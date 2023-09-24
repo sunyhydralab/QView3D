@@ -65,3 +65,12 @@ class PriorityTable:
                 self.__sorted_priority_list.insert(index, new_priority)
                 return
         self.__sorted_priority_list.append(new_priority)
+
+    def get_sorted_priority_list(self):
+        return self.__sorted_priority_list
+
+    def get_item(self, key):
+        return self.__table.get(key)
+
+    def set_item(self, key, item):
+        self.__table.set(key, item)
