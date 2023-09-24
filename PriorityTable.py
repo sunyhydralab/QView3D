@@ -7,6 +7,9 @@ class PriorityTable:
         self.__sorted_priority_list = []
 
     def add_job_queue(self, item):
+        """
+        Add a job queue to the table, based on it's priority
+        """
         # Add key to sorted keys list
         self.__add_key(item.get_priority())
         # Get current tuple of queue list and next turn
@@ -23,6 +26,7 @@ class PriorityTable:
     def remove_job_queue(self, item):
         """
         Removes the specified item from self.__table
+
         Returns True if the item is no longer in the table
         Returns False if item was not found in the table
         """
@@ -48,13 +52,16 @@ class PriorityTable:
                 return True
         return False
 
-    def __add_key(self, new_key):
+    def __add_key(self, new_priority):
+        """
+        Logic for adding new priority into __sorted_priority_list
+        """
         # Add key to sorted_keys list, could use binary search in the future
         for index in range(self.__sorted_priority_list):
             key = self.__sorted_priority_list[index]
-            if new_key == key:
+            if new_priority == key:
                 return
-            if new_key > key:
-                self.__sorted_priority_list.insert(index, new_key)
+            if new_priority > key:
+                self.__sorted_priority_list.insert(index, new_priority)
                 return
-        self.__sorted_priority_list.append(new_key)
+        self.__sorted_priority_list.append(new_priority)
