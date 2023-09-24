@@ -4,7 +4,7 @@ import HashTable
 class PriorityTable:
     def __init__(self):
         self.__table = HashTable()
-        self.__sorted_keys = []
+        self.__sorted_priority_list = []
 
     def add_job_queue(self, item):
         # Add key to sorted keys list
@@ -39,6 +39,7 @@ class PriorityTable:
                 # Check if queue list for this priority is now empty, if so, remove priority from table
                 if len(queue_list) == 0:
                     self.__table.remove(item.get_priority())
+                    self.__sorted_priority_list.remove(item.get_priority())
                     return True
                 # Fix the next_turn index
                 next_turn %= len(queue_list)
@@ -49,11 +50,11 @@ class PriorityTable:
 
     def __add_key(self, new_key):
         # Add key to sorted_keys list, could use binary search in the future
-        for index in range(self.__sorted_keys):
-            key = self.__sorted_keys[index]
+        for index in range(self.__sorted_priority_list):
+            key = self.__sorted_priority_list[index]
             if new_key == key:
                 return
             if new_key > key:
-                self.__sorted_keys.insert(index, new_key)
+                self.__sorted_priority_list.insert(index, new_key)
                 return
-        self.__sorted_keys.append(new_key)
+        self.__sorted_priority_list.append(new_key)
