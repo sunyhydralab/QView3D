@@ -20,11 +20,11 @@ class JobQueue:
     def peek(self):
         return self.__queue.peek()
 
-    def set_priority(self, priority):
+    def setPriority(self, priority):
         self.__priority = priority
 
-    def get_priority(self):
+    def getPriority(self):
         return self.__priority
 
-    def get_id(self):
+    def getId(self):
         return self.__id

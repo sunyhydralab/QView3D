@@ -3,10 +3,10 @@ import PriorityTable
 
 class Controller:
     def __init__(self, printers=[]):
-        self.__queue_table = PriorityTable()
+        self.__queueTable = PriorityTable()
         self.__printers = printers
 
-    def print_next_job(self):
+    def printNextJob(self):
         """
         Find the highest priority job and send to an available printer
 
@@ -14,37 +14,37 @@ class Controller:
         Return False if there are no jobs to dispatch
         """
 
-        sorted_priority_list = self.__queue_table.get_priority_list()
-        for priority in sorted_priority_list:
-            cur_queue_list, next_turn = self.__queue_table.get(priority)
+        sortedPriorityList = self.__queueTable.get_priority_list()
+        for priority in sortedPriorityList:
+            curQueueList, nextTurn = self.__queueTable.get(priority)
             # Iterate through all job queues starting with the next turn
-            index = next_turn
-            for _ in range(len(cur_queue_list)):
-                cur_job_queue = cur_queue_list[index]
+            index = nextTurn
+            for _ in range(len(curQueueList)):
+                curJobQueue = curQueueList[index]
                 # If a queue has no jobs, move to next in list
-                if cur_job_queue.isEmpty():
-                    index = (index + 1) % len(cur_queue_list)
+                if curJobQueue.isEmpty():
+                    index = (index + 1) % len(curQueueList)
                     continue
                 # If a job is found, see if there are any available pritners for it
-                job = cur_job_queue.remove()
-                available_printer = self.__check_available_printers(job)
+                job = curJobQueue.remove()
+                availablePrinter = self.__checkAvailablePrinters(job)
                 # Send the print out if possible
-                if available_printer != None:
+                if availablePrinter != None:
                     # TODO: implement printer class
-                    available_printer.print(job)
+                    availablePrinter.print(job)
                 # If printer is not available, request assistance from staff on hand
                 else:
-                    self.__request_assistance()
+                    self.__requestAssistance()
                 # Update table data
-                self.__queue_table.set_item(
-                    priority, (cur_queue_list, (index + 1) % len(cur_queue_list))
+                self.__queueTable.setItem(
+                    priority, (curQueueList, (index + 1) % len(curQueueList))
                 )
                 # Job dispatched
                 return True
         # No job dispatched
         return False
 
-    def __check_available_printers(self, job):
+    def __checkAvailablePrinters(self, job):
         """
         Search through all printers in __printers and see if any are compatable with the current job
 
@@ -53,7 +53,7 @@ class Controller:
         """
         return None
 
-    def __request_assistance(self):
+    def __requestAssistance(self):
         """
         Will put out a call to frontend to notify staff of assistance required
 
