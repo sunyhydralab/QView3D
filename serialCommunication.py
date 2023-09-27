@@ -8,15 +8,17 @@ def get3DPrinterList():
     ports = serial.tools.list_ports.comports()
     # Print out the list of ports.
     for port in ports:
-        # Save the port and description to list.
+        # Save the port and description to list. With key value pairs of port and description.
         portList = []
         # Keep a list of supported printers.
         supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
         # Check if the printer is supported and if true add it to the list.
         if port.description in supportedPrinters:
-            portList.append(port.device)
+            portList.append(port)   
         # Print out the list of supported printers.
         print(f"Port: {port.device}, Descp: {port.description}")
+    # Return the list of supported printers.
+    return portList
 
 # Function to parse the gcode file.
 def parseGcode(path):
