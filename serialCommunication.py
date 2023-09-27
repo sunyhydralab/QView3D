@@ -9,7 +9,7 @@ def get3DPrinterList():
     # Print out the list of ports.
     for port in ports:
         # Save the port and description to list. With key value pairs of port and description.
-        portList = []
+        printerList = []
         # Keep a list of supported printers.
         supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
         # Check if the printer is supported and if true add it to the list.
@@ -18,7 +18,7 @@ def get3DPrinterList():
         # Print out the list of supported printers.
         print(f"Port: {port.device}, Descp: {port.description}")
     # Return the list of supported printers.
-    return portList
+    return printerList
 
 # Function to parse the gcode file.
 def parseGcode(path):
@@ -35,10 +35,6 @@ def parseGcode(path):
 
 # Function to send gcode commands
 def sendGcode(message):
-    # Run the get3DPrinterList and Charlie's queue function here to get the serial port of the printer.
-    serialPort = "Whatever the serial port is."
-    # Select the serial port. 
-    ser = serial.Serial(serialPort, 115200, timeout=1)
     # Encode and send the message to the printer. 
     ser.write(f"{message}\n".encode('utf-8'))
     # Sleep the printer to give it enough time to get the instuction. 
@@ -57,13 +53,22 @@ def resetPrinter():
     # Reset Extruder
     sendGcode("G92 E0")
 
-# Close the serial port connection.
+#####################################################################################################################
 
 # Basic structure to send a Gcode file.  I'll add class integration later.  Just wanted to get the basic structure down. 
-resetPrinter()
-parseGcode("/test.gcode")
-resetPrinter()
 
-# Close the serial connection.
+# Reset the printer.
+resetPrinter()
+# Run the get3DPrinterList and Charlie's queue function here to get the serial port of the printer.
+availablePrinters = get3DPrinterList()
+# Run Charlie's queue function here to get the serial port of the printer.
+serialPort = "Whatever the serial port is."
+# Select the serial port. 
+ser = serial.Serial(serialPort, 115200, timeout=1)
+# Send the path to the gcode file for printing. 
+parseGcode("/test.gcode")
+# Reset the printer.
+resetPrinter()
+# Close the serial port connection.
 ser.close()
 
