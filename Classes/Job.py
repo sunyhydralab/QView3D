@@ -7,13 +7,21 @@ class Job:
         self.position = position
         self.printers = printers
         self.status = ""
+        
+        self.extension = ""
         # If printer is makerbot
-        self.convertFile()
+        # self.convertFile()
+        # sets the extension 
+        self.fileType() 
         # else
         self.printFile()
 
-    def convertFile(self):
-        pass
-
+    def fileType(self):
+        name, ext = os.path.splitext(file)
+        self.extension = ext
+        
     def printFile(self):
-        pass
+        if(self.extension == ".gcode"):
+            # send to compatible printer 
+        elif(self.extension == ".x3g"): 
+            # send to compatible printer 
