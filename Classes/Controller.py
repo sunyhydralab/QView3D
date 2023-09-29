@@ -1,6 +1,5 @@
 import PriorityTable
 
-
 class Controller:
     def __init__(self, printers=[]):
         self.__queueTable = PriorityTable()
