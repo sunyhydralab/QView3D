@@ -5,11 +5,11 @@ class Bot:
     def __init__(self, number, model): # initial registration of bot 
         self.__number = number 
         self.__model = model 
-        
         self.__isOnline = False # is online/ offline 
-                
+        
+        self.__printTime = None # array of print time info: total time, time elapsed, time left 
+        
         self.__isPrinting = False # is printing / not printing 
-        self.__donePrinting = False # is it done printing? This is determined by some type of event listener. 
         self.__isReady = False # ready to accept new job. This is done by user who marks printer as ready. 
 
         self.__errorStatus = None # error code if error 
@@ -48,14 +48,27 @@ class Bot:
             job = self.__queue.next() # print next job 
             self.printJob(job)
             
-    def printJob(self, job):
-        pass
     
-    def checkAmount(self, job):
-        weight = job.getWeight()
+    # def checkAmount(self, job):
+    #     weight = job.getWeight()
         # calculation to update the filament amount / if there will be enough 
         
     
     # code to continuously check the status of the bot. 
     def checkOnline(self):
+        pass
+    
+    def getPrintInfo():
+        pass
+    
+    def stopPrint(): 
+        pass 
+    
+    def pausePrint(): 
+        pass 
+    
+    def unpausePrint(): 
+        pass
+    
+    def printJob(self, job):
         pass
