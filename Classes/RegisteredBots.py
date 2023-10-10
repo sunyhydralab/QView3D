@@ -1,4 +1,6 @@
 import Bot 
+
+# perhaps this will all be info in the database 
 class RegisteredBots:
     def __init__(self):
         self.__bots = {}
