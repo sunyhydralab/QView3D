@@ -2,9 +2,9 @@ import Queue
 class Bot:
     
     # Data for one printer. Created using the RegisteredBots class. 
-    def __init__(self, number, model): # initial registration of bot 
-        self.__number = number 
-        self.__model = model 
+    def __init__(self, id): # initial registration of bot 
+        self.__id = id
+        # self.__model = model 
         self.__isOnline = False # is online/ offline 
         
         self.__printTime = None # array of print time info: total time, time elapsed, time left 
@@ -18,12 +18,6 @@ class Bot:
         
         self.__colorLoaded = None # color of filament on printer. Updated by user. 
         
-        # Maybe too complicated. May delete later. 
-        # self.__filamentRemaining = None # amount of filament left. Might be complicated though bc each printer may print at a different rate / errors will affect this value.
-        
-    # def setOnline(self, status): # True if printer goes online, False if printer goes offline. 
-    #     # this is determined by some sort of event listener. 
-    #     self.__isOnline = status 
     
     def setError(self, status): # True if there is an error, False if no error. Event listener. 
         if(status == True):
@@ -48,12 +42,6 @@ class Bot:
             job = self.__queue.next() # print next job 
             self.printJob(job)
             
-    
-    # def checkAmount(self, job):
-    #     weight = job.getWeight()
-        # calculation to update the filament amount / if there will be enough 
-        
-    
     # code to continuously check the status of the bot. 
     def checkOnline(self):
         pass
@@ -72,3 +60,6 @@ class Bot:
     
     def printJob(self, job):
         pass
+    
+    def getId(self):
+        return self.__id
