@@ -1,4 +1,4 @@
-from database.connectdb import db, engine
+from connectdb import db, engine
 from sqlalchemy.sql import text
 
 # Query the database
@@ -18,4 +18,4 @@ def query_supported_printers():
                 # Add more columns as needed
             })
 
-        return results
+        print(results)

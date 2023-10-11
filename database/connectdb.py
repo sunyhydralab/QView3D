@@ -9,6 +9,7 @@ DB_USER = config('DB_USER')
 DB_PASSWORD = config('DB_PASSWORD')
 DB_NAME = config('DB_NAME')
 engine = create_engine(f'mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}')
+
 def init_db(app):
     # Get database configuration from environment variables or configuration file
     
