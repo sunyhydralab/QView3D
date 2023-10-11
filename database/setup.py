@@ -42,6 +42,14 @@ def create_database():
                         )
                         """)
                 
+                cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS supported_printers (
+                            type_id INT AUTO_INCREMENT PRIMARY KEY, 
+                            printer_name VARCHAR(30), 
+                            date_added DATETIME DEFAULT CURRENT_TIMESTAMP 
+                        )
+                               """)
+                
             print("Database and table created successfully!")
 
         except Error as e:

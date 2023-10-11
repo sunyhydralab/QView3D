@@ -1,8 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for
+from sqlalchemy.sql import text  # Import text from sqlalchemy.sql
+from database import read
 
 formhandling_bp = Blueprint('formhandling', __name__)
 
-@formhandling_bp.route('/submitbot', methods=['POST'])
+# This is a form to register your bots. 
+@formhandling_bp.route('/submitbot', methods=['GET', 'POST'])
 def submitbot(): 
     if request.method == 'POST':
         model = request.form['botmodel']
@@ -10,4 +13,6 @@ def submitbot():
         firmware = request.form['firmware']
         materials = request.form['materials']
         notes = request.form['notes']
+        read.query_supported_printers()
+        return "model + buildVolume + firmware + materials + notes"
         

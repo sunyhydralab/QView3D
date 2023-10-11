@@ -20,5 +20,16 @@
         <label for="notes">Notes</label><input type="text" id = "notes" name = "notes"><br>
         <input type="submit" value="Submit">
     </form>
+
+    <!-- Portion for detecting printer -->
+    <label for="serial_port">Serial Port:</label>
+    <select name="serial_port" required>
+        <option value="" disabled selected>Select a printer</option>
+        {% for printer in detected_printers %}
+            <option value="{{ printer }}">{{ printer }}</option>
+        {% endfor %}
+    </select>
+    <br>
+
 </body>
 </html>

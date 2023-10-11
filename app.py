@@ -1,8 +1,11 @@
 from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 from decouple import config
-from database import setup
-from routes.display import display_bp  # Import the Blueprint
+from routes.display import display_bp
 from routes.formhandling import formhandling_bp
+from database import setup
+from database.connectdb import init_db  # Import the init_db function
+import pymysql  # Import pymysql
 
 app = Flask(__name__)
 
@@ -10,8 +13,9 @@ DB_HOST = config('DB_HOST')
 DB_USER = config('DB_USER')
 DB_PASSWORD = config('DB_PASSWORD')
 DB_NAME = config('DB_NAME')
+app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}'
 
-app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}'
+db = init_db(app)  # Initialize db with the Flask app
 
 # Register the display_bp Blueprint
 app.register_blueprint(display_bp)
