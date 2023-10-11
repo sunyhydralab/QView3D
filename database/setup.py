@@ -64,8 +64,7 @@ def createEnv():
     except Exception as e: 
         print(f"Error: {e}")
 
-if __name__ == "__main__":
-    
+def setup_database(): 
     # Create .env file 
     if not os.path.isfile("../.env"):
         createEnv()
@@ -76,4 +75,3 @@ if __name__ == "__main__":
         
     create_database() # now create, use, and generate database tables
         
-
