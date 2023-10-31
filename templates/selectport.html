@@ -12,11 +12,25 @@
 
     <label for="ports">Select printer port:</label>
     <form method="POST" action="/botselected">
-        <select name="ports" id="ports">
+        <select name="ports" id="ports" required>
             {% for port in printerlist %}
             <option value=`{{port.device}}`>Device: {{port.device}}</option>
             {% endfor %}
         </select>
+        <br><br>
+        Upload your .gcode file
+        <input type="file" id="file" name="file" accept=".gcode" required>
+        <br><br>
+
+        <label for="name">Quantity</label>
+        <input type="number" id="quantity" name="quantity" required>
+        <br><br>
+
+        <!-- on or None -->
+        <label for="priority">Priority job?</label>
+        <input type="checkbox" id="priority" name="priority">
+
+        <br><br>
         <input type="submit" value="Submit">
     </form>
 

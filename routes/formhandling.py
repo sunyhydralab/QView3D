@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, request
 from sqlalchemy.sql import text  # Import text from sqlalchemy.sql
 from database import read
 

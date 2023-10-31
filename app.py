@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from decouple import config
 from routes.display import display_bp
 from routes.formhandling import formhandling_bp
+from tasks.main import main
 from database import setup
 from database.connectdb import init_db  # Import the init_db function
 from database.setup import setup_database
@@ -21,6 +22,7 @@ db = init_db(app)  # Initialize db with the Flask app
 # Register the display_bp Blueprint
 app.register_blueprint(display_bp)
 app.register_blueprint(formhandling_bp)
+app.register_blueprint(main)
 
 if __name__ == "__main__":
     # setup.setup_database()
