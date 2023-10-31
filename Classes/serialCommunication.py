@@ -2,7 +2,8 @@ import serial
 import serial.tools.list_ports
 import time
 
-# Function to get a list of connected 3D prints.
+
+    # Function to get a list of connected 3D prints.
 def get3DPrinterList():
     # Get a list of all the connected serial ports.
     ports = serial.tools.list_ports.comports()
@@ -13,10 +14,11 @@ def get3DPrinterList():
         # Keep a list of supported printers.
         supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
         # Check if the printer is supported and if true add it to the list.
-        if port.description in supportedPrinters:
-            printerList.append(port)   
+        # if port.description in supportedPrinters:
+        printerList.append(port)   
+        
         # Print out the list of supported printers.
-        print(f"Port: {port.device}, Descp: {port.description}")
+        # print(f"Port: {port.device}, Descp: {port.description}")
     # Return the list of supported printers.
     return printerList
 
@@ -58,17 +60,19 @@ def resetPrinter():
 # Basic structure to send a Gcode file.  I'll add class integration later.  Just wanted to get the basic structure down. 
 
 # Reset the printer.
-resetPrinter()
+# resetPrinter()
 # Run the get3DPrinterList and Charlie's queue function here to get the serial port of the printer.
-availablePrinters = get3DPrinterList()
+# availablePrinters = get3DPrinterList()
 # Run Charlie's queue function here to get the serial port of the printer.
-serialPort = "Whatever the serial port is."
+# serialPort = "Whatever the serial port is."
 # Select the serial port. 
-ser = serial.Serial(serialPort, 115200, timeout=1)
+
+# ser = serial.Serial(serialPort, 115200, timeout=1)
+
 # Send the path to the gcode file for printing. 
-parseGcode("/test.gcode")
-# Reset the printer.
-resetPrinter()
+# parseGcode("/test.gcode")
+# # Reset the printer.
+# resetPrinter()
 # Close the serial port connection.
-ser.close()
+# ser.close()
 

@@ -5,6 +5,7 @@ from routes.display import display_bp
 from routes.formhandling import formhandling_bp
 from database import setup
 from database.connectdb import init_db  # Import the init_db function
+from database.setup import setup_database
 import pymysql  # Import pymysql
 
 app = Flask(__name__)

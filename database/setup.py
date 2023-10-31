@@ -83,3 +83,6 @@ def setup_database():
         
     create_database() # now create, use, and generate database tables
         
+# setup_database()
+if not os.path.isfile("../.env"):
+    createEnv()

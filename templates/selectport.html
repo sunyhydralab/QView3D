@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <h1>Select Port</h1>
+
+    <label for="ports">Select printer port:</label>
+    <form method="POST" action="/botselected">
+        <select name="ports" id="ports">
+            {% for port in printerlist %}
+            <option value=`{{port.device}}`>Device: {{port.device}}</option>
+            {% endfor %}
+        </select>
+        <input type="submit" value="Submit">
+    </form>
+
+    <!-- 
+    <ul>
+        {% for port in printerlist %}
+            <li>Device: {{ port.device }}, Description: {{ port.description }}</li>
+        {% endfor %}
+    </ul> -->
+</body>
+
+</html>
