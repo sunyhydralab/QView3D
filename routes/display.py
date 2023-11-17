@@ -14,7 +14,8 @@ def main():
 
 @display_bp.route('/selectport')
 def selectPort():
-    printerlist = Printer.getSupportedPrinters()
+    # printerlist = Printer.getSupportedPrinters()
+    printerlist = serialCommunication.get3DPrinterList()
     return render_template("selectport.html", printerlist=printerlist)
 
 @display_bp.route('/botselected', methods=['POST'])
@@ -29,7 +30,7 @@ def botSelected():
     else: 
         priority = 0 
         
-    create_job(file, "test", quantity, priority, selected_port)
+    create_job(file, "test", quantity, priority, selected_port, 1)
     return render_template("botselected.html", selected_port = selected_port)
 
 
