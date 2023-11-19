@@ -2,7 +2,6 @@ import serial
 import serial.tools.list_ports
 import time
 
-
     # Function to get a list of connected 3D prints.
 def get3DPrinterList():
     # Get a list of all the connected serial ports.

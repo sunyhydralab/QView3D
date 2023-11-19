@@ -76,6 +76,9 @@ class Printer:
             print(f"Port: {port.device}, Descp: {port.description}")
         # Return the list of supported printers.
         return printerList
+    
+    def getSizeOfQueue(self):
+        return self.queue.getSize()
         
     
     

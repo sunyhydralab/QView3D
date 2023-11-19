@@ -21,9 +21,6 @@ def create_job(file, name, quantity, priority, port, status):
         print("No supported printers found.")
         exit()
         
-    # # Selecting the first available printer for demonstration
-    # selected_printer = available_printers[0]
-    
     # Create a Job - assuming you have a Job class
     test_job = Job(file, name, quantity, priority, status)
     
@@ -32,7 +29,7 @@ def create_job(file, name, quantity, priority, port, status):
 
 def printer_util(selected_port, job):
     if selected_port:
-        printer = Printer(selected_port, None, True)
+        printer = Printer(selected_port, None, True) # Creating Printer object with selected port 
         
         printer.connect()  # Connect to the printer
         printer.reset()    # Reset the printer
