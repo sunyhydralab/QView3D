@@ -12,6 +12,7 @@ def get3DPrinterList():
         printerList = []
         # Keep a list of supported printers.
         supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
+        
         # Check if the printer is supported and if true add it to the list.
         # if port.description in supportedPrinters:
         printerList.append(port)   

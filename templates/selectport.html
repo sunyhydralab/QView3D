@@ -13,8 +13,9 @@
     <label for="ports">Select printer port:</label>
     <form method="POST" action="/botselected">
         <select name="ports" id="ports" required>
+            <option value="None">Device: None</option>
             {% for port in printerlist %}
-            <option value=`{{port.device}}`>Device: {{port.device}}</option>
+            <option value=`{{port}}`>Device: {{port}}</option>
             {% endfor %}
         </select>
         <br><br>

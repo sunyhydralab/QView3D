@@ -6,12 +6,13 @@ from Classes.Queue import Queue
 # Class for each printer.
 class Printer:
     # Constructor for the Printer class
-    def __init__(self, serial_port, filament=None, virtual=False):
+    def __init__(self, serial_port, mongoid, filament, virtual):
         self.serial_port = serial_port
         self.ser = None
         self.filament = filament
         self.virtual = virtual
         self.queue = Queue()
+        self.__mongoid = mongoid
 
     # Method to connect to the printer via serial port.
     def connect(self):
@@ -33,7 +34,7 @@ class Printer:
     # Method to send gcode commands to the printer.
     def sendGcode(self, message):
         if self.virtual:
-            print(f"Virtual Printer - Command: {message}, Received: ok")
+            # print(f"Virtual Printer - Command: {message}, Received: ok")
             return
         self.ser.write(f"{message}\n".encode("utf-8"))
         time.sleep(0.1)
@@ -41,7 +42,7 @@ class Printer:
             response = self.ser.readline().decode("utf-8").strip()
             if "ok" in response:
                 break
-        print(f"Command: {message}, Received: {response}")
+        # print(f"Command: {message}, Received: {response}")
 
     # Method to print a job.
     def printJob(self, job):
@@ -61,7 +62,7 @@ class Printer:
             num_virtual_printers = 3  # You can change this number as needed
             for i in range(num_virtual_printers):
                 # Creating virtual Printer objects
-                printerList.append(Printer("Virtual Port " + str(i), virtual=True))
+                printerList.append(Printer("Virtual Port " + str(i), 0, virtual=True, filament=False))
             return printerList
 
         # Get a list of all the connected serial ports.
@@ -79,8 +80,14 @@ class Printer:
     
     def getSizeOfQueue(self):
         return self.queue.getSize()
-        
     
+    def getPort(self): 
+        return self.serial_port
     
+    def addToQueue(self, job): # job object and file 
+        self.queue.addToBack(job) # RIGHT NOW we are just adding the JOB to the queue, when while i wrote it 
+        # i intended it to be jobID. do a database integratio thing in the classes - everything is in main.py right now
         
-            
+    def getId(self):
+       return self.__mongoid        
+        

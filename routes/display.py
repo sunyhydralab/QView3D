@@ -14,12 +14,21 @@ def main():
 
 @display_bp.route('/selectport')
 def selectPort():
-    # printerlist = Printer.getSupportedPrinters()
-    printerlist = serialCommunication.get3DPrinterList()
-    return render_template("selectport.html", printerlist=printerlist)
+    from app import printers # import printer collection 
+    # Retrieve ports of all registered printers from MongoDB
+    cursor = printers.find({}, {'_id': 0, 'port': 1})
+    printerlist = [doc['port'] for doc in cursor] # filtering so it only displays port.device 
+    
+    printerlist = serialCommunication.get3DPrinterList() # retrieve list of supported printers 
+    if len(printerlist) > 0: 
+        return render_template("selectport.html", printerlist=printerlist)
+    else: 
+        return "Error"
 
 @display_bp.route('/botselected', methods=['POST'])
 def botSelected(): 
+    
+    # retrieving selected printer, file, quantity, and priority. 
     selected_port = request.form.get('ports')
     file = request.form.get('file')
     quantity = request.form.get('quantity')
@@ -29,7 +38,8 @@ def botSelected():
         priority = 1 
     else: 
         priority = 0 
-        
+    
+    # creating a job with the selected port. 
     create_job(file, "test", quantity, priority, selected_port, 1)
     return render_template("botselected.html", selected_port = selected_port)
 

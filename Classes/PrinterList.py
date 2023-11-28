@@ -1,22 +1,21 @@
 from Classes.Printer import Printer
 class PrinterList: 
     
-    def __init__(self, printerlist): 
-        self.__list = []
-        for port in printerlist: 
-            self.addPrinter(port)
+    def __init__(self): 
+        self.__list = {} # Stores mongodbid: Printer Object 
           
-    def addPrinter(self, port): # add printer to printer list 
-        printer = Printer(port, None, False) # port, filament, virtual
-        self.__list.append(printer)
+    def addPrinter(self, port, id): # add printer to printer list 
+        printer = Printer(port, id, None, True) # port, filament, virtual
+        # self.__list.append(printer)
+        self.__list[id] = printer 
         
     def autoQueue(self): # Get index of printer with smallest queue 
-        minIndex = 0 
-        for index, printer in enumerate(self.__list): 
-            size = printer.getSizeOfQueue()
-            if size < self.__list[minIndex].getSizeOfQueue(): 
-                minIndex = index 
-        return minIndex 
+        # sort printer objects by size of queue 
+        sortPrintersByQueueSize = sorted(self.__list.items(), key=lambda item: item[1].getSizeOfQueue())
+        return sortPrintersByQueueSize # returns a list of tuples
+
+    def getList(self): 
+        return self.__list; 
             
         
             

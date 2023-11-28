@@ -46,3 +46,6 @@ class Job:
         elif self.extension == ".x3g":
             pass
             # send to compatible printer
+            
+    def getFile(self): 
+        return self.file
