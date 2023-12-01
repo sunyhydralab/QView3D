@@ -14,17 +14,18 @@ def create_job(file, name, quantity, priority, port, status):
     # Generating job with file, name, quantity, priority, status. 
     test_job = Job(file, name, quantity, priority, status)
     if(port == "None"): # OPTION FOR IF YOU WANT TO PRINT TO PRINTER W/ SMALLEST QUEUE: 
+
         # select printer with smallest queue. Add to queue of specific printer and also database 
         sortedPrinterList = printerObjects.autoQueue() # returns a dict sorted by which printer has smallest queue
         nextPrinter = sortedPrinterList[0][1] # gets printer object. tuple is in form (mongoId: PrinterObject)
-        printer_util(nextPrinter, test_job)
         handleQueue(nextPrinter, test_job)
+        printer_util(nextPrinter, test_job)
     else: 
         # PRINT TO SPECIFIC PRINTER: 
         for _port, _printerobj in printerObjects.getList(): 
             if _port == port: 
-                printer_util(_printerobj, test_job)
                 handleQueue(_printerobj, test_job)
+                printer_util(_printerobj, test_job)
                 break 
         else: 
             print("Error")

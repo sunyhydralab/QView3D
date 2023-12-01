@@ -34,7 +34,7 @@ class Printer:
     # Method to send gcode commands to the printer.
     def sendGcode(self, message):
         if self.virtual:
-            # print(f"Virtual Printer - Command: {message}, Received: ok")
+            print(f"Virtual Printer - Command: {message}, Received: ok")
             return
         self.ser.write(f"{message}\n".encode("utf-8"))
         time.sleep(0.1)
@@ -42,7 +42,7 @@ class Printer:
             response = self.ser.readline().decode("utf-8").strip()
             if "ok" in response:
                 break
-        # print(f"Command: {message}, Received: {response}")
+        print(f"Command: {message}, Received: {response}")
 
     # Method to print a job.
     def printJob(self, job):

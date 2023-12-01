@@ -47,5 +47,13 @@ with app.app_context(): # initialization code: Creates list of printers and adds
     print("OBJECTS: ", printerObjects.getList())
 
 if __name__ == "__main__":
+    # use threading here to constantly loop through printer objects and send stuff from queue. 
+    # Also use threading to listen for GCode commands and change statuses of printer objects. 
+    # Change status of printer in mongodb and also in-memory. 
+
+    # If hits last line in GCode file: 
+        # query for status ("done printing"), update. Use frontend to update status to "ready" once user removes print from plate. 
+        # Before sending to printer, query for status. If error, throw error. 
+        
     app.run(port=8000, debug=True)
     

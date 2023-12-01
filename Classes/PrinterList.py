@@ -5,7 +5,7 @@ class PrinterList:
         self.__list = {} # Stores mongodbid: Printer Object 
           
     def addPrinter(self, port, id): # add printer to printer list 
-        printer = Printer(port, id, None, True) # port, filament, virtual
+        printer = Printer(port, id, None, False) # port, filament, virtual
         # self.__list.append(printer)
         self.__list[id] = printer 
         
