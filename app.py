@@ -1,12 +1,18 @@
 from flask import Flask
-from routes.display import display_bp
-from tasks.main import main
 from Classes import serialCommunication
-from Classes.PrinterList import PrinterList
-from pymongo import MongoClient
+from Classes.PrinterList import PrinterList 
+
+from pymongo import MongoClient # Importing database client 
+
+# IMPORTING SERIAL FUNCTIONS 
 import serial
 import serial.tools.list_ports
 
+# IMPORTING BLUEPRINTS 
+from routes.display import display_bp
+from tasks.main import main
+
+# Basic app setup 
 app = Flask(__name__)
 
 # start database connection
@@ -15,7 +21,8 @@ client = MongoClient('localhost')
 db = client.hvamc # creates hvamc database 
 printers = db.printers # creates printer collection 
 universalqueue = db.bigqueue
-printerObjects = None 
+
+printerObjects = None # Will store list of printers. Idea is to have printer information stored in the database, but also cached in the frontend.  
 
 # Register the display_bp Blueprint
 app.register_blueprint(display_bp)
@@ -44,7 +51,7 @@ with app.app_context(): # initialization code: Creates list of printers and adds
         for doc in cursor: 
             printerObjects.addPrinter(doc['port'], doc['_id'])
         
-    print("OBJECTS: ", printerObjects.getList())
+    # print("OBJECTS: ", printerObjects.getList())
 
 if __name__ == "__main__":
     # use threading here to constantly loop through printer objects and send stuff from queue. 

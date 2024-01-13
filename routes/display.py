@@ -4,7 +4,6 @@ from Classes.Printer import Printer
 from flask import request
 import requests 
 from tasks.main import create_job
-# from flask import requests as rq
 
 display_bp = Blueprint('display', __name__)
 
