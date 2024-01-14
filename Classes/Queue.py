@@ -8,7 +8,7 @@ class Queue:
     def addToBack(self, jobid):
         if self.__queue.count(jobid)>0: 
             raise Exception("Job ID already in queue.") 
-        self.__queue.append(jobid) # appending on the right is the "front" because popping takes out from right 
+        self.__queue.append(jobid) # appending on the right is the "front" because popping takes out from right d
     
     def addToFront(self, jobid): 
         if self.__queue.count(jobid)>0: 

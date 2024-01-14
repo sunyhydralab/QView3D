@@ -2,7 +2,6 @@ import serial
 from serial.tools import list_ports
 import time
 
-
 # Class for each printer job.
 class Job:
     # Constructor for the Job class
@@ -39,13 +38,13 @@ class Job:
         self.extension = ext
 
     # Method for X3G/GCODE conversion.
-    def printFile(self):
-        if self.extension == ".gcode":
-            pass
-            # send to compatible printer
-        elif self.extension == ".x3g":
-            pass
-            # send to compatible printer
+    # def printFile(self):
+    #     if self.extension == ".gcode":
+    #         pass
+    #         # send to compatible printer
+    #     elif self.extension == ".x3g":
+    #         pass
+    #         # send to compatible printer
             
     def getFile(self): 
         return self.file

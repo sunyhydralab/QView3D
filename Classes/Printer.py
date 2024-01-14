@@ -83,11 +83,10 @@ class Printer:
     
     def getPort(self): 
         return self.serial_port
+        
+    def getId(self):
+       return self.__mongoid        
     
     def addToQueue(self, job): # job object and file 
         self.queue.addToBack(job) # RIGHT NOW we are just adding the JOB to the queue, when while i wrote it 
         # i intended it to be jobID. do a database integratio thing in the classes - everything is in main.py right now
-        
-    def getId(self):
-       return self.__mongoid        
-        
