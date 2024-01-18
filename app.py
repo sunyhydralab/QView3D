@@ -36,7 +36,8 @@ with app.app_context(): # initialization code: Creates list of printers and adds
         if not existing_printer: # only insert if port isnt in DB 
             printer = {
                 'port': machine.device, # port 
-                'name': machine.description, # name of device (ex. prusa, makerbot, etc.)
+                'description': machine.description, # name of device (ex. prusa, makerbot, etc.)
+                'name': 'default',
                 'queue': [], # printer queue 
                 'state': 'ready' # get information if printer is ready from sending GCode command. 
             }

@@ -11,7 +11,8 @@ class Job:
         self.gcode_lines = self.loadGcode(file)  # List containing the G-code lines
         self.quantity = quantity  # Quantity of the job
         self.priority = priority  # Priority of the job
-        self.status = status  # Status of the job
+        self.status = status  # Status of the job. (completed, error, cancelled, printing, in-queue, or failed.)
+        self.version = 1 
 
     # Method to load G-code from a given file.
     def loadGcode(self, file):
@@ -36,6 +37,12 @@ class Job:
     def fileType(self):
         name, ext = os.path.splitext(file)
         self.extension = ext
+        
+    def setVersion(self, version_update):
+        self.version = version_update; 
+    
+    def getVersion(self): 
+        return self.version
 
     # Method for X3G/GCODE conversion.
     # def printFile(self):
