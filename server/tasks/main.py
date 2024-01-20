@@ -9,7 +9,7 @@ from Classes.Job import Job
 main = Blueprint('main', __name__)
 
 def create_job(file, name, quantity, priority, port, status):
-    from app import printerObjects # get cached printer objects 
+    from server.app import printerObjects # get cached printer objects 
     
     # Generating job with file, name, quantity, priority, status. 
     test_job = Job(file, name, quantity, priority, status)
@@ -40,7 +40,7 @@ def printer_util(printer, job): #isAuto: False if specific port, True if port no
     printer.disconnect()        # Disconnect from the printer
         
 def handleQueue(printer, job): 
-    from app import printers # printers is a collection in MongoDB
+    from server.app import printers # printers is a collection in MongoDB
     # from app import printerObjects # get cached printer objects 
     printer.addToQueue(job) # adding to queue on this end. Have some separation mechanism - atomic operations? 
     # make it so the database / in-memory insertion is separate. Then have a way to consistently loop through all printers 
