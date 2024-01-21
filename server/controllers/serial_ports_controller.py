@@ -1,0 +1,1 @@
+# get connected serial ports 

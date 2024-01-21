@@ -3,67 +3,80 @@
 
 <template>
   <section class="section">
+    <nav class="navbar navbar-expand-lg bg-body-tertiary d-flex justify-content-between">
+      <RouterLink to='/' class="navbar-brand">Clever Name</RouterLink>
+      <button class="btn btn-outline-success" type="submit">Submit Job</button>
+    </nav>
+
+    <div class="sidenav">
+  <a href="#">About</a>
+  <a href="#">Services</a>
+  <a href="#">Clients</a>
+  <a href="#">Contact</a>
+</div>
     <!-- NAVBAR  -->
     <div>
-      <nav class="navbar" role="navigation" aria-label="dropdown navigation">
-        <div class="navbar-item has-dropdown is-active">
-          <div class="navbar-dropdown">
-            <!-- <a class="navbar-item"><LoginBadge/></a> -->
-            <a class="navbar-item">
-              <RouterLink to="/">Home</RouterLink>
-            </a>
-            <a class="navbar-item">
-              <RouterLink to="/queue">Queues</RouterLink>
-            </a>
-            <a class="navbar-item">
-              <RouterLink to="/registration">Registration</RouterLink>
-            </a>
-            <hr class="navbar-divider">
-            <div class="navbar-item">
-              <RouterLink to="/submit">Submit job</RouterLink>
-            </div>
-          </div>
-        </div>
-      </nav>
-    </div>
-
-    <nav class="navbar is-fixed-top" role="navigation" aria-label="main navigation">
-
-      <div class="navbar-brand">
-
-        <!-- Add the hamburger button -->
-        <a role="button" class="navbar-burger" aria-label="menu"
-          aria-expanded="false">
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
+      <div class="navbar-dropdown">
+        <a class="navbar-item">
+          <RouterLink to="/">Home </RouterLink>
+        </a>
+        <a class="navbar-item">
+          <RouterLink to="/queue">Queues </RouterLink>
+        </a>
+        <a class="navbar-item">
+          <RouterLink to="/registration">Registration </RouterLink>
+        </a>
+        <a class="navbar-item">
+          <RouterLink to="/submit">Submit job </RouterLink>
         </a>
       </div>
+    </div>
 
-    </nav>
   </section>
 </template>
 
 <style scoped>
-.icon {
-  padding-right: 10px;
+.navbar{
+  position: fixed;
+  z-index: 2;
+  padding-right: 5%;
+  padding-left: 2%; 
 }
 
-.button {
-  margin: 15px;
+.sidenav {
+  height: 100%; /* Full-height: remove this if you want "auto" height */
+  width: 160px; /* Set the width of the sidebar */
+  position: fixed; /* Fixed Sidebar (stay in place on scroll) */
+  z-index: 0; /* Stay on top */
+  top: 70; /* Stay at the top */
+  left: 0;
+  background-color: #111; /* Black */
+  overflow-x: hidden; /* Disable horizontal scroll */
+  padding-top: 20px;
 }
 
-.router-link {
-  color: #00b1d2;
+/* The navigation menu links */
+.sidenav a {
+  padding: 6px 8px 6px 16px;
+  text-decoration: none;
+  font-size: 25px;
+  color: #818181;
+  display: block;
+}
+.sidenav a:hover {
+  color: #f1f1f1;
 }
 
-.router-link-active {
-  font-weight: bold;
-  border-top: 2px solid #00b1d2;
+/* Style page content */
+.main {
+  margin-left: 160px; /* Same as the width of the sidebar */
+  padding: 0px 10px;
+  z-index: 1; /* Ensure content is on top of the sidebar */
 }
 
-.navbar {
-  border-bottom: 2px solid #00b1d2;
-  /* You can change the color and thickness as needed */
+/* On smaller screens, where height is less than 450px, change the style of the sidebar (less padding and a smaller font size) */
+@media screen and (max-height: 450px) {
+  .sidenav {padding-top: 15px;}
+  .sidenav a {font-size: 18px;}
 }
 </style>

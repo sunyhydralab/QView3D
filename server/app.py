@@ -1,6 +1,11 @@
 from flask import Flask, jsonify 
 from flask_cors import CORS 
 import os 
+from models.db import db
+from models.printers import Printer
+from models.jobs import Job
+from flask_migrate import Migrate
+from dotenv import load_dotenv
 # from Classes import serialCommunication
 # from Classes.PrinterList import PrinterList 
 
@@ -26,6 +31,12 @@ def shark():
     return "This is a good shark!"
 
 # start database connection
+load_dotenv()
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
+
+migrate = Migrate(app, db)
 # client = MongoClient('localhost')
 
 # db = client.hvamc # creates hvamc database 
