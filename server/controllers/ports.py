@@ -36,7 +36,6 @@ def registerPrinter():
     """
     try: 
         data = request.get_json() # get json data 
-        
         # extract data 
         device = data['printer']['device']
         description = data['printer']['description']
@@ -44,8 +43,7 @@ def registerPrinter():
         customname = data['printer']['customname']
         
         res = Printer.create_printer(device=device, description=description, hwid=hwid, name=customname)
-
-        return res 
+        return res
     
     except SQLAlchemyError as e:
         print(f"Database error: {e}")

@@ -1,6 +1,7 @@
 import { useRouter } from "vue-router"
 import { ref, computed } from 'vue';
 import * as myFetch from "./myFetch";
+import {toast} from "./toast";
 
 export function api(action: string, body?: unknown, method?: string, headers?: any) {
         headers = headers ?? {};
@@ -41,9 +42,29 @@ export function useRegisterPrinter(){
         async register(printer: RegisteredDevice){
             try{
                 const response = await api('register', {printer})
-                return response; 
+                if(response){
+                    if(response.success==false){
+                        toast.error(response.message);
+                    }else if (response.success === true) {
+                        toast.success(response.message);
+                    }else{
+                        console.error("Unexpected response:", response);
+                        toast.error("Failed to register printer. Unexpected response");
+                    }
+                } else{
+                    console.error("Response is undefined or null");
+                    toast.error("Failed to register printer. Unexpected response");
+                }
+                // if(response.success==false){
+                //     toast.error(response.message)
+                // }else if(response.success==true){
+                //     toast.success(response.message)
+                // }else{
+                //     toast.error
+                // }
             }catch(error){
                 console.error(error)
+                toast.error("An error occurred while registering the printer");
             }
         }
     }

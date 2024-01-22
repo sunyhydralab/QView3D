@@ -30,7 +30,6 @@ const doRegister = async () => {
         };
         // pass RegisteredPrinter data to register function 
         let res = await register(registeredPrinter.value)
-        console.log(res)
     }
     // reset values 
     selectedDevice.value = undefined;

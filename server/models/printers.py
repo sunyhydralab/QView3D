@@ -35,12 +35,11 @@ class Printer(db.Model):
     def create_printer(cls, device, description, hwid, name): 
         printerExists = cls.searchByDevice(device)
         if printerExists: 
-            response = jsonify({"success": False, "message": "Printer already registered."})
-            return response 
+            return {"success": False, "message": "Printer already registered."}
         else: 
             printer = cls(device=device, description=description, hwid=hwid, name=name)
             db.session.add(printer)
             db.session.commit()
-            response = jsonify({"success": True, "message": "Printer successfully registered."})
-            return response 
+            return {"success": True, "message": "Printer successfully registered."}
+
 
