@@ -1,4 +1,4 @@
-from flask import Flask, jsonify 
+from flask import Flask, jsonify, request, Response
 from flask_cors import CORS 
 import os 
 from models.db import db
@@ -17,15 +17,22 @@ from dotenv import load_dotenv
 
 # IMPORTING BLUEPRINTS 
 from controllers.display import display_bp
+from controllers.ports import ports_bp
 # from server.main import main
 
 # Basic app setup 
 app = Flask(__name__)
 app.config.from_object(__name__) # update application instantly 
 
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+CORS(app)
 
-
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        res = Response()
+        res.headers['X-Content-Type-Options'] = '*'
+        return res
+    
 @app.route('/shark', methods=['GET'])
 def shark():
     return "This is a good shark!"
@@ -47,6 +54,9 @@ migrate = Migrate(app, db)
 
 # # Register the display_bp Blueprint
 app.register_blueprint(display_bp)
+# app.register_blueprint(ports_bp, url_prefix='/api/v1')
+app.register_blueprint(ports_bp)
+
 # app.register_blueprint(main)
     
 # with app.app_context(): # initialization code: Creates list of printers and adds them to DB 

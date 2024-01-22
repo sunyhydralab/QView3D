@@ -7,11 +7,12 @@ import requests
 
 display_bp = Blueprint('display', __name__)
 
-@display_bp.route("/")
+@display_bp.route("/", methods=['GET'])
 def main():
-    return render_template("nav.html")
+    return "testing"
+    # return render_template("nav.html")
 
-@display_bp.route('/selectport')
+@display_bp.route('/selectport', methods=['GET'])
 def selectPort():
     # from server.app import printers # import printer collection 
     # Retrieve ports of all registered printers from MongoDB
