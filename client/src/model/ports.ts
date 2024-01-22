@@ -8,11 +8,18 @@ export function api(action: string, body?: unknown, method?: string, headers?: a
         .catch(err => console.log(err))
   }
 
- export interface Device {
+export interface Device {
     device: string;
     description: string;
     hwid: string;
-  }
+}
+
+export interface RegisteredDevice {
+    device: string; 
+    description: string; 
+    hwid: string; 
+    customname: string; 
+}
 
 export function useGetPorts(){
     const router = useRouter();
@@ -23,6 +30,20 @@ export function useGetPorts(){
                 return response; 
             }catch(error){
                 console.error(error);
+            }
+        }
+    }
+}
+
+export function useRegisterPrinter(){
+    const router = useRouter()
+    return {
+        async register(printer: RegisteredDevice){
+            try{
+                const response = await api('register', {printer})
+                return response; 
+            }catch(error){
+                console.error(error)
             }
         }
     }

@@ -32,10 +32,6 @@ def handle_preflight():
         res = Response()
         res.headers['X-Content-Type-Options'] = '*'
         return res
-    
-@app.route('/shark', methods=['GET'])
-def shark():
-    return "This is a good shark!"
 
 # start database connection
 load_dotenv()
