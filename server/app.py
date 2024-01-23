@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 # IMPORTING BLUEPRINTS 
 from controllers.display import display_bp
 from controllers.ports import ports_bp
+from controllers.jobs import jobs_bp
 # from server.main import main
 
 # Basic app setup 
@@ -50,8 +51,8 @@ migrate = Migrate(app, db)
 
 # # Register the display_bp Blueprint
 app.register_blueprint(display_bp)
-# app.register_blueprint(ports_bp, url_prefix='/api/v1')
 app.register_blueprint(ports_bp)
+app.register_blueprint(jobs_bp)
 
 # app.register_blueprint(main)
     
