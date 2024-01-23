@@ -23,6 +23,9 @@
         <a class="navbar-item">
           <RouterLink to="/submit">Submit job </RouterLink>
         </a>
+        <a class="navbar-item">
+          <RouterLink to="/history">Job History </RouterLink>
+        </a>
       </div>
     </div>
 

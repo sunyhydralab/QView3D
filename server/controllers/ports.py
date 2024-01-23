@@ -42,7 +42,7 @@ def registerPrinter():
         hwid = data['printer']['hwid']
         customname = data['printer']['customname']
         
-        res = Printer.create_printer(device=device, description=description, hwid=hwid, name=customname)
+        res = Printer.create_printer(device=device, description=description, hwid=hwid, name=customname, status='ready')
         return res
     
     except SQLAlchemyError as e:

@@ -3,6 +3,7 @@ import MainView from '@/views/MainView.vue'
 import QueueViewVue from '@/views/QueueView.vue'
 import RegisteredViewVue from '@/views/RegisteredView.vue'
 import SubmitJobVue from '@/views/SubmitJob.vue'
+import JobHistoryVue from '@/views/JobHistory.vue'
 
 const routes = [
   {
@@ -24,6 +25,11 @@ const routes = [
     path: '/submit', 
     name: 'SubmitJobVue', 
     component: SubmitJobVue,
+  }, 
+  {
+    path: '/history', 
+    name: 'JobHistoryVue', 
+    component: JobHistoryVue,
   }, 
 ]
 
