@@ -3,19 +3,21 @@ import { useGetPorts, useRegisterPrinter, useRetrievePrinters, type Device } fro
 import { ref, onMounted } from 'vue';
 const { ports } = useGetPorts();
 const { register } = useRegisterPrinter();
-const { retrieve } = useRetrievePrinters(); 
+const { retrieve } = useRetrievePrinters();
 
 let devices = ref<Array<Device>>([]); // Array of all devices -- stores ports for user to select/register
-let selectedDevice = ref<Device | undefined>() // device user selects to register. Different from 
-let name = ref('')
+let selectedDevice = ref<Device | undefined>() // device user selects to register.
+let name = ref('') // Stores the user input name of printer 
+let registered = ref<Array<Device>>([]) // Stores array of printers already registered in the system
 
 // fetch list of connected ports from backend and automatically load them into the form dropdown 
 onMounted(async () => {
     try {
         const devicelist = await ports(); // list of ports to be in form dropdown 
         devices.value = devicelist; // load ports into list 
-        
+
         const registeredList = await retrieve()//list of previously registered printers 
+        registered.value = registeredList; // loads registered printers into registered array 
 
     } catch (error) {
         console.error(error)
@@ -43,6 +45,18 @@ const doRegister = async () => {
 <template>
     <div class="container">
         <b>Registered View</b>
+
+        <div v-if="registered.length != 0">
+            <div class="card" style="width: 18rem;" v-for="printer in registered">
+                <div class="card-body">
+                    <h6>Name: {{ printer.customname }}</h6>
+                    <h6 class="card-subtitle mb-2 text-body-secondary">{{ printer.device }}</h6>
+                    <h6>Description: {{ printer.description }}</h6>
+                    <h6>hwid: {{ printer.hwid }}</h6>
+                    <h6>Date registered: {{ printer.date }}</h6>
+                </div>
+            </div>
+        </div>
 
         <div class="form-container">
             <b class="register">REGISTER PRINTERS</b>
@@ -94,8 +108,7 @@ const doRegister = async () => {
     width: 300px;
 }
 
-.register{
-    color: red; 
+.register {
+    color: red;
 }
-
 </style>
