@@ -51,16 +51,23 @@ export function useRegisterPrinter(){
                     console.error("Response is undefined or null");
                     toast.error("Failed to register printer. Unexpected response");
                 }
-                // if(response.success==false){
-                //     toast.error(response.message)
-                // }else if(response.success==true){
-                //     toast.success(response.message)
-                // }else{
-                //     toast.error
-                // }
             }catch(error){
                 console.error(error)
                 toast.error("An error occurred while registering the printer");
+            }
+        }
+    }
+}
+
+export function useRetrievePrinters(){
+    const router = useRouter()
+    return{
+        async retrieve(){
+            try{
+                const response = await api('getprinters')
+                return response; 
+            }catch(error){
+                console.error(error)
             }
         }
     }

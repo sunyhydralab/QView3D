@@ -1,41 +1,43 @@
 <script setup lang="ts">
-import { useGetPorts, useRegisterPrinter, type Device } from '../model/ports'
+import { useGetPorts, useRegisterPrinter, useRetrievePrinters, type Device } from '../model/ports'
 import { ref, onMounted } from 'vue';
 const { ports } = useGetPorts();
 const { register } = useRegisterPrinter();
+const { retrieve } = useRetrievePrinters(); 
+
+let devices = ref<Array<Device>>([]); // Array of all devices -- stores ports for user to select/register
+let selectedDevice = ref<Device | undefined>() // device user selects to register. Different from 
+let name = ref('')
 
 // fetch list of connected ports from backend and automatically load them into the form dropdown 
 onMounted(async () => {
     try {
-        const devicelist = await ports();
-        devices.value = devicelist;
+        const devicelist = await ports(); // list of ports to be in form dropdown 
+        devices.value = devicelist; // load ports into list 
+        
+        const registeredList = await retrieve()//list of previously registered printers 
+
     } catch (error) {
         console.error(error)
     }
 })
 
-let devices = ref<Array<Device>>([]); // Array of type Device  
-let selectedDevice = ref<Device | undefined>()
-let name = ref('')
-
-// let registeredPrinter = ref<RegisteredDevice | undefined>()
-let registeredPrinter = ref<Device | undefined>()
 
 const doRegister = async () => {
     if (selectedDevice.value && name.value) {
-        registeredPrinter.value = {
+        selectedDevice.value = {
             device: selectedDevice.value.device,
             description: selectedDevice.value.description,
             hwid: selectedDevice.value.hwid,
             customname: name.value.trim(), // Trim to remove leading and trailing spaces
         };
         // pass RegisteredPrinter data to register function 
-        let res = await register(registeredPrinter.value)
+        let res = await register(selectedDevice.value)
     }
     // reset values 
     selectedDevice.value = undefined;
     name.value = ''
-    console.log(registeredPrinter.value);
+    console.log(selectedDevice.value);
 }
 </script>
 <template>
