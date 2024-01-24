@@ -13,13 +13,9 @@ export interface Device {
     device: string;
     description: string;
     hwid: string;
-}
-
-export interface RegisteredDevice {
-    device: string; 
-    description: string; 
-    hwid: string; 
-    customname: string; 
+    customname?: string; 
+    status?: string; 
+    date?:string
 }
 
 export function useGetPorts(){
@@ -39,7 +35,7 @@ export function useGetPorts(){
 export function useRegisterPrinter(){
     const router = useRouter()
     return {
-        async register(printer: RegisteredDevice){
+        async register(printer: Device){
             try{
                 const response = await api('register', {printer})
                 if(response){

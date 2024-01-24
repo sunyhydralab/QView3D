@@ -39,9 +39,34 @@ class Printer(db.Model):
         if printerExists: 
             return {"success": False, "message": "Printer already registered."}
         else: 
-            printer = cls(device=device, description=description, hwid=hwid, name=name, status=status)
-            db.session.add(printer)
-            db.session.commit()
-            return {"success": True, "message": "Printer successfully registered."}
+            try: 
+                printer = cls(device=device, description=description, hwid=hwid, name=name, status=status)
+                db.session.add(printer)
+                db.session.commit()
+                return {"success": True, "message": "Printer successfully registered."}
+            except SQLAlchemyError as e:
+                print(f"Database error: {e}")
+                return jsonify({"error": "Failed to register printer. Database error"}), 500
 
+    @classmethod 
+    def get_registered_printers(cls): 
+        try:
+            # Query the database to get all registered printers
+            printers = cls.query.all()
+
+            # Convert the list of printers to a list of dictionaries
+            printers_data = [{"device": printer.device,
+                              "description": printer.description,
+                              "hwid": printer.hwid,
+                              "name": printer.name,
+                              "status": printer.status,
+                              "date": printer.date} for printer in printers]
+
+            # Return the list of printer information in JSON format
+            return jsonify({"printers": printers_data}), 200
+
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return jsonify({"error": "Failed to retrieve printers. Database error"}), 500
+             
 

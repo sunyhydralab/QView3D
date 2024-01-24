@@ -9,7 +9,7 @@ from models.printers import Printer
 
 ports_bp = Blueprint("ports", __name__)
 
-@ports_bp.route("/getports",  methods=["GET", "OPTIONS"])
+@ports_bp.route("/getports",  methods=["GET"])
 def getPorts():
     ports = serial.tools.list_ports.comports()
     printerList = []
@@ -23,6 +23,16 @@ def getPorts():
         # if port.description in supportedPrinters:
         printerList.append(port_info)
     return jsonify(printerList)
+
+# method to get printers already registered with the system 
+@ports_bp.route("/getprinters", methods=["GET"])
+def getRegisteredPrinters():  
+    try: 
+        res = Printer.get_registered_printers()
+        return res
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
 
 @ports_bp.route("/register", methods=["POST"])
 def registerPrinter(): 
@@ -44,10 +54,6 @@ def registerPrinter():
         
         res = Printer.create_printer(device=device, description=description, hwid=hwid, name=customname, status='ready')
         return res
-    
-    except SQLAlchemyError as e:
-        print(f"Database error: {e}")
-        return jsonify({"error": "Failed to register printer. Database error"}), 500
     
     except Exception as e:
         print(f"Unexpected error: {e}")

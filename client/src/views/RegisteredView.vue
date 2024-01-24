@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useGetPorts, useRegisterPrinter, type Device, type RegisteredDevice } from '../model/ports'
+import { useGetPorts, useRegisterPrinter, type Device } from '../model/ports'
 import { ref, onMounted } from 'vue';
 const { ports } = useGetPorts();
 const { register } = useRegisterPrinter();
@@ -18,7 +18,8 @@ let devices = ref<Array<Device>>([]); // Array of type Device
 let selectedDevice = ref<Device | undefined>()
 let name = ref('')
 
-let registeredPrinter = ref<RegisteredDevice | undefined>()
+// let registeredPrinter = ref<RegisteredDevice | undefined>()
+let registeredPrinter = ref<Device | undefined>()
 
 const doRegister = async () => {
     if (selectedDevice.value && name.value) {
@@ -39,9 +40,10 @@ const doRegister = async () => {
 </script>
 <template>
     <div class="container">
-        <p>Registered View</p>
+        <b>Registered View</b>
 
         <div class="form-container">
+            <b class="register">REGISTER PRINTERS</b>
             <form methods="POST" @submit="doRegister">
                 <select name="ports" id="ports" v-model="selectedDevice" required>
                     <option :value="null">Select Device</option>
@@ -89,4 +91,9 @@ const doRegister = async () => {
     margin-top: 20px;
     width: 300px;
 }
+
+.register{
+    color: red; 
+}
+
 </style>
