@@ -5,7 +5,8 @@
   <section class="section">
     <nav class="navbar navbar-expand-lg bg-body-tertiary d-flex justify-content-between">
       <RouterLink to='/' class="navbar-brand">Clever Name</RouterLink>
-      <button class="btn btn-outline-success" type="submit">Submit Job</button>
+      <!-- <button class="btn btn-outline-success" type="submit">Submit Job</button> -->
+      <button class="btn btn-outline-success"><RouterLink to="/submit">Submit job </RouterLink></button>
     </nav>
 
     <!-- NAVBAR  -->
@@ -33,11 +34,12 @@
 </template>
 
 <style scoped>
-/* .navbar{
-  position: fixed;
-  z-index: 2;
-  padding-right: 5%;
-  padding-left: 2%; 
-} */
+.btn{
+  margin-right: 3%; 
+}
+
+.navbar-brand, .navbar-dropdown{
+  margin-left: 2%; 
+}
 
 </style>
