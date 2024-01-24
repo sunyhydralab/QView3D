@@ -7,7 +7,7 @@ const { retrieve } = useRetrievePrinters();
 
 let devices = ref<Array<Device>>([]); // Array of all devices -- stores ports for user to select/register
 let selectedDevice = ref<Device | undefined>() // device user selects to register.
-let name = ref('') // Stores the user input name of printer 
+let customname = ref('') // Stores the user input name of printer 
 let registered = ref<Array<Device>>([]) // Stores array of printers already registered in the system
 
 // fetch list of connected ports from backend and automatically load them into the form dropdown 
@@ -18,6 +18,7 @@ onMounted(async () => {
 
         const registeredList = await retrieve()//list of previously registered printers 
         registered.value = registeredList; // loads registered printers into registered array 
+        console.log(registered.value)
 
     } catch (error) {
         console.error(error)
@@ -26,21 +27,19 @@ onMounted(async () => {
 
 
 const doRegister = async () => {
-    if (selectedDevice.value && name.value) {
+    if (selectedDevice.value && customname.value) {
         selectedDevice.value = {
             device: selectedDevice.value.device,
             description: selectedDevice.value.description,
             hwid: selectedDevice.value.hwid,
-            customname: name.value.trim(), // Trim to remove leading and trailing spaces
+            name: customname.value.trim(), // Trim to remove leading and trailing spaces
         };
         // pass RegisteredPrinter data to register function 
         let res = await register(selectedDevice.value)
     }
     // reset values 
     selectedDevice.value = undefined;
-    name.value = ''
-    console.log(selectedDevice.value);
-}
+    customname.value = ''}
 </script>
 <template>
     <div class="container">
@@ -49,7 +48,7 @@ const doRegister = async () => {
         <div v-if="registered.length != 0">
             <div class="card" style="width: 18rem;" v-for="printer in registered">
                 <div class="card-body">
-                    <h6>Name: {{ printer.customname }}</h6>
+                    <h6>Name: {{ printer.name }}</h6>
                     <h6 class="card-subtitle mb-2 text-body-secondary">{{ printer.device }}</h6>
                     <h6>Description: {{ printer.description }}</h6>
                     <h6>hwid: {{ printer.hwid }}</h6>
@@ -83,7 +82,7 @@ const doRegister = async () => {
                 </div>
                 <div v-if="selectedDevice">
                     <label for="name"></label>
-                    <input type="text" placeholder="Custom Name" maxlength="49" v-model="name" required>
+                    <input type="text" placeholder="Custom Name" maxlength="49" v-model="customname" required>
                     <br><br>
                     <input type="submit" value="Submit">
                 </div>

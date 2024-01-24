@@ -13,7 +13,7 @@ export interface Device {
     device: string;
     description: string;
     hwid: string;
-    customname?: string; 
+    name?: string; 
     status?: string; 
     date?:string
 }
@@ -65,7 +65,7 @@ export function useRetrievePrinters(){
         async retrieve(){
             try{
                 const response = await api('getprinters')
-                console.log(response.printers)
+                // console.log(response.printers)
                 return response.printers; 
             }catch(error){
                 console.error(error)

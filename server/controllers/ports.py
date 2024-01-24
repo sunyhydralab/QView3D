@@ -50,9 +50,9 @@ def registerPrinter():
         device = data['printer']['device']
         description = data['printer']['description']
         hwid = data['printer']['hwid']
-        customname = data['printer']['customname']
+        name = data['printer']['name']
         
-        res = Printer.create_printer(device=device, description=description, hwid=hwid, name=customname, status='ready')
+        res = Printer.create_printer(device=device, description=description, hwid=hwid, name=name, status='ready')
         return res
     
     except Exception as e:
