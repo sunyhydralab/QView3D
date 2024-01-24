@@ -7,7 +7,7 @@ export function api(action: string, body?: unknown, method?: string, headers?: a
         headers = headers ?? {};
     return myFetch.api(`${action}`, body, method, headers)
         .catch(err => console.log(err))
-  }
+}
 
 export interface Device {
     device: string;
@@ -15,11 +15,10 @@ export interface Device {
     hwid: string;
     name?: string; 
     status?: string; 
-    date?:string
+    date?: Date
 }
 
 export function useGetPorts(){
-    const router = useRouter();
     return {
         async ports(){
             try{
@@ -33,7 +32,6 @@ export function useGetPorts(){
 }
 
 export function useRegisterPrinter(){
-    const router = useRouter()
     return {
         async register(printer: Device){
             try{
@@ -60,7 +58,6 @@ export function useRegisterPrinter(){
 }
 
 export function useRetrievePrinters(){
-    const router = useRouter()
     return{
         async retrieve(){
             try{
