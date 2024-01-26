@@ -6,7 +6,7 @@ class PrinterStatusService:
         self.printer_threads = {}
 
     def start_printer_thread(self, printer):
-        thread = Thread(target=self.getStatus, args=(printer,))
+        thread = Thread(target=self.getStatus, args=(printer,)) # temporary lock 
         thread.start()
         return thread
 
@@ -24,5 +24,4 @@ class PrinterStatusService:
 
         
     def getStatus(self, printer):
-        while True: 
-            print(printer.getStatus())
+        print(printer.getStatus())

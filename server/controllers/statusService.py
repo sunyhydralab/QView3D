@@ -1,4 +1,4 @@
-# Background code to periodically ping printers for status 
+# API for user communication to printer threads 
 from flask import Blueprint
  
 status_bp = Blueprint("status", __name__)
