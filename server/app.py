@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, Response
+from flask import Flask, jsonify, request, Response, url_for
 from flask_cors import CORS 
 import os 
 from models.db import db
@@ -6,20 +6,15 @@ from models.printers import Printer
 from models.jobs import Job
 from flask_migrate import Migrate
 from dotenv import load_dotenv
-# from Classes import serialCommunication
-# from Classes.PrinterList import PrinterList 
-
-# from pymongo import MongoClient # Importing database client 
-
-# IMPORTING SERIAL FUNCTIONS 
-# import serial
-# import serial.tools.list_ports
+import json 
+from controllers.ports import getRegisteredPrinters
+#from services.printerStatusService import 
+#from services.queueService import 
 
 # IMPORTING BLUEPRINTS 
 from controllers.display import display_bp
 from controllers.ports import ports_bp
 from controllers.jobs import jobs_bp
-# from server.main import main
 
 # Basic app setup 
 app = Flask(__name__)
@@ -41,52 +36,42 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 migrate = Migrate(app, db)
-# client = MongoClient('localhost')
-
-# db = client.hvamc # creates hvamc database 
-# printers = db.printers # creates printer collection 
-# universalqueue = db.bigqueue
-
-# printerObjects = None # Will store list of printers. Idea is to have printer information stored in the database, but also cached in the frontend.  
 
 # # Register the display_bp Blueprint
 app.register_blueprint(display_bp)
 app.register_blueprint(ports_bp)
 app.register_blueprint(jobs_bp)
 
-# app.register_blueprint(main)
-    
-# with app.app_context(): # initialization code: Creates list of printers and adds them to DB 
-#     connectedPrinters = serialCommunication.get3DPrinterList() # get list of serial ports. ADD CODE TO FILTER FOR ONLY 3D PRINTERS
-#     # add all serial ports to DB
-#     for machine in connectedPrinters: 
-#         existing_printer = printers.find_one({'port': machine.device}) 
-#         if not existing_printer: # only insert if port isnt in DB 
-#             printer = {
-#                 'port': machine.device, # port 
-#                 'description': machine.description, # name of device (ex. prusa, makerbot, etc.)
-#                 'name': 'default',
-#                 'queue': [], # printer queue 
-#                 'state': 'ready' # get information if printer is ready from sending GCode command. 
-#             }
-#             result = printers.insert_one(printer)
-#             print(f"Inserted document with _id: {result.inserted_id}")
-#         else:
-#             print(f"Document with port {machine} already exists.")
+
+# on server start, create a Printer object for each printer in the database and assign it to its 
+# own thread     
+with app.app_context():
+    try:
+        res = getRegisteredPrinters() # gets registered printers 
+        data = res[0].get_json() # converts to JSON 
+        printers_data = data.get("printers", []) # gets the values w/ printer data
         
-#         # loop through DB and add to printerObjects - CACHED, CLIENT-SIDE PRINTER DATA 
-#         printerObjects = PrinterList() # Create a list of printer objects (cached data)
-#         cursor = printers.find()
-#         for doc in cursor: 
-#             printerObjects.addPrinter(doc['port'], doc['_id'])
+        printer_objects = []
         
-    # print("OBJECTS: ", printerObjects.getList())
+        # Create a Printer object for each printer in printers_data
+        for printer_info in printers_data:
+            printer = Printer(
+                device=printer_info["device"],
+                description=printer_info["description"],
+                hwid=printer_info["hwid"],
+                name=printer_info["name"],
+                status=printer_info["status"],
+            )
+            printer_objects.append(printer)
+            
+            for p in printer_objects: 
+                print(p.getDevice(p))
+        
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        
 
 if __name__ == "__main__":
-    # use threading here to constantly loop through printer objects and send stuff from queue. 
-    # Also use threading to listen for GCode commands and change statuses of printer objects. 
-    # Change status of printer in mongodb and also in-memory. 
-
     # If hits last line in GCode file: 
         # query for status ("done printing"), update. Use frontend to update status to "ready" once user removes print from plate. 
         # Before sending to printer, query for status. If error, throw error. 

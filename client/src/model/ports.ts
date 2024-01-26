@@ -62,7 +62,6 @@ export function useRetrievePrinters(){
         async retrieve(){
             try{
                 const response = await api('getprinters')
-                // console.log(response.printers)
                 return response.printers; 
             }catch(error){
                 console.error(error)

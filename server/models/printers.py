@@ -68,5 +68,10 @@ class Printer(db.Model):
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve printers. Database error"}), 500
+       
+    @classmethod  
+    def getDevice(cls, printer_instance):
+        return printer_instance.device
+            
              
 
