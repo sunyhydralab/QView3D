@@ -4,6 +4,10 @@ from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.exc import SQLAlchemyError
 from flask import jsonify 
+from Classes.Queue import Queue
+import serial
+import serial.tools.list_ports
+import time
 
 # model for Printer table 
 class Printer(db.Model):
@@ -14,6 +18,7 @@ class Printer(db.Model):
     name = db.Column(db.String(50), nullable=False)
     status = db.Column(db.String(50), nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False) 
+    queue = Queue()
     
     def __init__(self, device, description, hwid, name, status):
         self.device = device
@@ -22,6 +27,7 @@ class Printer(db.Model):
         self.name = name 
         self.status = status
     
+    # general classes 
     @classmethod
     def searchByDevice(cls, device): 
         try:
@@ -69,9 +75,41 @@ class Printer(db.Model):
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve printers. Database error"}), 500
        
-    @classmethod  
-    def getDevice(cls, printer_instance):
-        return printer_instance.device
+    # printer-specific classes   
+    def getDevice(self):
+        return self.device
+    
+    def getQueue(self): 
+        return self.queue
+    
+    def getStatus(self):
+        return self.status 
+    
+    def connect(self):
+        self.ser = serial.Serial(self.device, 115200, timeout=1)
+
+    def disconnect(self):
+        if self.ser:
+            self.ser.close()
+
+    def reset(self):
+        self.send_gcode("G28")
+        self.send_gcode("G92 E0")
+
+    def send_gcode(self, message):
+        self.ser.write(f"{message}\n".encode('utf-8'))
+        time.sleep(0.1)
+        while True:
+            response = self.ser.readline().decode("utf-8").strip()
+            if "ok" in response:
+                break
+        print(f"Command: {message}, Received: {response}")
+
+    def print_job(self, job):
+        for line in job.gcode_lines:
+            self.send_gcode(line)
+    
+    
             
              
 
