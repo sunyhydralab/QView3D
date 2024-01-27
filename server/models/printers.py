@@ -16,7 +16,7 @@ class Printer(db.Model):
     description = db.Column(db.String(50), nullable=False)
     hwid = db.Column(db.String(50), nullable=False)
     name = db.Column(db.String(50), nullable=False)
-    status = db.Column(db.String(50), nullable=False)
+    status = 'ready'
     date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False) 
     queue = Queue()
     

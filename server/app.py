@@ -8,10 +8,7 @@ from models.jobs import Job
 from models.PrinterStatusService import PrinterStatusService
 from flask_migrate import Migrate
 from dotenv import load_dotenv
-import json 
 from controllers.ports import getRegisteredPrinters
-#from services.printerStatusService import 
-#from services.queueService import 
 
 # IMPORTING BLUEPRINTS 
 from controllers.display import display_bp

@@ -17,7 +17,6 @@ class PrinterStatusService:
                 description=printer_info["description"],
                 hwid=printer_info["hwid"],
                 name=printer_info["name"],
-                status=printer_info["status"],
             )
             printer_thread = self.start_printer_thread(printer) # creating a thread for each printer object 
             self.printer_threads[printer] = printer_thread # mapping printer object to printer thread 
