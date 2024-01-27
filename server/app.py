@@ -43,17 +43,13 @@ app.register_blueprint(ports_bp)
 app.register_blueprint(jobs_bp)
 app.register_blueprint(status_bp)
 
-# def start_printer_thread(printer):
-#     thread = Thread(target=getStatus(printer))
-#     thread.start()
-#     return thread
 printer_status_service = PrinterStatusService()
 
 # on server start, create a Printer object for each printer in the database and assign it to its 
 # own thread
 with app.app_context():
     try:
-        res = getRegisteredPrinters() # gets registered printers 
+        res = getRegisteredPrinters() # gets registered printers from DB 
         data = res[0].get_json() # converts to JSON 
         printers_data = data.get("printers", []) # gets the values w/ printer data
         printer_status_service.create_printer_threads(printers_data)
