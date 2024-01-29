@@ -1,19 +1,17 @@
-"""Initial migration
+"""empty message
 
-Revision ID: 7ff513c7060b
-Revises: 3628293cf5de
-Create Date: 2024-01-22 11:03:15.589908
+Revision ID: 423164ad82ba
+Revises: 
+Create Date: 2024-01-28 21:57:42.810913
 
 """
 from alembic import op
 import sqlalchemy as sa
-from models.printers import Printer
-from models.jobs import Job
 
 
 # revision identifiers, used by Alembic.
-revision = '7ff513c7060b'
-down_revision = '3628293cf5de'
+revision = '423164ad82ba'
+down_revision = None
 branch_labels = None
 depends_on = None
 

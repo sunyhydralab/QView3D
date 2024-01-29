@@ -7,8 +7,6 @@ Create Date: ${create_date}
 """
 from alembic import op
 import sqlalchemy as sa
-from models.printers import Printer
-from models.jobs import Job
 ${imports if imports else ""}
 
 # revision identifiers, used by Alembic.
