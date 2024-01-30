@@ -1,6 +1,12 @@
 <script setup lang="ts">
-// Collect form data 
-// const selectedPort = ref<null | string>(null);
+import { useRetrievePrintersInfo, type Device } from '../model/ports'
+import { ref, onMounted } from 'vue'
+
+const { retrieve } = useRetrievePrintersInfo()
+const printers = ref<Array<Device>>([])
+
+// Collect form data
+const selectedPort = ref<string>("None")
 // const quantity = ref(1);
 // const priority = ref(false)
 // const file = ref();
@@ -8,6 +14,15 @@
 // const handleFileUpload = async() => {
 //     file.value = fileInput.value?.files
 // }
+
+// fills printers array with printers that have threads from the database
+onMounted(async () => {
+    try {
+        printers.value = await retrieve()
+    } catch (error) {
+        console.error('There has been a problem with your fetch operation:', error)
+    }
+})
 </script>
 <template>
     <div class="container">
@@ -15,9 +30,12 @@
 
         <div class="form-container">
             <form>
-                <select required> 
-                    <!-- Pull devices from Printer in database -->
+                <select v-model="selectedPort" required>
                     <option value="None">Device: None</option>
+                    <option v-for="printer in printers" :value="printer.device">
+                        {{ printer.name }}
+                        <!-- maybe show the status of the printer here??? -->
+                    </option>
                 </select>
                 <br><br>
                 Upload your .gcode file

@@ -1,12 +1,18 @@
 from threading import Thread
 from models.printers import Printer
 
+# this is the thread class that will be used to create a thread for each printer
+class PrinterThread(Thread):
+    def __init__(self, printer, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.printer = printer
+        
 class PrinterStatusService:
     def __init__(self):
         self.printer_threads = [] # array of printer threads
 
     def start_printer_thread(self, printer):
-        thread = Thread(target=self.update_thread, args=(printer,)) # temporary lock 
+        thread = PrinterThread(printer, target=self.update_thread, args=(printer,)) # temporary lock 
         thread.start()
         return thread
 
@@ -17,11 +23,26 @@ class PrinterStatusService:
                 description=printer_info["description"],
                 hwid=printer_info["hwid"],
                 name=printer_info["name"],
+                status="ready",
             )
             printer_thread = self.start_printer_thread(printer) # creating a thread for each printer object 
             self.printer_threads.append(printer_thread)
-            # self.printer_threads[printer] = printer_thread # mapping printer object to printer thread 
-
+    
+    # this method will be called by the UI to get the printers that have a threads information
+    def retrieve_printer_info(self):
+        printer_info_list = []
+        for thread in self.printer_threads:
+            printer = thread.printer  # get the printer object associated with the thread
+            printer_info = {
+                "device": printer.device,
+                "description": printer.description,
+                "hwid": printer.hwid,
+                "name": printer.name,
+                "status": printer.status,
+            }
+            printer_info_list.append(printer_info)
+        return printer_info_list
+        
         
     def update_thread(self, printer):
         """_summary_
