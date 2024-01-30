@@ -63,18 +63,19 @@ def resetPrinter():
 
 # Reset the printer.
 # resetPrinter()
+
 # Run the get3DPrinterList and Charlie's queue function here to get the serial port of the printer.
 # availablePrinters = get3DPrinterList()
 # Run Charlie's queue function here to get the serial port of the printer.
-# serialPort = "Whatever the serial port is."
-# Select the serial port. 
+# serialPort = "/dev/ttyACM0"
+# # # Select the serial port. 
 
 # ser = serial.Serial(serialPort, 115200, timeout=1)
 
-# Send the path to the gcode file for printing. 
+# # Send the path to the gcode file for printing. 
 # parseGcode("/test.gcode")
-# # Reset the printer.
+# # # Reset the printer.
 # resetPrinter()
-# Close the serial port connection.
+# # Close the serial port connection.
 # ser.close()
 

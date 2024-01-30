@@ -16,9 +16,10 @@ class Printer(db.Model):
     description = db.Column(db.String(50), nullable=False)
     hwid = db.Column(db.String(50), nullable=False)
     name = db.Column(db.String(50), nullable=False)
-    status = 'ready'
+    status = 'online'
     date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False) 
     queue = Queue()
+    ser = None 
     
     def __init__(self, device, description, hwid, name, status):
         self.device = device
@@ -84,6 +85,18 @@ class Printer(db.Model):
     
     def getStatus(self):
         return self.status 
+
+    def getName(self): 
+        return self.name
+    
+    def getSer(self): 
+        return self.ser
+    
+    def setSer(self, port): 
+        self.ser = port 
+        
+    def setStatus(self, newStatus): 
+        self.status = newStatus
     
     def connect(self):
         self.ser = serial.Serial(self.device, 115200, timeout=1)
@@ -91,25 +104,63 @@ class Printer(db.Model):
     def disconnect(self):
         if self.ser:
             self.ser.close()
-
+            self.setSer(None)
+            
     def reset(self):
-        self.send_gcode("G28")
-        self.send_gcode("G92 E0")
+        self.sendGcode("G28")
+        self.sendGcode("G92 E0")
 
-    def send_gcode(self, message):
+    def parseGcode(self, path):
+        with open(path, "r") as g:
+            # Replace file with the path to the file. "r" means read mode. 
+            for line in g:
+                #remove whitespace
+                line = line.strip() 
+                # Don't send empty lines and comments. ";" is a comment in gcode.
+                if len(line) == 0 or line.startswith(";"): 
+                    continue
+                # Send the line to the printer.
+                self.sendGcode(line, self.ser)
+
+    # Function to send gcode commands
+    def sendGcode(self, message, initializeStatus=False):
+        # Encode and send the message to the printer. 
         self.ser.write(f"{message}\n".encode('utf-8'))
+        # Sleep the printer to give it enough time to get the instuction. 
         time.sleep(0.1)
+        # Save and print out the response from the printer. We can use this for error handling and status updates.
         while True:
             response = self.ser.readline().decode("utf-8").strip()
             if "ok" in response:
+                if initializeStatus == True: 
+                    self.setStatus("ready")
                 break
-        print(f"Command: {message}, Received: {response}")
-
+        print(f"Command: {message}, Recieved: {response}")
+    
     def print_job(self, job):
         for line in job.gcode_lines:
             self.send_gcode(line)
-    
-    
-            
+
+    def printNextInQueue(self):
+        job = self.getQueue().getNext()
+        file = job.getFile()
+        port = serial.Serial(self.getDevice(), 115200, timeout=1) # set up serial communication 
+        self.setSer(port)
+        if self.getSer(): 
+            self.reset()
+            self.parseGcode(file)
+            self.reset()
+            self.disconnect()
+        else: 
+            raise Exception("Failed to establish serial connection for printer: ", self.name)
+        
+    def initialize(self): 
+        self.ser = serial.Serial(self.getDevice(), 115200, timeout=1) # set up serial communication 
+        if self.getSer(): 
+            self.reset(initializeStatus=True)
+        else: 
+            raise Exception("Failed to establish serial connection for printer: ", self.name)
+
+
              
 
