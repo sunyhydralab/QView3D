@@ -3,8 +3,6 @@ from models.printers import Printer
 import serial
 import serial.tools.list_ports
 import time
-
-
 class PrinterStatusService:
     def __init__(self):
         self.printer_threads = []  # array of printer threads
