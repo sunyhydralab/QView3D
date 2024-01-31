@@ -22,12 +22,12 @@ class Printer(db.Model):
     queue = Queue()
     ser = None
 
-    def __init__(self, device, description, hwid, name, status):
+    def __init__(self, device, description, hwid, name, id):
+        self.id = id
         self.device = device
         self.description = description
         self.hwid = hwid
         self.name = name
-        self.status = status
 
     # general classes
     @classmethod
@@ -73,7 +73,7 @@ class Printer(db.Model):
 
             # Convert the list of printers to a list of dictionaries
             printers_data = [
-                {
+                {   
                     "id": printer.id,
                     "device": printer.device,
                     "description": printer.description,
@@ -84,7 +84,6 @@ class Printer(db.Model):
                 }
                 for printer in printers
             ]
-
             # Return the list of printer information in JSON format
             return jsonify({"printers": printers_data}), 200
 
@@ -125,9 +124,9 @@ class Printer(db.Model):
             self.ser.close()
             self.setSer(None)
 
-    def reset(self):
+    def reset(self, initializeStatus):
         self.sendGcode("G28")
-        self.sendGcode("G92 E0")
+        self.sendGcode("G92 E0", initializeStatus)
 
     def parseGcode(self, path):
         with open(path, "r") as g:
