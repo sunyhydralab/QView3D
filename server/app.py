@@ -52,6 +52,7 @@ with app.app_context():
         res = getRegisteredPrinters() # gets registered printers from DB 
         data = res[0].get_json() # converts to JSON 
         printers_data = data.get("printers", []) # gets the values w/ printer data
+        print(printers_data)
         printer_status_service.create_printer_threads(printers_data)
         
     except Exception as e:
