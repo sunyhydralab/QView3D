@@ -17,6 +17,7 @@ class PrinterStatusService:
         # all printer statuses intiialized to be 'online.' Instantly changes to 'ready' on initialization -- test with 'reset printer' command.
         for printer_info in printers_data:
             printer = Printer(
+                id=printer_info["id"],
                 device=printer_info["device"],
                 description=printer_info["description"],
                 hwid=printer_info["hwid"],

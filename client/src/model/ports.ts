@@ -2,6 +2,8 @@ import { useRouter } from "vue-router"
 import { ref, computed } from 'vue';
 import * as myFetch from "./myFetch";
 import {toast} from "./toast";
+import type { ListFormat } from "typescript";
+import type {Job} from "./jobs"
 
 export function api(action: string, body?: unknown, method?: string, headers?: any) {
         headers = headers ?? {};
@@ -15,7 +17,8 @@ export interface Device {
     hwid: string;
     name?: string; 
     status?: string; 
-    date?: Date
+    date?: Date; 
+    queue?: Job[]
 }
 
 export function useGetPorts(){
