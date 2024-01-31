@@ -10,6 +10,9 @@ from flask_migrate import Migrate
 from dotenv import load_dotenv
 from controllers.ports import getRegisteredPrinters
 
+# moved this before importing the blueprints so that it can be accessed by the PrinterStatusService
+printer_status_service = PrinterStatusService()
+
 # IMPORTING BLUEPRINTS 
 from controllers.display import display_bp
 from controllers.ports import ports_bp
@@ -43,8 +46,6 @@ app.register_blueprint(ports_bp)
 app.register_blueprint(jobs_bp)
 app.register_blueprint(status_bp)
 
-printer_status_service = PrinterStatusService()
-
 # on server start, create a Printer object for each printer in the database and assign it to its 
 # own thread
 with app.app_context():
@@ -52,7 +53,6 @@ with app.app_context():
         res = getRegisteredPrinters() # gets registered printers from DB 
         data = res[0].get_json() # converts to JSON 
         printers_data = data.get("printers", []) # gets the values w/ printer data
-        print(printers_data)
         printer_status_service.create_printer_threads(printers_data)
         
     except Exception as e:

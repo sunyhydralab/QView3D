@@ -24,3 +24,18 @@ export function useGetJobs(){
         }
     }
 }
+
+//function to add job to queue
+export function useAddJobToQueue(){
+    return {
+        async addJobToQueue(job: Job){
+            try{
+                const response = await api('addjobtoqueue', job);
+                return response; 
+            }catch(error){
+                console.error(error)
+                toast.error("An error occurred while creating the job");
+            }
+        }
+    }
+}

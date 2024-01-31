@@ -59,3 +59,18 @@ def registerPrinter():
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
         
+# method to get the queue for a printer
+# unsure if this works tbh, need help!
+@ports_bp.route("/getqueue/<printer_name>", methods=["GET"])
+def getQueue(printer_name):
+    try:
+        # Query the database to find the printer by name
+        printer = Printer.query.get(printer_name)
+        if printer is None:
+            return jsonify({'error': 'Printer not found'}), 404
+        queue = printer.queue.getQueue()
+        return jsonify({'queue': queue}), 200
+
+    except SQLAlchemyError as e:
+        print(f"Database error: {e}")
+        return jsonify({"error": "Failed to retrieve queue. Database error"}), 500
