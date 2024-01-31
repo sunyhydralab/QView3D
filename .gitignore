@@ -2,3 +2,6 @@
 
 ### dotenv ###
 .env
+
+*.pyc
+__pycache__/
