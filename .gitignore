@@ -2,3 +2,5 @@
 
 ### dotenv ###
 .env
+
+.pyc
