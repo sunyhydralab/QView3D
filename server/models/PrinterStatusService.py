@@ -3,13 +3,17 @@ from models.printers import Printer
 import serial
 import serial.tools.list_ports
 import time
+class PrinterThread(Thread):
+    def __init__(self, printer, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.printer = printer
+        
 class PrinterStatusService:
     def __init__(self):
-        self.printer_threads = []  # array of printer threads
-        self.ping_thread = None
+        self.printer_threads = [] # array of printer threads
 
     def start_printer_thread(self, printer):
-        thread = Thread(target=self.update_thread, args=(printer,))
+        thread = PrinterThread(printer, target=self.update_thread, args=(printer,)) # temporary lock 
         thread.start()
         return thread
 
