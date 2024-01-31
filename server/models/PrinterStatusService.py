@@ -2,14 +2,16 @@ from threading import Thread
 from models.printers import Printer
 import serial
 import serial.tools.list_ports
-import time 
+import time
+
+
 class PrinterStatusService:
     def __init__(self):
-        self.printer_threads = [] # array of printer threads
-        self.ping_thread = None 
+        self.printer_threads = []  # array of printer threads
+        self.ping_thread = None
 
     def start_printer_thread(self, printer):
-        thread = Thread(target=self.update_thread, args=(printer,)) 
+        thread = Thread(target=self.update_thread, args=(printer,))
         thread.start()
         return thread
 
@@ -23,36 +25,53 @@ class PrinterStatusService:
                 hwid=printer_info["hwid"],
                 name=printer_info["name"],
             )
-            printer_thread = self.start_printer_thread(printer) # creating a thread for each printer object 
+            printer_thread = self.start_printer_thread(
+                printer
+            )  # creating a thread for each printer object
             self.printer_threads.append(printer_thread)
-        
-        # creating seperate thread to loop through all of the printer threads to ping them for print status  
-        self.ping_thread = Thread(target = self.pingForStatus)
 
-    
-    def update_thread(self, printer): 
-        while True: 
+        # creating seperate thread to loop through all of the printer threads to ping them for print status
+        self.ping_thread = Thread(target=self.pingForStatus)
+
+    def update_thread(self, printer):
+        while True:
             status = printer.getStatus()
-            #time sleep 
-            if status == 'configuring':
-                printer.initialize() # code to change status from online -> ready on thread start 
+            # time sleep
+            if status == "configuring":
+                printer.initialize()  # code to change status from online -> ready on thread start
             """
             I guess we could only really get a status "error" when we ping it and it doesnt work. No reason to 
             ping for error if its idle. 
             """
             queueSize = printer.getQueue().getSize()
-            if status == "ready" and queueSize > 0: 
+            if status == "ready" and queueSize > 0:
                 printer.printNextInQueue()
-                
-    def pingForStatus(self): 
-        """_summary_ psuedo code 
-        for printer in threads: 
+        # this method will be called by the UI to get the printers that have a threads information
+
+    def retrieve_printer_info(self):
+        printer_info_list = []
+        for thread in self.printer_threads:
+            printer = (
+                thread.printer
+            )  # get the printer object associated with the thread
+            printer_info = {
+                "device": printer.device,
+                "description": printer.description,
+                "hwid": printer.hwid,
+                "name": printer.name,
+                "status": printer.status,
+            }
+            printer_info_list.append(printer_info)
+        return printer_info_list
+
+    def pingForStatus(self):
+        """_summary_ psuedo code
+        for printer in threads:
             status = printer.getStatus()
-            if status == printing: 
-                GCODE for print status 
+            if status == printing:
+                GCODE for print status
         """
-        pass 
-    
-    
-    def getThreadArray(self): 
+        pass
+
+    def getThreadArray(self):
         return self.printer_threads
