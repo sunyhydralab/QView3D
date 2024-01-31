@@ -48,12 +48,11 @@ class PrinterStatusService:
                 printer.printNextInQueue()
         # this method will be called by the UI to get the printers that have a threads information
 
+    # this method will be called by the UI to get the printers that have a threads information
     def retrieve_printer_info(self):
         printer_info_list = []
         for thread in self.printer_threads:
-            printer = (
-                thread.printer
-            )  # get the printer object associated with the thread
+            printer = thread.printer  # get the printer object associated with the thread
             printer_info = {
                 "device": printer.device,
                 "description": printer.description,
