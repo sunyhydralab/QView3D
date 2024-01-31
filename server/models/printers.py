@@ -147,10 +147,12 @@ class Printer(db.Model):
         port = serial.Serial(self.getDevice(), 115200, timeout=1) # set up serial communication 
         self.setSer(port)
         if self.getSer(): 
+            self.setStatus('printing')
             self.reset()
             self.parseGcode(file)
             self.reset()
             self.disconnect()
+            self.setStatus('complete')
             # WHEN THE USER CLEARS THE JOB, THEN we can remove the job from printer queue, 
             # add it to job history collection, and update the printer status in-memory 
         else: 

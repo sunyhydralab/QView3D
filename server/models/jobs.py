@@ -18,6 +18,12 @@ class Job(db.Model):
     printer_id = db.Column(db.Integer, db.ForeignKey('printer.id'), nullable = False)
     printer = db.relationship('Printer', backref='Job')
     
+    def __init__(self, file, name, status, printerid): 
+        self.file = file 
+        self.name = name 
+        self.status = status 
+        self.printerid = printerid 
+    
     @classmethod
     def get_job_history(cls):
         try:

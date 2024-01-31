@@ -32,6 +32,7 @@ class PrinterStatusService:
     def update_thread(self, printer): 
         while True: 
             status = printer.getStatus()
+            #time sleep 
             if status == 'configuring':
                 printer.initialize() # code to change status from online -> ready on thread start 
             """
