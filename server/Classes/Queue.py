@@ -47,6 +47,9 @@ class Queue:
     def getSize(self): 
         return len(self.__queue)
     
+    def removeJob(self):
+        self.__queue.pop()
+    
     
 
 # test = Queue()

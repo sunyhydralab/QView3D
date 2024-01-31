@@ -13,7 +13,7 @@ class Printer:
         self.virtual = virtual
         self.queue = Queue()
         self.__mongoid = mongoid
-        self.status = "ready" # ready, error, offline, printing, complete 
+        self.status = "configuring" # ready, error, offline, printing, complete 
 
     # Method to connect to the printer via serial port.
     def connect(self):

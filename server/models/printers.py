@@ -16,7 +16,7 @@ class Printer(db.Model):
     description = db.Column(db.String(50), nullable=False)
     hwid = db.Column(db.String(50), nullable=False)
     name = db.Column(db.String(50), nullable=False)
-    status = 'online'
+    status = 'configuring' # default setting on printer start. Runs initialization and status switches to "ready" automatically.
     date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False) 
     queue = Queue()
     ser = None 
@@ -151,6 +151,8 @@ class Printer(db.Model):
             self.parseGcode(file)
             self.reset()
             self.disconnect()
+            # WHEN THE USER CLEARS THE JOB, THEN we can remove the job from printer queue, 
+            # add it to job history collection, and update the printer status in-memory 
         else: 
             raise Exception("Failed to establish serial connection for printer: ", self.name)
         

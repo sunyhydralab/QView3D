@@ -32,14 +32,23 @@ class PrinterStatusService:
     def update_thread(self, printer): 
         while True: 
             status = printer.getStatus()
-            if status == 'online':
+            if status == 'configuring':
                 printer.initialize() # code to change status from online -> ready on thread start 
-            
+            """
+            I guess we could only really get a status "error" when we ping it and it doesnt work. No reason to 
+            ping for error if its idle. 
+            """
             queueSize = printer.getQueue().getSize()
             if status == "ready" and queueSize > 0: 
                 printer.printNextInQueue()
                 
     def pingForStatus(self): 
+        """_summary_ psuedo code 
+        for printer in threads: 
+            status = printer.getStatus()
+            if status == printing: 
+                GCODE for print status 
+        """
         pass 
     
     
