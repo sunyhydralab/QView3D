@@ -72,10 +72,25 @@ export function useRetrievePrinters() {
 // gets the printers that have threads information from the server
 export function useRetrievePrintersInfo() {
   return {
-    async retrieve() {
+    async retrieveInfo() {
       try {
         const response = await api('getprinterinfo')
         return response // return the response directly
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
+}
+
+// gets the printers queue
+// route works but unsure if it is correctly sending the queue back
+export function useGetPrintersQueue() {
+  return {
+    async queue(name: string) {
+      try {
+        const response = await api(`getqueue/${name}`)
+        return response
       } catch (error) {
         console.error(error)
       }

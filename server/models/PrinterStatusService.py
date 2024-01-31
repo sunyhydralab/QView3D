@@ -43,6 +43,14 @@ class PrinterStatusService:
             printer_info_list.append(printer_info)
         return printer_info_list
         
+    # adds a job to the printer queue
+    # maybe move method to printer.py???
+    def add_job_to_printer_queue(self, job):
+        for thread in self.printer_threads:
+            if thread.printer.name == job.printer.name:
+                thread.printer.queue.addToBack(job.id)
+                return
+        raise ValueError(f"No printer found with name {job.printer}")
         
     def update_thread(self, printer):
         """_summary_
