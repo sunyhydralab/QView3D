@@ -48,3 +48,6 @@ class Job(db.Model):
         
     def getName(self):
         return self.name
+    
+    def getFile(self):
+        return self.file

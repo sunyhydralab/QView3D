@@ -15,7 +15,7 @@ class Printer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     device = db.Column(db.String(50), nullable=False)
     description = db.Column(db.String(50), nullable=False)
-    hwid = db.Column(db.String(50), nullable=False)
+    hwid = db.Column(db.String(150), nullable=False)
     name = db.Column(db.String(50), nullable=False)
     status = None  # default setting on printer start. Runs initialization and status switches to "ready" automatically.
     date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -173,9 +173,9 @@ class Printer(db.Model):
         self.setSer(port)
         if self.getSer():
             self.setStatus("printing")
-            self.reset()
+            self.reset(initializeStatus=False)
             self.parseGcode(file)
-            self.reset()
+            self.reset(initializeStatus=False)
             self.disconnect()
             self.setStatus("complete")
             # WHEN THE USER CLEARS THE JOB, THEN we can remove the job from printer queue,
