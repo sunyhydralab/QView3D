@@ -33,10 +33,10 @@ class Printer(db.Model):
 
     # general classes
     @classmethod
-    def searchByDevice(cls, device):
+    def searchByDevice(cls, hwid):
         try:
             # Query the database to find a printer by device
-            printer = cls.query.filter_by(device=device).first()
+            printer = cls.query.filter_by(hwid=hwid).first()
             return printer is not None
 
         except SQLAlchemyError as e:
@@ -45,7 +45,7 @@ class Printer(db.Model):
 
     @classmethod
     def create_printer(cls, device, description, hwid, name, status):
-        printerExists = cls.searchByDevice(device)
+        printerExists = cls.searchByDevice(hwid)
         if printerExists:
             return {"success": False, "message": "Printer already registered."}
         else:
