@@ -35,7 +35,7 @@ onMounted(async () => {
                     <th>{{ job.file }}</th>
                     <th>{{ job.date }}</th>
                     <th>{{ job.status }}</th>
-                    <th>{{ job.printer }}</th>
+                    <th>{{ job.printerid }}</th>
                     <th><button class="rerun"></button></th>
                 </tr>
             </div>
