@@ -27,6 +27,7 @@ class PrinterStatusService:
                 hwid=printer_info["hwid"],
                 name=printer_info["name"],
             )
+            print(printer.getId())
             printer_thread = self.start_printer_thread(printer)  # creating a thread for each printer object
             self.printer_threads.append(printer_thread)
 
@@ -35,6 +36,7 @@ class PrinterStatusService:
 
     def update_thread(self, printer):
         while True:
+            time.sleep(2)
             status = printer.getStatus()
             # time sleep
             if status == "configuring":

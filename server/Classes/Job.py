@@ -55,3 +55,6 @@ class Job:
             
     def getFile(self): 
         return self.file
+    
+    def getName(self):
+        return self.name

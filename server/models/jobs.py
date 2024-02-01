@@ -46,3 +46,5 @@ class Job(db.Model):
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500
         
+    def getName(self):
+        return self.name

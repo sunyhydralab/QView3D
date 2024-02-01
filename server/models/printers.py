@@ -17,17 +17,19 @@ class Printer(db.Model):
     description = db.Column(db.String(50), nullable=False)
     hwid = db.Column(db.String(50), nullable=False)
     name = db.Column(db.String(50), nullable=False)
-    status = "configuring"  # default setting on printer start. Runs initialization and status switches to "ready" automatically.
+    status = None  # default setting on printer start. Runs initialization and status switches to "ready" automatically.
     date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     queue = Queue()
     ser = None
 
-    def __init__(self, device, description, hwid, name, id):
-        self.id = id
+    def __init__(self, device, description, hwid, name, status='configuring', id=None):
         self.device = device
         self.description = description
         self.hwid = hwid
         self.name = name
+        self.status = status
+        if id is not None:
+            self.id = id
 
     # general classes
     @classmethod
@@ -109,6 +111,9 @@ class Printer(db.Model):
 
     def getSer(self):
         return self.ser
+    
+    def getId(self):
+        return self.id
 
     def setSer(self, port):
         self.ser = port

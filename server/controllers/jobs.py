@@ -25,11 +25,13 @@ def add_job_to_queue():
         # date = data["date"]
         printerid= data["printerid"]
         
-        job = Job(file, name, printer)
+        job = Job(file, name, printerid)
         threads = printer_status_service.getThreadArray()
-        printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))[0]
+        printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))[0].printer
         
         printerobject.getQueue().addToBack(job)
+        
+        # print(printerobject.getQueue().getNext().getName())
         # set job status once in queue 
         
         # job = Job.create_job(file, name, status, date, printer)

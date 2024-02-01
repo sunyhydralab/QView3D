@@ -51,6 +51,7 @@ app.register_blueprint(status_bp)
 with app.app_context():
     try:
         res = getRegisteredPrinters() # gets registered printers from DB 
+        print(res)
         data = res[0].get_json() # converts to JSON 
         printers_data = data.get("printers", []) # gets the values w/ printer data
         printer_status_service.create_printer_threads(printers_data)

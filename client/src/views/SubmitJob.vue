@@ -38,7 +38,7 @@ const handleSubmit = async () => {
                 name: name.value as string,
                 file: file.value as File,
                 // date: new Date(),
-                status: selectedPrinter.value?.status as string,
+                // status: selectedPrinter.value?.status as string,
                 printerid: selectedPrinter.value?.id as number,
             }
             // send job to printers queue
