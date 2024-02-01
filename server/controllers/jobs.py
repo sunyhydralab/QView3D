@@ -21,12 +21,19 @@ def add_job_to_queue():
         data = request.get_json()
         file = data["file"]
         name = data["name"]
-        status = data["status"]
-        date = data["date"]
-        printer = data["printer"]
+        # status = data["status"]
+        # date = data["date"]
+        printerid= data["printerid"]
         
-        job = Job.create_job(file, name, status, date, printer)
-        printer_status_service.add_job_to_printer_queue(job)
+        job = Job(file, name, printer)
+        threads = printer_status_service.getThreadArray()
+        printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))[0]
+        
+        printerobject.getQueue().addToBack(job)
+        # set job status once in queue 
+        
+        # job = Job.create_job(file, name, status, date, printer)
+        # printer_status_service.add_job_to_printer_queue(job)
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     except Exception as e:

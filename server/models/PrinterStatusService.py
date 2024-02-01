@@ -13,7 +13,7 @@ class PrinterStatusService:
         self.printer_threads = [] # array of printer threads
 
     def start_printer_thread(self, printer):
-        thread = PrinterThread(printer, target=self.update_thread, args=(printer,)) # temporary lock 
+        thread = PrinterThread(printer, target=self.update_thread, args=(printer,)) 
         thread.start()
         return thread
 
@@ -27,9 +27,7 @@ class PrinterStatusService:
                 hwid=printer_info["hwid"],
                 name=printer_info["name"],
             )
-            printer_thread = self.start_printer_thread(
-                printer
-            )  # creating a thread for each printer object
+            printer_thread = self.start_printer_thread(printer)  # creating a thread for each printer object
             self.printer_threads.append(printer_thread)
 
         # creating seperate thread to loop through all of the printer threads to ping them for print status
@@ -61,6 +59,7 @@ class PrinterStatusService:
                 "hwid": printer.hwid,
                 "name": printer.name,
                 "status": printer.status,
+                "id": printer.id
             }
             printer_info_list.append(printer_info)
         return printer_info_list

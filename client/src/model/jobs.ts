@@ -6,9 +6,10 @@ import {toast} from "./toast";
 export interface Job{
     name: string; 
     file: File; 
-    date: Date;
-    status: string; 
-    printer: string; //store printer name 
+    date?: Date;
+    status?: string; 
+    // printer: string; //store printer name 
+    printerid: number; 
 }
 
 export function useGetJobs(){

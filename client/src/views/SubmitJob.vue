@@ -12,6 +12,7 @@ const selectedPrinter = ref<Device | null>(null)
 const file = ref<File>()
 const quantity = ref<number>(1)
 const priority = ref<boolean>(false)
+const name = ref<string>()
 
 // file upload
 const handleFileUpload = (event: Event) => {
@@ -34,11 +35,11 @@ const handleSubmit = async () => {
         for (let i = 0; i < quantity.value; i++) {
             const job: Job = {
                 //name of file
-                name: file.value?.name as string,
+                name: name.value as string,
                 file: file.value as File,
-                date: new Date(),
+                // date: new Date(),
                 status: selectedPrinter.value?.status as string,
-                printer: selectedPrinter.value?.name as string,
+                printerid: selectedPrinter.value?.id as number,
             }
             // send job to printers queue
             try {
@@ -59,7 +60,7 @@ const handleSubmit = async () => {
             <form @submit.prevent="handleSubmit">
                 <select v-model="selectedPrinter" required>
                     <option value="None">Device: None</option>
-                    <option v-for="printer in printers" :value="printer">
+                    <option v-for="printer in printers" :value="printer" :key="printer.id">
                         {{ printer.name }}
                         <!-- maybe show the status of the printer here??? -->
                     </option>
@@ -78,6 +79,10 @@ const handleSubmit = async () => {
 
                 <label for="priority">Priority job?</label>
                 <input v-model="priority" type="checkbox" id="priority" name="priority">
+                <br><br>
+
+                <label for="name">Name</label>
+                <input v-model="name" type="text" id="name" name="name">
 
                 <br><br>
                 <!-- This form data does NOT go into the database -- goes into in-memory printer array to be handled. 
