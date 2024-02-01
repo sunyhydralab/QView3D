@@ -61,7 +61,7 @@ def registerPrinter():
         
 # method to get the queue for a printer
 # unsure if this works tbh, need help!
-@ports_bp.route("/getqueue/<printer_name>", methods=["GET"])
+@ports_bp.route("/getqueue", methods=["GET"])
 def getQueue(printer_name):
     try:
         # Query the database to find the printer by name

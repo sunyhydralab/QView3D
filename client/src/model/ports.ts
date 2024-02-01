@@ -89,9 +89,9 @@ export function useRetrievePrintersInfo() {
 // route works but unsure if it is correctly sending the queue back
 export function useGetPrintersQueue() {
   return {
-    async queue(name: string) {
+    async queue() {
       try {
-        const response = await api(`getqueue/${name}`)
+        const response = await api(`getqueue`)
         return response
       } catch (error) {
         console.error(error)
