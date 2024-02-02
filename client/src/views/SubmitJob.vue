@@ -74,7 +74,7 @@ const handleSubmit = async () => {
         <div class="form-container">
             <form @submit.prevent="handleSubmit">
                 <select v-model="selectedPrinter" required>
-                    <option value="None">Device: None</option>
+                    <option :value="null">Device: None</option>
                     <option v-for="printer in printers" :value="printer" :key="printer.id">
                         {{ printer.name }}
                         <!-- maybe show the status of the printer here??? -->
