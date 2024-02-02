@@ -133,17 +133,33 @@ class Printer(db.Model):
         self.sendGcode("G28")
         self.sendGcode("G92 E0", initializeStatus)
 
-    def parseGcode(self, path):
-        with open(path, "r") as g:
-            # Replace file with the path to the file. "r" means read mode.
-            for line in g:
-                # remove whitespace
-                line = line.strip()
-                # Don't send empty lines and comments. ";" is a comment in gcode.
-                if len(line) == 0 or line.startswith(";"):
-                    continue
-                # Send the line to the printer.
-                self.sendGcode(line, self.ser)
+    # def parseGcode(self, path):
+    #     with open(path, "r") as g:
+    #         # Replace file with the path to the file. "r" means read mode.
+    #         for line in g:
+    #             # remove whitespace
+    #             line = line.strip()
+    #             # Don't send empty lines and comments. ";" is a comment in gcode.
+    #             if len(line) == 0 or line.startswith(";"):
+    #                 continue
+    #             # Send the line to the printer.
+    #             self.sendGcode(line, self.ser)
+    
+    def parseGcode(self, file_content):
+    # Split the file content into lines
+        lines = file_content.splitlines()
+
+        # Iterate over each line
+        for line in lines:
+            # Remove leading and trailing whitespace
+            line = line.strip()
+
+            # Don't send empty lines and comments. ";" is a comment in gcode.
+            if len(line) == 0 or line.startswith(";"):
+                continue
+
+            # Send the line to the printer.
+            self.sendGcode(line, self.ser)
 
     # Function to send gcode commands
     def sendGcode(self, message, initializeStatus=False):
