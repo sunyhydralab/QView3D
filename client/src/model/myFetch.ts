@@ -1,18 +1,21 @@
 const API_ROOT = import.meta.env.VITE_API_ROOT as string;
 
 export function rest(url: string, body?: unknown, method?: string, headers?: HeadersInit){
-    console.log(body instanceof FormData)
-    const contentType = body instanceof FormData ? 'multipart/form-data' : 'application/json';
-    console.log(contentType)
-    return fetch(url, {
+    const isFormData = body instanceof FormData;
+    const options: RequestInit = {
         method: method ?? (body ? "POST" : "GET"),
         headers: {
-            // 'Content-Type': 'application/json',
-            'Content-Type': contentType,
             ...headers
         },
-        body: body ? JSON.stringify(body) : undefined
-    })
+        body: isFormData ? body : JSON.stringify(body)
+    };
+
+    if (!isFormData) {
+        options.headers = options.headers || {};
+        (options.headers as Record<string, string>)['Content-Type'] = 'application/json';
+    }
+
+    return fetch(url, options)
         .then(response => response.ok 
             ? response.json()
             : response.json().then(err => Promise.reject(err))    )
