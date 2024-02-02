@@ -18,10 +18,6 @@ def getJobs():
 @jobs_bp.route('/addjobtoqueue', methods=["POST"])
 def add_job_to_queue():
     try:
-        # data = request.get_json()
-        # file = data["file"]
-        # name = data["name"]
-        # printerid= data["printerid"]
         file = request.files['file']  # Access file directly from request.files
         name = request.form['name']  # Access other form fields from request.form
         printerid = request.form['printerid']
@@ -30,7 +26,7 @@ def add_job_to_queue():
         job = Job(file, name, printerid)
         threads = printer_status_service.getThreadArray()
         printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))[0].printer
-        
+
         printerobject.getQueue().addToBack(job)
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
