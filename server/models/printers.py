@@ -146,8 +146,11 @@ class Printer(db.Model):
     #             self.sendGcode(line, self.ser)
     
     def parseGcode(self, file_content):
-    # Split the file content into lines
-        lines = file_content.splitlines()
+        # Read the BytesIO object into a string
+        content_str = file_content.read().decode('utf-8')
+
+        # Split the string into lines
+        lines = content_str.splitlines()
 
         # Iterate over each line
         for line in lines:
@@ -165,7 +168,7 @@ class Printer(db.Model):
     def sendGcode(self, message, initializeStatus=False):
         # Encode and send the message to the printer.
         self.ser.write(f"{message}\n".encode("utf-8"))
-        # Sleep the printer to give it enough time to get the instuction.
+        # Sleep the printer to give it enough time to get the instruction.
         time.sleep(0.1)
         # Save and print out the response from the printer. We can use this for error handling and status updates.
         while True:
@@ -183,10 +186,11 @@ class Printer(db.Model):
     def printNextInQueue(self):
         job = self.getQueue().getNext()
         file = job.getFile()
-        port = serial.Serial(
-            self.getDevice(), 115200, timeout=1
-        )  # set up serial communication
-        self.setSer(port)
+        print("THIS IS THE DEVICE: ", self.getDevice())
+        # port = serial.Serial(
+        #     self.getDevice(), 115200, timeout=1
+        # )  # set up serial communication
+        # self.setSer(port)
         if self.getSer():
             self.setStatus("printing")
             self.reset(initializeStatus=False)
@@ -205,6 +209,7 @@ class Printer(db.Model):
         self.ser = serial.Serial(
             self.getDevice(), 115200, timeout=1
         )  # set up serial communication
+        print("SERIAL CONNECTION: ", self.getSer())
         if self.getSer():
             self.reset(initializeStatus=True)
         else:
