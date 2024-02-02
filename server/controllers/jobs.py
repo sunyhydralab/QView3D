@@ -24,12 +24,16 @@ def add_job_to_queue():
         # printerid= data["printerid"]
         file = request.files['file']  # Access file directly from request.files
         name = request.form['name']  # Access other form fields from request.form
-        printerid = request.form['printerid']
+        printerid = int(request.form['printerid'])
         print(file)
         
         job = Job(file, name, printerid)
         threads = printer_status_service.getThreadArray()
+        
+        print(threads)
         printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))[0].printer
+        # printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))
+        print(printerobject)
         
         printerobject.getQueue().addToBack(job)
         
