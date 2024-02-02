@@ -27,7 +27,6 @@ class PrinterStatusService:
                 hwid=printer_info["hwid"],
                 name=printer_info["name"],
             )
-            print(printer.getId())
             printer_thread = self.start_printer_thread(printer)  # creating a thread for each printer object
             self.printer_threads.append(printer_thread)
 

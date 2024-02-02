@@ -32,24 +32,33 @@ onMounted(async () => {
 // sends job to printer queue
 const handleSubmit = async () => {
     if (selectedPrinter.value) {
-        for (let i = 0; i < quantity.value; i++) {
-            const job: Job = {
-                //name of file
-                name: name.value as string,
-                file: file.value as File,
-                // date: new Date(),
-                // status: selectedPrinter.value?.status as string,
-                printerid: selectedPrinter.value?.id as number,
-            }
+        // for (let i = 0; i < quantity.value; i++) {
+            // const job: Job = {
+            //     //name of file
+            //     name: name.value as string,
+            //     file: file.value as File,
+            //     // date: new Date(),
+            //     // status: selectedPrinter.value?.status as string,
+            //     printerid: selectedPrinter.value?.id as number,
+            // }
             // send job to printers queue
+            const formData = new FormData(); // Create FormData object
+            
+            // Append form data
+            formData.append('file', file.value as File);
+
+            // Append other form fields
+            formData.append('name', name.value as string);
+            formData.append('printerid', selectedPrinter.value?.id?.toString() || '');
+
             try {
-                await addJobToQueue(job)
+                await addJobToQueue(formData)
             } catch (error) {
                 console.error('There has been a problem with your fetch operation:', error)
             }
         }
     }    
-}
+//}
 
 </script>
 <template>

@@ -29,7 +29,7 @@ export function useGetJobs(){
 //function to add job to queue
 export function useAddJobToQueue(){
     return {
-        async addJobToQueue(job: Job){
+        async addJobToQueue(job: FormData){
             try{
                 const response = await api('addjobtoqueue', job);
                 return response; 
