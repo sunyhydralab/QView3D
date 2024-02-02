@@ -1,3 +1,4 @@
+from io import BytesIO
 from flask import Blueprint, jsonify, request, make_response
 from models.jobs import Job
 from app import printer_status_service
@@ -27,7 +28,11 @@ def add_job_to_queue():
         printerid = int(request.form['printerid'])
         print(file)
         
-        job = Job(file, name, printerid)
+        # Read the file contents into memory
+        file_contents = BytesIO(file.read())
+        
+        # job = Job(file, name, printerid)
+        job = Job(file_contents, name, printerid)
         threads = printer_status_service.getThreadArray()
         
         print(threads)
