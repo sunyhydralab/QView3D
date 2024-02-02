@@ -36,14 +36,6 @@ def getRegisteredPrinters():
 
 @ports_bp.route("/register", methods=["POST"])
 def registerPrinter(): 
-    """_summary
-    interface RegisteredDevice {
-        device: string; 
-        description: string; 
-        hwid: string; 
-        customname: string; 
-    }
-    """
     try: 
         data = request.get_json() # get json data 
         # extract data 

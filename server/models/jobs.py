@@ -18,10 +18,11 @@ class Job(db.Model):
     printer_id = db.Column(db.Integer, db.ForeignKey('printer.id'), nullable = False)
     printer = db.relationship('Printer', backref='Job')
     
-    def __init__(self, file, name, printerid): 
+    def __init__(self, file, name, printer_id, status='inqueue'): 
         self.file = file 
         self.name = name 
-        self.printer_id = printerid 
+        self.printer_id = printer_id 
+        self.status = status # set default status to be in-queue
     
     def getPrinterId(self): 
         return self.printer_id
@@ -46,8 +47,38 @@ class Job(db.Model):
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500
         
+    # insert into job history 
+    @classmethod
+    def jobHistoryInsert(cls, file, name, printer_id, status): 
+        try:
+            job = cls(
+                file=file,
+                name=name,
+                printer_id=printer_id,
+                status=status,
+            )
+            db.session.add(job)
+            db.session.commit()
+            print("Job added to collection.")
+            return {"success": True, "message": "Job added to collection."}
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return (
+                jsonify({"error": "Failed to add job. Database error"}),
+                500,
+            )
+        
     def getName(self):
         return self.name
     
     def getFile(self):
         return self.file
+    
+    def getStatus(self): 
+        return self.status 
+    
+    def getPrinterId(self): 
+        return self.printer_id
+    
+    def setStatus(self, status): 
+        self.status = status

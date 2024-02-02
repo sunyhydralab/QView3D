@@ -21,6 +21,7 @@ class Printer(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     queue = Queue()
     ser = None
+    currentJob = None 
 
     def __init__(self, device, description, hwid, name, status='configuring', id=None):
         self.device = device
@@ -96,25 +97,6 @@ class Printer(db.Model):
                 500,
             )
 
-    # printer-specific classes
-    def getDevice(self):
-        return self.device
-
-    def getQueue(self):
-        return self.queue
-
-    def getStatus(self):
-        return self.status
-
-    def getName(self):
-        return self.name
-
-    def getSer(self):
-        return self.ser
-    
-    def getId(self):
-        return self.id
-
     def setSer(self, port):
         self.ser = port
 
@@ -130,21 +112,9 @@ class Printer(db.Model):
             self.setSer(None)
 
     def reset(self, initializeStatus):
-        self.sendGcode("G28")
+        self.sendGcode("G28", initializeStatus)
         self.sendGcode("G92 E0", initializeStatus)
 
-    # def parseGcode(self, path):
-    #     with open(path, "r") as g:
-    #         # Replace file with the path to the file. "r" means read mode.
-    #         for line in g:
-    #             # remove whitespace
-    #             line = line.strip()
-    #             # Don't send empty lines and comments. ";" is a comment in gcode.
-    #             if len(line) == 0 or line.startswith(";"):
-    #                 continue
-    #             # Send the line to the printer.
-    #             self.sendGcode(line, self.ser)
-    
     def parseGcode(self, file_content):
         # Read the BytesIO object into a string
         content_str = file_content.read().decode('utf-8')
@@ -177,6 +147,15 @@ class Printer(db.Model):
                 if initializeStatus == True:
                     self.setStatus("ready")
                 break
+            else: 
+                time.sleep(2)
+                if self.getStatus() == "printing":
+                    # set job status to error, do a database insert. do not remove from queue. wait for user intervention. 
+                    self.getCurrentJob().setStatus("error") # set status of job to error 
+                    # self.jobDatabaseInsert() # If error, do not remove from queue. Insert job into DB with status "error."
+                    # only remove from queue when user clicks a button on frontend to clear or mark as error.  
+                self.setStatus("error")
+                return
         print(f"Command: {message}, Recieved: {response}")
 
     def print_job(self, job):
@@ -184,22 +163,20 @@ class Printer(db.Model):
             self.send_gcode(line)
 
     def printNextInQueue(self):
-        job = self.getQueue().getNext()
+        job = self.getQueue().getNext() # get next job 
+        self.setCurrentJob(job) # set current job 
         file = job.getFile()
-        print("THIS IS THE DEVICE: ", self.getDevice())
-        # port = serial.Serial(
-        #     self.getDevice(), 115200, timeout=1
-        # )  # set up serial communication
-        # self.setSer(port)
         if self.getSer():
-            self.setStatus("printing")
+            job.setStatus("printing") # set job status to printing 
+            self.setStatus("printing") # set printer status to printing
             self.reset(initializeStatus=False)
             self.parseGcode(file)
             self.reset(initializeStatus=False)
             self.disconnect()
+            job.setStatus("complete") # set job status to complete 
+            # HERE: PERFORM DATABASE INSERT OF JOB DATA INTO JOB HISTORY TABLE
             self.setStatus("complete")
-            # WHEN THE USER CLEARS THE JOB, THEN we can remove the job from printer queue,
-            # add it to job history collection, and update the printer status in-memory
+            # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready, and set current job to None. 
         else:
             raise Exception(
                 "Failed to establish serial connection for printer: ", self.name
@@ -209,10 +186,39 @@ class Printer(db.Model):
         self.ser = serial.Serial(
             self.getDevice(), 115200, timeout=1
         )  # set up serial communication
-        print("SERIAL CONNECTION: ", self.getSer())
         if self.getSer():
             self.reset(initializeStatus=True)
         else:
             raise Exception(
                 "Failed to establish serial connection for printer: ", self.name
             )
+
+    def jobDatabaseInsert(self):
+        job = self.getCurrentJob()
+        job.jobHistoryInsert(job.getFile(), job.getName(), job.getPrinterId(), job.getStatus())
+        # print("STATUS: ", job.getStatus())
+        
+    # printer-specific classes
+    def getDevice(self):
+        return self.device
+
+    def getQueue(self):
+        return self.queue
+
+    def getStatus(self):
+        return self.status
+
+    def getName(self):
+        return self.name
+
+    def getSer(self):
+        return self.ser
+    
+    def getId(self):
+        return self.id
+    
+    def setCurrentJob(self, job):
+        self.currentJob = job
+        
+    def getCurrentJob(self): 
+        return self.currentJob

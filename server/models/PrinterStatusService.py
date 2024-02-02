@@ -33,19 +33,15 @@ class PrinterStatusService:
         # creating seperate thread to loop through all of the printer threads to ping them for print status
         self.ping_thread = Thread(target=self.pingForStatus)
 
-    def update_thread(self, printer):
+    def update_thread(self, printer): # TARGET FUNCTION 
         while True:
             time.sleep(2)
-            status = printer.getStatus()
+            status = printer.getStatus() # get printer status 
             # time sleep
             if status == "configuring":
                 printer.initialize()  # code to change status from online -> ready on thread start
-            """
-            I guess we could only really get a status "error" when we ping it and it doesnt work. No reason to 
-            ping for error if its idle. 
-            """
             queueSize = printer.getQueue().getSize()
-            if status == "ready" and queueSize > 0:
+            if status == "ready" and queueSize > 0: # CHANGE THIS LATER TO IF STATUS == READY 
                 printer.printNextInQueue()
         # this method will be called by the UI to get the printers that have a threads information
 
