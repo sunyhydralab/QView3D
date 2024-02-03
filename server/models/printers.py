@@ -174,7 +174,7 @@ class Printer(db.Model):
                     # only remove from queue when user clicks a button on frontend to clear or mark as error.  
                 self.setStatus("error")
                 return
-        print(f"Command: {message}, Recieved: {response}")
+        print(f"Command: {message}, Received: {response}")
 
     def print_job(self, job):
         for line in job.gcode_lines:
@@ -202,7 +202,7 @@ class Printer(db.Model):
 
     def initialize(self):
         printerList = self.getConnectedPorts()
-        if self.getDevice() in printerList: # if printer is connected, then run ser 
+        if any(printer['device'] == self.getDevice() for printer in printerList): # if printer is connected, then run ser
             self.ser = serial.Serial(
                 self.getDevice(), 115200, timeout=1
             )  # set up serial communication
