@@ -1,7 +1,5 @@
 Flask==3.0.1
 Flask-MySQLdb==2.0.0
 Flask-Migrate==4.0.5
-Flask-SQLAlchemy==2.0.25
-Flask-Migrate==4.0.5
 Flask-Cors==4.0.0
 pyserial==3.5

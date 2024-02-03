@@ -22,7 +22,6 @@ def add_job_to_queue():
         file = request.files['file']  # Access file directly from request.files
         name = request.form['name']  # Access other form fields from request.form
         printerid = int(request.form['printerid'])
-        print(file)
         
         # Read the file contents into memory
         file_contents = BytesIO(file.read())

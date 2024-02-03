@@ -97,6 +97,21 @@ class Printer(db.Model):
                 500,
             )
 
+    @classmethod
+    def getConnectedPorts(cls): 
+        ports = serial.tools.list_ports.comports()
+        printerList = []
+        for port in ports:
+            port_info = {
+                'device': port.device,
+                'description': port.description,
+                'hwid': port.hwid,
+            }
+            supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
+            # if port.description in supportedPrinters:
+            printerList.append(port_info)
+        return printerList
+        
     def setSer(self, port):
         self.ser = port
 
@@ -183,12 +198,15 @@ class Printer(db.Model):
             )
 
     def initialize(self):
-        self.ser = serial.Serial(
-            self.getDevice(), 115200, timeout=1
-        )  # set up serial communication
-        if self.getSer():
-            self.reset(initializeStatus=True)
+        printerList = self.getConnectedPorts()
+        if self.getDevice() in printerList: # if printer is connected, then run ser 
+            self.ser = serial.Serial(
+                self.getDevice(), 115200, timeout=1
+            )  # set up serial communication
+            if self.getSer():
+                self.reset(initializeStatus=True)
         else:
+            self.setStatus("offline")
             raise Exception(
                 "Failed to establish serial connection for printer: ", self.name
             )
