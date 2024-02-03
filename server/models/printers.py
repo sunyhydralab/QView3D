@@ -1,5 +1,5 @@
 from models.db import db
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.exc import SQLAlchemyError
@@ -8,6 +8,8 @@ from Classes.Queue import Queue
 import serial
 import serial.tools.list_ports
 import time
+from datetime import datetime
+from tzlocal import get_localzone
 
 
 # model for Printer table
@@ -18,7 +20,7 @@ class Printer(db.Model):
     hwid = db.Column(db.String(150), nullable=False)
     name = db.Column(db.String(50), nullable=False)
     status = None  # default setting on printer start. Runs initialization and status switches to "ready" automatically.
-    date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).astimezone(), nullable=False)
     queue = Queue()
     ser = None
     currentJob = None 
@@ -29,6 +31,7 @@ class Printer(db.Model):
         self.hwid = hwid
         self.name = name
         self.status = status
+        self.date = datetime.now(get_localzone())
         if id is not None:
             self.id = id
 
@@ -83,7 +86,7 @@ class Printer(db.Model):
                     "hwid": printer.hwid,
                     "name": printer.name,
                     "status": printer.status,
-                    "date": printer.date,
+                    "date": f"{printer.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(printer.date)}",  # Include timezone abbreviation
                 }
                 for printer in printers
             ]
