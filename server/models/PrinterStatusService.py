@@ -12,13 +12,13 @@ class PrinterThread(Thread):
         super().__init__(*args, **kwargs)
         self.printer = printer
 
-
 class PrinterStatusService:
     def __init__(self):
         self.printer_threads = []  # array of printer threads
 
     def start_printer_thread(self, printer):
         thread = PrinterThread(printer, target=self.update_thread, args=(printer,)) 
+        thread.daemon = True #lets you kill the thread when the main program exits, allows for the server to be shut down
         thread.start()
         return thread
 
@@ -51,12 +51,7 @@ class PrinterStatusService:
                 printer.initialize()  # code to change status from online -> ready on thread start
                 
             queueSize = printer.getQueue().getSize() # get size of queue 
-
-            # if (status == "ready" and queueSize > 0): # if something is in the queue, print next 
-            #     # printer.jobDatabaseInsert(printer.getQueue().getNext()) # get next job in queue and insert into database
-            #     job = printer.getQueue().getNext()
-            #     # self.sendJobToDB(job)
-
+            
             if (status == "ready" and queueSize > 0):
                 printer.printNextInQueue()
         # this method will be called by the UI to get the printers that have a threads information
