@@ -7,6 +7,9 @@ const { retrieveInfo } = useRetrievePrintersInfo()
 const { addJobToQueue } = useAddJobToQueue()
 const printers = ref<Array<Device>>([])
 
+// Form reference
+const form = ref<HTMLFormElement | null>(null);
+
 // Collect form data
 const selectedPrinter = ref<Device | null>(null)
 const file = ref<File>()
@@ -43,11 +46,10 @@ const handleSubmit = async () => {
             await addJobToQueue(formData)
 
             // reset form
-            selectedPrinter.value = null
-            file.value = undefined
-            quantity.value = 1
-            priority.value = false
-            name.value = ''
+            if (form.value) {
+                form.value.reset()
+            }
+            
         } catch (error) {
             console.error('There has been a problem with your fetch operation:', error)
         }
@@ -60,7 +62,7 @@ const handleSubmit = async () => {
         <p>Submit Job View</p>
 
         <div class="form-container">
-            <form @submit.prevent="handleSubmit">
+            <form @submit.prevent="handleSubmit" ref="form">
                 <select v-model="selectedPrinter" required>
                     <option :value="null">Device: None</option>
                     <option v-for="printer in printers" :value="printer" :key="printer.id">
