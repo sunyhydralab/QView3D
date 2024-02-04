@@ -18,12 +18,7 @@ class PrinterStatusService:
         self.printer_threads = []  # array of printer threads
 
     def start_printer_thread(self, printer):
-<<<<<<< HEAD
-        thread = PrinterThread(printer, target=self.update_thread, args=(printer,))
-=======
         thread = PrinterThread(printer, target=self.update_thread, args=(printer,)) 
-        thread.daemon = True # lets you kill the thread when the main program exits, allows for the server to be shut down
->>>>>>> 9224c12879428210e9355d2ccfbf565ed46a4c03
         thread.start()
         return thread
 
