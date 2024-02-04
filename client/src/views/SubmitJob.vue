@@ -23,6 +23,13 @@ const handleFileUpload = (event: Event) => {
     file.value = target.files ? target.files[0] : undefined
 }
 
+// validate quantity
+const validateQuantity = () => {
+    if (quantity.value < 1) {
+        quantity.value = 1
+    }
+}
+
 // fills printers array with printers that have threads from the database
 onMounted(async () => {
     try {
@@ -49,6 +56,11 @@ const handleSubmit = async () => {
             if (form.value) {
                 form.value.reset()
             }
+            // reset Vue refs
+            selectedPrinter.value = null;
+            quantity.value = 1;
+            priority.value = false;
+            name.value = undefined;
             
         } catch (error) {
             console.error('There has been a problem with your fetch operation:', error)
@@ -79,7 +91,7 @@ const handleSubmit = async () => {
                 <!-- Make it so user can't insert negative quantity. Decide on upper limit. -->
                 <!-- Make load-balancing feature -->
                 <label for="name">Quantity</label>
-                <input v-model="quantity" type="number" id="quantity" name="quantity" min="0" required>
+                <input v-model="quantity" type="number" id="quantity" name="quantity" min="0" required @input="validateQuantity">
                 <br><br>
 
                 <label for="priority">Priority job?</label>
