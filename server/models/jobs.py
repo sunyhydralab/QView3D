@@ -1,10 +1,12 @@
 from models.db import db 
-from datetime import datetime
+from datetime import datetime, timezone
 from models.printers import Printer
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from flask import jsonify 
 from sqlalchemy.exc import SQLAlchemyError
+from datetime import datetime
+from tzlocal import get_localzone
 
 # model for job history table 
 class Job(db.Model):
@@ -12,7 +14,7 @@ class Job(db.Model):
     file = db.Column(db.LargeBinary, nullable=False)
     name = db.Column(db.String(50), nullable = False)
     status = db.Column(db.String(50), nullable=False)
-    date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)  
+    date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).astimezone(), nullable=False)
     
     # foregin key relationship to match jobs to the printer printed on 
     printer_id = db.Column(db.Integer, db.ForeignKey('printer.id'), nullable = False)
@@ -23,6 +25,7 @@ class Job(db.Model):
         self.name = name 
         self.printer_id = printer_id 
         self.status = status # set default status to be in-queue
+        self.date = datetime.now(get_localzone())
     
     def getPrinterId(self): 
         return self.printer_id
@@ -36,7 +39,7 @@ class Job(db.Model):
                 "file": jobs.file, 
                 "name": jobs.name, 
                 "status": jobs.status, 
-                "date": jobs.date, 
+                "date": f"{jobs.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(jobs.date)}",  
                 "printer": {
                     "name": Printer.name
                 }

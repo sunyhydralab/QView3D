@@ -8,7 +8,6 @@ from Classes.Queue import Queue
 import serial
 import serial.tools.list_ports
 import time
-from datetime import datetime
 from tzlocal import get_localzone
 
 
