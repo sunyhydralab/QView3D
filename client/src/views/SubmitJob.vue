@@ -7,6 +7,9 @@ const { retrieveInfo } = useRetrievePrintersInfo()
 const { addJobToQueue } = useAddJobToQueue()
 const printers = ref<Array<Device>>([])
 
+// Form reference
+const form = ref<HTMLFormElement | null>(null);
+
 // Collect form data
 const selectedPrinter = ref<Device | null>(null)
 const file = ref<File>()
@@ -18,6 +21,13 @@ const name = ref<string>()
 const handleFileUpload = (event: Event) => {
     const target = event.target as HTMLInputElement
     file.value = target.files ? target.files[0] : undefined
+}
+
+// validate quantity
+const validateQuantity = () => {
+    if (quantity.value < 1) {
+        quantity.value = 1
+    }
 }
 
 // fills printers array with printers that have threads from the database
@@ -43,11 +53,15 @@ const handleSubmit = async () => {
             await addJobToQueue(formData)
 
             // reset form
-            selectedPrinter.value = null
-            file.value = undefined
-            quantity.value = 1
-            priority.value = false
-            name.value = ''
+            if (form.value) {
+                form.value.reset()
+            }
+            // reset Vue refs
+            selectedPrinter.value = null;
+            quantity.value = 1;
+            priority.value = false;
+            name.value = undefined;
+            
         } catch (error) {
             console.error('There has been a problem with your fetch operation:', error)
         }
@@ -60,7 +74,7 @@ const handleSubmit = async () => {
         <p>Submit Job View</p>
 
         <div class="form-container">
-            <form @submit.prevent="handleSubmit">
+            <form @submit.prevent="handleSubmit" ref="form">
                 <select v-model="selectedPrinter" required>
                     <option :value="null">Device: None</option>
                     <option v-for="printer in printers" :value="printer" :key="printer.id">
@@ -77,7 +91,7 @@ const handleSubmit = async () => {
                 <!-- Make it so user can't insert negative quantity. Decide on upper limit. -->
                 <!-- Make load-balancing feature -->
                 <label for="name">Quantity</label>
-                <input v-model="quantity" type="number" id="quantity" name="quantity" min="0" required>
+                <input v-model="quantity" type="number" id="quantity" name="quantity" min="0" required @input="validateQuantity">
                 <br><br>
 
                 <label for="priority">Priority job?</label>

@@ -32,7 +32,6 @@ def add_job_to_queue():
         threads = printer_status_service.getThreadArray()
         
         printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))[0].printer
-        
         printerobject.getQueue().addToBack(job)
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200

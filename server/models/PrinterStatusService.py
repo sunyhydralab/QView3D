@@ -18,12 +18,17 @@ class PrinterStatusService:
         self.printer_threads = []  # array of printer threads
 
     def start_printer_thread(self, printer):
+<<<<<<< HEAD
         thread = PrinterThread(printer, target=self.update_thread, args=(printer,))
+=======
+        thread = PrinterThread(printer, target=self.update_thread, args=(printer,)) 
+        thread.daemon = True # lets you kill the thread when the main program exits, allows for the server to be shut down
+>>>>>>> 9224c12879428210e9355d2ccfbf565ed46a4c03
         thread.start()
         return thread
 
     def create_printer_threads(self, printers_data):
-        # all printer statuses intiialized to be 'online.' Instantly changes to 'ready' on initialization -- test with 'reset printer' command.
+        # all printer statuses initialized to be 'online.' Instantly changes to 'ready' on initialization -- test with 'reset printer' command.
         for printer_info in printers_data:
             printer = Printer(
                 id=printer_info["id"],
@@ -37,7 +42,7 @@ class PrinterStatusService:
             )  # creating a thread for each printer object
             self.printer_threads.append(printer_thread)
 
-        # creating seperate thread to loop through all of the printer threads to ping them for print status
+        # creating separate thread to loop through all of the printer threads to ping them for print status
         self.ping_thread = Thread(target=self.pingForStatus)
 
     def update_thread(self, printer):  # TARGET FUNCTION
@@ -80,7 +85,7 @@ class PrinterStatusService:
         return printer_info_list
 
     def pingForStatus(self):
-        """_summary_ psuedo code
+        """_summary_ pseudo code
         for printer in threads:
             status = printer.getStatus()
             if status == printing:

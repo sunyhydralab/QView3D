@@ -8,7 +8,6 @@ from Classes.Queue import Queue
 import serial
 import serial.tools.list_ports
 import time
-from datetime import datetime
 from tzlocal import get_localzone
 import os 
 import json 
@@ -173,9 +172,15 @@ class Printer(db.Model):
                     self.setStatus("ready")
                 break
             else: 
-                self.setStatus("error") # if ok is not in response, set status equal to error. 
-                break
-        print(f"Command: {message}, Recieved: {response}")
+                time.sleep(2)
+                if self.getStatus() == "printing":
+                    # set job status to error, do a database insert. do not remove from queue. wait for user intervention. 
+                    self.getCurrentJob().setStatus("error") # set status of job to error 
+                    # self.jobDatabaseInsert() # If error, do not remove from queue. Insert job into DB with status "error."
+                    # only remove from queue when user clicks a button on frontend to clear or mark as error.  
+                self.setStatus("error")
+                return
+        print(f"Command: {message}, Received: {response}")
 
     def print_job(self, job):
         for line in job.gcode_lines:
@@ -211,7 +216,7 @@ class Printer(db.Model):
 
     def initialize(self):
         printerList = self.getConnectedPorts()
-        if self.getDevice() in printerList: # if printer is connected, then run ser 
+        if any(printer['device'] == self.getDevice() for printer in printerList): # if printer is connected, then run ser
             self.ser = serial.Serial(
                 self.getDevice(), 115200, timeout=1
             )  # set up serial communication
@@ -270,4 +275,5 @@ class Printer(db.Model):
         return self.ser
     
     def getId(self):
+        return self.id
         return self.id
