@@ -171,15 +171,16 @@ class Printer(db.Model):
                 if initializeStatus == True: # if first-time connecting, this is the reset function setting the status to "ready"
                     self.setStatus("ready")
                 break
-            else: 
-                time.sleep(2)
-                if self.getStatus() == "printing":
-                    # set job status to error, do a database insert. do not remove from queue. wait for user intervention. 
-                    self.getCurrentJob().setStatus("error") # set status of job to error 
-                    # self.jobDatabaseInsert() # If error, do not remove from queue. Insert job into DB with status "error."
-                    # only remove from queue when user clicks a button on frontend to clear or mark as error.  
-                self.setStatus("error")
-                return
+            # if stops while printing, set status to error.
+            # else:
+            #     time.sleep(2)
+            #     if self.getStatus() == "printing":
+            #         # set job status to error, do a database insert. do not remove from queue. wait for user intervention. 
+            #         self.getCurrentJob().setStatus("error") # set status of job to error 
+            #         # self.jobDatabaseInsert() # If error, do not remove from queue. Insert job into DB with status "error."
+            #         # only remove from queue when user clicks a button on frontend to clear or mark as error.  
+            #     self.setStatus("error")
+            #     return
         print(f"Command: {message}, Received: {response}")
 
     def print_job(self, job):

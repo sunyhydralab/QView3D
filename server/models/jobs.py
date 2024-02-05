@@ -1,3 +1,4 @@
+import base64
 from models.db import db 
 from datetime import datetime, timezone
 from models.printers import Printer
@@ -16,7 +17,7 @@ class Job(db.Model):
     status = db.Column(db.String(50), nullable=False)
     date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).astimezone(), nullable=False)
     
-    # foregin key relationship to match jobs to the printer printed on 
+    # foreign key relationship to match jobs to the printer printed on 
     printer_id = db.Column(db.Integer, db.ForeignKey('printer.id'), nullable = False)
     printer = db.relationship('Printer', backref='Job')
     
@@ -36,16 +37,17 @@ class Job(db.Model):
             jobs = cls.query.all()
             
             jobs_data = [{
-                "file": jobs.file, 
-                "name": jobs.name, 
-                "status": jobs.status, 
-                "date": f"{jobs.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(jobs.date)}",  
+                "file": base64.b64encode(job.file).decode('utf-8') if job.file else None, 
+                "name": job.name, 
+                "status": job.status, 
+                "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",  
                 "printer": {
-                    "name": Printer.name
+                    "name": job.printer.name if job.printer else None
                 }
             } for job in jobs]
+            print(jobs_data)
             
-            return jsonify({"jobs": jobs_data})
+            return jobs_data
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500

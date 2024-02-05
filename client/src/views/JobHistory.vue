@@ -8,7 +8,8 @@ let jobs = ref<Array<Job>>([])
 onMounted(async () => {
     try {
         const joblist = await jobhistory(); // Retrieve jobs from database. TASK FOR LATER: ONLY PORT 20 AT A TIME, INTRODUCE PAGING 
-        jobs.value = joblist; // Bring job array in-memory 
+        // jobs.value = joblist; // Bring job array in-memory 
+        jobs.value = joblist.jobs;
         console.log(joblist)
 
     } catch (error) {
@@ -21,27 +22,32 @@ onMounted(async () => {
     <div class="container">
         <b>Job History View</b>
         <table>
-            <tr>
-                <th>Job Title</th>
-                <th>File</th>
-                <th>Date Completed</th>
-                <th>Final Status</th>
-                <th>Printer</th>
-                <th>Rerun Job</th>
-            </tr>
-            <div v-if="jobs.length > 0">
-                <tr v-for="job in jobs">
-                    <th>{{ job.name }}</th>
-                    <th>{{ job.file }}</th>
-                    <th>{{ job.date }}</th>
-                    <th>{{ job.status }}</th>
-                    <th>{{ job.printerid }}</th>
-                    <th><button class="rerun"></button></th>
+            <thead>
+                <tr>
+                    <th>Job Title</th>
+                    <th>File</th>
+                    <th>Date Completed</th>
+                    <th>Final Status</th>
+                    <th>Printer</th>
+                    <th>Rerun Job</th>
                 </tr>
-            </div>
-            <div v-else>
-                No jobs found. Submit your first job <RouterLink to="/submit">here!</RouterLink>
-            </div>
+            </thead>
+            <tbody v-if="jobs.length > 0">
+                <tr v-for="job in jobs" :key="job.name">
+                    <td>{{ job.name }}</td>
+                    <td>{{ job.file }}</td>
+                    <td>{{ job.date }}</td>
+                    <td>{{ job.status }}</td>
+                    <!-- FIX THIS ERROR -->
+                    <td>{{ job.printer.name }}</td>
+                    <td><button class="rerun"></button></td>
+                </tr>
+            </tbody>
+            <tbody v-else>
+                <tr>
+                    <td colspan="6">No jobs found. Submit your first job <RouterLink to="/submit">here!</RouterLink></td>
+                </tr>
+            </tbody>
         </table>
     </div>
 </template>
