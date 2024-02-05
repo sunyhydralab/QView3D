@@ -140,7 +140,7 @@ class Printer(db.Model):
         if self.getStatus()=="error": # if any error occurs, do not proceed with printing.
             return "error"
         # Read the BytesIO object into a string
-        content_str = file_content.read().decode('utf-8')
+        content_str = file_content.decode('utf-8')
 
         # Split the string into lines
         lines = content_str.splitlines()
@@ -191,12 +191,13 @@ class Printer(db.Model):
         job = self.getQueue().getNext() # get next job 
         self.setCurrentJob(job) # set current job 
         file = job.getFile()
+        file = job.openFile(file)
         if self.getSer():
             job.setStatus("printing") # set job status to printing 
             self.setStatus("printing") # set printer status to printing
             self.reset(initializeStatus=False)
-            verdict = self.parseGcode(file) # passes file to code. returns "complete" if successful, "error" if not. 
-            
+            # verdict = self.parseGcode(file) # passes file to code. returns "complete" if successful, "error" if not. 
+            verdict = "complete"
             if verdict =="complete":
                 job.setStatus("complete") # set job status to complete 
                 self.setStatus("complete")
@@ -206,13 +207,16 @@ class Printer(db.Model):
                 
             self.disconnect()
             
-        self.sendJobToDB(job) # send job to the DB after job complete 
-            # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready. 
+            self.sendJobToDB(job) # send job to the DB after job complete 
+        # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready. 
             
-        # else:
-        #     raise Exception(
-        #         "Failed to establish serial connection for printer: ", self.name
-        #     )
+            job.closeFile(file) # close the file after job is complete.
+            job.deleteFile() # delete the file from dedicated folder after job is complete.
+            
+        else:
+            raise Exception(
+                "Failed to establish serial connection for printer: ", self.name
+            )
 
     def initialize(self):
         printerList = self.getConnectedPorts()
@@ -237,13 +241,15 @@ class Printer(db.Model):
             "file_name": job.getFileName()
         }
         # get the job file 
-        file = job.getFile() 
-        
+        file_path = job.getFile() 
+        with open(file_path, 'rb') as file:
+            file_contents = file.read()
+
         # URL to send through route 
         base_url = os.getenv('BASE_URL')
 
         # Prepare the file to be sent
-        files = {'file': file}
+        files = {'file': (file_path, file_contents)}
 
         # Combine job data and file for sending
         data = {

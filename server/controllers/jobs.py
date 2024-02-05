@@ -28,9 +28,12 @@ def add_job_to_queue():
         printerid = int(request.form['printerid'])
         
         # Read the file contents into memory. QUESTION: WILL THIS WORK FOR LARGE FILES? WILL THIS OVERLOAD THE MEMORY? 
-        file_contents = BytesIO(file.read())
+        # file_contents = BytesIO(file.read())
+        
+        # Save the file to the server
+        Job.saveToFolder(file)
 
-        job = Job(file_contents, name, printerid, file_name=file_name)
+        job = Job(file, name, printerid, file_name=file_name)
         threads = printer_status_service.getThreadArray()
         
         printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))[0].printer
@@ -46,9 +49,11 @@ def add_job_to_queue():
 @jobs_bp.route('/jobdbinsert', methods=["POST"])
 def job_db_insert():
     try:
-        # Get the file from the request
+        # Get the file from the request files
         file = request.files['file']
-        # # Get the job data from the request
+        file_contents = file.read()
+
+        # Get the job data from the request
         jobdata = request.form.get('jobdata')
         jobdata = json.loads(jobdata)  # Convert jobdata from JSON to a Python dictionary
 
@@ -59,7 +64,9 @@ def job_db_insert():
         file_name=jobdata.get('file_name')
 
         # Insert the job data into the database
-        res = Job.jobHistoryInsert(file, name, printer_id, status, file_name)
+        res = Job.jobHistoryInsert(file_contents, name, printer_id, status, file_name)
+        
+        del file_contents  # Delete the file contents from memory
 
         # print(name, printer_id, status)
         return "success"

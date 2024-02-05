@@ -1,4 +1,5 @@
 import base64
+import os
 from models.db import db 
 from datetime import datetime, timezone
 from models.printers import Printer
@@ -82,7 +83,18 @@ class Job(db.Model):
         return self.name
     
     def getFile(self):
-        return self.file
+        # Open the file in binary mode and return the file object
+        file_path = os.path.join("..", "uploads", self.file.filename)
+        return file_path
+    
+    def openFile(self, file):
+        # open the file in binary mode
+        file = open(file, 'rb')
+        return file        
+    
+    def closeFile(self, file):
+        # close the file
+        file.close()
     
     def getStatus(self): 
         return self.status 
@@ -96,4 +108,18 @@ class Job(db.Model):
     def setStatus(self, status): 
         self.status = status
         
+    def saveToFolder(file):
+    # if folder doesn't exist, create it
+    # save the file to a folder
+        folder_path = os.path.join("..", "uploads")
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+        file_path = os.path.join(folder_path, file.filename)
+        file.save(file_path)
+        return file_path
     
+    def deleteFile(self):
+        # get job file path
+        file_path = os.path.join("..", "uploads", self.file.filename)
+        # delete the file
+        os.remove(file_path)
