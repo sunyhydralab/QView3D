@@ -70,7 +70,19 @@ class PrinterStatusService:
                 "name": printer.name,
                 "status": printer.status,
                 "id": printer.id,
+                "queue": [] # empty queue to store job objects 
             }
+            
+            queue = printer.getQueue()
+            for job in queue: 
+                job_info = {
+                    "name": job.name,
+                    "status": job.status,
+                    "date": job.date.strftime('%a, %d %b %Y %H:%M:%S'),
+                    "file_name": job.file_name,
+                }
+                printer_info['queue'].append(job_info)
+            
             printer_info_list.append(printer_info)
         return printer_info_list
 

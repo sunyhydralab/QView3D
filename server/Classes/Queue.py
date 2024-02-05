@@ -4,39 +4,43 @@ class Queue:
     def __init__(self):
         self.__queue = deque() # use Python double-ended queue  
     
+            
+    def __iter__(self): # iterate over queue 
+        return iter(self.__queue)
+    
     # if no priority add to end of queue. If priority add to front of queue. 
-    def addToBack(self, jobid):
-        if self.__queue.count(jobid)>0: 
+    def addToBack(self, job):
+        if self.__queue.count(job)>0: 
             raise Exception("Job ID already in queue.") 
-        self.__queue.append(jobid) # appending on the right is the "front" because popping takes out from right d
+        self.__queue.append(job) # appending on the right is the "front" because popping takes out from right d
     
-    def addToFront(self, jobid): 
-        if self.__queue.count(jobid)>0: 
+    def addToFront(self, job): 
+        if self.__queue.count(job)>0: 
             raise Exception("Job ID already in queue.") 
-        self.__queue.appendleft(jobid)
+        self.__queue.appendleft(job)
     
-    def bump(self, up, jobid): # up = boolean. if up = true bump up, else bump down 
-        index = list(self.__queue).index(jobid)
+    def bump(self, up, job): # up = boolean. if up = true bump up, else bump down 
+        index = list(self.__queue).index(job)
         if up==True: 
-            self.__queue.remove(jobid)
-            self.__queue.insert(index-1, jobid)
+            self.__queue.remove(job)
+            self.__queue.insert(index-1, job)
         else: 
-            self.__queue.remove(jobid)
-            self.__queue.insert(index+1, jobid)
+            self.__queue.remove(job)
+            self.__queue.insert(index+1, job)
             pass 
     
-    def deleteJob(self, jobid): 
-        if self.__queue.count(jobid)<=0: 
+    def deleteJob(self, job): 
+        if self.__queue.count(job)<=0: 
             raise Exception("Job not in queue.") 
-        self.__queue.remove(jobid)
+        self.__queue.remove(job)
     
-    def bumpExtreme(self, front, jobid): # bump to back/front of queue 
+    def bumpExtreme(self, front, job): # bump to back/front of queue 
         if(front == True):
-            self.__queue.remove(jobid)
-            self.addToFront(jobid)
+            self.__queue.remove(job)
+            self.addToFront(job)
         else: 
-            self.__queue.remove(jobid)
-            self.addToBack(jobid) 
+            self.__queue.remove(job)
+            self.addToBack(job) 
             
     def getQueue(self): 
         return self.__queue
@@ -49,20 +53,7 @@ class Queue:
     
     def removeJob(self):
         self.__queue.pop()
+
     
     
 
-# test = Queue()
-
-# test.addToFront(1)
-# test.addToFront(2)
-# test.addToFront(3)
-# test.addToFront(4)
-# test.addToFront(5)
-# # test.addToBack(10)
-# # test.addToFront(11)
-# # test.bumpExtreme(False, 2)
-# test.bump(False, 2)
-
-# print(test.getNext())
-# print(test.getQueue())
