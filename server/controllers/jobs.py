@@ -12,7 +12,8 @@ jobs_bp = Blueprint("jobs", __name__)
 def getJobs(): 
     try:
         res = Job.get_job_history()
-        return res 
+        # since response isn't iterable, we need to convert it to a JSON object
+        return jsonify({"jobs": res})
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
