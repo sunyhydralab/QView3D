@@ -6,9 +6,10 @@ import { toast } from './toast'
 export interface Job {
   name: string
   file: File
+  file_name: string 
   date?: Date
   status?: string
-  // printer: string; //store printer name
+  printer: string; //store printer name
   printerid: number
 }
 

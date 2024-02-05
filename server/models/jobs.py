@@ -15,18 +15,24 @@ class Job(db.Model):
     file = db.Column(db.LargeBinary, nullable=False)
     name = db.Column(db.String(50), nullable = False)
     status = db.Column(db.String(50), nullable=False)
+    file_name = db.Column(db.String(50), nullable=False)
     date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).astimezone(), nullable=False)
     
     # foreign key relationship to match jobs to the printer printed on 
     printer_id = db.Column(db.Integer, db.ForeignKey('printer.id'), nullable = False)
+    
     printer = db.relationship('Printer', backref='Job')
     
-    def __init__(self, file, name, printer_id, status='inqueue'): 
+    # file_name = None 
+    
+    def __init__(self, file, name, printer_id, status='inqueue', file_name=None): 
         self.file = file 
         self.name = name 
         self.printer_id = printer_id 
         self.status = status # set default status to be in-queue
         self.date = datetime.now(get_localzone())
+        self.file_name = file_name
+        # file_name =  base64.b64encode(self.file).decode('utf-8') if self.file else None
     
     def getPrinterId(self): 
         return self.printer_id
@@ -37,13 +43,11 @@ class Job(db.Model):
             jobs = cls.query.all()
             
             jobs_data = [{
-                "file": base64.b64encode(job.file).decode('utf-8') if job.file else None, 
+                "file_name": job.file_name, 
                 "name": job.name, 
                 "status": job.status, 
                 "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",  
-                "printer": {
-                    "name": job.printer.name if job.printer else None
-                }
+                "printer": job.printer.name
             } for job in jobs]
             print(jobs_data)
             
@@ -54,13 +58,14 @@ class Job(db.Model):
         
     # insert into job history 
     @classmethod
-    def jobHistoryInsert(cls, file, name, printer_id, status): 
+    def jobHistoryInsert(cls, file, name, printer_id, status, file_name): 
         try:
             job = cls(
                 file=file,
                 name=name,
                 printer_id=printer_id,
                 status=status,
+                file_name=file_name
             )
             db.session.add(job)
             db.session.commit()
@@ -82,8 +87,13 @@ class Job(db.Model):
     def getStatus(self): 
         return self.status 
     
+    def getFileName(self):
+        return self.file_name
+    
     def getPrinterId(self): 
         return self.printer_id
     
     def setStatus(self, status): 
         self.status = status
+        
+    

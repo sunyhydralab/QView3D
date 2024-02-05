@@ -23,13 +23,14 @@ def getJobs():
 def add_job_to_queue():
     try:
         file = request.files['file']  # Access file directly from request.files
+        file_name = file.filename
         name = request.form['name']  # Access other form fields from request.form
         printerid = int(request.form['printerid'])
         
         # Read the file contents into memory. QUESTION: WILL THIS WORK FOR LARGE FILES? WILL THIS OVERLOAD THE MEMORY? 
         file_contents = BytesIO(file.read())
 
-        job = Job(file_contents, name, printerid)
+        job = Job(file_contents, name, printerid, file_name=file_name)
         threads = printer_status_service.getThreadArray()
         
         printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))[0].printer
@@ -55,9 +56,10 @@ def job_db_insert():
         name = jobdata.get('name')
         printer_id = jobdata.get('printer_id')
         status = jobdata.get('status')
+        file_name=jobdata.get('file_name')
 
         # Insert the job data into the database
-        res = Job.jobHistoryInsert(file, name, printer_id, status)
+        res = Job.jobHistoryInsert(file, name, printer_id, status, file_name)
 
         # print(name, printer_id, status)
         return "success"

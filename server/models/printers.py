@@ -22,11 +22,11 @@ class Printer(db.Model):
     description = db.Column(db.String(50), nullable=False)
     hwid = db.Column(db.String(150), nullable=False)
     name = db.Column(db.String(50), nullable=False)
-    status = None  # default setting on printer start. Runs initialization and status switches to "ready" automatically.
     date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).astimezone(), nullable=False)
+    
     queue = Queue()
     ser = None
-    # currentJob = None 
+    status = None  # default setting on printer start. Runs initialization and status switches to "ready" automatically.
 
     def __init__(self, device, description, hwid, name, status='configuring', id=None):
         self.device = device
@@ -189,7 +189,7 @@ class Printer(db.Model):
 
     def printNextInQueue(self):
         job = self.getQueue().getNext() # get next job 
-        # self.setCurrentJob(job) # set current job 
+        self.setCurrentJob(job) # set current job 
         file = job.getFile()
         if self.getSer():
             job.setStatus("printing") # set job status to printing 
@@ -206,13 +206,13 @@ class Printer(db.Model):
                 
             self.disconnect()
             
-            self.sendJobToDB(job) # send job to the DB after job complete 
+        self.sendJobToDB(job) # send job to the DB after job complete 
             # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready. 
             
-        else:
-            raise Exception(
-                "Failed to establish serial connection for printer: ", self.name
-            )
+        # else:
+        #     raise Exception(
+        #         "Failed to establish serial connection for printer: ", self.name
+        #     )
 
     def initialize(self):
         printerList = self.getConnectedPorts()
@@ -234,6 +234,7 @@ class Printer(db.Model):
             "name": job.getName(),
             "printer_id": job.getPrinterId(),
             "status": job.getStatus(),
+            "file_name": job.getFileName()
         }
         # get the job file 
         file = job.getFile() 

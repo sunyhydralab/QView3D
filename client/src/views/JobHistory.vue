@@ -11,7 +11,6 @@ onMounted(async () => {
         // jobs.value = joblist; // Bring job array in-memory 
         jobs.value = joblist.jobs;
         console.log(joblist)
-
     } catch (error) {
         console.error(error)
     }
@@ -35,11 +34,11 @@ onMounted(async () => {
             <tbody v-if="jobs.length > 0">
                 <tr v-for="job in jobs" :key="job.name">
                     <td>{{ job.name }}</td>
-                    <td>{{ job.file }}</td>
+                    <td>{{ job.file_name }}</td>
                     <td>{{ job.date }}</td>
                     <td>{{ job.status }}</td>
                     <!-- FIX THIS ERROR -->
-                    <td>{{ job.printer.name }}</td>
+                    <td>{{ job.printer }}</td>
                     <td><button class="rerun"></button></td>
                 </tr>
             </tbody>
