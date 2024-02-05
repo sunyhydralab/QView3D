@@ -197,7 +197,6 @@ class Printer(db.Model):
             verdict = self.parseGcode(file) # passes file to code. returns "complete" if successful, "error" if not. 
             
             if verdict =="complete":
-                self.reset(initializeStatus=False)
                 job.setStatus("complete") # set job status to complete 
                 self.setStatus("complete")
             else: 
