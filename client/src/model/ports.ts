@@ -2,6 +2,7 @@ import { useRouter } from 'vue-router'
 import { ref, computed } from 'vue'
 import * as myFetch from './myFetch'
 import { toast } from './toast'
+import { type Job } from './jobs'
 
 export function api(action: string, body?: unknown, method?: string, headers?: any) {
   headers = headers ?? {}
@@ -16,6 +17,8 @@ export interface Device {
   status?: string
   date?: Date
   id?: number 
+
+  queue?: Job[] //  Store job array to store queue for each printer. 
 }
 
 export function useGetPorts() {
