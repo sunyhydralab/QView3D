@@ -275,4 +275,3 @@ class Printer(db.Model):
     
     def getId(self):
         return self.id
-        return self.id
