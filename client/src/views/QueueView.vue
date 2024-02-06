@@ -30,7 +30,8 @@ onMounted(async () => {
 <template>
   <div class="container">
     <b>Queue View</b>
-    <div class="accordion" id="accordionPanelsStayOpenExample">
+    <div v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">here</RouterLink>, or restart the server.</div>
+    <div v-else class="accordion" id="accordionPanelsStayOpenExample">
       <div class="accordion-item" v-for="(printer, index) in printers" :key="printer.id">
         <h2 class="accordion-header" id="panelsStayOpen-headingOne">
           <button class="accordion-button" type="button" data-bs-toggle="collapse"

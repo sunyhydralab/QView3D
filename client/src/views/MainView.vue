@@ -31,6 +31,7 @@ import { onMounted, ref } from 'vue';
                 <th>File</th>
                 <th>Progress</th>
             </tr>
+            <div v-if="devices.length === 0">No printers available. Either register a printer <RouterLink to="/registration">here</RouterLink>, or restart the server.</div>
             <tr v-for="device in devices">
                 <th>{{ device.name }}</th> 
                 <th></th>
