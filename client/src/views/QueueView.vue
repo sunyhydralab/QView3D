@@ -41,7 +41,7 @@ onMounted(async () => {
         </h2>
         <div id="panelsStayOpen-collapseOne" class="accordion-collapse collapse show"
           aria-labelledby="panelsStayOpen-headingOne" data-bs-parent="#accordionPanelsStayOpenExample">
-          <div class="accordion-body" v-for="job in printer.queue" :key="job.name">
+          <div class="accordion-body">
             <table>
               <thead>
                 <tr>
@@ -53,7 +53,7 @@ onMounted(async () => {
                 </tr>
               </thead>
               <tbody>
-                <tr>
+                <tr v-for="job in printer.queue" :key="job.name">
                   <td>{{ job.name }}</td>
                   <td>{{ job.file_name }}</td>
                   <td>{{ job.date }}</td>
