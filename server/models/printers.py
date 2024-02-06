@@ -136,26 +136,19 @@ class Printer(db.Model):
         self.sendGcode("G28", initializeStatus)
         self.sendGcode("G92 E0", initializeStatus)
 
-    def parseGcode(self, file_content):
+    def parseGcode(self, path):
         if self.getStatus()=="error": # if any error occurs, do not proceed with printing.
             return "error"
-        # Read the BytesIO object into a string
-        content_str = file_content.decode('utf-8')
-
-        # Split the string into lines
-        lines = content_str.splitlines()
-
-        # Iterate over each line
-        for line in lines:
-            # Remove leading and trailing whitespace
-            line = line.strip()
-
-            # Don't send empty lines and comments. ";" is a comment in gcode.
-            if len(line) == 0 or line.startswith(";"):
-                continue
-
-            # Send the line to the printer.
-            self.sendGcode(line, self.ser)
+        with open(path, "r") as g:
+            # Replace file with the path to the file. "r" means read mode. 
+            for line in g:
+                #remove whitespace
+                line = line.strip() 
+                # Don't send empty lines and comments. ";" is a comment in gcode.
+                if len(line) == 0 or line.startswith(";"): 
+                    continue
+                # Send the line to the printer.
+                self.sendGcode(line)
         return "complete"
 
     # Function to send gcode commands
@@ -189,15 +182,15 @@ class Printer(db.Model):
 
     def printNextInQueue(self):
         job = self.getQueue().getNext() # get next job 
-        self.setCurrentJob(job) # set current job 
-        file = job.getFile()
-        file = job.openFile(file)
+        path = job.getFilePath()
         if self.getSer():
             job.setStatus("printing") # set job status to printing 
             self.setStatus("printing") # set printer status to printing
             self.reset(initializeStatus=False)
-            # verdict = self.parseGcode(file) # passes file to code. returns "complete" if successful, "error" if not. 
+            
+            verdict = self.parseGcode(path) # passes file to code. returns "complete" if successful, "error" if not.
             verdict = "complete"
+            
             if verdict =="complete":
                 job.setStatus("complete") # set job status to complete 
                 self.setStatus("complete")
@@ -209,10 +202,7 @@ class Printer(db.Model):
             
             self.sendJobToDB(job) # send job to the DB after job complete 
         # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready. 
-            
-            job.closeFile(file) # close the file after job is complete.
-            job.deleteFile() # delete the file from dedicated folder after job is complete.
-            
+        
         else:
             raise Exception(
                 "Failed to establish serial connection for printer: ", self.name
@@ -238,26 +228,21 @@ class Printer(db.Model):
             "name": job.getName(),
             "printer_id": job.getPrinterId(),
             "status": job.getStatus(),
-            "file_name": job.getFileName()
+            "file_name": job.getFileName(),
+            "file_path": job.getFilePath(),
         }
-        # get the job file 
-        file_path = job.getFile() 
-        with open(file_path, 'rb') as file:
-            file_contents = file.read()
-
+        
         # URL to send through route 
         base_url = os.getenv('BASE_URL')
-
-        # Prepare the file to be sent
-        files = {'file': (file_path, file_contents)}
 
         # Combine job data and file for sending
         data = {
             "jobdata": json.dumps(jobdata),  # Convert jobdata to JSON
         }
+        
+        # response = requests.post(f'{base_url}/jobdbinsert', files=files, data=data)
+        response = requests.post(f'{base_url}/jobdbinsert', data=data)
 
-        # send data through route 
-        response = requests.post(f'{base_url}/jobdbinsert', files=files, data=data)
         
         if response.ok:
             print("Job data successfully inserted into the database.")

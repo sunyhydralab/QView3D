@@ -31,9 +31,10 @@ def add_job_to_queue():
         # file_contents = BytesIO(file.read())
         
         # Save the file to the server
-        Job.saveToFolder(file)
+        # Job.saveToFolder(file)
 
-        job = Job(file, name, printerid, file_name=file_name)
+        job = Job(file, name, printerid, file_name=file_name) # create job object 
+        
         threads = printer_status_service.getThreadArray()
         
         printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))[0].printer
@@ -44,29 +45,24 @@ def add_job_to_queue():
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
-    
+
 # route to insert job into database
 @jobs_bp.route('/jobdbinsert', methods=["POST"])
 def job_db_insert():
     try:
-        # Get the file from the request files
-        file = request.files['file']
-        file_contents = file.read()
-
-        # Get the job data from the request
         jobdata = request.form.get('jobdata')
+        
         jobdata = json.loads(jobdata)  # Convert jobdata from JSON to a Python dictionary
 
         # Get the individual fields from jobdata
         name = jobdata.get('name')
         printer_id = jobdata.get('printer_id')
         status = jobdata.get('status')
-        file_name=jobdata.get('file_name')
+        file_name=jobdata.get("file_name")
+        file_path=jobdata.get("file_path")
 
         # Insert the job data into the database
-        res = Job.jobHistoryInsert(file_contents, name, printer_id, status, file_name)
-        
-        del file_contents  # Delete the file contents from memory
+        res = Job.jobHistoryInsert(name, printer_id, status, file_name, file_path)
 
         # print(name, printer_id, status)
         return "success"

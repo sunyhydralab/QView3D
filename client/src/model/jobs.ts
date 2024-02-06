@@ -31,7 +31,6 @@ export function useAddJobToQueue() {
   return {
     async addJobToQueue(job: FormData) {
       try {
-        console.log('job:', job)
         const response = await api('addjobtoqueue', job)
         if (response) {
           if (response.success == false) {

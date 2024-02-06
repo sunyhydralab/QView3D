@@ -9,7 +9,8 @@ from flask import jsonify
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
 from tzlocal import get_localzone
-
+from io import BytesIO
+from werkzeug.datastructures import FileStorage
 # model for job history table 
 class Job(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -18,11 +19,10 @@ class Job(db.Model):
     status = db.Column(db.String(50), nullable=False)
     file_name = db.Column(db.String(50), nullable=False)
     date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).astimezone(), nullable=False)
-    
     # foreign key relationship to match jobs to the printer printed on 
     printer_id = db.Column(db.Integer, db.ForeignKey('printer.id'), nullable = False)
-    
     printer = db.relationship('Printer', backref='Job')
+    path = None
     
     # file_name = None 
     
@@ -32,8 +32,12 @@ class Job(db.Model):
         self.printer_id = printer_id 
         self.status = status # set default status to be in-queue
         self.date = datetime.now(get_localzone())
+        
         self.file_name = file_name
+        
+        # self.path = os.path.join("..", "uploads", self.file.filename) # set file path 
         # file_name =  base64.b64encode(self.file).decode('utf-8') if self.file else None
+        self.saveToFolder()
     
     def getPrinterId(self): 
         return self.printer_id
@@ -57,20 +61,25 @@ class Job(db.Model):
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500
         
-    # insert into job history 
     @classmethod
-    def jobHistoryInsert(cls, file, name, printer_id, status, file_name): 
+    def jobHistoryInsert(cls, name, printer_id, status, file_name, file_path): 
         try:
+            with open(file_path, 'rb') as file:
+                file_data = file.read()
+                
+            file_storage = FileStorage(stream=BytesIO(file_data), filename=file_name)  
+            
             job = cls(
-                file=file,
+                file = file_storage, 
                 name=name,
                 printer_id=printer_id,
                 status=status,
                 file_name=file_name
             )
+            
             db.session.add(job)
             db.session.commit()
-            print("Job added to collection.")
+            cls.deleteFile(file_path)
             return {"success": True, "message": "Job added to collection."}
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
@@ -78,14 +87,15 @@ class Job(db.Model):
                 jsonify({"error": "Failed to add job. Database error"}),
                 500,
             )
-        
+                
     def getName(self):
         return self.name
     
-    def getFile(self):
-        # Open the file in binary mode and return the file object
-        file_path = os.path.join("..", "uploads", self.file.filename)
-        return file_path
+    def getFilePath(self):
+        return self.path 
+    
+    def getFile(self): 
+        return self.file
     
     def openFile(self, file):
         # open the file in binary mode
@@ -108,18 +118,24 @@ class Job(db.Model):
     def setStatus(self, status): 
         self.status = status
         
-    def saveToFolder(file):
-    # if folder doesn't exist, create it
-    # save the file to a folder
+    def setPath(self, path): 
+        self.path = path 
+           
+    def saveToFolder(self):
+        file_storage = self.getFile()  # Assuming getFile() returns a FileStorage object
         folder_path = os.path.join("..", "uploads")
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-        file_path = os.path.join(folder_path, file.filename)
-        file.save(file_path)
+
+        file_name = self.getFile().filename
+        file_path = os.path.join(folder_path, file_name)
+        self.getFile().save(file_path)
+        
+        file_path = os.path.join(folder_path, self.getFileName())
+        
+        self.setPath(file_path)
+
         return file_path
     
-    def deleteFile(self):
-        # get job file path
-        file_path = os.path.join("..", "uploads", self.file.filename)
-        # delete the file
-        os.remove(file_path)
+    @classmethod
+    def deleteFile(cls, path):
+        os.remove(path)
+    
