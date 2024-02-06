@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { useRetrievePrinters, type Device } from '@/model/ports';
+import { useRetrievePrinters, type Device } from '@/model/ports';
 import { onMounted, ref } from 'vue';
   const {retrieve} = useRetrievePrinters(); 
 

@@ -2,7 +2,7 @@
 import { useRouter } from 'vue-router'
 import { api } from './ports'
 import { toast } from './toast'
-
+import {type Device} from '@/model/ports'
 export interface Job {
   name: string
   file: File
@@ -48,6 +48,34 @@ export function useAddJobToQueue() {
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while adding the job to the queue')
+      }
+    }
+  }
+}
+
+// function to duplicate and rerun job 
+export function useRerunJob(){
+  return {
+    async rerunJob(job: Job, printer: Device){
+      try {
+        let id = printer.id
+        const response = await api('rerunjob', {job, id}) // pass rerun job the Job object and desired printer
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to rerun job. Unexpected response')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to rerun job. Unexpected response')
+        }
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while rerunning the job')
       }
     }
   }

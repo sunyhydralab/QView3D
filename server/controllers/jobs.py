@@ -26,12 +26,6 @@ def add_job_to_queue():
         file_name = file.filename
         name = request.form['name']  # Access other form fields from request.form
         printerid = int(request.form['printerid'])
-        
-        # Read the file contents into memory. QUESTION: WILL THIS WORK FOR LARGE FILES? WILL THIS OVERLOAD THE MEMORY? 
-        # file_contents = BytesIO(file.read())
-        
-        # Save the file to the server
-        # Job.saveToFolder(file)
 
         job = Job(file, name, printerid, file_name=file_name) # create job object 
         
@@ -42,6 +36,7 @@ def add_job_to_queue():
         printerobject.getQueue().addToBack(job)
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
+    
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -66,6 +61,28 @@ def job_db_insert():
 
         # print(name, printer_id, status)
         return "success"
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
+@jobs_bp.route('/rerunjob', methods=["POST"])
+def rerun_job():
+    try:
+        data = request.get_json()
+
+        printerid = data['id']
+        file_name = data['job']['file_name']
+        job_name = data['job']['name']
+
+        job = Job(file=None, name=job_name, printer_id=printerid, file_name=file_name) # create job object without passing file.
+        
+        threads = printer_status_service.getThreadArray()
+        
+        printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))[0].printer
+        
+        printerobject.getQueue().addToBack(job)
+        
+        return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
