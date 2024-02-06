@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
 import { useRerunJob, type Job } from '@/model/jobs';
 const { retrieveInfo } = useRetrievePrintersInfo()
 
-const {rerunJob} = useRerunJob()
+const { rerunJob } = useRerunJob()
 
 type Printer = Device & { isExpanded?: boolean }
 const printers = ref<Array<Printer>>([]) // Get list of open printer threads 
@@ -16,7 +16,7 @@ const toggleAccordion = (id: string) => {
   }
 }
 
-const handleRerun = (job: Job, printer: Printer) => { 
+const handleRerun = (job: Job, printer: Printer) => {
   rerunJob(job, printer)
   console.log('Rerunning job:', job, 'on printer:', printer);
 };
@@ -29,8 +29,17 @@ onMounted(async () => {
   }
 })
 
-const showDropdown = ref(true);
+function handleCancel(jobToFind: Job, printerToFind: Device): void {
+  // remove from in-memory array 
+  const foundPrinter = printers.value.find(printer => printer === printerToFind); // Find the printer by direct object comparison
+  if (!foundPrinter) return; // Return if printer not found
+  const jobIndex = foundPrinter.queue?.findIndex(job => job === jobToFind); // Find the index of the job in the printer's queue
+  if (jobIndex === undefined || jobIndex === -1) return; // Return if job not found
+  foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
 
+  // remove from queue 
+
+}
 </script>
 
 <template>
@@ -54,6 +63,7 @@ const showDropdown = ref(true);
             <table>
               <thead>
                 <tr>
+                  <th>Cancel</th>
                   <th>Job Title</th>
                   <th>File</th>
                   <th>Date Added</th>
@@ -63,6 +73,9 @@ const showDropdown = ref(true);
               </thead>
               <tbody>
                 <tr v-for="job in printer.queue" :key="job.name">
+                  <td>
+                    <button @click="handleCancel(job, printer)">X</button>
+                  </td>
                   <td><b>{{ job.name }}</b></td>
                   <td>{{ job.file_name }}</td>
                   <td>{{ job.date }}</td>
@@ -78,6 +91,7 @@ const showDropdown = ref(true);
                     </div>
                   </td>
                 </tr>
+
               </tbody>
             </table>
           </div>
@@ -179,8 +193,8 @@ th {
   background-color: #3e8e41;
 }
 
-.printerrerun{
-  cursor: pointer; 
+.printerrerun {
+  cursor: pointer;
   padding: 12px 16px;
 }
 </style>

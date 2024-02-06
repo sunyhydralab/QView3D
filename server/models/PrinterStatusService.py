@@ -80,6 +80,7 @@ class PrinterStatusService:
                     "status": job.status,
                     "date": job.date.strftime('%a, %d %b %Y %H:%M:%S'),
                     "file_name": job.file_name,
+                    "printerid": job.printer_id
                 }
                 printer_info['queue'].append(job_info)
             
