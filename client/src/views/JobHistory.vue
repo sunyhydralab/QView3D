@@ -44,7 +44,8 @@ onMounted(async () => {
             </tbody>
             <tbody v-else>
                 <tr>
-                    <td colspan="6">No jobs found. Submit your first job <RouterLink to="/submit">here!</RouterLink></td>
+                    <td colspan="6">No jobs found. Submit your first job <RouterLink to="/submit">here!</RouterLink>
+                    </td>
                 </tr>
             </tbody>
         </table>

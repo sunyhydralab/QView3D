@@ -3,86 +3,82 @@ import { ref, onMounted } from 'vue'
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
 const { retrieveInfo } = useRetrievePrintersInfo()
 
-const printers = ref<Array<Device>>([]) // Get list of open printer threads 
+type Printer = Device & { isExpanded?: boolean }
+const printers = ref<Array<Printer>>([]) // Get list of open printer threads 
 
+const toggleAccordion = (id: string) => {
+  const printer = printers.value.find(p => p.id === Number(id))
+  if (printer) {
+    printer.isExpanded = !printer.isExpanded
+  }
+}
+
+const rerunJob = (job: any) => {
+  // TODO: Implement rerun job functionality
+  console.log('Rerunning job:', job)
+}
 
 onMounted(async () => {
   try {
-    printers.value = await retrieveInfo()
+    printers.value = (await retrieveInfo()).map((printer: Device) => ({ ...printer, isExpanded: true }))
   } catch (error) {
     console.error('There has been a problem with your fetch operation:', error)
   }
 })
-
-
 </script>
+
 <template>
   <div class="container">
-    <p>Queue View</p>
-
-    <div class="dropdown" v-for="printer in printers" :key="printer.id">
-      <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton">
-        {{ printer.name }}
-      </button>
-      <div class="dropdown-menu show" aria-labelledby="dropdownMenuButton">
-        <!-- <div v-for="job in printer.queue" :key="job.name" class="dropdown-item" href="#">{{job.name}}</div> -->
-        <table>
-          <!-- This data is taken from the backend in-memory array, NOT the database. Done with threading. -->
-          <!-- Perhaps the printer names are displayed and this is drawn from the database, but all of the associated data
-              is taken from the in-memory threads and cron updates. 
-          -->
-            <tr>
-                <th>Cancel</th> 
-                <th>Rerun</th>
-                <th>Position</th>
-                <th>Bump</th>
-                <th>Job Name</th>
-                <th>File</th>
-                <th>Time added</th>
-                <th>Flag</th>
-            </tr>
-            <tr v-for="job in printer.queue">
-                <th></th> 
-                <th></th>
-                <th></th>
-                <th></th>
-                <th>{{ job.name }}</th>
-                <th>{{ job.file_name }}</th>
-                <th>{{ job.date }}</th>
-                <th>{{ job.status }}</th>
-            </tr>
-        </table>
+    <b>Queue View</b>
+    <div class="accordion" id="accordionPanelsStayOpenExample">
+      <div class="accordion-item" v-for="(printer, index) in printers" :key="printer.id">
+        <h2 class="accordion-header" id="panelsStayOpen-headingOne">
+          <button class="accordion-button" type="button" data-bs-toggle="collapse"
+            data-bs-target="#panelsStayOpen-collapseOne" aria-expanded="true" aria-controls="panelsStayOpen-collapseOne">
+            {{ printer.name }}
+          </button>
+        </h2>
+        <div id="panelsStayOpen-collapseOne" class="accordion-collapse collapse show"
+          aria-labelledby="panelsStayOpen-headingOne" data-bs-parent="#accordionPanelsStayOpenExample">
+          <div class="accordion-body" v-for="job in printer.queue" :key="job.name">
+            <table>
+              <thead>
+                <tr>
+                  <th>Job Title</th>
+                  <th>File</th>
+                  <th>Date Added</th>
+                  <th>Final Status</th>
+                  <th>Rerun Job</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{ job.name }}</td>
+                  <td>{{ job.file_name }}</td>
+                  <td>{{ job.date }}</td>
+                  <td>{{ job.status }}</td>
+                  <td><button type="button" class="btn btn-secondary" @click="rerunJob(job)">Rerun</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-      
-
     </div>
-
   </div>
 </template>
 
 <style scoped>
-.container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.dropdown {
-  width: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center; /* Center content horizontally */
-}
 
 table {
   width: 100%;
   border-collapse: collapse;
+  border: 0px;
 }
 
 th,
 td {
-  border: 2px solid #dddddd;
+  border: 1px solid #dddddd;
   text-align: left;
   padding: 8px;
 }
@@ -91,10 +87,28 @@ th {
   background-color: #f2f2f2;
 }
 
-.dropdown-toggle {
-  width: 100%;
-  text-align: left;
-  padding: 8px;
-  margin-bottom: 20px; 
+.accordion-body {
+  padding: 0;
+}
+
+/* HARDCODED */
+.accordion-item {
+  width: 1296px;
+}
+
+.accordion-button:not(.collapsed) {
+  background-color: #f2f2f2;
+}
+.accordion-button:focus {
+  box-shadow: none;
+}
+
+.accordion-button {
+  color: black;
+  display: flex;
+}
+
+.accordion-button:not(.collapsed)::after {
+  background-image: var(--bs-accordion-btn-icon);
 }
 </style>
