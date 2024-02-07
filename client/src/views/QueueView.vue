@@ -23,10 +23,17 @@ onMounted(async () => {
     const printerName = route.params.printerName
 
     const printerInfo = await retrieveInfo()
-    printers.value = printerInfo.map((printer: Device) => ({
-      ...printer,
-      isExpanded: printer.name === printerName
-    }))
+    console.log("BEFORE: " + printerInfo)
+    printers.value = []
+
+    for (const printer of printerInfo) {
+      printers.value.push({
+        ...printer,
+        isExpanded: printer.name === printerName
+      })
+    }
+    
+    console.log("AFTER: " + printers.value)
   } catch (error) {
     console.error('There has been a problem with your fetch operation:', error)
   }
@@ -59,15 +66,15 @@ async function handleCancel(jobToFind: Job, printerToFind: Device) {
 
     <div v-else class="accordion" id="accordionPanelsStayOpenExample">
       <div class="accordion-item" v-for="(printer, index) in printers" :key="printer.id">
-        <h2 class="accordion-header" id="panelsStayOpen-headingOne">
+        <h2 class="accordion-header" :id="'panelsStayOpen-heading' + index">
           <button class="accordion-button" type="button" data-bs-toggle="collapse"
-            data-bs-target="#panelsStayOpen-collapseOne" :aria-expanded="printer.isExpanded"
-            aria-controls="panelsStayOpen-collapseOne">
+            :data-bs-target="'#panelsStayOpen-collapse' + index" :aria-expanded="printer.isExpanded"
+            :aria-controls="'panelsStayOpen-collapse' + index">
             {{ printer.name }}
           </button>
         </h2>
-        <div id="panelsStayOpen-collapseOne" class="accordion-collapse collapse" :class="{ show: printer.isExpanded }"
-          aria-labelledby="panelsStayOpen-headingOne" data-bs-parent="#accordionPanelsStayOpenExample">
+        <div :id="'panelsStayOpen-collapse' + index" class="accordion-collapse collapse" :class="{ show: printer.isExpanded }"
+          :aria-labelledby="'panelsStayOpen-heading' + index" data-bs-parent="#accordionPanelsStayOpenExample">
           <div class="accordion-body">
             <div>
               Printer Status: <b>{{ printer.status }} </b>
