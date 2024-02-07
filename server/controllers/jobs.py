@@ -103,16 +103,16 @@ def remove_job():
         printerobject = list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer # get printer job is queued to 
         queue = printerobject.getQueue()
         
-        job = queue.deleteJob(job_id) # retrieve and remove job from queue
-        Job.deleteFile(file_path) # delete file from folder
-        
-        job.setStatus("cancelled") # set status of job to cancelled.
+        Job.jobHistoryInsert(name, printer_id, "cancelled", file_name, file_path)
 
+        job = queue.deleteJob(job_id) # retrieve and remove job from queue
+        
+        Job.deleteFile(file_path) # delete file from folder
+                    
         if status == "printing":
             printerobject.setStatus("complete")
             printerobject.stopPrint()
-            Job.jobHistoryInsert(name, printer_id, "cancelled", file_name, file_path)
-            pass 
+        
 
         return jsonify({"success": True, "message": "Job removed from printer queue."}), 200
 

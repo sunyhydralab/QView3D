@@ -86,7 +86,7 @@ class Job(db.Model):
             
             db.session.add(job)
             db.session.commit()
-            cls.deleteFile(file_path)
+            # cls.deleteFile(file_path)
             return {"success": True, "message": "Job added to collection."}
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
@@ -94,7 +94,49 @@ class Job(db.Model):
                 jsonify({"error": "Failed to add job. Database error"}),
                 500,
             )
-                
+            
+    def setFile(self, file_name): 
+        path = self.generatePath(file_name)
+        if self.fileExistsInPath(path):
+            with open(path, 'rb') as file:
+                file_data = file.read()
+            
+            file_storage = FileStorage(stream=BytesIO(file_data), filename=file_name)  
+            
+            # path = self.generatePath(file_name)
+            self.file = file_storage
+        else: 
+            self.file = self.loadFileFromDB(file_name)
+           
+    def saveToFolder(self):
+        file_name = self.getFileName()
+        file_path = self.generatePath(file_name)
+        self.getFile().save(file_path)
+        self.setPath(file_path)
+        return file_path
+    
+    def loadFileFromDB(self, file_name):
+        job = Job.query.filter_by(file_name=file_name).first()  # Query the database for a job with the same file_name
+        if job is not None:
+            return FileStorage(stream=BytesIO(job.file), filename=job.file_name) # Create a FileStorage object from the job's file data
+        else:
+            return "File not found in database."
+    
+    @classmethod
+    def generatePath(self, filename):
+        folder_path = os.path.join("..", "uploads")
+        file_path = os.path.join(folder_path, filename)
+        return file_path 
+    
+    @classmethod
+    def deleteFile(cls, path):
+        os.remove(path)
+        
+    @classmethod 
+    def fileExistsInPath(self, path): 
+        if os.path.exists(path):
+            return True
+    
     def getName(self):
         return self.name
     
@@ -131,35 +173,3 @@ class Job(db.Model):
     def setPath(self, path): 
         self.path = path 
         
-    def setFile(self, file_name): 
-        with open(self.generatePath(file_name), 'rb') as file:
-            file_data = file.read()
-        
-        file_storage = FileStorage(stream=BytesIO(file_data), filename=file_name)  
-        
-        # path = self.generatePath(file_name)
-        self.file = file_storage
-        
-           
-    def saveToFolder(self):
-        # file_storage = self.getFile()  # Assuming getFile() returns a FileStorage object
-        # folder_path = os.path.join("..", "uploads")
-
-        file_name = self.getFile().filename
-        # file_path = os.path.join(folder_path, file_name)
-        file_path = self.generatePath(file_name)
-        self.getFile().save(file_path)
-        # file_path = os.path.join(folders_path, self.getFileName())
-        self.setPath(file_path)
-        return file_path
-    
-    @classmethod
-    def generatePath(self, filename):
-        folder_path = os.path.join("..", "uploads")
-        file_path = os.path.join(folder_path, filename)
-        return file_path 
-    
-    @classmethod
-    def deleteFile(cls, path):
-        os.remove(path)
-    

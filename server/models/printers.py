@@ -142,11 +142,11 @@ class Printer(db.Model):
         self.sendGcode("M0")
 
     def parseGcode(self, path):
-        if self.getStatus()=="error": # if any error occurs, do not proceed with printing.
-            return "error"
         with open(path, "r") as g:
             # Replace file with the path to the file. "r" means read mode. 
             for line in g:
+                if self.getStatus()=="error": # if any error occurs, do not proceed with printing.
+                    return "error"
                 #remove whitespace
                 line = line.strip() 
                 # Don't send empty lines and comments. ";" is a comment in gcode.
