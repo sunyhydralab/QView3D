@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { useRetrievePrintersInfo, type Device } from '@/model/ports';
+import { useRetrievePrinters, type Device } from '@/model/ports';
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-const { retrieveInfo } = useRetrievePrintersInfo();
+const { retrieve } = useRetrievePrinters();
 const router = useRouter();
 
 let printers = ref<Array<Device>>([]); // Array of all devices. Used to list registered printers on frontend. 
@@ -45,8 +45,8 @@ const clearThenRerunPrint = (printer: Device) => {
 
 onMounted(async () => {
   try {
-    const printersInfo = await retrieveInfo()//list of previously registered printers 
-    printers.value = printersInfo; // loads registered printers into registered array 
+    const retrievedPrinters = await retrieve()//list of previously registered printers 
+    printers.value = retrievedPrinters; // loads registered printers into registered array 
   } catch (error) {
     console.error(error)
   }
@@ -72,7 +72,7 @@ onMounted(async () => {
       <div v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">
           here</RouterLink>, or restart the server.</div>
       <tr v-for="printer in printers" :key="printer.name"
-        v-show="printer.status === 'printing' && printer.queue?.[0]?.status === 'printing'">
+        v-show="printer.queue?.[0]?.status === 'printing'">
         <td><button type="button" class="btn btn-link" @click="sendToQueueView(printer.name)">{{ printer.name }}</button>
         </td>
         <td>
