@@ -111,7 +111,7 @@ def remove_job():
                     
         if status == "printing":
             printerobject.setStatus("complete")
-            printerobject.stopPrint()
+            printerobject.stopPrint(True)
         
 
         return jsonify({"success": True, "message": "Job removed from printer queue."}), 200

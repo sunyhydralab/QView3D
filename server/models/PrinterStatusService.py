@@ -4,8 +4,6 @@ import serial
 import serial.tools.list_ports
 import time
 import requests 
-# from flask import current_app
-
 
 class PrinterThread(Thread):
     def __init__(self, printer, *args, **kwargs):

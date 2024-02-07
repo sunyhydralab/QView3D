@@ -28,6 +28,7 @@ class Printer(db.Model):
     # queue = Queue()
     ser = None
     status = None  # default setting on printer start. Runs initialization and status switches to "ready" automatically.
+    stopPrint = False
 
     def __init__(self, device, description, hwid, name, status='configuring', id=None):
         self.device = device
@@ -37,6 +38,7 @@ class Printer(db.Model):
         self.status = status
         self.date = datetime.now(get_localzone())
         self.queue = Queue()
+        self.stopPrint = False 
         if id is not None:
             self.id = id
 
@@ -119,12 +121,6 @@ class Printer(db.Model):
             # if port.description in supportedPrinters:
             printerList.append(port_info)
         return printerList
-        
-    def setSer(self, port):
-        self.ser = port
-
-    def setStatus(self, newStatus):
-        self.status = newStatus
 
     def connect(self):
         self.ser = serial.Serial(self.device, 115200, timeout=1)
@@ -138,15 +134,17 @@ class Printer(db.Model):
         self.sendGcode("G28", initializeStatus)
         self.sendGcode("G92 E0", initializeStatus)
         
-    def stopPrint(self):
-        self.sendGcode("M0")
+    # def stopPrint(self):
+    #     # self.sendGcode("M0")
 
     def parseGcode(self, path):
         with open(path, "r") as g:
             # Replace file with the path to the file. "r" means read mode. 
             for line in g:
-                if self.getStatus()=="error": # if any error occurs, do not proceed with printing.
+                
+                if self.getStopPrint()==True or self.getStatus()=="error": # if any error occurs, do not proceed with printing.
                     return "error"
+                
                 #remove whitespace
                 line = line.strip() 
                 # Don't send empty lines and comments. ";" is a comment in gcode.
@@ -198,7 +196,7 @@ class Printer(db.Model):
             self.reset(initializeStatus=False)
             
             verdict = self.parseGcode(path) # passes file to code. returns "complete" if successful, "error" if not.
-            verdict = "complete"
+            # verdict = "complete"
             
             if verdict =="complete":
                 job.setStatus("complete") # set job status to complete 
@@ -210,6 +208,7 @@ class Printer(db.Model):
             self.disconnect()
             
             self.sendJobToDB(job) # send job to the DB after job complete 
+            job.deleteFile() # remove file from folder after job complete
         # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready. 
         
         else:
@@ -280,3 +279,15 @@ class Printer(db.Model):
     
     def getId(self):
         return self.id
+    
+    def getStopPrint(self):
+        return self.stopPrint
+    
+    def setSer(self, port):
+        self.ser = port
+
+    def setStatus(self, newStatus):
+        self.status = newStatus
+        
+    def setStopPrint(self, stopPrint):
+        self.stopPrint = stopPrint
