@@ -11,10 +11,10 @@ const { rerunJob } = useRerunJob()
 type Printer = Device & { isExpanded?: boolean }
 const printers = ref<Array<Printer>>([]) // Get list of open printer threads 
 
-const handleRerun = (job: Job, printer: Printer) => {
-  rerunJob(job, printer)
-  console.log('Rerunning job:', job, 'on printer:', printer);
-};
+// const handleRerun = (job: Job, printer: Printer) => {
+//   rerunJob(job, printer)
+//   console.log('Rerunning job:', job, 'on printer:', printer);
+// };
 
 // handles the route from the main view
 onMounted(async () => {
