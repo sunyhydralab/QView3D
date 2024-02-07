@@ -1,25 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
-import { useRerunJob, type Job } from '@/model/jobs';
+import { useRerunJob, useRemoveJob, type Job } from '@/model/jobs';
 const { retrieveInfo } = useRetrievePrintersInfo()
-
+const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
 
 type Printer = Device & { isExpanded?: boolean }
 const printers = ref<Array<Printer>>([]) // Get list of open printer threads 
-
-const toggleAccordion = (id: string) => {
-  const printer = printers.value.find(p => p.id === Number(id))
-  if (printer) {
-    printer.isExpanded = !printer.isExpanded
-  }
-}
-
-const handleRerun = (job: Job, printer: Printer) => {
-  rerunJob(job, printer)
-  console.log('Rerunning job:', job, 'on printer:', printer);
-};
 
 onMounted(async () => {
   try {
@@ -29,7 +17,19 @@ onMounted(async () => {
   }
 })
 
-function handleCancel(jobToFind: Job, printerToFind: Device): void {
+const toggleAccordion = (id: string) => {
+  const printer = printers.value.find(p => p.id === Number(id))
+  if (printer) {
+    printer.isExpanded = !printer.isExpanded
+  }
+}
+
+const handleRerun = async (job: Job, printer: Printer) => {
+  await rerunJob(job, printer)
+  console.log('Rerunning job:', job, 'on printer:', printer);
+};
+
+async function handleCancel(jobToFind: Job, printerToFind: Device) {
   // remove from in-memory array 
   const foundPrinter = printers.value.find(printer => printer === printerToFind); // Find the printer by direct object comparison
   if (!foundPrinter) return; // Return if printer not found
@@ -38,7 +38,7 @@ function handleCancel(jobToFind: Job, printerToFind: Device): void {
   foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
 
   // remove from queue 
-
+  await removeJob(jobToFind)
 }
 </script>
 

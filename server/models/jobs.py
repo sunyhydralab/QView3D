@@ -24,6 +24,9 @@ class Job(db.Model):
     printer = db.relationship('Printer', backref='Job')
     path = None
     
+    job_id = 1
+    id_counter = 1 
+    
     def __init__(self, file, name, printer_id, status='inqueue', file_name=None, path=None): 
         # if file is not provided, load it in from the path
         if file==None and file_name!=None: 
@@ -37,6 +40,9 @@ class Job(db.Model):
         self.date = datetime.now(get_localzone())
         self.file_name = file_name
         self.path = path 
+        
+        self.job_id = Job.id_counter  # Assign a unique ID
+        Job.id_counter += 1  # Increment the counter for the next object
         
         self.saveToFolder()
     
@@ -116,6 +122,9 @@ class Job(db.Model):
     def getPrinterId(self): 
         return self.printer_id
     
+    def getJobId(self):
+        return self.job_id
+    
     def setStatus(self, status): 
         self.status = status
         
@@ -125,26 +134,26 @@ class Job(db.Model):
     def setFile(self, file_name): 
         with open(self.generatePath(file_name), 'rb') as file:
             file_data = file.read()
-                
-        file_storage = FileStorage(stream=BytesIO(file_data), filename=file_name)  
         
+        file_storage = FileStorage(stream=BytesIO(file_data), filename=file_name)  
         
         # path = self.generatePath(file_name)
         self.file = file_storage
         
            
     def saveToFolder(self):
-        file_storage = self.getFile()  # Assuming getFile() returns a FileStorage object
+        # file_storage = self.getFile()  # Assuming getFile() returns a FileStorage object
         # folder_path = os.path.join("..", "uploads")
 
         file_name = self.getFile().filename
         # file_path = os.path.join(folder_path, file_name)
         file_path = self.generatePath(file_name)
         self.getFile().save(file_path)
-        # file_path = os.path.join(folder_path, self.getFileName())
+        # file_path = os.path.join(folders_path, self.getFileName())
         self.setPath(file_path)
         return file_path
     
+    @classmethod
     def generatePath(self, filename):
         folder_path = os.path.join("..", "uploads")
         file_path = os.path.join(folder_path, filename)

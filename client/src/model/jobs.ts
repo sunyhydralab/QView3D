@@ -11,6 +11,7 @@ export interface Job {
   status?: string
   printer: string; //store printer name
   printerid: number
+  job_id: number 
 }
 
 export function useGetJobs() {
@@ -76,6 +77,32 @@ export function useRerunJob(){
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while rerunning the job')
+      }
+    }
+  }
+}
+
+export function useRemoveJob(){
+  return {
+    async removeJob(job: Job){
+      try {
+        const response = await api('deletejob', job)
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to remove job. Unexpected response.')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to remove job. Unexpected response')
+        }
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while removing the job')
       }
     }
   }

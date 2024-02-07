@@ -86,3 +86,53 @@ def rerun_job():
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
+    
+@jobs_bp.route('/deletejob', methods=["POST"])
+def remove_job():
+    try:
+        # job has: printer id. job info.
+        data = request.get_json()
+        status = data['status']
+        printer_id = data['printerid']
+        job_id = data['job_id']
+        file_name=data['file_name']
+        name = data['name']
+        
+        file_path = Job.generatePath(file_name)
+    
+        threads = printer_status_service.getThreadArray()
+        printerobject = list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer # get printer job is queued to 
+        queue = printerobject.getQueue()
+        
+        job = queue.deleteJob(job_id) # retrieve and remove job from queue
+        Job.deleteFile(file_path) # delete file from folder
+        
+        job.setStatus("cancelled") # set status of job to cancelled.
+
+        if status == "printing":
+            printerobject.setStatus("complete")
+            printerobject.stopPrint()
+            Job.jobHistoryInsert(name, printer_id, "cancelled", file_name, file_path)
+            pass 
+
+        return jsonify({"success": True, "message": "Job removed from printer queue."}), 200
+
+        # check status of job. 
+            # if job is not printing: 
+                # set job status to cancelled.
+                # remove from queue 
+                # remove file from folder 
+                
+            # if job is printing: 
+                # Send GCODE command to stop printer. 
+                # printer status = "complete." 
+                # wait for user intervention to set to "ready."
+                # Job status = cancelled. 
+                # remove job from queue 
+                # Insert job into DB. 
+                # remove file from folder 
+        # 
+
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500

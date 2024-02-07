@@ -29,10 +29,13 @@ class Queue:
             self.__queue.insert(index+1, job)
             pass 
     
-    def deleteJob(self, job): 
-        if self.__queue.count(job)<=0: 
-            raise Exception("Job not in queue.") 
-        self.__queue.remove(job)
+    def deleteJob(self, jobid):
+        deletedjob = None
+        for job in self.__queue:
+            if job.getJobId() == jobid:
+                deletedjob = job
+                self.__queue.remove(job)
+                return deletedjob
     
     def bumpExtreme(self, front, job): # bump to back/front of queue 
         if(front == True):
@@ -41,7 +44,13 @@ class Queue:
         else: 
             self.__queue.remove(job)
             self.addToBack(job) 
-            
+    
+    def getJob(self, job_to_find):
+        for job in self.__queue:
+            if job.getJobId() == job_to_find.getJobId():
+                return job
+        return None  # Return None if job is not found in the queue
+         
     def getQueue(self): 
         return self.__queue
     

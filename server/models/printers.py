@@ -135,6 +135,9 @@ class Printer(db.Model):
     def reset(self, initializeStatus):
         self.sendGcode("G28", initializeStatus)
         self.sendGcode("G92 E0", initializeStatus)
+        
+    def stopPrint(self):
+        self.sendGcode("M0")
 
     def parseGcode(self, path):
         if self.getStatus()=="error": # if any error occurs, do not proceed with printing.
@@ -176,13 +179,17 @@ class Printer(db.Model):
             #     return
         print(f"Command: {message}, Received: {response}")
 
-    def print_job(self, job):
-        for line in job.gcode_lines:
-            self.send_gcode(line)
+    # def print_job(self, job):
+    #     for line in job.gcode_lines:
+    #         self.send_gcode(line)
 
     def printNextInQueue(self):
         job = self.getQueue().getNext() # get next job 
         path = job.getFilePath()
+        
+        if not self.fileExistsInPath(path):
+            job.saveToFolder()
+        
         if self.getSer():
             job.setStatus("printing") # set job status to printing 
             self.setStatus("printing") # set printer status to printing
@@ -249,6 +256,9 @@ class Printer(db.Model):
         else:
             print("Failed to insert job data into the database.")
 
+    def fileExistsInPath(self, path): 
+        if os.path.exists(path):
+            return True
         
     # printer-specific classes
     def getDevice(self):
