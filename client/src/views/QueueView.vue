@@ -2,6 +2,8 @@
 import { ref, onMounted, reactive } from 'vue'
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
 import { useRerunJob, useRemoveJob, type Job } from '@/model/jobs';
+import { useRoute } from 'vue-router'
+
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
@@ -9,9 +11,22 @@ const { rerunJob } = useRerunJob()
 type Printer = Device & { isExpanded?: boolean }
 const printers = ref<Array<Printer>>([]) // Get list of open printer threads 
 
+const handleRerun = (job: Job, printer: Printer) => {
+  rerunJob(job, printer)
+  console.log('Rerunning job:', job, 'on printer:', printer);
+};
+
+// handles the route from the main view
 onMounted(async () => {
   try {
-    printers.value = (await retrieveInfo()).map((printer: Device) => ({ ...printer, isExpanded: true }))
+    const route = useRoute()
+    const printerName = route.params.printerName
+
+    const printerInfo = await retrieveInfo()
+    printers.value = printerInfo.map((printer: Device) => ({
+      ...printer,
+      isExpanded: printer.name === printerName
+    }))
   } catch (error) {
     console.error('There has been a problem with your fetch operation:', error)
   }
@@ -53,11 +68,12 @@ async function handleCancel(jobToFind: Job, printerToFind: Device) {
       <div class="accordion-item" v-for="(printer, index) in printers" :key="printer.id">
         <h2 class="accordion-header" id="panelsStayOpen-headingOne">
           <button class="accordion-button" type="button" data-bs-toggle="collapse"
-            data-bs-target="#panelsStayOpen-collapseOne" aria-expanded="true" aria-controls="panelsStayOpen-collapseOne">
-            <b>{{ printer.name }} </b>
+            data-bs-target="#panelsStayOpen-collapseOne" :aria-expanded="printer.isExpanded"
+            aria-controls="panelsStayOpen-collapseOne">
+            {{ printer.name }}
           </button>
         </h2>
-        <div id="panelsStayOpen-collapseOne" class="accordion-collapse collapse show"
+        <div id="panelsStayOpen-collapseOne" class="accordion-collapse collapse" :class="{ show: printer.isExpanded }"
           aria-labelledby="panelsStayOpen-headingOne" data-bs-parent="#accordionPanelsStayOpenExample">
           <div class="accordion-body">
             <div>
@@ -94,7 +110,6 @@ async function handleCancel(jobToFind: Job, printerToFind: Device) {
                     </div>
                   </td>
                 </tr>
-
               </tbody>
             </table>
           </div>
