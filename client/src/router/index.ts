@@ -7,30 +7,30 @@ import JobHistoryVue from '@/views/JobHistory.vue'
 
 const routes = [
   {
-    path: '/', 
-    name: 'MainView', 
-    component: MainView,
-  }, 
+    path: '/',
+    name: 'MainView',
+    component: MainView
+  },
   {
-    path: '/queue', 
-    name: 'QueueViewVue', 
-    component: QueueViewVue,
-  }, 
+    path: '/queue/:printerName?',
+    name: 'QueueViewVue',
+    component: QueueViewVue
+  },
   {
-    path: '/registration', 
-    name: 'RegisteredViewVue', 
-    component: RegisteredViewVue,
-  }, 
+    path: '/registration',
+    name: 'RegisteredViewVue',
+    component: RegisteredViewVue
+  },
   {
-    path: '/submit', 
-    name: 'SubmitJobVue', 
-    component: SubmitJobVue,
-  }, 
+    path: '/submit',
+    name: 'SubmitJobVue',
+    component: SubmitJobVue
+  },
   {
-    path: '/history', 
-    name: 'JobHistoryVue', 
-    component: JobHistoryVue,
-  }, 
+    path: '/history',
+    name: 'JobHistoryVue',
+    component: JobHistoryVue
+  }
 ]
 
 const router = createRouter({
