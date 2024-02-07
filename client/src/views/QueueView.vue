@@ -54,12 +54,15 @@ function handleCancel(jobToFind: Job, printerToFind: Device): void {
         <h2 class="accordion-header" id="panelsStayOpen-headingOne">
           <button class="accordion-button" type="button" data-bs-toggle="collapse"
             data-bs-target="#panelsStayOpen-collapseOne" aria-expanded="true" aria-controls="panelsStayOpen-collapseOne">
-            <b>{{ printer.name }}</b>
+            <b>{{ printer.name }} </b>
           </button>
         </h2>
         <div id="panelsStayOpen-collapseOne" class="accordion-collapse collapse show"
           aria-labelledby="panelsStayOpen-headingOne" data-bs-parent="#accordionPanelsStayOpenExample">
           <div class="accordion-body">
+            <div>
+              Printer Status: <b>{{ printer.status }} </b>
+            </div>
             <table>
               <thead>
                 <tr>
