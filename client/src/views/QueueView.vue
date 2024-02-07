@@ -11,19 +11,12 @@ const { rerunJob } = useRerunJob()
 type Printer = Device & { isExpanded?: boolean }
 const printers = ref<Array<Printer>>([]) // Get list of open printer threads 
 
-// const handleRerun = (job: Job, printer: Printer) => {
-//   rerunJob(job, printer)
-//   console.log('Rerunning job:', job, 'on printer:', printer);
-// };
-
-// handles the route from the main view
 onMounted(async () => {
   try {
     const route = useRoute()
     const printerName = route.params.printerName
 
     const printerInfo = await retrieveInfo()
-    console.log("BEFORE: " + printerInfo)
     printers.value = []
 
     for (const printer of printerInfo) {
@@ -32,8 +25,7 @@ onMounted(async () => {
         isExpanded: printer.name === printerName
       })
     }
-    
-    console.log("AFTER: " + printers.value)
+  
   } catch (error) {
     console.error('There has been a problem with your fetch operation:', error)
   }

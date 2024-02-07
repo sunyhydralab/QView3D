@@ -26,13 +26,12 @@ def add_job_to_queue():
         file_name = file.filename
         name = request.form['name']  # Access other form fields from request.form
         printerid = int(request.form['printerid'])
-
+        
         job = Job(file, name, printerid, file_name=file_name) # create job object 
         
         threads = printer_status_service.getThreadArray()
         
-        printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))[0].printer
-        
+        printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))[0].printer        
         printerobject.getQueue().addToBack(job)
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200

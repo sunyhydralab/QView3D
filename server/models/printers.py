@@ -24,7 +24,8 @@ class Printer(db.Model):
     name = db.Column(db.String(50), nullable=False)
     date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).astimezone(), nullable=False)
     
-    queue = Queue()
+    queue = None
+    # queue = Queue()
     ser = None
     status = None  # default setting on printer start. Runs initialization and status switches to "ready" automatically.
 
@@ -35,6 +36,7 @@ class Printer(db.Model):
         self.name = name
         self.status = status
         self.date = datetime.now(get_localzone())
+        self.queue = Queue()
         if id is not None:
             self.id = id
 
