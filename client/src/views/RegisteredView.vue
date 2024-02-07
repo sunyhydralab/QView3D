@@ -13,18 +13,13 @@ let registered = ref<Array<Device>>([]) // Stores array of printers already regi
 // fetch list of connected ports from backend and automatically load them into the form dropdown 
 onMounted(async () => {
     try {
-        const devicelist = await ports(); // list of ports to be in form dropdown 
-        devices.value = devicelist; // load ports into list 
-
-        const registeredList = await retrieve()//list of previously registered printers 
-        registered.value = registeredList; // loads registered printers into registered array 
-        console.log(registered.value)
-
+        devices.value = await ports();  // load ports into list when component is mounted
+        registered.value = await retrieve();  // loads registered printers into registered array
+        console.log(registered.value);
     } catch (error) {
-        console.error(error)
+        console.error(error);
     }
-})
-
+});
 
 const doRegister = async () => {
     if (selectedDevice.value && customname.value) {
@@ -35,11 +30,17 @@ const doRegister = async () => {
             name: customname.value.trim(), // Trim to remove leading and trailing spaces
         };
         // pass RegisteredPrinter data to register function 
-        let res = await register(selectedDevice.value)
+        // let res = await register(selectedDevice.value)
+
+        await register(selectedDevice.value);
+
+        // Fetch the updated list after registration
+        registered.value = await retrieve();
     }
     // reset values 
     selectedDevice.value = undefined;
-    customname.value = ''}
+    customname.value = ''
+}
 </script>
 <template>
     <div class="container">
