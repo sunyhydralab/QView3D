@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
 import { useRerunJob, useRemoveJob, type Job } from '@/model/jobs';
 import { useRoute } from 'vue-router'
@@ -31,13 +31,6 @@ onMounted(async () => {
     console.error('There has been a problem with your fetch operation:', error)
   }
 })
-
-const toggleAccordion = (id: string) => {
-  const printer = printers.value.find(p => p.id === Number(id))
-  if (printer) {
-    printer.isExpanded = !printer.isExpanded
-  }
-}
 
 const handleRerun = async (job: Job, printer: Printer) => {
   await rerunJob(job, printer)
