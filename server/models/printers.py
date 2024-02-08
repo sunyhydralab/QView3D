@@ -141,21 +141,21 @@ class Printer(db.Model):
         with open(path, "r") as g:
             # Replace file with the path to the file. "r" means read mode. 
             for line in g:
-                
-                if self.getStopPrint()==True or self.getStatus()=="error": # if any error occurs, do not proceed with printing.
-                    return "error"
-                
                 #remove whitespace
                 line = line.strip() 
                 # Don't send empty lines and comments. ";" is a comment in gcode.
                 if len(line) == 0 or line.startswith(";"): 
                     continue
                 # Send the line to the printer.
-                self.sendGcode(line)
+                res = self.sendGcode(line)
+                if res == "error": 
+                    return "error"
         return "complete"
 
     # Function to send gcode commands
     def sendGcode(self, message, initializeStatus=False):
+        if self.getStopPrint()==True or self.getStatus()=="error": # if any error occurs, do not proceed with printing.
+                return "error"
         # Encode and send the message to the printer.
         self.ser.write(f"{message}\n".encode("utf-8"))
         # Sleep the printer to give it enough time to get the instruction.
