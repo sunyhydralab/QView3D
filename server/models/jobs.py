@@ -139,7 +139,8 @@ class Job(db.Model):
     
     @classmethod
     def deleteFile(cls, path):
-        os.remove(path)
+        if cls.fileExistsInPath(path):
+            os.remove(path)
         
     @classmethod 
     def fileExistsInPath(self, path): 
