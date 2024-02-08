@@ -56,6 +56,17 @@ with app.app_context():
         printers_data = data.get("printers", []) # gets the values w/ printer data
         printer_status_service.create_printer_threads(printers_data)
         
+        uploads_folder = os.path.join('../uploads')
+        if os.path.exists(uploads_folder):
+            # Remove the uploads folder and recreate it as an empty directory
+            os.rmdir(uploads_folder)
+            os.makedirs(uploads_folder)
+            print("Uploads folder recreated as an empty directory.")
+        else:
+            # Create the uploads folder if it doesn't exist
+            os.makedirs(uploads_folder)
+            print("Uploads folder created successfully.")
+            
     except Exception as e:
         print(f"Unexpected error: {e}")
         

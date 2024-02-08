@@ -136,74 +136,30 @@ def remove_job():
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
     
-@jobs_bp.route('/bumpUp', methods=["POST"])
+@jobs_bp.route('/bumpjob', methods=["POST"])
 def bump_up():
     try:
         data = request.get_json()
         printerid = data['id']
         job = data['job']
+        choice = data['choice']
         
         threads = printer_status_service.getThreadArray()
         
         printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))[0].printer
         
-        printerobject.queue.bump(True, job)
+        if choice == 1: 
+            printerobject.queue.bump(True, job)
+        elif choice == 2: 
+            printerobject.queue.bump(False, job)
+        elif choice == 3: 
+            printerobject.queue.bumpExtreme(True, job)
+        elif choice == 4: 
+            printerobject.queue.bumpExtreme(False, job)
+        else: 
+            return jsonify({"error": "Unexpected error occurred"}), 500
         
         return jsonify({"success": True, "message": "Job bumped up in printer queue."}), 200
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-    
-@jobs_bp.route('/bumpDown', methods=["POST"])
-def bump_down():
-    try:
-        data = request.get_json()
-        printer_id = data['id']
-        job = data['job']
-        
-        threads = printer_status_service.getThreadArray()
-        
-        printerobject = list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer
-        
-        printerobject.queue.bump(False, job)
-        
-        return jsonify({"success": True, "message": "Job bumped down in printer queue."}), 200
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-    
-@jobs_bp.route('/bumpToTop', methods=["POST"])
-def bump_to_top():
-    try:
-        data = request.get_json()
-        printer_id = data['id']
-        job = data['job']
-        
-        threads = printer_status_service.getThreadArray()
-        
-        printerobject = list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer
-        
-        printerobject.queue.bumpExtreme(True, job)
-        
-        return jsonify({"success": True, "message": "Job bumped to front of printer queue."}), 200
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-    
-@jobs_bp.route('/bumpToBack', methods=["POST"])
-def bump_to_back():
-    try:
-        data = request.get_json()
-        printer_id = data['id']
-        job = data['job']
-        
-        threads = printer_status_service.getThreadArray()
-        
-        printerobject = list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer
-        
-        printerobject.queue.bumpExtreme(False, job)
-        
-        return jsonify({"success": True, "message": "Job bumped to back of printer queue."}), 200
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500

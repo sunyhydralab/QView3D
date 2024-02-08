@@ -11,6 +11,7 @@ from datetime import datetime
 from tzlocal import get_localzone
 from io import BytesIO
 from werkzeug.datastructures import FileStorage
+import time 
 # model for job history table 
 class Job(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -71,12 +72,13 @@ class Job(db.Model):
     @classmethod
     def jobHistoryInsert(cls, name, printer_id, status, file_name, file_path): 
         try:
+            # if cls.fileExistsInPath(file_path):
             with open(file_path, 'rb') as file:
                 file_data = file.read()
                 file_storage = FileStorage(stream=BytesIO(file_data), filename=file_name)
-
-                
-            # file_storage = FileStorage(stream=BytesIO(file_data), filename=file_name)  
+            # else: 
+            #     file_storage = cls.loadFileFromDB(file_name)
+            #     file_data = file_storage.read()
             
             job = cls(
                 file = file_data, 
@@ -101,7 +103,7 @@ class Job(db.Model):
         if self.fileExistsInPath(path):
             with open(path, 'rb') as file:
                 file_data = file.read()
-            
+                
             file_storage = FileStorage(stream=BytesIO(file_data), filename=file_name)  
             
             # path = self.generatePath(file_name)
@@ -110,8 +112,12 @@ class Job(db.Model):
             self.file = self.loadFileFromDB(file_name)
            
     def saveToFolder(self):
+        
         file_name = self.getFileName()
         file_path = self.generatePath(file_name)
+        
+        if not self.fileExistsInPath(file_path):
+            self.file = self.loadFileFromDB(file_name)
         file = self.getFile()
         if isinstance(file, bytes):
             file = FileStorage(stream=BytesIO(file), filename=file_name)
@@ -120,13 +126,10 @@ class Job(db.Model):
         return file_path
     
     def loadFileFromDB(self, file_name):
+        print(file_name)
         job = Job.query.filter_by(file_name=file_name).first()  # Query the database for a job with the same file_name
         if job is not None:
-            print(f"job.file type: {type(job.file)}")
-            print(f"job.file value: {job.file}")
             stream = BytesIO(job.file)
-            print(f"stream type: {type(stream)}")
-            print(f"stream value: {stream.getvalue()}")
             return FileStorage(stream=stream, filename=job.file_name) # Create a FileStorage object from the job's file data
         else:
             return "File not found in database."
@@ -141,11 +144,16 @@ class Job(db.Model):
     def deleteFile(cls, path):
         if cls.fileExistsInPath(path):
             os.remove(path)
-        
+            return True 
+        else: 
+            return False 
+            
     @classmethod 
-    def fileExistsInPath(self, path): 
+    def fileExistsInPath(cls, path): 
         if os.path.exists(path):
             return True
+        else:
+            return False 
     
     def getName(self):
         return self.name

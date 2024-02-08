@@ -7,7 +7,8 @@ import { useRoute } from 'vue-router'
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
-const { bumpUp, bumpDown, bumpToTop, bumpToBack } = bumpJobs()
+// const { bumpUp, bumpDown, bumpToTop, bumpToBack } = bumpJobs()
+const {bumpjob} = bumpJobs()
 
 type Printer = Device & { isExpanded?: boolean }
 const printers = ref<Array<Printer>>([]) // Get list of open printer threads 
@@ -80,21 +81,39 @@ function statusColor(status: string | undefined) {
   }
 }
 
+// const bump = async (job: Job, printer: Printer, direction: string) => {
+//   switch (direction) {
+//     case 'up':
+//       await bumpUp(job, printer)
+//       break;
+//     case 'down':
+//       await bumpDown(job, printer)
+//       break;
+//     case 'top':
+//       await bumpToTop(job, printer)
+//       break;
+//     case 'bottom':
+//       await bumpToBack(job, printer)
+//       break;
+//   }
+
+
 const bump = async (job: Job, printer: Printer, direction: string) => {
   switch (direction) {
     case 'up':
-      await bumpUp(job, printer)
+      await bumpjob(job, printer, 1)
       break;
     case 'down':
-      await bumpDown(job, printer)
+      await bumpjob(job, printer, 2)
       break;
     case 'top':
-      await bumpToTop(job, printer)
+      await bumpjob(job, printer, 3)
       break;
     case 'bottom':
-      await bumpToBack(job, printer)
+      await bumpjob(job, printer, 4)
       break;
   }
+
 
   // Re-fetch the printer's queue from the backend
   const printerInfo = await retrieveInfo()
