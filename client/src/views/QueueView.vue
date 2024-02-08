@@ -25,7 +25,7 @@ onMounted(async () => {
         isExpanded: printer.name === printerName
       })
     }
-  
+
   } catch (error) {
     console.error('There has been a problem with your fetch operation:', error)
   }
@@ -47,6 +47,27 @@ async function handleCancel(jobToFind: Job, printerToFind: Device) {
   // remove from queue 
   await removeJob(jobToFind)
 }
+
+function capitalizeFirstLetter(string: string | undefined) {
+  return string ? string.charAt(0).toUpperCase() + string.slice(1) : '';
+}
+
+function statusColor(status: string | undefined) {
+  switch (status) {
+    case 'ready':
+      return 'green';
+    case 'error':
+      return 'red';
+    case 'offline':
+      return 'darkred';
+    case 'printing':
+      return 'blue';
+    case 'complete':
+      return 'darkgreen';
+    default:
+      return 'black';
+  }
+}
 </script>
 
 <template>
@@ -62,15 +83,15 @@ async function handleCancel(jobToFind: Job, printerToFind: Device) {
           <button class="accordion-button" type="button" data-bs-toggle="collapse"
             :data-bs-target="'#panelsStayOpen-collapse' + index" :aria-expanded="printer.isExpanded"
             :aria-controls="'panelsStayOpen-collapse' + index">
-            {{ printer.name }}
+            <b>{{ printer.name }}:&nbsp;
+              <span class="status-text" :style="{ color: statusColor(printer.status) }">{{ capitalizeFirstLetter(printer.status) }}</span>
+            </b>
           </button>
         </h2>
-        <div :id="'panelsStayOpen-collapse' + index" class="accordion-collapse collapse" :class="{ show: printer.isExpanded }"
-          :aria-labelledby="'panelsStayOpen-heading' + index" data-bs-parent="#accordionPanelsStayOpenExample">
+        <div :id="'panelsStayOpen-collapse' + index" class="accordion-collapse collapse"
+          :class="{ show: printer.isExpanded }" :aria-labelledby="'panelsStayOpen-heading' + index"
+          data-bs-parent="#accordionPanelsStayOpenExample">
           <div class="accordion-body">
-            <div>
-              Printer Status: <b>{{ printer.status }} </b>
-            </div>
             <table>
               <thead>
                 <tr>
