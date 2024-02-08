@@ -1,20 +1,14 @@
 <script setup lang="ts">
-import { useRetrievePrinters, type Device } from '@/model/ports';
+import { useRetrievePrintersInfo, type Device } from '@/model/ports';
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-const { retrieve } = useRetrievePrinters();
+const { retrieveInfo } = useRetrievePrintersInfo();
 const router = useRouter();
 
 let printers = ref<Array<Device>>([]); // Array of all devices. Used to list registered printers on frontend. 
 
-// send the user to the queue view
-// with the accordion open for the printer
 const sendToQueueView = (name: string | undefined) => {
-  // send the user to the queue view
-  // with the accordion open for the printer
-  // with the name of the printer that was clicked
-  console.log('Sending to queue view:', name);
   if (name) {
     router.push({ name: 'QueueViewVue', params: { printerName: name } });
   }
@@ -45,8 +39,8 @@ const clearThenRerunPrint = (printer: Device) => {
 
 onMounted(async () => {
   try {
-    const retrievedPrinters = await retrieve()//list of previously registered printers 
-    printers.value = retrievedPrinters; // loads registered printers into registered array 
+    const printerInfo = await retrieveInfo()//list of previously registered printers 
+    printers.value = printerInfo; // loads registered printers into registered array 
   } catch (error) {
     console.error(error)
   }
@@ -71,8 +65,7 @@ onMounted(async () => {
       </tr>
       <div v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">
           here</RouterLink>, or restart the server.</div>
-      <tr v-for="printer in printers" :key="printer.name"
-        v-show="printer.queue?.[0]?.status === 'printing'">
+      <tr v-for="printer in printers" :key="printer.name">
         <td><button type="button" class="btn btn-link" @click="sendToQueueView(printer.name)">{{ printer.name }}</button>
         </td>
         <td>
@@ -88,19 +81,22 @@ onMounted(async () => {
         <td>{{ printer.queue?.[0]?.file_name }}</td>
         <td>
           <!-- if printer is still printing, show progress bar -->
-          <div class="progress">
-            <div v-if="printer.status === 'printing'" class="progress-bar progress-bar-striped progress-bar-animated"
-              role="progressbar" style="width: 25%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">
-              <p>
-                <!-- printers progress % -->
-                <!-- this will be the style="width: 25%" -->
-              </p>
+
+          <div v-if="printer.status === 'printing'">
+            <div class="progress">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 25%"
+                aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">
+                <p>
+                  <!-- printers progress % -->
+                  <!-- this will be the style="width: 25%" -->
+                </p>
+              </div>
             </div>
-            <div v-else>
-              <button @click="failPrint(printer)">Fail</button>
-              <button @click="clearPrint(printer)">Clear</button>
-              <button @click="clearThenRerunPrint(printer)">Clear/Rerun</button>
-            </div>
+          </div>
+          <div v-else>
+            <button type="button" class="btn btn-danger" @click="failPrint(printer)">Fail</button>
+            <button type="button" class="btn btn-secondary" @click="clearPrint(printer)">Clear</button>
+            <button type="button" class="btn btn-info" @click="clearThenRerunPrint(printer)">Clear/Rerun</button>
           </div>
         </td>
       </tr>

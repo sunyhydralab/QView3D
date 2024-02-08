@@ -6,15 +6,21 @@ const { register } = useRegisterPrinter();
 const { retrieve } = useRetrievePrinters();
 
 let devices = ref<Array<Device>>([]); // Array of all devices -- stores ports for user to select/register
-let selectedDevice = ref<Device | undefined>() // device user selects to register.
+let selectedDevice = ref<Device | null>(null) // device user selects to register.
 let customname = ref('') // Stores the user input name of printer 
 let registered = ref<Array<Device>>([]) // Stores array of printers already registered in the system
 
 // fetch list of connected ports from backend and automatically load them into the form dropdown 
 onMounted(async () => {
     try {
-        devices.value = await ports();  // load ports into list when component is mounted
+        const allDevices = await ports();  // load all ports
         registered.value = await retrieve();  // loads registered printers into registered array
+
+        // Filter out the already registered devices
+        devices.value = allDevices.filter((device: Device) =>
+            !registered.value.some(registeredDevice => registeredDevice.device === device.device)
+        );
+
         console.log(registered.value);
     } catch (error) {
         console.error(error);
@@ -29,16 +35,21 @@ const doRegister = async () => {
             hwid: selectedDevice.value.hwid,
             name: customname.value.trim(), // Trim to remove leading and trailing spaces
         };
-        // pass RegisteredPrinter data to register function 
-        // let res = await register(selectedDevice.value)
 
         await register(selectedDevice.value);
 
         // Fetch the updated list after registration
         registered.value = await retrieve();
+
+        // Refresh the devices list
+        const allDevices = await ports();
+        devices.value = allDevices.filter((device: Device) =>
+            !registered.value.some(registeredDevice => registeredDevice.device === device.device)
+        );
     }
+
     // reset values 
-    selectedDevice.value = undefined;
+    selectedDevice.value = null;
     customname.value = ''
 }
 </script>
@@ -62,7 +73,7 @@ const doRegister = async () => {
             <b class="register">REGISTER PRINTERS</b>
             <form methods="POST" @submit="doRegister">
                 <select name="ports" id="ports" v-model="selectedDevice" required>
-                    <option :value="null">Select Device</option>
+                    <option disabled value="null">Select Device</option> <!-- Default option -->
                     <option v-for="printer in devices" :value="printer">
                         {{ printer.device }}
                     </option>

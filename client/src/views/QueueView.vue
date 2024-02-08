@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
-import { useRerunJob, useRemoveJob, type Job } from '@/model/jobs';
+import { useRerunJob, useRemoveJob, bumpJobs, type Job } from '../model/jobs';
 import { useRoute } from 'vue-router'
 
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
+const { bumpUp, bumpDown, bumpToTop, bumpToBack } = bumpJobs()
 
 type Printer = Device & { isExpanded?: boolean }
 const printers = ref<Array<Printer>>([]) // Get list of open printer threads 
@@ -34,6 +35,16 @@ onMounted(async () => {
 const handleRerun = async (job: Job, printer: Printer) => {
   await rerunJob(job, printer)
   console.log('Rerunning job:', job, 'on printer:', printer);
+
+  // Re-fetch the printer's queue from the backend
+  const printerInfo = await retrieveInfo()
+  const foundPrinter = printerInfo.find((p: any) => p.id === printer.id)
+  if (foundPrinter) {
+    const printerIndex = printers.value.findIndex(p => p.id === printer.id)
+    if (printerIndex !== -1) {
+      printers.value[printerIndex].queue = foundPrinter.queue
+    }
+  }
 };
 
 async function handleCancel(jobToFind: Job, printerToFind: Device) {
@@ -68,6 +79,33 @@ function statusColor(status: string | undefined) {
       return 'black';
   }
 }
+
+const bump = async (job: Job, printer: Printer, direction: string) => {
+  switch (direction) {
+    case 'up':
+      await bumpUp(job, printer)
+      break;
+    case 'down':
+      await bumpDown(job, printer)
+      break;
+    case 'top':
+      await bumpToTop(job, printer)
+      break;
+    case 'bottom':
+      await bumpToBack(job, printer)
+      break;
+  }
+
+  // Re-fetch the printer's queue from the backend
+  const printerInfo = await retrieveInfo()
+  const foundPrinter = printerInfo.find((p: any) => p.id === printer.id)
+  if (foundPrinter) {
+    const printerIndex = printers.value.findIndex(p => p.id === printer.id)
+    if (printerIndex !== -1) {
+      printers.value[printerIndex].queue = foundPrinter.queue
+    }
+  }
+}
 </script>
 
 <template>
@@ -84,7 +122,8 @@ function statusColor(status: string | undefined) {
             :data-bs-target="'#panelsStayOpen-collapse' + index" :aria-expanded="printer.isExpanded"
             :aria-controls="'panelsStayOpen-collapse' + index">
             <b>{{ printer.name }}:&nbsp;
-              <span class="status-text" :style="{ color: statusColor(printer.status) }">{{ capitalizeFirstLetter(printer.status) }}</span>
+              <span class="status-text" :style="{ color: statusColor(printer.status) }">{{
+                capitalizeFirstLetter(printer.status) }}</span>
             </b>
           </button>
         </h2>
@@ -95,35 +134,67 @@ function statusColor(status: string | undefined) {
             <table>
               <thead>
                 <tr>
-                  <th>Cancel</th>
+                  <th class="col-1">Cancel</th>
+                  <th class="col-2">Rerun Job</th>
+                  <th class="col-1">Position</th>
+                  <th class="col-1">Bump</th>
                   <th>Job Title</th>
                   <th>File</th>
                   <th>Date Added</th>
-                  <th>Status</th>
-                  <th>Rerun Job</th>
+                  <th class="col-1">Status</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr v-for="job in printer.queue" :key="job.name">
-                  <td>
-                    <button @click="handleCancel(job, printer)">X</button>
+              <transition-group name="list" tag="tbody">
+                <tr v-for="job in printer.queue" :key="job.job_id">
+                  <td class="text-center">
+                    <button type="button" class="btn btn-danger w-100" @click="handleCancel(job, printer)">X</button>
+                  </td>
+                  <td class="text-center">
+                    <div class="btn-group w-100">
+                      <button type="button" class="btn btn-primary" @click="handleRerun(job, printer)">Rerun
+                        Job</button>
+                      <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="visually-hidden">Toggle Dropdown</span>
+                      </button>
+                      <div class="dropdown-menu">
+                        <button class="dropdown-item" v-for="otherPrinter in printers.filter(p => p.id !== printer.id)"
+                          :key="otherPrinter.id" @click="handleRerun(job, otherPrinter)">{{ otherPrinter.name
+                          }}</button>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <b>
+                      {{ printer.queue ? printer.queue.findIndex(j => j === job) + 1 : '' }}
+                    </b>
+                  </td>
+                  <td class="text-center">
+                    <div class="dropdown w-100">
+                      <button class="btn dropdown-toggle w-100"
+                        :class="{ 'btn-secondary': printer.queue && job !== printer.queue[0], 'btn-danger': printer.queue && job === printer.queue[0] }"
+                        type="button" data-bs-toggle="dropdown"
+                        :disabled="printer.queue ? job === printer.queue[0] : false"></button>
+                      <ul class="dropdown-menu">
+                        <li class="dropdown-item" v-if="printer.queue && printer.queue.findIndex(j => j === job) > 1"
+                          @click="bump(job, printer, 'up')">Bump Up</li>
+                        <li class="dropdown-item" v-if="printer.queue && printer.queue.findIndex(j => j === job) > 1"
+                          @click="bump(job, printer, 'top')">Send to Top</li>
+                        <li class="dropdown-item"
+                          v-if="printer.queue && printer.queue.findIndex(j => j === job) < printer.queue.length - 1"
+                          @click="bump(job, printer, 'down')">Bump Down</li>
+                        <li class="dropdown-item"
+                          v-if="printer.queue && printer.queue.findIndex(j => j === job) < printer.queue.length - 1"
+                          @click="bump(job, printer, 'bottom')">Send to Bottom</li>
+                      </ul>
+                    </div>
                   </td>
                   <td><b>{{ job.name }}</b></td>
                   <td>{{ job.file_name }}</td>
                   <td>{{ job.date }}</td>
                   <td>{{ job.status }}</td>
-                  <td>
-                    <div class="dropdown">
-                      <button class="dropbtn">Rerun Job</button>
-                      <div class="dropdown-content">
-                        <div v-for="printer in printers" :key="printer.id">
-                          <div class="printerrerun" @click="handleRerun(job, printer)">{{ printer.name }}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </td>
                 </tr>
-              </tbody>
+              </transition-group>
             </table>
           </div>
         </div>
@@ -133,6 +204,10 @@ function statusColor(status: string | undefined) {
 </template>
 
 <style scoped>
+.list-move {
+  transition: transform 1s;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -227,5 +302,4 @@ th {
 .printerrerun {
   cursor: pointer;
   padding: 12px 16px;
-}
-</style>
+}</style>

@@ -99,7 +99,7 @@ const handleSubmit = async () => {
                 <br><br>
 
                 <label for="name">Name</label>
-                <input v-model="name" type="text" id="name" name="name">
+                <input v-model="name" type="text" id="name" name="name" required>
 
                 <br><br>
                 <!-- This form data does NOT go into the database -- goes into in-memory printer array to be handled. 
