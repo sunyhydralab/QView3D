@@ -34,7 +34,10 @@ def handle_preflight():
 
 # start database connection
 load_dotenv()
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI')
+basedir = os.path.abspath(os.path.dirname(__file__))
+database_file = os.path.join(basedir, os.environ.get('SQLALCHEMY_DATABASE_URI'))
+database_uri = 'sqlite:///' + database_file
+app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
