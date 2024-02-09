@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, type Device } from '@/model/ports';
-import { onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { onMounted, onUnmounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 const { retrieveInfo } = useRetrievePrintersInfo();
 const router = useRouter();
 
 let printers = ref<Array<Device>>([]); // Array of all devices. Used to list registered printers on frontend. 
+let intervalId: number | undefined
 
 const sendToQueueView = (name: string | undefined) => {
   if (name) {
@@ -21,6 +22,40 @@ const setPrinterStatus = (printer: Device, status: string) => {
   // TODO: implement this
   console.log('Setting status of printer:', printer, 'to:', status);
 }
+
+onMounted(async () => {
+  try {
+    const route = useRoute()
+    const printerName = route.params.printerName
+    const updatePrinters = async () => {
+      const printerInfo = await retrieveInfo()
+      printers.value = []
+
+      for (const printer of printerInfo) {
+        printers.value.push({
+          ...printer,
+          isExpanded: printer.name === printerName
+        })
+      }
+    }
+
+    // Fetch the printer status immediately on mount
+    await updatePrinters()
+
+     // Then fetch it every 5 seconds
+     intervalId = window.setInterval(updatePrinters, 5000)
+
+  } catch (error) {
+    console.error('There has been a problem with your fetch operation:', error)
+  }
+})
+
+onUnmounted(() => {
+  // Clear the interval when the component is unmounted to prevent memory leaks
+  if (intervalId) {
+    clearInterval(intervalId)
+  }
+})
 
 // fail the print job
 const failPrint = (printer: Device) => {
