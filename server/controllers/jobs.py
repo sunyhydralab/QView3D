@@ -31,7 +31,7 @@ def add_job_to_queue():
         printer_id = int(request.form['printerid'])
         
         # insert into DB and return PK 
-        status = 'printing' # set status 
+        status = 'inqueue' # set status 
         res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original) # insert into DB 
         
         # retrieve job from DB
