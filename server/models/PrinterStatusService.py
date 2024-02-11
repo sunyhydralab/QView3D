@@ -29,6 +29,7 @@ class PrinterStatusService:
                 description=printer_info["description"],
                 hwid=printer_info["hwid"],
                 name=printer_info["name"],
+                status='configuring'
             )
             printer_thread = self.start_printer_thread(
                 printer
@@ -39,20 +40,14 @@ class PrinterStatusService:
         self.ping_thread = Thread(target=self.pingForStatus)
 
     def update_thread(self, printer):  # TARGET FUNCTION
-        # with current_app._get_current_object().app_context():
-
         while True:
             time.sleep(2)
             status = printer.getStatus()  # get printer status
 
-            if status == "configuring":
-                printer.initialize()  # code to change status from online -> ready on thread start
-                
             queueSize = printer.getQueue().getSize() # get size of queue 
             
             if (status == "ready" and queueSize > 0):
                 printer.printNextInQueue()
-        # this method will be called by the UI to get the printers that have a threads information
 
     # this method will be called by the UI to get the printers that have a threads information
     def retrieve_printer_info(self):
@@ -74,12 +69,12 @@ class PrinterStatusService:
             queue = printer.getQueue()
             for job in queue: 
                 job_info = {
+                    "id": job.id,
                     "name": job.name,
                     "status": job.status,
                     "date": job.date.strftime('%a, %d %b %Y %H:%M:%S'),
-                    "file_name": job.file_name,
                     "printerid": job.printer_id, 
-                    "job_id": job.job_id
+                    "file_name_original": job.file_name_original
                 }
                 printer_info['queue'].append(job_info)
             

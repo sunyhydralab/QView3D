@@ -15,7 +15,4 @@ def getOpenThreads():
 @status_bp.route('/getprinterinfo', methods=["GET"])
 def getPrinterInfo():
     printer_info = printer_status_service.retrieve_printer_info()  # call the method on the instance
-    
-
-    
     return jsonify(printer_info)

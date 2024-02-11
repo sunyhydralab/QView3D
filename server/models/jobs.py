@@ -12,40 +12,33 @@ from tzlocal import get_localzone
 from io import BytesIO
 from werkzeug.datastructures import FileStorage
 import time 
+import gzip
 # model for job history table 
 class Job(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     file = db.Column(db.LargeBinary(16777215), nullable=False)
     name = db.Column(db.String(50), nullable = False)
     status = db.Column(db.String(50), nullable=False)
-    file_name = db.Column(db.String(50), nullable=False)
     date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).astimezone(), nullable=False)
     # foreign key relationship to match jobs to the printer printed on 
     printer_id = db.Column(db.Integer, db.ForeignKey('printer.id'), nullable = False)
     printer = db.relationship('Printer', backref='Job')
-    path = None
+    file_name_original = db.Column(db.String(50), nullable = False)
+    file_name_pk = None
     
-    job_id = 1
-    id_counter = 1 
-    
-    def __init__(self, file, name, printer_id, status='inqueue', file_name=None, path=None): 
-        # if file is not provided, load it in from the path
-        if file==None and file_name!=None: 
-            self.setFile(file_name)
-        else: 
-            self.file = file 
-            
+    def __init__(self, file, name, printer_id, status, file_name_original): 
+        self.file = file 
         self.name = name 
         self.printer_id = printer_id 
-        self.status = status # set default status to be in-queue
-        self.date = datetime.now(get_localzone())
-        self.file_name = file_name
-        self.path = path 
+        self.status = status 
+        self.file_name_original = file_name_original # original file name without PK identifier 
         
-        self.job_id = Job.id_counter  # Assign a unique ID
-        Job.id_counter += 1  # Increment the counter for the next object
-        
-        self.saveToFolder()
+        file_name_pk = None
+        # file name attribute set after job is inserted into DB 
+
+    def __repr__(self):
+        # return f"Job(id={self.id}, name={self.name}, printer_id={self.printer_id}, status={self.status}, file_name={self.file_name})"
+        return f"Job(id={self.id}, name={self.name}, printer_id={self.printer_id}, status={self.status})"
     
     def getPrinterId(self): 
         return self.printer_id
@@ -56,13 +49,14 @@ class Job(db.Model):
             jobs = cls.query.all()
             
             jobs_data = [{
-                "file_name": job.file_name, 
+                # "file_name": job.file_name, 
+                "id": job.id,
                 "name": job.name, 
                 "status": job.status, 
                 "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",  
-                "printer": job.printer.name
+                "printer": job.printer.name, 
+                "file_name_original": job.file_name_original
             } for job in jobs]
-            print(jobs_data)
             
             return jobs_data
         except SQLAlchemyError as e:
@@ -70,90 +64,76 @@ class Job(db.Model):
             return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500
         
     @classmethod
-    def jobHistoryInsert(cls, name, printer_id, status, file_name, file_path): 
+    def jobHistoryInsert(cls, name, printer_id, status, file, file_name_original): 
         try:
-            # if cls.fileExistsInPath(file_path):
-            with open(file_path, 'rb') as file:
+            if isinstance(file, bytes):
+                file_data = file
+            else:
                 file_data = file.read()
-                file_storage = FileStorage(stream=BytesIO(file_data), filename=file_name)
-            # else: 
-            #     file_storage = cls.loadFileFromDB(file_name)
-            #     file_data = file_storage.read()
+
+            compressed_data = gzip.compress(file_data) # compress data before storing in database
             
             job = cls(
-                file = file_data, 
+                file = compressed_data, 
                 name=name,
                 printer_id=printer_id,
                 status=status,
-                file_name=file_name
+                file_name_original = file_name_original
             )
 
             db.session.add(job)
             db.session.commit()
-            return {"success": True, "message": "Job added to collection."}
+        
+            return {"success": True, "message": "Job added to collection.", "id": job.id}
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return (
                 jsonify({"error": "Failed to add job. Database error"}),
                 500,
+            ) 
+    
+    @classmethod
+    def update_job_status(cls, job_id, new_status):
+        try:
+            # Retrieve the job from the database based on its primary key
+            job = cls.query.get(job_id)
+            if job:
+                # Update the status attribute of the job
+                job.status = new_status
+                # Commit the changes to the database
+                db.session.commit()
+                return {"success": True, "message": f"Job {job_id} status updated successfully."}
+            else:
+                return {"success": False, "message": f"Job {job_id} not found."}, 404
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return (
+                jsonify({"error": "Failed to update job status. Database error"}),
+                500,
             )
-            
-    def setFile(self, file_name): 
-        path = self.generatePath(file_name)
-        if self.fileExistsInPath(path):
-            with open(path, 'rb') as file:
-                file_data = file.read()
-                
-            file_storage = FileStorage(stream=BytesIO(file_data), filename=file_name)  
-            
-            # path = self.generatePath(file_name)
-            self.file = file_storage
-        else: 
-            self.file = self.loadFileFromDB(file_name)
+                    
+    @classmethod 
+    def findJob(cls, job_id):
+        try:
+            job = cls.query.filter_by(id=job_id).first()
+            return job
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return jsonify({"error": "Failed to retrieve job. Database error"}), 500   
            
     def saveToFolder(self):
-        
-        file_name = self.getFileName()
-        file_path = self.generatePath(file_name)
-        
-        if not self.fileExistsInPath(file_path):
-            self.file = self.loadFileFromDB(file_name)
-        file = self.getFile()
-        if isinstance(file, bytes):
-            file = FileStorage(stream=BytesIO(file), filename=file_name)
-        file.save(file_path)
-        self.setPath(file_path)
-        return file_path
+        file_data = self.getFile()
+        decompressed_data = gzip.decompress(file_data) 
+        with open(self.generatePath(), 'wb') as f:
+            f.write(decompressed_data)
     
-    def loadFileFromDB(self, file_name):
-        print(file_name)
-        job = Job.query.filter_by(file_name=file_name).first()  # Query the database for a job with the same file_name
-        if job is not None:
-            stream = BytesIO(job.file)
-            return FileStorage(stream=stream, filename=job.file_name) # Create a FileStorage object from the job's file data
-        else:
-            return "File not found in database."
+    def generatePath(self):
+        return os.path.join('../uploads', self.getFileNamePk())
     
-    @classmethod
-    def generatePath(self, filename):
-        folder_path = os.path.join("..", "uploads")
-        file_path = os.path.join(folder_path, filename)
-        return file_path 
-    
-    @classmethod
-    def deleteFile(cls, path):
-        if cls.fileExistsInPath(path):
-            os.remove(path)
-            return True 
-        else: 
-            return False 
-            
-    @classmethod 
-    def fileExistsInPath(cls, path): 
-        if os.path.exists(path):
-            return True
-        else:
-            return False 
+    def removeFileFromPath(self):
+        file_path = self.generatePath()  # Get the file path
+        if os.path.exists(file_path):    # Check if the file exists
+            os.remove(file_path)         # Remove the file
     
     def getName(self):
         return self.name
@@ -164,30 +144,33 @@ class Job(db.Model):
     def getFile(self): 
         return self.file
     
-    def openFile(self, file):
-        # open the file in binary mode
-        file = open(file, 'rb')
-        return file        
-    
-    def closeFile(self, file):
-        # close the file
-        file.close()
-    
     def getStatus(self): 
         return self.status 
     
-    def getFileName(self):
-        return self.file_name
+    def getFileNamePk(self):
+        return self.file_name_pk
+    
+    def getFileNameOriginal(self):
+        return self.file_name_original
     
     def getPrinterId(self): 
         return self.printer_id
     
     def getJobId(self):
-        return self.job_id
+        return self.id
     
     def setStatus(self, status): 
         self.status = status
+        # self.setDBstatus(self.id, status)
+    
+    @classmethod 
+    def setDBstatus(cls, jobid, status):
+        cls.update_job_status(jobid, status)
+
         
     def setPath(self, path): 
         self.path = path 
+
+    def setFileName(self, filename):
+        self.file_name_pk = filename
         

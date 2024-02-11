@@ -12,8 +12,8 @@ from tzlocal import get_localzone
 import os 
 import json 
 import requests 
-# from models.jobs import Job 
-
+from dotenv import load_dotenv
+load_dotenv()
 
 # model for Printer table
 class Printer(db.Model):
@@ -30,7 +30,7 @@ class Printer(db.Model):
     status = None  # default setting on printer start. Runs initialization and status switches to "ready" automatically.
     stopPrint = False
 
-    def __init__(self, device, description, hwid, name, status='configuring', id=None):
+    def __init__(self, device, description, hwid, name, status=status, id=None):
         self.device = device
         self.description = description
         self.hwid = hwid
@@ -57,26 +57,26 @@ class Printer(db.Model):
     @classmethod
     def create_printer(cls, device, description, hwid, name, status):
         printerExists = cls.searchByDevice(hwid)
-        if printerExists:
-            return {"success": False, "message": "Printer already registered."}
-        else:
-            try:
-                printer = cls(
-                    device=device,
-                    description=description,
-                    hwid=hwid,
-                    name=name,
-                    status=status,
-                )
-                db.session.add(printer)
-                db.session.commit()
-                return {"success": True, "message": "Printer successfully registered."}
-            except SQLAlchemyError as e:
-                print(f"Database error: {e}")
-                return (
-                    jsonify({"error": "Failed to register printer. Database error"}),
-                    500,
-                )
+        # if printerExists:
+        #     return {"success": False, "message": "Printer already registered."}
+        # else:
+        try:
+            printer = cls(
+                device=device,
+                description=description,
+                hwid=hwid,
+                name=name,
+                status=status,
+            )
+            db.session.add(printer)
+            db.session.commit()
+            return {"success": True, "message": "Printer successfully registered.", "printer_id": printer.id}
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return (
+                jsonify({"error": "Failed to register printer. Database error"}),
+                500,
+            )
 
     @classmethod
     def get_registered_printers(cls):
@@ -121,6 +121,18 @@ class Printer(db.Model):
             # if port.description in supportedPrinters:
             printerList.append(port_info)
         return printerList
+    
+    @classmethod 
+    def findPrinter(cls, id):
+        try:
+            printer = cls.query.get(id)
+            return printer
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return (
+                jsonify({"error": "Failed to retrieve printer. Database error"}),
+                500,
+            )
 
     def connect(self):
         self.ser = serial.Serial(self.device, 115200, timeout=1)
@@ -130,132 +142,81 @@ class Printer(db.Model):
             self.ser.close()
             self.setSer(None)
 
-    def reset(self, initializeStatus):
-        self.sendGcode("G28", initializeStatus)
-        self.sendGcode("G92 E0", initializeStatus)
-        
-    # def stopPrint(self):
-    #     # self.sendGcode("M0")
-
-    def parseGcode(self, path):
-        with open(path, "r") as g:
-            # Replace file with the path to the file. "r" means read mode. 
-            for line in g:
-                #remove whitespace
-                line = line.strip() 
-                # Don't send empty lines and comments. ";" is a comment in gcode.
-                if len(line) == 0 or line.startswith(";"): 
-                    continue
-                # Send the line to the printer.
-                res = self.sendGcode(line)
-                if res == "error": 
-                    return "error"
-        return "complete"
+    def reset(self):
+        self.sendGcode("G28")
+        self.sendGcode("G92 E0") 
 
     # Function to send gcode commands
-    def sendGcode(self, message, initializeStatus=False):
-        if self.getStopPrint()==True or self.getStatus()=="error": # if any error occurs, do not proceed with printing.
-                return "error"
-        # Encode and send the message to the printer.
-        self.ser.write(f"{message}\n".encode("utf-8"))
-        # Sleep the printer to give it enough time to get the instruction.
-        time.sleep(0.1)
-        # Save and print out the response from the printer. We can use this for error handling and status updates.
-        while True:
-            response = self.ser.readline().decode("utf-8").strip()
-            if "ok" in response:
-                if initializeStatus == True: # if first-time connecting, this is the reset function setting the status to "ready"
-                    self.setStatus("ready")
-                break
-            # if stops while printing, set status to error.
-            # else:
-            #     time.sleep(2)
-            #     if self.getStatus() == "printing":
-            #         # set job status to error, do a database insert. do not remove from queue. wait for user intervention. 
-            #         self.getCurrentJob().setStatus("error") # set status of job to error 
-            #         # self.jobDatabaseInsert() # If error, do not remove from queue. Insert job into DB with status "error."
-            #         # only remove from queue when user clicks a button on frontend to clear or mark as error.  
-            #     self.setStatus("error")
-            #     return
-        print(f"Command: {message}, Received: {response}")
-
-    # def print_job(self, job):
-    #     for line in job.gcode_lines:
-    #         self.send_gcode(line)
+    def sendGcode(self, message):
+        try: 
+            if self.getStatus()=="error" or self.getStatus()=='complete': # if any error occurs, do not proceed with printing.
+                return
+            # Encode and send the message to the printer.
+            self.ser.write(f"{message}\n".encode("utf-8"))
+            # Sleep the printer to give it enough time to get the instruction.
+            time.sleep(0.1)
+            # Save and print out the response from the printer. We can use this for error handling and status updates.
+            while True:
+                response = self.ser.readline().decode("utf-8").strip()
+                if "ok" in response:
+                    break
+            print(f"Command: {message}, Received: {response}")
+        except serial.SerialException as e:
+            self.setStatus("error")
+            return "error" 
+        
+    def parseGcode(self, path):
+        try: 
+            with open(path, "r") as g:
+                # Replace file with the path to the file. "r" means read mode. 
+                for line in g:
+                    #remove whitespace
+                    line = line.strip() 
+                    # Don't send empty lines and comments. ";" is a comment in gcode.
+                    if len(line) == 0 or line.startswith(";"): 
+                        continue
+                    # Send the line to the printer.
+                    res = self.sendGcode(line)
+                    if res == "error": 
+                        return "error"
+            return "complete"
+        except FileNotFoundError:
+            self.setStatus('complete')
+            return 
 
     def printNextInQueue(self):
         job = self.getQueue().getNext() # get next job 
-        path = job.getFilePath()
-        
-        if not self.fileExistsInPath(path):
-            job.saveToFolder()
-        
-        if self.getSer():
-            job.setStatus("printing") # set job status to printing 
-            self.setStatus("printing") # set printer status to printing
-            self.reset(initializeStatus=False)
-            
-            verdict = self.parseGcode(path) # passes file to code. returns "complete" if successful, "error" if not.
-            # verdict = "complete"
-            
-            if verdict =="complete":
-                job.setStatus("complete") # set job status to complete 
-                self.setStatus("complete")
-            else: 
-                job.setStatus("error")
-                self.setStatus("error")
-                
-            self.disconnect()
-            
-            self.sendJobToDB(job) # send job to the DB after job complete 
-            job.deleteFile() # remove file from folder after job complete
-        # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready. 
-        
-        else:
-            raise Exception(
-                "Failed to establish serial connection for printer: ", self.name
-            )
-
-    def initialize(self):
-        printerList = self.getConnectedPorts()
-        if any(printer['device'] == self.getDevice() for printer in printerList): # if printer is connected, then run ser
-            self.ser = serial.Serial(
-                self.getDevice(), 115200, timeout=1
-            )  # set up serial communication
+        try:
             if self.getSer():
-                self.reset(initializeStatus=True)
-        else:
-            self.setStatus("offline")
-            raise Exception(
-                "Failed to establish serial connection for printer: ", self.name
-            )
+                job.saveToFolder()
+                path = job.generatePath()
+                        
+                # job.setStatus("printing") # set job status to printing 
+                self.setStatus("printing") # set printer status to printing
+                self.sendStatusToJob(job, job.id, "printing")
+                self.reset()
+                
+                verdict = self.parseGcode(path) # passes file to code. returns "complete" if successful, "error" if not.
 
-    def sendJobToDB(self, job):  
-        # get the job data      
-        jobdata = { 
-            "name": job.getName(),
-            "printer_id": job.getPrinterId(),
-            "status": job.getStatus(),
-            "file_name": job.getFileName(),
-            "file_path": job.getFilePath(),
-        }
-        
-        # URL to send through route 
-        base_url = os.getenv('BASE_URL')
-
-        # Combine job data and file for sending
-        data = {
-            "jobdata": json.dumps(jobdata),  # Convert jobdata to JSON
-        }
-        
-        # response = requests.post(f'{base_url}/jobdbinsert', files=files, data=data)
-        response = requests.post(f'{base_url}/jobdbinsert', data=data)
-
-        
-        if response.ok:
-            print("Job data successfully inserted into the database.")
-        else:
-            print("Failed to insert job data into the database.")
+                if verdict =="complete":
+                    self.setStatus("complete")
+                    self.sendStatusToJob(job, job.id, "complete")
+                else: 
+                    self.sendStatusToJob(job, job.id, "error")
+                    self.setStatus("error")
+                    
+                self.disconnect()
+    
+                job.removeFileFromPath() # remove file from folder after job complete
+            # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready. 
+            
+            else:
+                self.setStatus("error")
+                self.sendStatusToJob(job, job.id, "error")
+        except serial.SerialException as e:
+            self.setStatus("error")
+            job.setStatus("error")
+            return "error" 
 
     def fileExistsInPath(self, path): 
         if os.path.exists(path):
@@ -287,7 +248,29 @@ class Printer(db.Model):
         self.ser = port
 
     def setStatus(self, newStatus):
-        self.status = newStatus
+        if newStatus=='ready': 
+            if self.getSer():
+                self.status = newStatus
+            else: 
+                self.status = "offline"
         
     def setStopPrint(self, stopPrint):
         self.stopPrint = stopPrint
+        
+    def sendStatusToJob(self, job, job_id, status):
+        try:
+            job.setStatus(status)
+            data = {
+                "printerid": self.id,
+                "jobid": job_id,
+                "status": status  # Assuming status is accessible here
+            }
+            base_url = os.getenv("BASE_URL", "http://localhost:8000")
+
+            response = requests.post(f"{base_url}/updatejobstatus", json=data)
+            if response.status_code == 200:
+                print("Status sent successfully")
+            else:
+                print("Failed to send status:", response.text)
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to send status to job: {e}")

@@ -9,6 +9,7 @@ from models.PrinterStatusService import PrinterStatusService
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 from controllers.ports import getRegisteredPrinters
+import shutil
 
 # moved this before importing the blueprints so that it can be accessed by the PrinterStatusService
 printer_status_service = PrinterStatusService()
@@ -53,22 +54,26 @@ app.register_blueprint(status_bp)
 # own thread
 with app.app_context():
     try:
+        
+        # Creating printer threads from registered printers on server start 
         res = getRegisteredPrinters() # gets registered printers from DB 
-        print(res)
         data = res[0].get_json() # converts to JSON 
         printers_data = data.get("printers", []) # gets the values w/ printer data
         printer_status_service.create_printer_threads(printers_data)
         
+        # Create in-memory uploads folder 
         uploads_folder = os.path.join('../uploads')
         if os.path.exists(uploads_folder):
-            # Remove the uploads folder and recreate it as an empty directory
-            os.rmdir(uploads_folder)
+            # Remove the uploads folder and all its contents
+            shutil.rmtree(uploads_folder)
+            # Recreate it as an empty directory
             os.makedirs(uploads_folder)
             print("Uploads folder recreated as an empty directory.")
         else:
             # Create the uploads folder if it doesn't exist
             os.makedirs(uploads_folder)
             print("Uploads folder created successfully.")
+        
             
     except Exception as e:
         print(f"Unexpected error: {e}")

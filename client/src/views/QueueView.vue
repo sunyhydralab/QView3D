@@ -8,7 +8,7 @@ const { retrieveInfo } = useRetrievePrintersInfo()
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
 // const { bumpUp, bumpDown, bumpToTop, bumpToBack } = bumpJobs()
-const {bumpjob} = bumpJobs()
+const { bumpjob } = bumpJobs()
 
 type Printer = Device & { isExpanded?: boolean }
 const printers = ref<Array<Printer>>([]) // Get list of open printer threads 
@@ -22,7 +22,6 @@ onMounted(async () => {
     const updatePrinters = async () => {
       const printerInfo = await retrieveInfo()
       printers.value = []
-
       for (const printer of printerInfo) {
         printers.value.push({
           ...printer,
@@ -30,13 +29,10 @@ onMounted(async () => {
         })
       }
     }
-
     // Fetch the printer status immediately on mount
     await updatePrinters()
-
-     // Then fetch it every 5 seconds
-     intervalId = window.setInterval(updatePrinters, 5000)
-
+    // Then fetch it every 5 seconds
+    intervalId = window.setInterval(updatePrinters, 5000)
   } catch (error) {
     console.error('There has been a problem with your fetch operation:', error)
   }
@@ -51,8 +47,6 @@ onUnmounted(() => {
 
 const handleRerun = async (job: Job, printer: Printer) => {
   await rerunJob(job, printer)
-  console.log('Rerunning job:', job, 'on printer:', printer);
-
   // Re-fetch the printer's queue from the backend
   const printerInfo = await retrieveInfo()
   const foundPrinter = printerInfo.find((p: any) => p.id === printer.id)
@@ -62,6 +56,7 @@ const handleRerun = async (job: Job, printer: Printer) => {
       printers.value[printerIndex].queue = foundPrinter.queue
     }
   }
+
 };
 
 async function handleCancel(jobToFind: Job, printerToFind: Device) {
@@ -73,7 +68,7 @@ async function handleCancel(jobToFind: Job, printerToFind: Device) {
   foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
 
   // remove from queue 
-  await removeJob(jobToFind)
+  await removeJob(jobToFind, 0)
 }
 
 function capitalizeFirstLetter(string: string | undefined) {
@@ -96,23 +91,6 @@ function statusColor(status: string | undefined) {
       return 'black';
   }
 }
-
-// const bump = async (job: Job, printer: Printer, direction: string) => {
-//   switch (direction) {
-//     case 'up':
-//       await bumpUp(job, printer)
-//       break;
-//     case 'down':
-//       await bumpDown(job, printer)
-//       break;
-//     case 'top':
-//       await bumpToTop(job, printer)
-//       break;
-//     case 'bottom':
-//       await bumpToBack(job, printer)
-//       break;
-//   }
-
 
 const bump = async (job: Job, printer: Printer, direction: string) => {
   switch (direction) {
@@ -169,6 +147,7 @@ const bump = async (job: Job, printer: Printer, direction: string) => {
             <table>
               <thead>
                 <tr>
+                  <th class="col-1">Job ID</th>
                   <th class="col-1">Cancel</th>
                   <th class="col-2">Rerun Job</th>
                   <th class="col-1">Position</th>
@@ -176,14 +155,16 @@ const bump = async (job: Job, printer: Printer, direction: string) => {
                   <th>Job Title</th>
                   <th>File</th>
                   <th>Date Added</th>
-                  <th class="col-1">Status</th>
+                  <th class="col-1">Job Status</th>
                 </tr>
               </thead>
               <transition-group name="list" tag="tbody">
-                <tr v-for="job in printer.queue" :key="job.job_id">
+                <tr v-for="job in printer.queue" :key="job.id">
+                  <td>{{ job.id }}</td>
                   <td class="text-center">
                     <button type="button" class="btn btn-danger w-100" @click="handleCancel(job, printer)">X</button>
                   </td>
+
                   <td class="text-center">
                     <div class="btn-group w-100">
                       <button type="button" class="btn btn-primary" @click="handleRerun(job, printer)">Rerun
@@ -199,17 +180,20 @@ const bump = async (job: Job, printer: Printer, direction: string) => {
                       </div>
                     </div>
                   </td>
+
                   <td class="text-center">
                     <b>
                       {{ printer.queue ? printer.queue.findIndex(j => j === job) + 1 : '' }}
                     </b>
                   </td>
+
                   <td class="text-center">
                     <div class="dropdown w-100">
                       <button class="btn dropdown-toggle w-100"
-                        :class="{ 'btn-secondary': printer.queue && job !== printer.queue[0], 'btn-danger': printer.queue && job === printer.queue[0] }"
+                        :class="{ 'btn-danger': printer.queue && job.status === 'printing', 'btn-secondary': !printer.queue || (printer.queue && job.status !== 'printing') }"
                         type="button" data-bs-toggle="dropdown"
-                        :disabled="printer.queue ? job === printer.queue[0] : false"></button>
+                        :disabled="printer.queue && job.status === 'printing'"></button>
+
                       <ul class="dropdown-menu">
                         <li class="dropdown-item" v-if="printer.queue && printer.queue.findIndex(j => j === job) > 1"
                           @click="bump(job, printer, 'up')">Bump Up</li>
@@ -224,8 +208,9 @@ const bump = async (job: Job, printer: Printer, direction: string) => {
                       </ul>
                     </div>
                   </td>
+
                   <td><b>{{ job.name }}</b></td>
-                  <td>{{ job.file_name }}</td>
+                  <td>{{ job.file_name_original }}</td>
                   <td>{{ job.date }}</td>
                   <td>{{ job.status }}</td>
                 </tr>
@@ -337,4 +322,5 @@ th {
 .printerrerun {
   cursor: pointer;
   padding: 12px 16px;
-}</style>
+}
+</style>

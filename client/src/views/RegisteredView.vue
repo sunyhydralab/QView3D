@@ -16,12 +16,14 @@ onMounted(async () => {
         const allDevices = await ports();  // load all ports
         registered.value = await retrieve();  // loads registered printers into registered array
 
-        // Filter out the already registered devices
-        devices.value = allDevices.filter((device: Device) =>
-            !registered.value.some(registeredDevice => registeredDevice.device === device.device)
-        );
+        devices.value = allDevices
 
-        console.log(registered.value);
+        // Filter out the already registered devices
+        // devices.value = allDevices.filter((device: Device) =>
+        //     !registered.value.some(registeredDevice => registeredDevice.device === device.device)
+        // );
+        // console.log(registered.value);
+
     } catch (error) {
         console.error(error);
     }

@@ -23,6 +23,7 @@ onMounted(async () => {
         <table>
             <thead>
                 <tr>
+                    <th>Job ID</th>
                     <th>Job Title</th>
                     <th>File</th>
                     <th>Date Completed</th>
@@ -33,11 +34,11 @@ onMounted(async () => {
             </thead>
             <tbody v-if="jobs.length > 0">
                 <tr v-for="job in jobs" :key="job.name">
+                    <td>{{ job.id }}</td>
                     <td>{{ job.name }}</td>
-                    <td>{{ job.file_name }}</td>
+                    <td>{{ job.file_name_original }}</td>
                     <td>{{ job.date }}</td>
                     <td>{{ job.status }}</td>
-                    <!-- FIX THIS ERROR -->
                     <td>{{ job.printer }}</td>
                     <td><button class="rerun"></button></td>
                 </tr>

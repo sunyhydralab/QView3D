@@ -1,6 +1,7 @@
 from io import BytesIO
 from flask import Blueprint, jsonify, request, make_response
 from models.jobs import Job
+from models.printers import Printer
 from app import printer_status_service
 import json 
 from werkzeug.utils import secure_filename
@@ -22,17 +23,31 @@ def getJobs():
 @jobs_bp.route('/addjobtoqueue', methods=["POST"])
 def add_job_to_queue():
     try:
+        # retrieve job data 
         file = request.files['file']  # Access file directly from request.files
-        file_name = file.filename
+        file_name_original = file.filename
+        
         name = request.form['name']  # Access other form fields from request.form
-        printerid = int(request.form['printerid'])
+        printer_id = int(request.form['printerid'])
         
-        job = Job(file, name, printerid, file_name=file_name) # create job object 
+        # insert into DB and return PK 
+        status = 'printing' # set status 
+        res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original) # insert into DB 
         
-        threads = printer_status_service.getThreadArray()
+        # retrieve job from DB
+        id = res['id']
         
-        printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))[0].printer        
-        printerobject.getQueue().addToBack(job)
+        job = Job.query.get(id)
+        
+        file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
+        
+        job.setFileName(file_name_pk) # set unique in-memory file name 
+        
+        # threads = printer_status_service.getThreadArray()
+        # printerobject = list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer  
+              
+        findPrinterObject(printer_id).getQueue().addToBack(job)
+
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     
@@ -40,6 +55,33 @@ def add_job_to_queue():
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
 
+@jobs_bp.route('/rerunjob', methods=["POST"])
+def rerun_job():
+    try:
+        data = request.get_json()
+        printerpk = data['printerpk'] # printer to rerun job on 
+        jobpk = data['jobpk']
+        
+        job = Job.findJob(jobpk) # retrieve Job to rerun 
+        
+        status = 'inqueue' # set status 
+        file_name_original = job.getFileNameOriginal() # get original file name
+        
+        # Insert new job into DB and return new PK 
+        res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original) # insert into DB 
+        id = res['id']
+        file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
+        rerunjob = Job.query.get(id)
+        file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
+        rerunjob.setFileName(file_name_pk) # set unique file name 
+        
+        findPrinterObject(printerpk).getQueue().addToBack(rerunjob)
+
+        return jsonify({"success": True, "message": "Job added to printer queue."}), 200
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
 # route to insert job into database
 @jobs_bp.route('/jobdbinsert', methods=["POST"])
 def job_db_insert():
@@ -52,110 +94,78 @@ def job_db_insert():
         name = jobdata.get('name')
         printer_id = jobdata.get('printer_id')
         status = jobdata.get('status')
-        file_name=jobdata.get("file_name")
+        # file_name=jobdata.get("file_name")
         file_path=jobdata.get("file_path")
 
         # Insert the job data into the database
-        res = Job.jobHistoryInsert(name, printer_id, status, file_name, file_path)
+        # res = Job.jobHistoryInsert(name, printer_id, status, file_name, file_path)
+        res = Job.jobHistoryInsert(name, printer_id, status, file_path)
 
-        # print(name, printer_id, status)
         return "success"
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
-    
-@jobs_bp.route('/rerunjob', methods=["POST"])
-def rerun_job():
-    try:
-        data = request.get_json()
-
-        printerid = data['id']
-        file_name = data['job']['file_name']
-        job_name = data['job']['name']
-
-        job = Job(file=None, name=job_name, printer_id=printerid, file_name=file_name) # create job object without passing file.
-        
-        threads = printer_status_service.getThreadArray()
-        
-        printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))[0].printer
-        
-        printerobject.getQueue().addToBack(job)
-        
-        return jsonify({"success": True, "message": "Job added to printer queue."}), 200
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-    
-@jobs_bp.route('/deletejob', methods=["POST"])
+ 
+ # cancel queued job   
+@jobs_bp.route('/canceljob', methods=["POST"]) 
 def remove_job():
     try:
         # job has: printer id. job info.
+        # 0 = cancel job, 1 = clear job, 2 = fail job, 3 = clear job (but also rerun)
         data = request.get_json()
-        status = data['status']
-        printer_id = data['printerid']
-        job_id = data['job_id']
-        file_name=data['file_name']
-        name = data['name']
+        jobpk = data['jobpk']
+        key = data['key']
         
-        file_path = Job.generatePath(file_name)
-    
-        threads = printer_status_service.getThreadArray()
-        printerobject = list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer # get printer job is queued to 
+        # Retrieve job to delete & printer id 
+        job = Job.findJob(jobpk) 
+        printerid = job.getPrinterId() 
+        
+        # retrieve printer object & corresponding queue
+        printerobject = findPrinterObject(printerid)
         queue = printerobject.getQueue()
         
-        Job.jobHistoryInsert(name, printer_id, "cancelled", file_name, file_path)
-
-        job = queue.deleteJob(job_id) # retrieve and remove job from queue
+        job_id = job.getJobId()
         
-        Job.deleteFile(file_path) # delete file from folder
-                    
-        if status == "printing":
-            printerobject.setStatus("complete")
-            printerobject.stopPrint(True)
+        # remove job from queue
+        queue.deleteJob(job_id) 
         
+        # get status of job 
+        status = job.getStatus()
+        
+        # if printing, remove file from uploads folder 
+        if status == 'printing':
+            job.removeFileFromPath() # remove file from uploads folder to stop printer functioning 
+        
+        if key == 0: 
+            Job.update_job_status(job_id, "cancelled")
+        elif key==2: 
+            Job.update_job_status(job_id, "error")
+        else: 
+            Job.update_job_status(job_id, "complete")
 
         return jsonify({"success": True, "message": "Job removed from printer queue."}), 200
-
-        # check status of job. 
-            # if job is not printing: 
-                # set job status to cancelled.
-                # remove from queue 
-                # remove file from folder 
-                
-            # if job is printing: 
-                # Send GCODE command to stop printer. 
-                # printer status = "complete." 
-                # wait for user intervention to set to "ready."
-                # Job status = cancelled. 
-                # remove job from queue 
-                # Insert job into DB. 
-                # remove file from folder 
-        # 
-
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
     
 @jobs_bp.route('/bumpjob', methods=["POST"])
-def bump_up():
+def bumpjob():
     try:
         data = request.get_json()
-        printerid = data['id']
-        job = data['job']
+        printer_id = data['printerid']
+        job_id = data['jobid']
         choice = data['choice']
         
-        threads = printer_status_service.getThreadArray()
-        
-        printerobject = list(filter(lambda thread: thread.printer.id == printerid, threads))[0].printer
+        printerobject = findPrinterObject(printer_id)
         
         if choice == 1: 
-            printerobject.queue.bump(True, job)
+            printerobject.queue.bump(True, job_id)
         elif choice == 2: 
-            printerobject.queue.bump(False, job)
+            printerobject.queue.bump(False, job_id)
         elif choice == 3: 
-            printerobject.queue.bumpExtreme(True, job)
+            printerobject.queue.bumpExtreme(True, job_id)
         elif choice == 4: 
-            printerobject.queue.bumpExtreme(False, job)
+            printerobject.queue.bumpExtreme(False, job_id)
         else: 
             return jsonify({"error": "Unexpected error occurred"}), 500
         
@@ -163,3 +173,39 @@ def bump_up():
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
+    
+@jobs_bp.route('/updatejobstatus', methods=["POST"])
+def updateJobStatus():
+    try:
+        data = request.get_json()
+        job_id = data['jobid']
+        newstatus = data['status']
+        
+        res = Job.update_job_status(job_id, newstatus)
+        
+        return jsonify(res), 200
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+
+@jobs_bp.route("/setstatus", methods=["POST"])
+def setStatus():
+    try:
+        print("HEEERREEEE")
+        data = request.get_json() # get json data 
+        printer_id = data['printerid']
+        newstatus = data['status']
+ 
+        printerobject = findPrinterObject(printer_id)
+        
+        printerobject.setStatus(newstatus)
+        
+        return jsonify({"success": True, "message": "Status updated successfully."}), 200
+
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
+def findPrinterObject(printer_id): 
+    threads = printer_status_service.getThreadArray()
+    return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer  

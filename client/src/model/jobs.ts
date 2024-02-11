@@ -4,14 +4,15 @@ import { api } from './ports'
 import { toast } from './toast'
 import { type Device } from '@/model/ports'
 export interface Job {
+  id: number, 
   name: string
   file: File
-  file_name: string
+  file_name_original: string
   date?: Date
   status?: string
   printer: string //store printer name
   printerid: number
-  job_id: number
+  // job_id: number
 }
 
 export function useGetJobs() {
@@ -57,10 +58,13 @@ export function useAddJobToQueue() {
 // function to duplicate and rerun job
 export function useRerunJob() {
   return {
-    async rerunJob(job: Job, printer: Device) {
+    async rerunJob(job: Job | undefined, printer: Device) {
       try {
-        let id = printer.id
-        const response = await api('rerunjob', { job, id }) // pass rerun job the Job object and desired printer
+        let printerpk = printer.id
+        let jobpk = job?.id
+
+        const response = await api('rerunjob', { jobpk, printerpk }) // pass rerun job the Job object and desired printer
+        // const response = {"success": true, "message": "Job rerun successfully"}
         if (response) {
           if (response.success == false) {
             toast.error(response.message)
@@ -84,9 +88,10 @@ export function useRerunJob() {
 
 export function useRemoveJob() {
   return {
-    async removeJob(job: Job) {
+    async removeJob(job: Job, key: number) {
+      let jobpk = job.id
       try {
-        const response = await api('deletejob', job)
+        const response = await api('canceljob', {jobpk, key})
         if (response) {
           if (response.success == false) {
             toast.error(response.message)
@@ -112,8 +117,9 @@ export function bumpJobs() {
   return {
     async bumpjob(job: Job, printer: Device, choice: number) {
       try {
-        let id = printer.id
-        const response = await api('bumpjob', { job, id, choice })
+        let printerid = printer.id
+        let jobid = job.id
+        const response = await api('bumpjob', { printerid, jobid, choice })
         if (response) {
           if (response.success == false) {
             toast.error(response.message)
@@ -131,72 +137,6 @@ export function bumpJobs() {
         console.error(error)
         toast.error('An error occurred while bumping the job')
       }
-    },
-  //   async bumpDown(job: Job, printer: Device) {
-  //     try {
-  //       let id = printer.id
-  //       const response = await api('bumpDown', { job, id })
-  //       if (response) {
-  //         if (response.success == false) {
-  //           toast.error(response.message)
-  //         } else if (response.success === true) {
-  //           toast.success(response.message)
-  //         } else {
-  //           console.error('Unexpected response:', response)
-  //           toast.error('Failed to bump job. Unexpected response.')
-  //         }
-  //       } else {
-  //         console.error('Response is undefined or null')
-  //         toast.error('Failed to bump job. Unexpected response')
-  //       }
-  //     } catch (error) {
-  //       console.error(error)
-  //       toast.error('An error occurred while bumping the job')
-  //     }
-  //   },
-  //   async bumpToTop(job: Job, printer: Device) {
-  //     try {
-  //       let id = printer.id
-  //       const response = await api('bumpToTop', { job, id })
-  //       if (response) {
-  //         if (response.success == false) {
-  //           toast.error(response.message)
-  //         } else if (response.success === true) {
-  //           toast.success(response.message)
-  //         } else {
-  //           console.error('Unexpected response:', response)
-  //           toast.error('Failed to bump job. Unexpected response.')
-  //         }
-  //       } else {
-  //         console.error('Response is undefined or null')
-  //         toast.error('Failed to bump job. Unexpected response')
-  //       }
-  //     } catch (error) {
-  //       console.error(error)
-  //       toast.error('An error occurred while bumping the job')
-  //     }
-  //   },
-  //   async bumpToBack(job: Job, printer: Device) {
-  //     try {
-  //       let id = printer.id
-  //       const response = await api('bumpToBack', { job, id })
-  //       if (response) {
-  //         if (response.success == false) {
-  //           toast.error(response.message)
-  //         } else if (response.success === true) {
-  //           toast.success(response.message)
-  //         } else {
-  //           console.error('Unexpected response:', response)
-  //           toast.error('Failed to bump job. Unexpected response.')
-  //         }
-  //       } else {
-  //         console.error('Response is undefined or null')
-  //         toast.error('Failed to bump job. Unexpected response')
-  //       }
-  //     } catch (error) {
-  //       console.error(error)
-  //       toast.error('An error occurred while bumping the job')
-  //     }
-  //   }
+    }
    }
 }

@@ -16,7 +16,7 @@ export interface Device {
   name?: string
   status?: string
   date?: Date
-  id?: number 
+  id: number 
   queue?: Job[] //  Store job array to store queue for each printer. 
 }
 
@@ -87,25 +87,14 @@ export function useRetrievePrintersInfo() {
   }
 }
 
-// gets the printers queue
-// route works but unsure if it is correctly sending the queue back
-export function useGetPrintersQueue() {
+export function useSetStatus(){
   return {
-    async queue() {
+    async setStatus(printerid: number | undefined, status: string){
       try {
-        const response = await api(`getqueue`)
+        const response = await api('setstatus', {printerid, status})
         return response
       } catch (error) {
         console.error(error)
-
-        // Check if the error is a "Failed to establish serial connection" exception
-        if (error instanceof Error && error.message.includes("Failed to establish serial connection for printer: ")) {
-          // Display a toast error message
-          toast.error("Failed to establish serial connection");
-        } else {
-          // Handle other errors as needed i.e if error is not due to failed  serial connection, display generic error message
-          toast.error('An error occurred while fetching the printer queue');
-        }
       }
     }
   }

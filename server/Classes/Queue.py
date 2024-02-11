@@ -19,10 +19,10 @@ class Queue:
             raise Exception("Job ID already in queue.") 
         self.__queue.appendleft(job)
     
-    def bump(self, up, job): # up = boolean. if up = true bump up, else bump down 
+    def bump(self, up, jobid): # up = boolean. if up = true bump up, else bump down 
         # Find the index of the job in the queue with the same job_id as the job_id in the job dictionary.
         # If no such job is found, index will be -1.
-        index = next((index for index, queued_job in enumerate(self.__queue) if queued_job.job_id == job['job_id']), -1)
+        index = next((index for index, queued_job in enumerate(self.__queue) if queued_job.id == jobid), -1)
         
         # If index is -1, this means that the job was not found in the queue.
         # In this case, print a message to the console and return from the function.
@@ -55,8 +55,8 @@ class Queue:
                 self.__queue.remove(job)
                 return deletedjob
     
-    def bumpExtreme(self, front, job): # bump to back/front of queue 
-        index = next((index for index, queued_job in enumerate(self.__queue) if queued_job.job_id == job['job_id']), -1)
+    def bumpExtreme(self, front, jobid): # bump to back/front of queue 
+        index = next((index for index, queued_job in enumerate(self.__queue) if queued_job.id == jobid), -1)
         if index == -1:
             print("Job not found in queue.")
             return
