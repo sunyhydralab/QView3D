@@ -3,6 +3,10 @@ import { useRetrievePrintersInfo, useSetStatus, type Device } from '@/model/port
 import {type Job, useRemoveJob, useRerunJob} from '@/model/jobs';
 import { onMounted, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useRetrievePrintersInfo, type Device } from '@/model/ports';
+import { onMounted, onUnmounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+
 const { retrieveInfo } = useRetrievePrintersInfo();
 const { setStatus } = useSetStatus();
 const { removeJob } = useRemoveJob()
@@ -57,6 +61,40 @@ const setPrinterStatus = async (printer: Device, status: string) => {
     });
   console.log('Setting status of printer:', printer, 'to:', status);
 }
+
+onMounted(async () => {
+  try {
+    const route = useRoute()
+    const printerName = route.params.printerName
+    const updatePrinters = async () => {
+      const printerInfo = await retrieveInfo()
+      printers.value = []
+
+      for (const printer of printerInfo) {
+        printers.value.push({
+          ...printer,
+          isExpanded: printer.name === printerName
+        })
+      }
+    }
+
+    // Fetch the printer status immediately on mount
+    await updatePrinters()
+
+     // Then fetch it every 5 seconds
+     intervalId = window.setInterval(updatePrinters, 5000)
+
+  } catch (error) {
+    console.error('There has been a problem with your fetch operation:', error)
+  }
+})
+
+onUnmounted(() => {
+  // Clear the interval when the component is unmounted to prevent memory leaks
+  if (intervalId) {
+    clearInterval(intervalId)
+  }
+})
 
 const releasePrinter = async (job: Job | undefined, key: number, printer: Device) => {
   // setPrinterStatus(printer, 'ready')
