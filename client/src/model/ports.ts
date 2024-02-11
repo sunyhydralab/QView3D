@@ -16,7 +16,7 @@ export interface Device {
   name?: string
   status?: string
   date?: Date
-  id: number 
+  id?: number 
   queue?: Job[] //  Store job array to store queue for each printer. 
 }
 

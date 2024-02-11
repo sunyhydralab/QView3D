@@ -42,9 +42,6 @@ def add_job_to_queue():
         file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
         
         job.setFileName(file_name_pk) # set unique in-memory file name 
-        
-        # threads = printer_status_service.getThreadArray()
-        # printerobject = list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer  
               
         findPrinterObject(printer_id).getQueue().addToBack(job)
 
@@ -69,9 +66,12 @@ def rerun_job():
         
         # Insert new job into DB and return new PK 
         res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original) # insert into DB 
+        
         id = res['id']
         file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
+        
         rerunjob = Job.query.get(id)
+        
         file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
         rerunjob.setFileName(file_name_pk) # set unique file name 
         

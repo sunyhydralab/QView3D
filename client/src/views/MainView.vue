@@ -104,6 +104,7 @@ const releasePrinter = async (job: Job | undefined, key: number, printer: Device
   if (job) {
     await removeJob(job, key);
   }
+  
   if(key == 3){
     await rerunJob(job, printer)
   }

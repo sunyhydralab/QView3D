@@ -181,6 +181,7 @@ class Printer(db.Model):
                         return "error"
             return "complete"
         except FileNotFoundError:
+            # if exception, send gcode to reset printer & lower print bed 
             self.setStatus('complete')
             return 
 
