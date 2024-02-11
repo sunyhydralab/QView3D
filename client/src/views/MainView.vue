@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, useSetStatus, type Device } from '@/model/ports';
 import {type Job, useRemoveJob, useRerunJob} from '@/model/jobs';
-import { onMounted, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { useRetrievePrintersInfo, type Device } from '@/model/ports';
 import { onMounted, onUnmounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
 
 const { retrieveInfo } = useRetrievePrintersInfo();
 const { setStatus } = useSetStatus();
