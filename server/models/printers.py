@@ -182,8 +182,19 @@ class Printer(db.Model):
             return "complete"
         except FileNotFoundError:
             # if exception, send gcode to reset printer & lower print bed 
+            self.endingSequence() 
             self.setStatus('complete')
             return 
+      
+    # Function to send "ending" gcode commands   
+    def endingSequence(self):
+        self.sendGcode("M104 S0") # turn off extruder
+        self.sendGcode("M140 S0") # turn off bed
+        self.sendGcode("M106 S0") # Turn of cooling fan 
+        self.sendGcode("G0 Z0") # Move print bed to bottom
+        self.sendGcode("G28 X0 Y0") # home x and y axis
+        self.sendGcode("M84") # disable motors 
+         
 
     def printNextInQueue(self):
         job = self.getQueue().getNext() # get next job 
