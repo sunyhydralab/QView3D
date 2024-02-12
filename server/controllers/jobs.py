@@ -132,9 +132,11 @@ def remove_job():
         # get status of job 
         status = job.getStatus()
         
+        path = job.generatePath() # get path of file
+        
         # if printing, remove file from uploads folder 
         if status == 'printing':
-            job.removeFileFromPath() # remove file from uploads folder to stop printer functioning 
+            Job.removeFileFromPath(path) # remove file from uploads folder to stop printer functioning 
         
         if key == 0: 
             Job.update_job_status(job_id, "cancelled")

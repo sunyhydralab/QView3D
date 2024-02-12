@@ -130,8 +130,9 @@ class Job(db.Model):
     def generatePath(self):
         return os.path.join('../uploads', self.getFileNamePk())
     
-    def removeFileFromPath(self):
-        file_path = self.generatePath()  # Get the file path
+    @classmethod
+    def removeFileFromPath(cls, file_path):
+        # file_path = self.generatePath()  # Get the file path
         if os.path.exists(file_path):    # Check if the file exists
             os.remove(file_path)         # Remove the file
     
