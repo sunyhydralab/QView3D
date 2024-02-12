@@ -17,22 +17,24 @@ let intervalId: number | undefined;
 
 onMounted(async () => {
   try {
-    const route = useRoute()
-    const printerName = route.params.printerName
-    const updatePrinters = async () => {
-      const printerInfo = await retrieveInfo()
-      printers.value = []
-      for (const printer of printerInfo) {
-        printers.value.push({
-          ...printer,
-          isExpanded: printer.name === printerName
-        })
-      }
-    }
-    // Fetch the printer status immediately on mount
-    await updatePrinters()
+    const printerInfo = await retrieveInfo()
+    printers.value = printerInfo
+    // const route = useRoute()
+    // const printerName = route.params.printerName
+    // const updatePrinters = async () => {
+    //   // const printerInfo = await retrieveInfo()
+    //   printers.value = []
+    //   for (const printer of printerInfo) {
+    //     printers.value.push({
+    //       ...printer,
+    //       isExpanded: printer.name === printerName
+    //     })
+    //   }
+    // }
+    // // Fetch the printer status immediately on mount
+    // await updatePrinters()
      // Then fetch it every 5 seconds
-     intervalId = window.setInterval(updatePrinters, 5000)
+    //  intervalId = window.setInterval(updatePrinters, 5000)
 
   } catch (error) {
     console.error(error)
@@ -47,6 +49,7 @@ const sendToQueueView = (name: string | undefined) => {
 
 // set the status of the printer
 const setPrinterStatus = async (printer: Device, status: string) => {
+  console.log("here")
   printer.status = status; // update the status in the frontend
   await setStatus(printer.id, status); // update the status in the backend
   setTimeout(() => {
@@ -59,39 +62,40 @@ const setPrinterStatus = async (printer: Device, status: string) => {
   console.log('Setting status of printer:', printer, 'to:', status);
 }
 
-onMounted(async () => {
-  try {
-    const route = useRoute()
-    const printerName = route.params.printerName
-    const updatePrinters = async () => {
-      const printerInfo = await retrieveInfo()
-      printers.value = []
+// onMounted(async () => {
+//   try {
+//     const printerInfo = await retrieveInfo()
+    // const route = useRoute()
+    // const printerName = route.params.printerName
+    // const updatePrinters = async () => {
+    //   const printerInfo = await retrieveInfo()
+    //   printers.value = []
 
-      for (const printer of printerInfo) {
-        printers.value.push({
-          ...printer,
-          isExpanded: printer.name === printerName
-        })
-      }
-    }
+    //   for (const printer of printerInfo) {
+    //     printers.value.push({
+    //       ...printer,
+    //       isExpanded: printer.name === printerName
+    //     })
+    //   }
+    // }
 
     // Fetch the printer status immediately on mount
-    await updatePrinters()
+    // await updatePrinters()
 
-     // Then fetch it every 5 seconds
-     intervalId = window.setInterval(updatePrinters, 5000)
+    //  // Then fetch it every 5 seconds
+    //  intervalId = window.setInterval(updatePrinters, 5000)
 
-  } catch (error) {
-    console.error('There has been a problem with your fetch operation:', error)
-  }
-})
+//   } catch (error) {
+//     console.error('There has been a problem with your fetch operation:', error)
+//   }
+// })
 
-onUnmounted(() => {
-  // Clear the interval when the component is unmounted to prevent memory leaks
-  if (intervalId) {
-    clearInterval(intervalId)
-  }
-})
+// onUnmounted(() => {
+//   // Clear the interval when the component is unmounted to prevent memory leaks
+//   if (intervalId) {
+//     clearInterval(intervalId)
+//   }
+// })
 
 const releasePrinter = async (job: Job | undefined, key: number, printer: Device) => {
   // setPrinterStatus(printer, 'ready')

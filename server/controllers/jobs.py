@@ -42,7 +42,7 @@ def add_job_to_queue():
         file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
         
         job.setFileName(file_name_pk) # set unique in-memory file name 
-              
+
         findPrinterObject(printer_id).getQueue().addToBack(job)
 
         
@@ -116,35 +116,41 @@ def remove_job():
         jobpk = data['jobpk']
         key = data['key']
         
+
         # Retrieve job to delete & printer id 
         job = Job.findJob(jobpk) 
         printerid = job.getPrinterId() 
-        
+
         # retrieve printer object & corresponding queue
         printerobject = findPrinterObject(printerid)
+        printerobject.setStatus("complete")
         queue = printerobject.getQueue()
-        
+
         job_id = job.getJobId()
-        
+
         # remove job from queue
         queue.deleteJob(job_id) 
-        
+
         # get status of job 
         status = job.getStatus()
-        
-        path = job.generatePath() # get path of file
-        
+
+        # path = job.generatePath() # get path of file
+
+        file_name_pk = job.getFileNameOriginal() + f"_{job_id}" # append id to file name to make it unique
+
+        path = Job.getPathForDelete(file_name_pk)
+
         # if printing, remove file from uploads folder 
         if status == 'printing':
             Job.removeFileFromPath(path) # remove file from uploads folder to stop printer functioning 
-        
         if key == 0: 
             Job.update_job_status(job_id, "cancelled")
         elif key==2: 
             Job.update_job_status(job_id, "error")
+            queue.deleteJob(job_id) 
         else: 
-            Job.update_job_status(job_id, "complete")
-
+            Job.update_job_status(job_id, "ready")
+            queue.deleteJob(job_id) 
         return jsonify({"success": True, "message": "Job removed from printer queue."}), 200
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -193,7 +199,6 @@ def updateJobStatus():
 @jobs_bp.route("/setstatus", methods=["POST"])
 def setStatus():
     try:
-        print("HEEERREEEE")
         data = request.get_json() # get json data 
         printer_id = data['printerid']
         newstatus = data['status']
@@ -201,6 +206,8 @@ def setStatus():
         printerobject = findPrinterObject(printer_id)
         
         printerobject.setStatus(newstatus)
+
+        print(printerobject.getStatus())
         
         return jsonify({"success": True, "message": "Status updated successfully."}), 200
 
