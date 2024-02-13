@@ -260,11 +260,11 @@ class Printer(db.Model):
         self.ser = port
 
     def setStatus(self, newStatus):
-        if newStatus=='ready': 
-            if self.getSer():
-                self.status = newStatus
-            else: 
-                self.status = "offline"
+        # if newStatus=='ready': 
+        #     if self.getSer():
+        self.status = newStatus
+            # else: 
+            #     self.status = "offline"
         
     def setStopPrint(self, stopPrint):
         self.stopPrint = stopPrint
