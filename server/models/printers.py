@@ -155,6 +155,7 @@ class Printer(db.Model):
             time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
             while True:
+                # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
                 if "ok" in response:
                     break
@@ -177,9 +178,8 @@ class Printer(db.Model):
                         continue
                     # Send the line to the printer.
                     res = self.sendGcode(line)
-
-                    print(self.getStatus())
-                    if self.getStatus() == "complete":
+                    
+                    if self.getStatus() != "printing":
                         self.endingSequence() 
                         return "cancelled"
 
@@ -200,7 +200,7 @@ class Printer(db.Model):
         self.sendGcode("M140 S0") # turn off bed
         self.sendGcode("M106 S0") # Turn of cooling fan 
         self.sendGcode("M84") # disable motors 
-        self.setStatus('complete')
+        # self.setStatus('complete')
          
 
     def printNextInQueue(self):
@@ -223,6 +223,8 @@ class Printer(db.Model):
                 elif verdict=="error": 
                     self.sendStatusToJob(job, job.id, "error")
                     self.setStatus("error")
+                # elif verdict == "cancelled":
+                #     job.
                     
                 # self.disconnect()
     

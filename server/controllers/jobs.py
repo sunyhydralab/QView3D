@@ -114,47 +114,78 @@ def remove_job():
         # 0 = cancel job, 1 = clear job, 2 = fail job, 3 = clear job (but also rerun)
         data = request.get_json()
         jobpk = data['jobpk']
-        key = data['key']
         
 
         # Retrieve job to delete & printer id 
         job = Job.findJob(jobpk) 
         printerid = job.getPrinterId() 
 
+        jobstatus = job.getStatus()
+
         # retrieve printer object & corresponding queue
         printerobject = findPrinterObject(printerid)
-        printerobject.setStatus("complete")
+        # printerobject.setStatus("complete")
         queue = printerobject.getQueue()
 
-        job_id = job.getJobId()
 
-        # remove job from queue
-        queue.deleteJob(job_id) 
+        if jobstatus == 'printing': # only change statuses, dont remove from queue 
+            printerobject.setStatus("complete")
+            job.setStatus("cancelled")
+            Job.update_job_status(jobpk, "cancelled")
+        else: 
+            # remove job from queue
+            queue.deleteJob(jobpk) 
 
         # get status of job 
-        status = job.getStatus()
+        # status = job.getStatus()
 
         # path = job.generatePath() # get path of file
 
-        file_name_pk = job.getFileNameOriginal() + f"_{job_id}" # append id to file name to make it unique
+        # file_name_pk = job.getFileNameOriginal() + f"_{job_id}" # append id to file name to make it unique
 
-        path = Job.getPathForDelete(file_name_pk)
+        # path = Job.getPathForDelete(file_name_pk)
 
         # if printing, remove file from uploads folder 
-        if status == 'printing':
-            Job.removeFileFromPath(path) # remove file from uploads folder to stop printer functioning 
-        if key == 0: 
-            Job.update_job_status(job_id, "cancelled")
-        elif key==2: 
-            Job.update_job_status(job_id, "error")
-            queue.deleteJob(job_id) 
-        else: 
-            Job.update_job_status(job_id, "ready")
-            queue.deleteJob(job_id) 
+        # if status == 'printing':
+        #     Job.removeFileFromPath(path) # remove file from uploads folder to stop printer functioning 
+        # if key == 0: 
+        #     Job.update_job_status(job_id, "cancelled")
+        # elif key==2: 
+        #     Job.update_job_status(job_id, "error")
+        #     queue.deleteJob(job_id) 
+        # else: 
+        #     Job.update_job_status(job_id, "ready")
+        #     queue.deleteJob(job_id) 
         return jsonify({"success": True, "message": "Job removed from printer queue."}), 200
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
+    
+@jobs_bp.route('/releasejob', methods=["POST"])
+def releasejob(): 
+    try: 
+        data = request.get_json()
+        jobpk = data['jobpk']
+        key = data['key']
+        job = Job.findJob(jobpk) 
+        printerid = job.getPrinterId() 
+        printerobject = findPrinterObject(printerid)
+        queue = printerobject.getQueue()
+
+        queue.deleteJob(jobpk) # remove job from queue 
+
+        if key == 3: 
+            Job.update_job_status(jobpk, "error")
+            printerobject.setStatus("error") # printer ready to accept new prints 
+        elif key == 2: 
+            rerunjob(printerid, jobpk)
+            printerobject.setStatus("ready") # printer ready to accept new prints 
+        elif key == 1: 
+            printerobject.setStatus("ready") # printer ready to accept new prints 
+        return jsonify({"success": True, "message": "Job released successfully."}), 200
+    except Exception as e: 
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500  
     
 @jobs_bp.route('/bumpjob', methods=["POST"])
 def bumpjob():
@@ -206,8 +237,6 @@ def setStatus():
         printerobject = findPrinterObject(printer_id)
         
         printerobject.setStatus(newstatus)
-
-        print(printerobject.getStatus())
         
         return jsonify({"success": True, "message": "Status updated successfully."}), 200
 
@@ -218,3 +247,22 @@ def setStatus():
 def findPrinterObject(printer_id): 
     threads = printer_status_service.getThreadArray()
     return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer  
+
+def rerunjob(printerpk, jobpk):
+    job = Job.findJob(jobpk) # retrieve Job to rerun 
+    
+    status = 'inqueue' # set status 
+    file_name_original = job.getFileNameOriginal() # get original file name
+    
+    # Insert new job into DB and return new PK 
+    res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original) # insert into DB 
+    
+    id = res['id']
+    file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
+    
+    rjob = Job.query.get(id)
+    
+    file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
+    rjob.setFileName(file_name_pk) # set unique file name 
+    
+    findPrinterObject(printerpk).getQueue().addToFront(rjob)

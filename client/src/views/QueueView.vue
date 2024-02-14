@@ -64,11 +64,12 @@ async function handleCancel(jobToFind: Job, printerToFind: Device) {
   const foundPrinter = printers.value.find(printer => printer === printerToFind); // Find the printer by direct object comparison
   if (!foundPrinter) return; // Return if printer not found
   const jobIndex = foundPrinter.queue?.findIndex(job => job === jobToFind); // Find the index of the job in the printer's queue
+
   if (jobIndex === undefined || jobIndex === -1) return; // Return if job not found
   foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
 
   // remove from queue 
-  await removeJob(jobToFind, 0)
+  await removeJob(jobToFind)
 }
 
 function capitalizeFirstLetter(string: string | undefined) {

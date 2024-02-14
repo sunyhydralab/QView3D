@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, useSetStatus, type Device } from '@/model/ports';
-import {type Job, useRemoveJob, useRerunJob} from '@/model/jobs';
+import {type Job, useRemoveJob, useRerunJob, useReleaseJob} from '@/model/jobs';
 import { useRouter, useRoute } from 'vue-router';
 import { onMounted, onUnmounted, ref } from 'vue';
 
 const { retrieveInfo } = useRetrievePrintersInfo();
 const { setStatus } = useSetStatus();
+const {releaseJob} = useReleaseJob()
+
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
 
@@ -47,7 +49,6 @@ const sendToQueueView = (name: string | undefined) => {
 
 // set the status of the printer
 const setPrinterStatus = async (printer: Device, status: string) => {
-  console.log("here")
   printer.status = status; // update the status in the frontend
   await setStatus(printer.id, status); // update the status in the backend
   setTimeout(() => {
@@ -60,22 +61,8 @@ const setPrinterStatus = async (printer: Device, status: string) => {
   console.log('Setting status of printer:', printer, 'to:', status);
 }
 
-const releasePrinter = async (job: Job | undefined, key: number, printer: Device) => {
-  // setPrinterStatus(printer, 'ready')
-  if(key==2){
-    setPrinterStatus(printer, 'error')
-  }else{
-    setPrinterStatus(printer, 'ready')
-  }
-
-  if (job) {
-    await removeJob(job, key);
-  }
-  
-  if(key == 3){
-    await rerunJob(job, printer)
-  }
-
+const releasePrinter = async (job: Job | undefined, key: number) => {
+  await releaseJob(job, key)
 }
 
 </script>
@@ -122,9 +109,9 @@ const releasePrinter = async (job: Job | undefined, key: number, printer: Device
           </div>
 
             <div v-else-if="printer.status === 'complete'">
-              <button type="button" class="btn btn-danger" @click="releasePrinter(printer.queue?.[0], 2, printer)">Fail</button>
-              <button type="button" class="btn btn-secondary" @click="releasePrinter(printer.queue?.[0], 1, printer)">Clear</button>
-              <button type="button" class="btn btn-info" @click="releasePrinter(printer.queue?.[0], 3, printer)">Clear/Rerun</button>
+              <button type="button" class="btn btn-danger" @click="releasePrinter(printer.queue?.[0], 3)">Fail</button>
+              <button type="button" class="btn btn-secondary" @click="releasePrinter(printer.queue?.[0], 1)">Clear</button>
+              <button type="button" class="btn btn-info" @click="releasePrinter(printer.queue?.[0], 2)">Clear/Rerun</button>
             </div>
         </td>
 
