@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
 import { useGetJobs, type Job, useRerunJob } from '@/model/jobs';
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+// import { useGetJobs, type Job } from '@/model/jobs';
+// import { computed, onMounted, ref } from 'vue';
 const { jobhistory } = useGetJobs()
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { rerunJob } = useRerunJob()
 
 const printers = ref<Array<Device>>([]) // Get list of open printer threads 
 let jobs = ref<Array<Job>>([])
+let filter = ref('') // This will hold the current filter value
 
 let page = ref(1)
 let pageSize = ref(10)
@@ -60,6 +63,14 @@ const changePage = async (newPage: any) => {
     jobs.value = joblist;
     totalJobs.value = total;
 }
+// computed property that returns the filtered list of jobs. 
+let filteredJobs = computed(() => {
+  if (filter.value) {
+    return jobs.value.filter(job => job.printer.includes(filter.value))
+  } else {
+    return jobs.value
+  }
+})
 </script>
 
 <template>
@@ -71,6 +82,7 @@ const changePage = async (newPage: any) => {
             <input id="pageSize" type="number" v-model.number="pageSize" min="1" class="form-control" style="width: auto;">
         </div>
         <table class="table">
+        <input v-model="filter" placeholder="Filter by printer" />
             <thead>
                 <tr>
                     <th>Job ID</th>
@@ -82,8 +94,8 @@ const changePage = async (newPage: any) => {
                     <th>Rerun Job</th>
                 </tr>
             </thead>
-            <tbody v-if="jobs.length > 0">
-                <tr v-for="job in jobs" :key="job.name">
+            <tbody v-if="filteredJobs.length > 0">
+                <tr v-for="job in filteredJobs" :key="job.name">
                     <td>{{ job.id }}</td>
                     <td>{{ job.name }}</td>
                     <td>{{ job.file_name_original }}</td>
@@ -103,7 +115,9 @@ const changePage = async (newPage: any) => {
                         </div>
                     </td>
                 </tr>
+                
             </tbody>
+            
             <tbody v-else>
                 <tr>
                     <td colspan="7">No jobs found. Submit your first job <RouterLink to="/submit">here!</RouterLink>
