@@ -140,3 +140,17 @@ export function bumpJobs() {
     }
   }
 }
+
+export function useGetGcode(){
+  return {
+    async getgcode(job: Job) {
+      try {
+        const response = await api('getgcode', job)
+        return response
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while retrieving the gcode')
+      }
+    }
+  }
+}

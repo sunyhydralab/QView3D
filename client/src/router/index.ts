@@ -30,7 +30,7 @@ const routes = [
     path: '/history',
     name: 'JobHistoryVue',
     component: JobHistoryVue
-  }
+  }, 
 ]
 
 const router = createRouter({

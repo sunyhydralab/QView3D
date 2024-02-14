@@ -2,6 +2,7 @@
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
 import { useAddJobToQueue, type Job } from '../model/jobs'
 import { ref, onMounted } from 'vue'
+import { toast } from '@/model/toast';
 
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { addJobToQueue } = useAddJobToQueue()
@@ -11,7 +12,11 @@ const printers = ref<Array<Device>>([])
 const form = ref<HTMLFormElement | null>(null);
 
 // Collect form data
-const selectedPrinter = ref<Device | null>(null)
+// const selectedPrinter = ref<Device | null>(null)
+
+const selectedPrinters = ref<Array<Device>>([])
+
+
 const file = ref<File>()
 const quantity = ref<number>(1)
 const priority = ref<boolean>(false)
@@ -28,6 +33,11 @@ const validateQuantity = () => {
     if (quantity.value < 1) {
         quantity.value = 1
     }
+    if(quantity.value < selectedPrinters.value.length){
+        toast.error('Quantity must be greater than or equal to the number of selected printers')
+        return false; 
+    }
+    return true; 
 }
 
 // fills printers array with printers that have threads from the database
@@ -41,30 +51,47 @@ onMounted(async () => {
 
 // sends job to printer queue
 const handleSubmit = async () => {
-    if (selectedPrinter.value) {
-        const formData = new FormData(); // Create FormData object
+    let sub = validateQuantity()
+    if(sub == true){
 
-        // Append form data
-        formData.append('file', file.value as File);
-        // Append other form fields
-        formData.append('name', name.value as string);
-        formData.append('printerid', selectedPrinter.value?.id?.toString() || '');
-        try {
-            await addJobToQueue(formData)
+        let printsPerPrinter = Math.floor(quantity.value / selectedPrinters.value.length) // number of even prints per printer
+        let remainder = quantity.value % selectedPrinters.value.length; //remainder to be evenly distributed 
 
-            // reset form
-            if (form.value) {
-                form.value.reset()
+        for(const printer of selectedPrinters.value){
+            let numPrints = printsPerPrinter
+            if(remainder > 0){
+                numPrints += 1
+                remainder -= 1
             }
-            // reset Vue refs
-            selectedPrinter.value = null;
-            quantity.value = 1;
-            priority.value = false;
-            name.value = undefined;
-            
-        } catch (error) {
-            console.error('There has been a problem with your fetch operation:', error)
+            for(let i = 0; i < numPrints; i++){
+                const formData = new FormData() // create FormData object
+                formData.append('file', file.value as File) // append form data
+                formData.append('name', name.value as string)
+                formData.append('printerid', printer?.id?.toString() || '');
+                try {
+                    await addJobToQueue(formData)
+                    // reset form
+                    if (form.value) {
+                        form.value.reset()
+                    }
+                    // reset Vue refs
+                } catch (error) {
+                    console.error('There has been a problem with your fetch operation:', error)
+                }
+            }
         }
+        selectedPrinters.value = [];
+        quantity.value = 1;
+        priority.value = false;
+        name.value = undefined;
+    }
+}
+
+function appendPrinter(printer: Device){
+    if(!selectedPrinters.value.includes(printer)){
+        selectedPrinters.value.push(printer)
+    }else{
+        selectedPrinters.value = selectedPrinters.value.filter(p => p !== printer)
     }
 }
 
@@ -75,13 +102,21 @@ const handleSubmit = async () => {
 
         <div class="form-container">
             <form @submit.prevent="handleSubmit" ref="form">
-                <select v-model="selectedPrinter" required>
+
+                <select required multiple>
                     <option :value="null">Device: None</option>
-                    <option v-for="printer in printers" :value="printer" :key="printer.id">
+                    <option v-for="printer in printers" :value="printer" :key="printer.id" @click="appendPrinter(printer)">
                         {{ printer.name }}
-                        <!-- maybe show the status of the printer here??? -->
                     </option>
                 </select>
+
+                <div>
+                    Selected printer(s): <br>
+                    <p v-for="printer in selectedPrinters">
+                        <b>{{ printer.name }}</b> status: {{ printer.status }}<br>
+                    </p>
+                </div>
+                
                 <br><br>
                 Upload your .gcode file
                 <!-- Decide which file types are compatible with which printer. .gcode v-if printer is compatible with .gcode, .x3g if with .x3g, etc -->
@@ -91,7 +126,7 @@ const handleSubmit = async () => {
                 <!-- Make it so user can't insert negative quantity. Decide on upper limit. -->
                 <!-- Make load-balancing feature -->
                 <label for="name">Quantity</label>
-                <input v-model="quantity" type="number" id="quantity" name="quantity" min="0" required @input="validateQuantity">
+                <input v-model="quantity" type="number" id="quantity" name="quantity" min="0" required>
                 <br><br>
 
                 <label for="priority">Priority job?</label>
@@ -102,12 +137,7 @@ const handleSubmit = async () => {
                 <input v-model="name" type="text" id="name" name="name" required>
 
                 <br><br>
-                <!-- This form data does NOT go into the database -- goes into in-memory printer array to be handled. 
-                    Also is sent to the QueueView. Perhaps the form is sent to the backend and queueview retrieves that data
-                    from the backend. 
-                    The job data only gets inserted into the Job table once it is done printing. 
-                -->
-                <input type="submit" value="Submit">
+                <input type="submit" value="Add to queue(s)">
             </form>
         </div>
     </div>

@@ -30,8 +30,8 @@ def add_job_to_queue():
         
         name = request.form['name']  # Access other form fields from request.form
         printer_id = int(request.form['printerid'])
+        # quantity = int(request.form['quantity'])
         
-        # insert into DB and return PK 
         status = 'inqueue' # set status 
         res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original) # insert into DB 
         
@@ -43,9 +43,8 @@ def add_job_to_queue():
         file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
         
         job.setFileName(file_name_pk) # set unique in-memory file name 
-              
+            
         findPrinterObject(printer_id).getQueue().addToBack(job)
-
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     
@@ -194,7 +193,6 @@ def updateJobStatus():
 @jobs_bp.route("/setstatus", methods=["POST"])
 def setStatus():
     try:
-        print("HEEERREEEE")
         data = request.get_json() # get json data 
         printer_id = data['printerid']
         newstatus = data['status']
