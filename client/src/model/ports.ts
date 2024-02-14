@@ -78,7 +78,6 @@ export function useRetrievePrintersInfo() {
     async retrieveInfo() {
       try {
         const response = await api('getprinterinfo')
-        console.log(response)
         return response // return the response directly
       } catch (error) {
         console.error(error)

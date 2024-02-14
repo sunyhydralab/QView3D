@@ -35,7 +35,14 @@ onMounted(async () => {
      intervalId = window.setInterval(updatePrinters, 5000)
 
   } catch (error) {
-    console.error(error)
+    console.error('There has been a problem with your fetch operation:', error)
+  }
+})
+
+onUnmounted(() => {
+  // Clear the interval when the component is unmounted to prevent memory leaks
+  if (intervalId) {
+    clearInterval(intervalId)
   }
 })
 
@@ -58,40 +65,6 @@ const setPrinterStatus = async (printer: Device, status: string) => {
     });
   console.log('Setting status of printer:', printer, 'to:', status);
 }
-
-onMounted(async () => {
-  try {
-    const route = useRoute()
-    const printerName = route.params.printerName
-    const updatePrinters = async () => {
-      const printerInfo = await retrieveInfo()
-      printers.value = []
-
-      for (const printer of printerInfo) {
-        printers.value.push({
-          ...printer,
-          isExpanded: printer.name === printerName
-        })
-      }
-    }
-
-    // Fetch the printer status immediately on mount
-    await updatePrinters()
-
-     // Then fetch it every 5 seconds
-     intervalId = window.setInterval(updatePrinters, 5000)
-
-  } catch (error) {
-    console.error('There has been a problem with your fetch operation:', error)
-  }
-})
-
-onUnmounted(() => {
-  // Clear the interval when the component is unmounted to prevent memory leaks
-  if (intervalId) {
-    clearInterval(intervalId)
-  }
-})
 
 const releasePrinter = async (job: Job | undefined, key: number, printer: Device) => {
   // setPrinterStatus(printer, 'ready')
@@ -157,7 +130,17 @@ const releasePrinter = async (job: Job | undefined, key: number, printer: Device
             <div v-else-if="printer.status === 'complete'">
               <button type="button" class="btn btn-danger" @click="releasePrinter(printer.queue?.[0], 2, printer)">Fail</button>
               <button type="button" class="btn btn-secondary" @click="releasePrinter(printer.queue?.[0], 1, printer)">Clear</button>
-              <button type="button" class="btn btn-info" @click="releasePrinter(printer.queue?.[0], 3, printer)">Clear/Rerun</button>
+              <div class="btn-group w-100">
+                <button type="button" class="btn btn-info" @click="releasePrinter(printer.queue?.[0], 3, printer)">Clear/Rerun</button>
+                <button type="button" class="btn btn-info dropdown-toggle dropdown-toggle-split"
+                  data-bs-toggle="dropdown" aria-expanded="false">
+                  <span class="visually-hidden">Toggle Dropdown</span>
+                </button>
+                <div class="dropdown-menu">
+                  <button class="dropdown-item" v-for="otherPrinter in printers.filter(p => p.id !== printer.id)"
+                    :key="otherPrinter.id" @click="releasePrinter(printer.queue?.[0], 3, otherPrinter)">{{ otherPrinter.name }}</button>
+                </div>
+              </div>
             </div>
         </td>
 

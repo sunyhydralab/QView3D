@@ -119,6 +119,19 @@ const bump = async (job: Job, printer: Printer, direction: string) => {
     }
   }
 }
+
+const isLastJob = (job: Job, printer: Printer) => {
+  return printer.queue ? printer.queue.indexOf(job) === printer.queue.length - 1 : false;
+}
+const isFirstJobPrinting = (job: Job, printer: Printer) => {
+  if (!printer.queue) return false;
+  return printer.queue[0] && printer.queue[0].status === 'printing';
+}
+const canBumpUp = (job: Job, printer: Printer) => {
+  if (!printer.queue) return false;
+  const index = printer.queue.indexOf(job);
+  return index !== 0 && (index !== 1 || !isFirstJobPrinting(job, printer));
+}
 </script>
 
 <template>
@@ -193,22 +206,14 @@ const bump = async (job: Job, printer: Printer, direction: string) => {
                         :class="{ 'btn-danger': printer.queue && job.status === 'printing', 'btn-secondary': !printer.queue || (printer.queue && job.status !== 'printing') }"
                         type="button" data-bs-toggle="dropdown"
                         :disabled="printer.queue && job.status === 'printing'"></button>
-
                       <ul class="dropdown-menu">
-                        <li class="dropdown-item" v-if="printer.queue && printer.queue.findIndex(j => j === job) > 1"
-                          @click="bump(job, printer, 'up')">Bump Up</li>
-                        <li class="dropdown-item" v-if="printer.queue && printer.queue.findIndex(j => j === job) > 1"
-                          @click="bump(job, printer, 'top')">Send to Top</li>
-                        <li class="dropdown-item"
-                          v-if="printer.queue && printer.queue.findIndex(j => j === job) < printer.queue.length - 1"
-                          @click="bump(job, printer, 'down')">Bump Down</li>
-                        <li class="dropdown-item"
-                          v-if="printer.queue && printer.queue.findIndex(j => j === job) < printer.queue.length - 1"
-                          @click="bump(job, printer, 'bottom')">Send to Bottom</li>
+                        <li class="dropdown-item" v-if="canBumpUp(job, printer)" @click="bump(job, printer, 'up')">Bump Up</li>
+                        <li class="dropdown-item" v-if="canBumpUp(job, printer)" @click="bump(job, printer, 'top')">Send to Top</li>
+                        <li class="dropdown-item" v-if="!isLastJob(job, printer)" @click="bump(job, printer, 'down')">Bump Down</li>
+                        <li class="dropdown-item" v-if="!isLastJob(job, printer)" @click="bump(job, printer, 'bottom')">Send to Bottom</li>
                       </ul>
                     </div>
                   </td>
-
                   <td><b>{{ job.name }}</b></td>
                   <td>{{ job.file_name_original }}</td>
                   <td>{{ job.date }}</td>

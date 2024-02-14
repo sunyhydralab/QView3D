@@ -44,12 +44,12 @@ class Job(db.Model):
         return self.printer_id
         
     @classmethod
-    def get_job_history(cls):
+    def get_job_history(cls, page, pageSize):
         try:
-            jobs = cls.query.all()
-            
+            pagination = cls.query.order_by(cls.date.desc()).paginate(page=page, per_page=pageSize, error_out=False)
+            jobs = pagination.items
+
             jobs_data = [{
-                # "file_name": job.file_name, 
                 "id": job.id,
                 "name": job.name, 
                 "status": job.status, 
@@ -57,8 +57,8 @@ class Job(db.Model):
                 "printer": job.printer.name, 
                 "file_name_original": job.file_name_original
             } for job in jobs]
-            
-            return jobs_data
+
+            return jobs_data, pagination.total
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500

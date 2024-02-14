@@ -4,7 +4,7 @@ import { api } from './ports'
 import { toast } from './toast'
 import { type Device } from '@/model/ports'
 export interface Job {
-  id: number, 
+  id: number
   name: string
   file: File
   file_name_original: string
@@ -17,9 +17,9 @@ export interface Job {
 
 export function useGetJobs() {
   return {
-    async jobhistory() {
+    async jobhistory(page: number, pageSize: number) {
       try {
-        const response = await api('getjobs')
+        const response = await api(`getjobs?page=${page}&pageSize=${pageSize}`)
         return response
       } catch (error) {
         console.error(error)
@@ -91,7 +91,7 @@ export function useRemoveJob() {
     async removeJob(job: Job, key: number) {
       let jobpk = job.id
       try {
-        const response = await api('canceljob', {jobpk, key})
+        const response = await api('canceljob', { jobpk, key })
         if (response) {
           if (response.success == false) {
             toast.error(response.message)
@@ -138,5 +138,5 @@ export function bumpJobs() {
         toast.error('An error occurred while bumping the job')
       }
     }
-   }
+  }
 }

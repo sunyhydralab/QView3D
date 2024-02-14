@@ -11,10 +11,11 @@ jobs_bp = Blueprint("jobs", __name__)
 
 @jobs_bp.route('/getjobs', methods=["GET"])
 def getJobs(): 
+    page = request.args.get('page', default=1, type=int)
+    pageSize = request.args.get('pageSize', default=10, type=int)
     try:
-        res = Job.get_job_history()
-        # since response isn't iterable, we need to convert it to a JSON object
-        return jsonify({"jobs": res})
+        res = Job.get_job_history(page, pageSize)
+        return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
