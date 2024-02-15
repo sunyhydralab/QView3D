@@ -32,8 +32,8 @@ class Job(db.Model):
         self.printer_id = printer_id 
         self.status = status 
         self.file_name_original = file_name_original # original file name without PK identifier 
-        
         file_name_pk = None
+        # file_name_pk = None
         # file name attribute set after job is inserted into DB 
 
     def __repr__(self):
@@ -167,6 +167,10 @@ class Job(db.Model):
     @classmethod 
     def setDBstatus(cls, jobid, status):
         cls.update_job_status(jobid, status)
+
+    @classmethod 
+    def getPathForDelete(cls, file_name):
+        return os.path.join('../uploads', file_name)
 
         
     def setPath(self, path): 

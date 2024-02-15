@@ -88,10 +88,10 @@ export function useRerunJob() {
 
 export function useRemoveJob() {
   return {
-    async removeJob(job: Job, key: number) {
+    async removeJob(job: Job) {
       let jobpk = job.id
       try {
-        const response = await api('canceljob', { jobpk, key })
+        const response = await api('canceljob', {jobpk})
         if (response) {
           if (response.success == false) {
             toast.error(response.message)
@@ -141,6 +141,32 @@ export function bumpJobs() {
   }
 }
 
+export function useReleaseJob(){
+  return {
+    async releaseJob(job: Job | undefined, key: number){
+      try {
+        let jobpk = job?.id
+        const response = await api('releasejob', { jobpk, key })
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to release job. Unexpected response.')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to release job. Unexpected response')
+        }
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while releasing the job')
+      }
+    }
+  }
+}
 export function useGetGcode(){
   return {
     async getgcode(job: Job) {

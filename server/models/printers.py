@@ -149,14 +149,13 @@ class Printer(db.Model):
     # Function to send gcode commands
     def sendGcode(self, message):
         try: 
-            if self.getStatus()=="error" or self.getStatus()=='complete': # if any error occurs, do not proceed with printing.
-                return
             # Encode and send the message to the printer.
             self.ser.write(f"{message}\n".encode("utf-8"))
             # Sleep the printer to give it enough time to get the instruction.
             time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
             while True:
+                # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
                 if "ok" in response:
                     break
@@ -173,58 +172,70 @@ class Printer(db.Model):
                     #remove whitespace
                     line = line.strip() 
                     # Don't send empty lines and comments. ";" is a comment in gcode.
+                    if ";" in line:  # Remove inline comments
+                        line = line.split(";")[0].strip()  # Remove comments starting with ";"
                     if len(line) == 0 or line.startswith(";"): 
                         continue
                     # Send the line to the printer.
                     res = self.sendGcode(line)
+                    
+                    if self.getStatus() != "printing":
+                        self.endingSequence() 
+                        return "cancelled"
+
                     if res == "error": 
                         return "error"
             return "complete"
         except FileNotFoundError:
             # if exception, send gcode to reset printer & lower print bed 
             self.endingSequence() 
-            self.setStatus('complete')
+            # self.setStatus('complete')
             return 
       
     # Function to send "ending" gcode commands   
     def endingSequence(self):
+        self.sendGcode("G0 Z0") # Move print bed to bottom
+        self.sendGcode("G28 X0 Y0") # home x and y axis
         self.sendGcode("M104 S0") # turn off extruder
         self.sendGcode("M140 S0") # turn off bed
         self.sendGcode("M106 S0") # Turn of cooling fan 
-        self.sendGcode("G0 Z0") # Move print bed to bottom
-        self.sendGcode("G28 X0 Y0") # home x and y axis
         self.sendGcode("M84") # disable motors 
+        # self.setStatus('complete')
          
 
     def printNextInQueue(self):
+        self.connect()
         job = self.getQueue().getNext() # get next job 
         try:
             if self.getSer():
                 job.saveToFolder()
                 path = job.generatePath()
-                        
+                
                 # job.setStatus("printing") # set job status to printing 
                 self.setStatus("printing") # set printer status to printing
                 self.sendStatusToJob(job, job.id, "printing")
                 self.reset()
-                
                 verdict = self.parseGcode(path) # passes file to code. returns "complete" if successful, "error" if not.
 
                 if verdict =="complete":
                     self.setStatus("complete")
                     self.sendStatusToJob(job, job.id, "complete")
-                else: 
+                elif verdict=="error": 
                     self.sendStatusToJob(job, job.id, "error")
                     self.setStatus("error")
+                # elif verdict == "cancelled":
+                #     job.
                     
-                self.disconnect()
+                # self.disconnect()
     
-                job.removeFileFromPath() # remove file from folder after job complete
+                job.removeFileFromPath(path) # remove file from folder after job complete
             # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready. 
             
             else:
                 self.setStatus("error")
                 self.sendStatusToJob(job, job.id, "error")
+
+            return     
         except serial.SerialException as e:
             self.setStatus("error")
             job.setStatus("error")
@@ -261,10 +272,10 @@ class Printer(db.Model):
 
     def setStatus(self, newStatus):
         # if newStatus=='ready': 
-        #     if self.getSer():
+        # if self.getSer():
         self.status = newStatus
             # else: 
-            #     self.status = "offline"
+                # self.status = "offline"
         
     def setStopPrint(self, stopPrint):
         self.stopPrint = stopPrint
