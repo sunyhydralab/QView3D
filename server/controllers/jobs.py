@@ -208,8 +208,11 @@ def updateJobStatus():
         printerid = job.getPrinterId() 
         printerobject = findPrinterObject(printerid)
         queue = printerobject.getQueue()
-        inmemjob = queue.getJob(job)
-        inmemjob.setStatus(newstatus)
+        
+        # if(status == 'error')
+        
+        # inmemjob = queue.getJob(job)
+        # inmemjob.setStatus(newstatus)
         
         return jsonify(res), 200
     except Exception as e:

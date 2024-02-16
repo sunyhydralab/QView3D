@@ -193,12 +193,13 @@ class Printer(db.Model):
                     
                     res = self.sendGcode(line)
                     
+                    if res == "error": 
+                        return "error"
+                    
                     if self.getStatus() != "printing":
                         self.endingSequence() 
                         return "cancelled"
 
-                    if res == "error": 
-                        return "error"
             return "complete"
         except FileNotFoundError:
             # if exception, send gcode to reset printer & lower print bed 
