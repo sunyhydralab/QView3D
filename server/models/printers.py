@@ -157,12 +157,13 @@ class Printer(db.Model):
             while True:
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
-                if response == "":
-                    self.responseCount+=1 
-                    if(self.responseCount>=10):
-                        raise TimeoutError("No response from printer") 
+                # if response == "":
+                #     self.responseCount+=1 
+                #     if(self.responseCount>=10):
+                #         raise TimeoutError("No response from printer") 
                 if "ok" in response:
                     break
+                print(f"INSIDE LOOP: Command: {message}, Received: {response}")
             print(f"Command: {message}, Received: {response}")
         except serial.SerialException as e:
             self.setStatus("error")
@@ -209,14 +210,14 @@ class Printer(db.Model):
       
     # Function to send "ending" gcode commands   
     def endingSequence(self):
-        self.sendGcode("G0 Z0") # Move print bed to bottom
-        self.sendGcode("G28 X0 Y0") # home x and y axis
-        self.sendGcode("M104 S0") # turn off extruder
-        self.sendGcode("M140 S0") # turn off bed
-        self.sendGcode("M106 S0") # Turn of cooling fan 
-        self.sendGcode("M84") # disable motors 
-        # self.setStatus('complete')
-         
+        self.sendGcode("G91")
+        self.sendGcode("G1 F1800 E-3")
+        self.sendGcode("G1 F3000 Z10")
+        self.sendGcode("G90")
+        self.sendGcode("G1 X0 Y220")
+        self.sendGcode("M106 S0")
+        self.sendGcode("M104 S0")
+        self.sendGcode("M140 S0")
 
     def printNextInQueue(self):
         self.connect()

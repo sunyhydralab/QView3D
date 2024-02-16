@@ -61,12 +61,12 @@ const setPrinterStatus = async (printer: Device, status: string) => {
   printer.status = status; // update the status in the frontend
   await setStatus(printer.id, status); // update the status in the backend
 
-  if (status == "complete") {
+  if (status == "complete" || status=='offline') {
     if (printer.queue && printer.queue.length > 0) {
-      printer.queue[0].status = "cancelled";
-      console.log(printer.queue[0].status)
+        printer.queue[0].status = "cancelled";
+        await removeJob(printer.queue?.[0])
     }
-    await removeJob(printer.queue?.[0])
+    // await removeJob(printer.queue?.[0])
   }
 
   setTimeout(() => {
@@ -144,7 +144,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
           </div>
 
           <div
-            v-else-if="printer.status === 'complete' && (printer.queue?.[0].status == 'complete' || printer.queue?.[0].status == 'cancelled')">
+            v-else-if="(printer?.status === 'complete' || printer?.status=='offline') && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')">
             <button type="button" class="btn btn-danger"
               @click="releasePrinter(printer.queue?.[0], 3, printer)">Fail</button>
             <button type="button" class="btn btn-secondary"
