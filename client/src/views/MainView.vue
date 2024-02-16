@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, useSetStatus, type Device } from '@/model/ports';
-import {type Job, useReleaseJob} from '@/model/jobs';
+import { type Job, useReleaseJob, useRemoveJob } from '@/model/jobs';
 import { useRouter, useRoute } from 'vue-router';
 import { onMounted, onUnmounted, ref } from 'vue';
 
 const { retrieveInfo } = useRetrievePrintersInfo();
 const { setStatus } = useSetStatus();
-const {releaseJob} = useReleaseJob()
+const { releaseJob } = useReleaseJob()
+const { removeJob } = useRemoveJob()
 
 const router = useRouter();
 
@@ -16,6 +17,8 @@ let intervalId: number | undefined;
 
 onMounted(async () => {
   try {
+    // const printerInfo = await retrieveInfo();
+    // printers.value = printerInfo
     const route = useRoute()
     const printerName = route.params.printerName
     const updatePrinters = async () => {
@@ -30,8 +33,10 @@ onMounted(async () => {
     }
     // Fetch the printer status immediately on mount
     await updatePrinters()
-     // Then fetch it every 5 seconds
-     intervalId = window.setInterval(updatePrinters, 5000)
+    // Then fetch it every 5 seconds
+    intervalId = window.setInterval(updatePrinters, 3000)
+
+    console.log("PRINTERS: ", printers.value)
 
   } catch (error) {
     console.error('There has been a problem with your fetch operation:', error)
@@ -55,13 +60,23 @@ const sendToQueueView = (name: string | undefined) => {
 const setPrinterStatus = async (printer: Device, status: string) => {
   printer.status = status; // update the status in the frontend
   await setStatus(printer.id, status); // update the status in the backend
+
+  if (status == "complete") {
+    if (printer.queue && printer.queue.length > 0) {
+      printer.queue[0].status = "cancelled";
+      console.log(printer.queue[0].status)
+    }
+    await removeJob(printer.queue?.[0])
+  }
+
   setTimeout(() => {
-      // Using setTimeout to ensure the value is reset after the change event is processed
-      const selectElement = document.querySelector('select');
-      if (selectElement) {
-        (selectElement as HTMLSelectElement).value = '';
-      }
-    });
+    // Using setTimeout to ensure the value is reset after the change event is processed
+    const selectElement = document.querySelector('select');
+    if (selectElement) {
+      (selectElement as HTMLSelectElement).value = '';
+    }
+  });
+
   console.log('Setting status of printer:', printer, 'to:', status);
 }
 
@@ -91,11 +106,13 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
         <th>File</th>
         <th>Progress</th>
       </tr>
-      <div v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">
-          here</RouterLink>, or restart the server.</div>
+      <tr v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">
+          here</RouterLink>, or restart the server.</tr>
 
       <tr v-for="printer in printers" :key="printer.name">
-        <td v-if="(printer.status === 'printing' || printer.status==='complete') && (printer.queue?.[0].status!='inqueue')">{{ printer.queue?.[0].id }}</td>
+        <td
+          v-if="(printer.status === 'printing' || printer.status === 'complete') && (printer.queue?.[0].status != 'inqueue')">
+          {{ printer.queue?.[0].id }}</td>
         <td v-else><i>idle</i></td>
         <td><button type="button" class="btn btn-link" @click="sendToQueueView(printer.name)">{{ printer.name }}</button>
         </td>
@@ -106,12 +123,14 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
             <option value="">Change Status</option> <!-- Default option -->
             <option value="offline">Turn Offline</option>
             <option value="ready">Set to Ready</option>
-            <option v-if="printer.status=='printing'" value="complete">Stop Print</option>
+            <option v-if="printer.status == 'printing'" value="complete">Stop Print</option>
           </select>
         </td>
 
-        <td>{{ (printer.status === 'printing' || printer.status==='complete') && (printer.queue?.[0].status!='inqueue') ? printer.queue?.[0].name : '' }}</td>
-        <td>{{ (printer.status === 'printing' || printer.status==='complete') && (printer.queue?.[0].status!='inqueue') ? printer.queue?.[0].file_name_original : '' }}</td>
+        <td v-if="(printer.queue?.[0]?.status != 'inqueue') && printer.status!='offline'">{{ printer.queue?.[0]?.name }}</td>
+        <td v-else></td>
+        <td v-if="(printer.queue?.[0]?.status != 'inqueue') && printer.status!='offline'">{{ printer.queue?.[0]?.file_name_original }}</td>
+        <td v-else></td>
 
         <td>
           <div v-if="printer.status === 'printing'">
@@ -124,15 +143,19 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
             </div>
           </div>
 
-            <div v-else-if="printer.status === 'complete' && (printer.queue?.[0].status=='complete' || printer.queue?.[0].status=='cancelled')">
-              <button type="button" class="btn btn-danger" @click="releasePrinter(printer.queue?.[0], 3, printer)">Fail</button>
-              <button type="button" class="btn btn-secondary" @click="releasePrinter(printer.queue?.[0], 1, printer)">Clear</button>
-              <button type="button" class="btn btn-info" @click="releasePrinter(printer.queue?.[0], 2, printer)">Clear/Rerun</button>
-            </div>
+          <div
+            v-else-if="printer.status === 'complete' && (printer.queue?.[0].status == 'complete' || printer.queue?.[0].status == 'cancelled')">
+            <button type="button" class="btn btn-danger"
+              @click="releasePrinter(printer.queue?.[0], 3, printer)">Fail</button>
+            <button type="button" class="btn btn-secondary"
+              @click="releasePrinter(printer.queue?.[0], 1, printer)">Clear</button>
+            <button type="button" class="btn btn-info"
+              @click="releasePrinter(printer.queue?.[0], 2, printer)">Clear/Rerun</button>
+          </div>
 
         </td>
 
-        
+
       </tr>
     </table>
   </div>
@@ -158,5 +181,4 @@ th {
 
 p {
   margin: 0;
-}
-</style>
+}</style>

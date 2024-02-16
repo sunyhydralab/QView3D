@@ -88,8 +88,8 @@ export function useRerunJob() {
 
 export function useRemoveJob() {
   return {
-    async removeJob(job: Job) {
-      let jobpk = job.id
+    async removeJob(job: Job | undefined) {
+      let jobpk = job?.id
       try {
         const response = await api('canceljob', {jobpk})
         if (response) {

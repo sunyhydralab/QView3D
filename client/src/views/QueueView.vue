@@ -17,6 +17,8 @@ let intervalId: number | undefined;
 
 onMounted(async () => {
   try {
+    // const printerInfo = await retrieveInfo();
+    // printers.value = printerInfo
     const route = useRoute()
     const printerName = route.params.printerName
     const updatePrinters = async () => {
@@ -32,7 +34,7 @@ onMounted(async () => {
     // Fetch the printer status immediately on mount
     await updatePrinters()
     // Then fetch it every 5 seconds
-    intervalId = window.setInterval(updatePrinters, 5000)
+    intervalId = window.setInterval(updatePrinters, 3000)
   } catch (error) {
     console.error('There has been a problem with your fetch operation:', error)
   }
@@ -176,8 +178,8 @@ const canBumpUp = (job: Job, printer: Printer) => {
                 <tr v-for="job in printer.queue" :key="job.id">
                   <td>{{ job.id }}</td>
                   <td class="text-center">
-                    <button v-if="job.status!='printing'" type="button" class="btn btn-danger w-100" @click="handleCancel(job, printer)">X</button>
-                    <button v-else type="button" class="btn btn-secondary w-100"><RouterLink to="/">X</RouterLink></button>
+                    <button v-if="job.status=='inqueue'" type="button" class="btn btn-danger w-100" @click="handleCancel(job, printer)">X</button>
+                    <button v-else><RouterLink to="/">Goto release</RouterLink></button>
                   </td>
 
                   <td class="text-center">
