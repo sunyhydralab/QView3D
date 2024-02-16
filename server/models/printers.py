@@ -223,18 +223,18 @@ class Printer(db.Model):
                 elif verdict=="error": 
                     self.sendStatusToJob(job, job.id, "error")
                     self.setStatus("error")
-                # elif verdict == "cancelled":
-                #     job.
+                elif verdict=="cancelled":
+                    self.sendStatusToJob(job, job.id, "cancelled")
+                    self.getQueue().deleteJob(job.id)
+                    # self.setStatus("complete")
                     
-                # self.disconnect()
-    
+                self.disconnect()
                 job.removeFileFromPath(path) # remove file from folder after job complete
             # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready. 
             
             else:
                 self.setStatus("error")
                 self.sendStatusToJob(job, job.id, "error")
-
             return     
         except serial.SerialException as e:
             self.setStatus("error")

@@ -17,9 +17,9 @@ export interface Job {
 
 export function useGetJobs() {
   return {
-    async jobhistory(page: number, pageSize: number) {
+    async jobhistory(page: number, pageSize: number, printerIds?: number[]) {
       try {
-        const response = await api(`getjobs?page=${page}&pageSize=${pageSize}`)
+        const response = await api(`getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}`)
         return response
       } catch (error) {
         console.error(error)

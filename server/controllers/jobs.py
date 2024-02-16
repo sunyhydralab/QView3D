@@ -10,11 +10,12 @@ import os
 jobs_bp = Blueprint("jobs", __name__)
 
 @jobs_bp.route('/getjobs', methods=["GET"])
-def getJobs(): 
+def getJobs():
     page = request.args.get('page', default=1, type=int)
     pageSize = request.args.get('pageSize', default=10, type=int)
+    printerIds = request.args.get('printerIds', type=json.loads)
     try:
-        res = Job.get_job_history(page, pageSize)
+        res = Job.get_job_history(page, pageSize, printerIds)
         return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -59,23 +60,24 @@ def rerun_job():
         printerpk = data['printerpk'] # printer to rerun job on 
         jobpk = data['jobpk']
         
-        job = Job.findJob(jobpk) # retrieve Job to rerun 
+        rerunjob(printerpk, jobpk, "back")
+        # job = Job.findJob(jobpk) # retrieve Job to rerun 
         
-        status = 'inqueue' # set status 
-        file_name_original = job.getFileNameOriginal() # get original file name
+        # status = 'inqueue' # set status 
+        # file_name_original = job.getFileNameOriginal() # get original file name
         
-        # Insert new job into DB and return new PK 
-        res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original) # insert into DB 
+        # # Insert new job into DB and return new PK 
+        # res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original) # insert into DB 
         
-        id = res['id']
-        file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
+        # id = res['id']
+        # file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
         
-        rerunjob = Job.query.get(id)
+        # rerunjob = Job.query.get(id)
         
-        file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
-        rerunjob.setFileName(file_name_pk) # set unique file name 
+        # file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
+        # rerunjob.setFileName(file_name_pk) # set unique file name 
         
-        findPrinterObject(printerpk).getQueue().addToBack(rerunjob)
+        # findPrinterObject(printerpk).getQueue().addToBack(rerunjob)
 
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     except Exception as e:
@@ -98,7 +100,6 @@ def job_db_insert():
         file_path=jobdata.get("file_path")
 
         # Insert the job data into the database
-        # res = Job.jobHistoryInsert(name, printer_id, status, file_name, file_path)
         res = Job.jobHistoryInsert(name, printer_id, status, file_path)
 
         return "success"
@@ -127,35 +128,14 @@ def remove_job():
         # printerobject.setStatus("complete")
         queue = printerobject.getQueue()
 
-
-        if jobstatus == 'printing': # only change statuses, dont remove from queue 
-            printerobject.setStatus("complete")
-            job.setStatus("cancelled")
-            Job.update_job_status(jobpk, "cancelled")
-        else: 
-            # remove job from queue
-            queue.deleteJob(jobpk) 
-
-        # get status of job 
-        # status = job.getStatus()
-
-        # path = job.generatePath() # get path of file
-
-        # file_name_pk = job.getFileNameOriginal() + f"_{job_id}" # append id to file name to make it unique
-
-        # path = Job.getPathForDelete(file_name_pk)
-
-        # if printing, remove file from uploads folder 
-        # if status == 'printing':
-        #     Job.removeFileFromPath(path) # remove file from uploads folder to stop printer functioning 
-        # if key == 0: 
-        #     Job.update_job_status(job_id, "cancelled")
-        # elif key==2: 
-        #     Job.update_job_status(job_id, "error")
-        #     queue.deleteJob(job_id) 
+        # if jobstatus == 'printing': # only change statuses, dont remove from queue 
+        #     printerobject.setStatus("complete")
         # else: 
-        #     Job.update_job_status(job_id, "ready")
-        #     queue.deleteJob(job_id) 
+        queue.deleteJob(jobpk) 
+            
+        job.setStatus("cancelled")
+        Job.update_job_status(jobpk, "cancelled")
+
         return jsonify({"success": True, "message": "Job removed from printer queue."}), 200
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -178,7 +158,7 @@ def releasejob():
             Job.update_job_status(jobpk, "error")
             printerobject.setStatus("error") # printer ready to accept new prints 
         elif key == 2: 
-            rerunjob(printerid, jobpk)
+            rerunjob(printerid, jobpk, "front")
             printerobject.setStatus("ready") # printer ready to accept new prints 
         elif key == 1: 
             printerobject.setStatus("ready") # printer ready to accept new prints 
@@ -248,7 +228,7 @@ def findPrinterObject(printer_id):
     threads = printer_status_service.getThreadArray()
     return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer  
 
-def rerunjob(printerpk, jobpk):
+def rerunjob(printerpk, jobpk, position):
     job = Job.findJob(jobpk) # retrieve Job to rerun 
     
     status = 'inqueue' # set status 
@@ -262,7 +242,14 @@ def rerunjob(printerpk, jobpk):
     
     rjob = Job.query.get(id)
     
-    file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
+    base_name, extension = os.path.splitext(file_name_original)
+
+    # Append the ID to the base name
+    file_name_pk = f"{base_name}_{id}{extension}"
+    
     rjob.setFileName(file_name_pk) # set unique file name 
     
-    findPrinterObject(printerpk).getQueue().addToFront(rjob)
+    if position == "back":
+        findPrinterObject(printerpk).getQueue().addToBack(rjob)
+    else: 
+        findPrinterObject(printerpk).getQueue().addToFront(rjob)

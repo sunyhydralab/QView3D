@@ -9,6 +9,7 @@ const { retrieveInfo } = useRetrievePrintersInfo()
 const { rerunJob } = useRerunJob()
 
 const printers = ref<Array<Device>>([]) // Get list of open printer threads 
+const selectedPrinters = ref<Array<Device>>([])
 let jobs = ref<Array<Job>>([])
 let filter = ref('') // This will hold the current filter value
 
@@ -65,12 +66,20 @@ const changePage = async (newPage: any) => {
 }
 // computed property that returns the filtered list of jobs. 
 let filteredJobs = computed(() => {
-  if (filter.value) {
-    return jobs.value.filter(job => job.printer.includes(filter.value))
-  } else {
-    return jobs.value
-  }
+    if (filter.value) {
+        return jobs.value.filter(job => job.printer.includes(filter.value))
+    } else {
+        return jobs.value
+    }
 })
+
+function appendPrinter(printer: Device) {
+    if (!selectedPrinters.value.includes(printer)) {
+        selectedPrinters.value.push(printer)
+    } else {
+        selectedPrinters.value = selectedPrinters.value.filter(p => p !== printer)
+    }
+}
 </script>
 
 <template>
@@ -80,9 +89,21 @@ let filteredJobs = computed(() => {
             <br>
             <label for="pageSize" class="form-label">Jobs per page:</label>
             <input id="pageSize" type="number" v-model.number="pageSize" min="1" class="form-control" style="width: auto;">
+
+            <select required multiple>
+                <option :value="null">Device: None</option>
+                <option v-for="printer in printers" :value="printer" :key="printer.id" @click="appendPrinter(printer)">
+                    {{ printer.name }}
+                </option>
+            </select>
+            <div>
+                    Selected printer(s): <br>
+                    <p v-for="printer in selectedPrinters">
+                        <b>{{ printer.name }}</b> status: {{ printer.status }}<br>
+                    </p>
+                </div>
         </div>
         <table class="table">
-        <input v-model="filter" placeholder="Filter by printer" />
             <thead>
                 <tr>
                     <th>Job ID</th>
@@ -104,7 +125,8 @@ let filteredJobs = computed(() => {
                     <td>{{ job.printer }}</td>
                     <td>
                         <div class="dropdown">
-                            <button class="btn btn-secondary dropdown-toggle" type="button" id="printerDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <button class="btn btn-secondary dropdown-toggle" type="button" id="printerDropdown"
+                                data-bs-toggle="dropdown" aria-expanded="false">
                                 Rerun Job
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="printerDropdown">
@@ -115,9 +137,9 @@ let filteredJobs = computed(() => {
                         </div>
                     </td>
                 </tr>
-                
+
             </tbody>
-            
+
             <tbody v-else>
                 <tr>
                     <td colspan="7">No jobs found. Submit your first job <RouterLink to="/submit">here!</RouterLink>
@@ -130,7 +152,8 @@ let filteredJobs = computed(() => {
                 <li class="page-item" :class="{ 'disabled': page <= 1 }">
                     <a class="page-link" href="#" @click.prevent="changePage(page - 1)">Previous</a>
                 </li>
-                <li class="page-item disabled"><a class="page-link">Page {{ page }} of {{ Math.ceil(totalJobs / pageSize) }}</a></li>
+                <li class="page-item disabled"><a class="page-link">Page {{ page }} of {{ Math.ceil(totalJobs / pageSize)
+                }}</a></li>
                 <li class="page-item" :class="{ 'disabled': page >= Math.ceil(totalJobs / pageSize) }">
                     <a class="page-link" href="#" @click.prevent="changePage(page + 1)">Next</a>
                 </li>
