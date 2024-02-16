@@ -46,10 +46,12 @@ class Job(db.Model):
     @classmethod
     def get_job_history(cls, page, pageSize, printerIds=None):
         try:
-            query = cls.query.order_by(cls.date.desc())
+            query = cls.query
 
             if printerIds:
                 query = query.filter(cls.printer_id.in_(printerIds))
+
+            query = query.order_by(cls.date.asc())  # Change this line
 
             pagination = query.paginate(page=page, per_page=pageSize, error_out=False)
             jobs = pagination.items

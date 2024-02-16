@@ -19,8 +19,10 @@ export function useGetJobs() {
   return {
     async jobhistory(page: number, pageSize: number, printerIds?: number[]) {
       try {
+        // console.log(`getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}`)
         const response = await api(`getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}`)
         return response
+        return "success"
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while retrieving the jobs')
