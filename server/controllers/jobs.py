@@ -41,7 +41,10 @@ def add_job_to_queue():
         
         job = Job.query.get(id)
         
-        file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
+        base_name, extension = os.path.splitext(file_name_original)
+
+        # Append the ID to the base name
+        file_name_pk = f"{base_name}_{id}{extension}"
         
         job.setFileName(file_name_pk) # set unique in-memory file name 
 
