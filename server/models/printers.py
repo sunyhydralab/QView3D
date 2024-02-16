@@ -23,12 +23,11 @@ class Printer(db.Model):
     hwid = db.Column(db.String(150), nullable=False)
     name = db.Column(db.String(50), nullable=False)
     date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).astimezone(), nullable=False)
-    
     queue = None
-    # queue = Queue()
     ser = None
     status = None  # default setting on printer start. Runs initialization and status switches to "ready" automatically.
-    stopPrint = False
+    # stopPrint = False
+    responseCount = 0 # if count == 10 & no response, set error 
 
     def __init__(self, device, description, hwid, name, status=status, id=None):
         self.device = device
@@ -41,6 +40,7 @@ class Printer(db.Model):
         self.stopPrint = False 
         if id is not None:
             self.id = id
+        self.responseCount = 0
 
     # general classes
     @classmethod
@@ -157,11 +157,24 @@ class Printer(db.Model):
             while True:
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
+                if response == "":
+                    self.responseCount+=1 
+                    if(self.responseCount>=10):
+                        raise TimeoutError("No response from printer") 
                 if "ok" in response:
                     break
             print(f"Command: {message}, Received: {response}")
         except serial.SerialException as e:
             self.setStatus("error")
+            print(e)
+            return "error" 
+        except TimeoutError as e:  # Catch the TimeoutError exception
+            self.setStatus("error")
+            print(e)
+            return "error" 
+        except Exception as e: 
+            self.setStatus("error")
+            print(e)
             return "error" 
         
     def parseGcode(self, path):
@@ -177,6 +190,7 @@ class Printer(db.Model):
                     if len(line) == 0 or line.startswith(";"): 
                         continue
                     # Send the line to the printer.
+                    
                     res = self.sendGcode(line)
                     
                     if self.getStatus() != "printing":

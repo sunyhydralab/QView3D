@@ -118,7 +118,6 @@ def remove_job():
         # 0 = cancel job, 1 = clear job, 2 = fail job, 3 = clear job (but also rerun)
         data = request.get_json()
         jobpk = data['jobpk']
-        print("HERREEE")
         # Retrieve job to delete & printer id 
         job = Job.findJob(jobpk) 
         printerid = job.getPrinterId() 
@@ -204,6 +203,13 @@ def updateJobStatus():
         newstatus = data['status']
         
         res = Job.update_job_status(job_id, newstatus)
+        
+        job = Job.findJob(job_id) 
+        printerid = job.getPrinterId() 
+        printerobject = findPrinterObject(printerid)
+        queue = printerobject.getQueue()
+        inmemjob = queue.getJob(job)
+        inmemjob.setStatus(newstatus)
         
         return jsonify(res), 200
     except Exception as e:
