@@ -149,8 +149,9 @@ def releasejob():
         data = request.get_json()
         jobpk = data['jobpk']
         key = data['key']
-        printerId = data['printerId']
-        printerobject = findPrinterObject(printerId)
+        job = Job.findJob(jobpk) 
+        printerid = job.getPrinterId() 
+        printerobject = findPrinterObject(printerid)
         queue = printerobject.getQueue()
 
         queue.deleteJob(jobpk) # remove job from queue 
@@ -159,7 +160,7 @@ def releasejob():
             Job.update_job_status(jobpk, "error")
             printerobject.setStatus("error") # printer ready to accept new prints 
         elif key == 2: 
-            rerunjob(printerId, jobpk, "front")
+            rerunjob(printerid, jobpk, "front")
             printerobject.setStatus("ready") # printer ready to accept new prints 
         elif key == 1: 
             printerobject.setStatus("ready") # printer ready to accept new prints 

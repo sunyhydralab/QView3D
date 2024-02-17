@@ -80,8 +80,7 @@ const setPrinterStatus = async (printer: Device, status: string) => {
   console.log('Setting status of printer:', printer, 'to:', status);
 }
 
-const releasePrinter = async (jobToFind: Job | undefined, key: number, printerToFind: Device, printerIdToPrintTo: number | undefined) => {
-  console.log("printer id to print to: ", printerIdToPrintTo)
+const releasePrinter = async (jobToFind: Job | undefined, key: number, printerToFind: Device) => {
   // let printerToFind = job?.printerid
   const foundPrinter = printers.value.find(printer => printer === printerToFind); // Find the printer by direct object comparison
   if (!foundPrinter) return; // Return if printer not found
@@ -90,7 +89,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
   if (jobIndex === undefined || jobIndex === -1) return; // Return if job not found
   foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
 
-  await releaseJob(jobToFind, key, printerIdToPrintTo);
+  await releaseJob(jobToFind, key)
 }
 
 </script>
@@ -112,8 +111,8 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
 
       <tr v-for="printer in printers" :key="printer.name">
         <td
-          v-if="(printer.status === 'printing' || printer.status === 'complete') && (printer.queue?.[0]?.status != 'inqueue')">
-          {{ printer.queue?.[0]?.id }}</td>
+          v-if="(printer.status === 'printing' || printer.status === 'complete') && (printer.queue?.[0].status != 'inqueue')">
+          {{ printer.queue?.[0].id }}</td>
         <td v-else><i>idle</i></td>
         <td><button type="button" class="btn btn-link" @click="sendToQueueView(printer.name)">{{ printer.name }}</button>
         </td>
@@ -144,24 +143,14 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
             </div>
           </div>
 
-          <div v-else-if="(printer?.status === 'complete' || printer?.status=='offline') && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')">
+          <div
+            v-else-if="(printer?.status === 'complete' || printer?.status=='offline') && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')">
             <button type="button" class="btn btn-danger"
-              @click="releasePrinter(printer.queue?.[0], 3, printer, printer.id)">Fail</button>
+              @click="releasePrinter(printer.queue?.[0], 3, printer)">Fail</button>
             <button type="button" class="btn btn-secondary"
-              @click="releasePrinter(printer.queue?.[0], 1, printer, printer.id)">Clear</button>
-
-            <!-- Clear/Rerun dropdown -->
-            <div class="dropdown">
-              <button class="btn btn-info dropdown-toggle" type="button" id="rerunDropdown"
-                  data-bs-toggle="dropdown" aria-expanded="false">
-                  Clear/Rerun
-              </button>
-              <ul class="dropdown-menu" aria-labelledby="rerunDropdown">
-                  <li v-for="rerunPrinter in printers" :key="rerunPrinter.id">
-                      <a class="dropdown-item" @click="releasePrinter(printer.queue?.[0], 2, rerunPrinter, rerunPrinter.id)">{{ rerunPrinter.name }}</a>
-                  </li>
-              </ul>
-            </div>
+              @click="releasePrinter(printer.queue?.[0], 1, printer)">Clear</button>
+            <button type="button" class="btn btn-info"
+              @click="releasePrinter(printer.queue?.[0], 2, printer)">Clear/Rerun</button>
           </div>
 
         </td>
