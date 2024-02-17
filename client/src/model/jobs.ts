@@ -143,10 +143,10 @@ export function bumpJobs() {
 
 export function useReleaseJob(){
   return {
-    async releaseJob(job: Job | undefined, key: number){
+    async releaseJob(job: Job | undefined, key: number, printerId: number | undefined){
       try {
         let jobpk = job?.id
-        const response = await api('releasejob', { jobpk, key })
+        const response = await api('releasejob', { jobpk, key, printerId })
         if (response) {
           if (response.success == false) {
             toast.error(response.message)
