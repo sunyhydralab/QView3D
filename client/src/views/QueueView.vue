@@ -12,8 +12,13 @@ const { rerunJob } = useRerunJob()
 const { bumpjob } = bumpJobs()
 
 const isActive = ref(true);
+
 let close = () => {
   isActive.value = !isActive.value;
+}
+
+function debug() {
+  console.log(isActive.value)
 }
 
 type Printer = Device & { isExpanded?: boolean }
@@ -158,16 +163,30 @@ const canBumpUp = (job: Job, printer: Printer) => {
 
 <template>
   <div class="container">
+
+    <!-- Modal -->
     <div v-if="isActive">
-      <div class="modal is-active">
-      <div class="modal-content">
-        <span class="close-button" @click="isActive = !isActive">x</span>
-        <p>Are you sure you want to delete?</p>
-        <button @click="">Yes</button>
-        <button @click="isActive = !isActive">No</button>
+    <div class="modal" id="exampleModal" tabindex="-1" role="dialog" style="display: block;">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Welcome Modal</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>This is a Bootstrap modal. You can put any content you want here.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
+
+
     <b>Queue View</b>
 
     <div v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">here
@@ -207,8 +226,11 @@ const canBumpUp = (job: Job, printer: Printer) => {
                 <tr v-for="job in printer.queue" :key="job.id">
                   <td>{{ job.id }}</td>
                   <td class="text-center">
-                    <button v-if="job.status=='inqueue'" type="button" class="btn btn-danger w-100" @click="isActive=!isActive">X</button>
-                    <button v-else><RouterLink to="/">Goto release</RouterLink></button>
+                    <button v-if="job.status == 'inqueue'" type="button" class="btn btn-danger w-100"
+                      @click="isActive = !isActive, debug()">X</button>
+                    <button v-else>
+                      <RouterLink to="/">Goto release</RouterLink>
+                    </button>
                   </td>
 
                   <td class="text-center">
@@ -240,10 +262,14 @@ const canBumpUp = (job: Job, printer: Printer) => {
                         type="button" data-bs-toggle="dropdown"
                         :disabled="printer.queue && job.status === 'printing'"></button>
                       <ul class="dropdown-menu">
-                        <li class="dropdown-item" v-if="canBumpUp(job, printer)" @click="bump(job, printer, 'up')">Bump Up</li>
-                        <li class="dropdown-item" v-if="canBumpUp(job, printer)" @click="bump(job, printer, 'top')">Send to Top</li>
-                        <li class="dropdown-item" v-if="!isLastJob(job, printer)" @click="bump(job, printer, 'down')">Bump Down</li>
-                        <li class="dropdown-item" v-if="!isLastJob(job, printer)" @click="bump(job, printer, 'bottom')">Send to Bottom</li>
+                        <li class="dropdown-item" v-if="canBumpUp(job, printer)" @click="bump(job, printer, 'up')">Bump Up
+                        </li>
+                        <li class="dropdown-item" v-if="canBumpUp(job, printer)" @click="bump(job, printer, 'top')">Send
+                          to Top</li>
+                        <li class="dropdown-item" v-if="!isLastJob(job, printer)" @click="bump(job, printer, 'down')">Bump
+                          Down</li>
+                        <li class="dropdown-item" v-if="!isLastJob(job, printer)" @click="bump(job, printer, 'bottom')">
+                          Send to Bottom</li>
                       </ul>
                     </div>
                   </td>
@@ -259,17 +285,6 @@ const canBumpUp = (job: Job, printer: Printer) => {
       </div>
     </div>
   </div>
-  <div v-if="isActive">
-    <div class="modal is-active">
-    <div class="modal-content">
-      <span class="close-button" @click="isActive = !isActive">x</span>
-      <p>Are you sure you want to delete?</p>
-      <button @click="">Yes</button>
-      <button @click="isActive = !isActive">No</button>
-    </div>
-  </div>
-  </div>
-  
 </template>
 
 <style scoped>
@@ -371,5 +386,9 @@ th {
 .printerrerun {
   cursor: pointer;
   padding: 12px 16px;
+}
+
+.modal-backdrop {
+  display: none;
 }
 </style>
