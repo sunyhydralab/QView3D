@@ -3,12 +3,18 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
 import { useRerunJob, useRemoveJob, bumpJobs, type Job } from '../model/jobs';
 import { useRoute } from 'vue-router'
+import ConfirmationModal from '@/components/ConfirmationModal.vue';
 
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
 // const { bumpUp, bumpDown, bumpToTop, bumpToBack } = bumpJobs()
 const { bumpjob } = bumpJobs()
+
+const isActive = ref(true);
+let close = () => {
+  isActive.value = !isActive.value;
+}
 
 type Printer = Device & { isExpanded?: boolean }
 const printers = ref<Array<Printer>>([]) // Get list of open printer threads 
@@ -58,11 +64,24 @@ const handleRerun = async (job: Job, printer: Printer) => {
       printers.value[printerIndex].queue = foundPrinter.queue
     }
   }
-
 };
+
+const showDeleteConfirmation = ref(false);
 
 async function handleCancel(jobToFind: Job, printerToFind: Device) {
   // remove from in-memory array 
+  // if(confirm('Are you sure you want to delete this job?')) 
+  // {
+  //   const foundPrinter = printers.value.find(printer => printer === printerToFind); // Find the printer by direct object comparison
+  //   if (!foundPrinter) return; // Return if printer not found
+  //   const jobIndex = foundPrinter.queue?.findIndex(job => job === jobToFind); // Find the index of the job in the printer's queue
+
+  //   if (jobIndex === undefined || jobIndex === -1) return; // Return if job not found
+  //   foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
+
+  //   // remove from queue 
+  //   await removeJob(jobToFind)
+  // }
   const foundPrinter = printers.value.find(printer => printer === printerToFind); // Find the printer by direct object comparison
   if (!foundPrinter) return; // Return if printer not found
   const jobIndex = foundPrinter.queue?.findIndex(job => job === jobToFind); // Find the index of the job in the printer's queue
@@ -139,6 +158,16 @@ const canBumpUp = (job: Job, printer: Printer) => {
 
 <template>
   <div class="container">
+    <div v-if="isActive">
+      <div class="modal is-active">
+      <div class="modal-content">
+        <span class="close-button" @click="isActive = !isActive">x</span>
+        <p>Are you sure you want to delete?</p>
+        <button @click="">Yes</button>
+        <button @click="isActive = !isActive">No</button>
+      </div>
+    </div>
+  </div>
     <b>Queue View</b>
 
     <div v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">here
@@ -178,7 +207,7 @@ const canBumpUp = (job: Job, printer: Printer) => {
                 <tr v-for="job in printer.queue" :key="job.id">
                   <td>{{ job.id }}</td>
                   <td class="text-center">
-                    <button v-if="job.status=='inqueue'" type="button" class="btn btn-danger w-100" @click="handleCancel(job, printer)">X</button>
+                    <button v-if="job.status=='inqueue'" type="button" class="btn btn-danger w-100" @click="isActive=!isActive">X</button>
                     <button v-else><RouterLink to="/">Goto release</RouterLink></button>
                   </td>
 
@@ -230,6 +259,17 @@ const canBumpUp = (job: Job, printer: Printer) => {
       </div>
     </div>
   </div>
+  <div v-if="isActive">
+    <div class="modal is-active">
+    <div class="modal-content">
+      <span class="close-button" @click="isActive = !isActive">x</span>
+      <p>Are you sure you want to delete?</p>
+      <button @click="">Yes</button>
+      <button @click="isActive = !isActive">No</button>
+    </div>
+  </div>
+  </div>
+  
 </template>
 
 <style scoped>
