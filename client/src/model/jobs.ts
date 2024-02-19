@@ -56,6 +56,33 @@ export function useAddJobToQueue() {
   }
 }
 
+
+export function useAutoQueue() {
+  return {
+    async auto(job: FormData) {
+      try {
+        const response = await api('autoqueue', job)
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to add job to queue. Unexpected response')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to add job to queue. Unexpected response')
+        }
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while adding the job to the queue')
+      }
+    }
+  }
+}
+
 // function to duplicate and rerun job
 export function useRerunJob() {
   return {
@@ -92,7 +119,7 @@ export function useRemoveJob() {
     async removeJob(job: Job | undefined) {
       let jobpk = job?.id
       try {
-        const response = await api('canceljob', {jobpk})
+        const response = await api('canceljob', { jobpk })
         if (response) {
           if (response.success == false) {
             toast.error(response.message)
@@ -142,9 +169,9 @@ export function bumpJobs() {
   }
 }
 
-export function useReleaseJob(){
+export function useReleaseJob() {
   return {
-    async releaseJob(job: Job | undefined, key: number){
+    async releaseJob(job: Job | undefined, key: number) {
       try {
         let jobpk = job?.id
         const response = await api('releasejob', { jobpk, key })
@@ -168,7 +195,7 @@ export function useReleaseJob(){
     }
   }
 }
-export function useGetGcode(){
+export function useGetGcode() {
   return {
     async getgcode(job: Job) {
       try {
