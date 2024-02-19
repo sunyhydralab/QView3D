@@ -4,11 +4,7 @@ import { api } from './ports'
 import { toast } from './toast'
 import { type Device } from '@/model/ports'
 import { ref } from 'vue';
-import { Socket } from 'vue-socket.io-extended';
-import io from 'socket.io-client';
-
-// socket.io setup for progress updates, using the VITE_API_ROOT environment variable
-export const socket = io(import.meta.env.VITE_API_ROOT)
+import { socket } from './myFetch'
 
 export interface Job {
   id: number
@@ -18,6 +14,7 @@ export interface Job {
   date?: Date
   status?: string
   progress?: number //store progress of job
+  elapsed_time?: number //store elapsed time of job
   printer: string //store printer name
   printerid: number
   // job_id: number
@@ -192,21 +189,26 @@ export function useGetGcode(){
 
 // function to constantly update progress of job
 export function setupProgressSocket(printers: any) {
-  // Check if the first job in the queue of the first printer is printing
-  if (printers[0]?.queue[0]?.status === 'printing') {
-    socket.on("progress_update", ((data: any) => {
-      const job = printers
-        .flatMap((printer: { queue: any; }) => printer.queue)
-        .find((job: { id: any; }) => job?.id === data.job_id);
+  
+  // Check if printers is not an empty array
+  if (printers.length > 0) {
+    // Check if the first job in the queue of the first printer is printing
+    if (printers[0]?.queue[0]?.status === 'printing') {
+      socket.on("progress_update", ((data: any) => {
+        const job = printers
+          .flatMap((printer: { queue: any; }) => printer.queue)
+          .find((job: { id: any; }) => job?.id === data.job_id);
 
-      if (job) {
-        job.progress = data.progress;
-        // Update the display value only if progress is defined
-        if (data.progress !== undefined) {
-          job.progress= data.progress;
+        if (job) {
+          job.progress = data.progress;
+          job.elapsed_time = data.elapsed_time;
+          // Update the display value only if progress is defined
+          if (data.progress !== undefined) {
+            job.progress= data.progress;
+          }
         }
-      }
-    }))
+      }))
+    }
   }
 }
 

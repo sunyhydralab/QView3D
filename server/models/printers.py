@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.exc import SQLAlchemyError
-from flask import jsonify
+from flask import jsonify, current_app
 from Classes.Queue import Queue
 import serial
 import serial.tools.list_ports
@@ -152,7 +152,7 @@ class Printer(db.Model):
             # Encode and send the message to the printer.
             self.ser.write(f"{message}\n".encode("utf-8"))
             # Sleep the printer to give it enough time to get the instruction.
-            time.sleep(0.1)
+            #time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
             while True:
                 # logic here about time elapsed since last response
@@ -306,12 +306,14 @@ class Printer(db.Model):
     def setSer(self, port):
         self.ser = port
 
+    #  now when we set the status, we can emit the status to the frontend
     def setStatus(self, newStatus):
-        # if newStatus=='ready': 
-        # if self.getSer():
-        self.status = newStatus
-            # else: 
-                # self.status = "offline"
+        try:
+            self.status = newStatus
+            # Emit a 'status_update' event with the new status
+            current_app.socketio.emit('status_update', {'printer_id': self.id, 'status': newStatus})
+        except Exception as e:
+            print('Error setting status:', e)
         
     def setStopPrint(self, stopPrint):
         self.stopPrint = stopPrint

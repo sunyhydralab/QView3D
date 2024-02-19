@@ -29,7 +29,7 @@ CORS(app)
 
 # Initialize SocketIO, which will be used to send printer status updates to the frontend
 # and this specific socketit will be used throughout the backend
-socketio = SocketIO(app, cors_allowed_origins="*")  # Initialize SocketIO with the Flask app
+socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False, async_mode='threading') # Initialize SocketIO with the Flask app
 app.socketio = socketio  # Add the SocketIO object to the app object
 
 @app.before_request

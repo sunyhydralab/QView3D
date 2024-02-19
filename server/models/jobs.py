@@ -173,13 +173,21 @@ class Job(db.Model):
         
     # added a setProgress method to update the progress of a job
     # which sends it to the frontend using socketio
+    # added time!
     def setProgress(self, progress):
         global job_progress
         if self.status == 'printing':
-            job_progress[self.id] = progress
-            
-            # Emit a 'progress_update' event with the new progress
-            current_app.socketio.emit('progress_update', {'job_id': self.id, 'progress': progress})
+            if self.id not in job_progress:
+                # If the job is not in the dictionary, add it with the current time as the start time
+                job_progress[self.id] = {'start_time': time.time(), 'progress': progress}
+            else:
+                # If the job is already in the dictionary, just update the progress
+                job_progress[self.id]['progress'] = progress
+
+            elapsed_time = time.time() - job_progress[self.id]['start_time']
+
+            # Emit a 'progress_update' event with the new progress and the elapsed time
+            current_app.socketio.emit('progress_update', {'job_id': self.id, 'progress': progress, 'elapsed_time': elapsed_time})
         elif self.id in job_progress:
             del job_progress[self.id]  # Remove the job from the dictionary if it's not printing
 

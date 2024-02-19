@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useRetrievePrintersInfo, useSetStatus, type Device } from '@/model/ports';
+import { useRetrievePrintersInfo, useSetStatus, setupStatusSocket, disconnectStatusSocket, type Device } from '@/model/ports';
 import { type Job, useReleaseJob, useRemoveJob, setupProgressSocket, disconnectProgressSocket } from '@/model/jobs';
 import { useRouter, useRoute } from 'vue-router';
 import { onMounted, onUnmounted, ref } from 'vue';
@@ -31,9 +31,8 @@ onMounted(async () => {
     }
     // Fetch the printer status immediately on mount
     await updatePrinters()
-    // Then fetch it every 5 seconds
-    //intervalId = window.setInterval(updatePrinters, 5000)
-
+    // Setup the satus socket
+    setupStatusSocket(printers)
     // Setup the progress socket
     setupProgressSocket(printers.value)
 
@@ -50,6 +49,8 @@ onUnmounted(() => {
     clearInterval(intervalId)
   }
 
+  // Disconnect the status socket
+  disconnectStatusSocket()
   // Disconnect the progress socket
   disconnectProgressSocket()
 })
@@ -63,9 +64,9 @@ const sendToQueueView = (name: string | undefined) => {
 // set the status of the printer
 const setPrinterStatus = async (printer: Device, status: string) => {
   printer.status = status; // update the status in the frontend
-  await setStatus(printer.id, status); // update the status in the backend
+  const updatedStatus = await setStatus(printer.id, status); // update the status in the backend
 
-  if (status == "complete" || status == 'offline') {
+  if (updatedStatus === 'complete' || updatedStatus === 'offline') {
     if (printer.queue && printer.queue.length > 0) {
       printer.queue[0].status = "cancelled";
       await removeJob(printer.queue?.[0])
@@ -81,7 +82,7 @@ const setPrinterStatus = async (printer: Device, status: string) => {
     }
   });
 
-  console.log('Setting status of printer:', printer, 'to:', status);
+  console.log('Setting status of printer:', printer, 'to:', updatedStatus);
 }
 
 const releasePrinter = async (jobToFind: Job | undefined, key: number, printerToFind: Device, printerIdToPrintTo: number | undefined) => {
@@ -141,12 +142,14 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
         <td style="width: 250px;">
           <div v-if="printer.status === 'printing' && printer.queue">
             <div v-for="job in printer.queue" :key="job.id">
+              <!-- Display the elapsed time -->
+              <p v-if="job.elapsed_time">{{ new Date(job.elapsed_time * 1000).toISOString().substr(11, 8) }}</p>
               <div class="progress">
                 <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
-                  :style="{ width: job.progress + '%' }" :aria-valuenow="job.progress" aria-valuemin="0"
+                  :style="{ width: (job.progress || 0) + '%' }" :aria-valuenow="job.progress" aria-valuemin="0"
                   aria-valuemax="100">
                   <!-- job progress set to 2 decimal places -->
-                  <p>{{ job.progress?.toFixed(2) }}%</p>
+                  <p>{{ job.progress ? `${job.progress.toFixed(2)}%` : '' }}</p>
                 </div>
               </div>
             </div>

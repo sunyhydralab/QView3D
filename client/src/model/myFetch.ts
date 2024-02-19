@@ -1,3 +1,10 @@
+import io from 'socket.io-client';
+
+// socket.io setup for status updates, using the VITE_API_ROOT environment variable
+// moved this to myFetch.ts to make it easier to use in other files
+export const socket = io(import.meta.env.VITE_API_ROOT, {
+    transports: ['websocket']
+})
 const API_ROOT = import.meta.env.VITE_API_ROOT as string;
 
 export function rest(url: string, body?: unknown, method?: string, headers?: HeadersInit){
