@@ -163,7 +163,7 @@ class Printer(db.Model):
                 #         raise TimeoutError("No response from printer") 
                 if "ok" in response:
                     break
-                print(f"INSIDE LOOP: Command: {message}, Received: {response}")
+                # print(f"INSIDE LOOP: Command: {message}, Received: {response}")
             print(f"Command: {message}, Received: {response}")
         except serial.SerialException as e:
             self.setStatus("error")
@@ -177,7 +177,7 @@ class Printer(db.Model):
             self.setStatus("error")
             print(e)
             return "error" 
-        
+    
     def parseGcode(self, path):
         try: 
             with open(path, "r") as g:
@@ -241,7 +241,7 @@ class Printer(db.Model):
                     self.setStatus("error")
                 elif verdict=="cancelled":
                     self.sendStatusToJob(job, job.id, "cancelled")
-                    self.getQueue().deleteJob(job.id)
+                    # self.getQueue().deleteJob(job.id)
                     # self.setStatus("complete")
                     
                 self.disconnect()
