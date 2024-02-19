@@ -6,6 +6,7 @@ import json
 from werkzeug.utils import secure_filename
 import os 
 import gzip
+from flask import current_app
 
 # get data for jobs 
 jobs_bp = Blueprint("jobs", __name__)
@@ -19,8 +20,6 @@ def getJobs():
     # convert to boolean 
     oldestFirst = request.args.get('oldestFirst', default='false')
     oldestFirst = oldestFirst.lower() in ['true', '1']
-
-    print("controller: ", oldestFirst)
     
     try:
         res = Job.get_job_history(page, pageSize, printerIds, oldestFirst)
@@ -54,8 +53,6 @@ def add_job_to_queue():
         file_name_pk = f"{base_name}_{id}{extension}"
         
         job.setFileName(file_name_pk) # set unique in-memory file name 
-
-        job.saveToFolder()
 
         findPrinterObject(printer_id).getQueue().addToBack(job)
         
@@ -291,3 +288,4 @@ def rerunjob(printerpk, jobpk, position):
         findPrinterObject(printerpk).getQueue().addToBack(rjob)
     else: 
         findPrinterObject(printerpk).getQueue().addToFront(rjob)
+        
