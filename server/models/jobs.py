@@ -44,14 +44,16 @@ class Job(db.Model):
         return self.printer_id
         
     @classmethod
-    def get_job_history(cls, page, pageSize, printerIds=None):
+    def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False):
         try:
             query = cls.query
-
             if printerIds:
                 query = query.filter(cls.printer_id.in_(printerIds))
 
-            query = query.order_by(cls.date.asc())  # Change this line
+            if oldestFirst:
+                query = query.order_by(cls.date.desc())
+            else: 
+                query = query.order_by(cls.date.asc())  # Change this line
 
             pagination = query.paginate(page=page, per_page=pageSize, error_out=False)
             jobs = pagination.items
@@ -64,6 +66,8 @@ class Job(db.Model):
                 "printer": job.printer.name, 
                 "file_name_original": job.file_name_original
             } for job in jobs]
+            
+            print(jobs_data)
 
             return jobs_data, pagination.total
         except SQLAlchemyError as e:

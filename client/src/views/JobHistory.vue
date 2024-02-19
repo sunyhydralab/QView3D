@@ -12,6 +12,7 @@ const printers = ref<Array<Device>>([]) // Get list of open printer threads
 const selectedPrinters = ref<Array<Device>>([])
 let jobs = ref<Array<Job>>([])
 let filter = ref('') // This will hold the current filter value
+let oldestFirst = ref<boolean>(false)
 
 let page = ref(1)
 let pageSize = ref(10)
@@ -88,8 +89,10 @@ function appendPrinter(printer: Device) {
 }
 
 async function submitFilter() {
+    jobs.value = []; // Clear the jobs array
+    // console.log(oldestFirst.value)
     const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
-    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds)
+    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value)
     jobs.value = joblist;
     totalJobs.value = total;
 }
@@ -108,6 +111,10 @@ async function submitFilter() {
                 <option v-for="printer in printers" :value="printer" :key="printer.id" @click="appendPrinter(printer)">
                     {{ printer.name }}
                 </option>
+            </select>
+            <select v-model="oldestFirst" required>
+                <option v-bind="{ value: true }">Oldest to Newest</option>
+                <option v-bind="{ value: false }">Newest To Oldest</option>
             </select>
             <br>
             <button @click="submitFilter">Submit Filter</button>

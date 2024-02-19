@@ -16,8 +16,14 @@ def getJobs():
     pageSize = request.args.get('pageSize', default=10, type=int)
     printerIds = request.args.get('printerIds', type=json.loads)
     
+    # convert to boolean 
+    oldestFirst = request.args.get('oldestFirst', default='false')
+    oldestFirst = oldestFirst.lower() in ['true', '1']
+
+    print("controller: ", oldestFirst)
+    
     try:
-        res = Job.get_job_history(page, pageSize, printerIds)
+        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst)
         return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")
