@@ -79,8 +79,13 @@ class Job(db.Model):
             else:
                 file_data = file.read()
 
-            compressed_data = gzip.compress(file_data) # compress data before storing in database
-            
+                
+            try:
+                gzip.decompress(file_data)
+                compressed_data = file_data  # If it decompresses successfully, it's already compressed
+            except OSError:
+                compressed_data = gzip.compress(file_data)  
+                            
             job = cls(
                 file = compressed_data, 
                 name=name,
@@ -186,4 +191,7 @@ class Job(db.Model):
 
     def setFileName(self, filename):
         self.file_name_pk = filename
+        
+    def setFile(self, file):
+        self.file = file
         

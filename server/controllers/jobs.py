@@ -1,4 +1,3 @@
-from io import BytesIO
 from flask import Blueprint, jsonify, request, make_response
 from models.jobs import Job
 from models.printers import Printer
@@ -6,6 +5,8 @@ from app import printer_status_service
 import json 
 from werkzeug.utils import secure_filename
 import os 
+import gzip
+
 # get data for jobs 
 jobs_bp = Blueprint("jobs", __name__)
 
@@ -48,6 +49,8 @@ def add_job_to_queue():
         file_name_pk = f"{base_name}_{id}{extension}"
         
         job.setFileName(file_name_pk) # set unique in-memory file name 
+
+        job.saveToFolder()
 
         findPrinterObject(printer_id).getQueue().addToBack(job)
         
@@ -261,6 +264,8 @@ def rerunjob(printerpk, jobpk, position):
     file_name_pk = f"{base_name}_{id}{extension}"
     
     rjob.setFileName(file_name_pk) # set unique file name 
+
+    rjob.saveToFolder()
     
     if position == "back":
         findPrinterObject(printerpk).getQueue().addToBack(rjob)
