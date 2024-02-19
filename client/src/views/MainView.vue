@@ -138,16 +138,15 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
           printer.queue?.[0]?.file_name_original }}</td>
         <td v-else></td>
 
-        <td>
+        <td style="width: 250px;">
           <div v-if="printer.status === 'printing' && printer.queue">
             <div v-for="job in printer.queue" :key="job.id">
-              <h5>{{ job.name }}</h5>
               <div class="progress">
                 <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
                   :style="{ width: job.progress + '%' }" :aria-valuenow="job.progress" aria-valuemin="0"
                   aria-valuemax="100">
                   <!-- job progress set to 2 decimal places -->
-                  <p v-if="job.progress">{{ job.progress.toFixed(2) }}%</p>
+                  <p>{{ job.progress?.toFixed(2) }}%</p>
                 </div>
               </div>
             </div>
