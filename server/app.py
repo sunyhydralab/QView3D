@@ -4,15 +4,20 @@ from flask_cors import CORS
 import os 
 from models.db import db
 from models.printers import Printer
-from models.jobs import Job
 from models.PrinterStatusService import PrinterStatusService
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 from controllers.ports import getRegisteredPrinters
 import shutil
+from flask_socketio import SocketIO  # Add this import
+
+# moved this up here so we can pass the app to the PrinterStatusService
+# Basic app setup 
+app = Flask(__name__)
+app.config.from_object(__name__) # update application instantly 
 
 # moved this before importing the blueprints so that it can be accessed by the PrinterStatusService
-printer_status_service = PrinterStatusService()
+printer_status_service = PrinterStatusService(app)
 
 # IMPORTING BLUEPRINTS 
 from controllers.display import display_bp
@@ -20,11 +25,12 @@ from controllers.ports import ports_bp
 from controllers.jobs import jobs_bp
 from controllers.statusService import status_bp, getStatus 
 
-# Basic app setup 
-app = Flask(__name__)
-app.config.from_object(__name__) # update application instantly 
-
 CORS(app)
+
+# Initialize SocketIO, which will be used to send printer status updates to the frontend
+# and this specific socketit will be used throughout the backend
+socketio = SocketIO(app, cors_allowed_origins="*")  # Initialize SocketIO with the Flask app
+app.socketio = socketio  # Add the SocketIO object to the app object
 
 @app.before_request
 def handle_preflight():
@@ -90,5 +96,6 @@ if __name__ == "__main__":
     # If hits last line in GCode file: 
         # query for status ("done printing"), update. Use frontend to update status to "ready" once user removes print from plate. 
         # Before sending to printer, query for status. If error, throw error. 
-    app.run(port=8000, debug=True)
-    
+    # since we are using socketio, we need to use socketio.run instead of app.run
+    # which passes the app anyways
+    socketio.run(app, port=8000, debug=True)  # Replace app.run with socketio.run

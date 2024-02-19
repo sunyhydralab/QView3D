@@ -18,9 +18,11 @@
     "bootstrap": "^5.3.2",
     "cors": "^2.8.5",
     "node": "^21.6.2",
+    "socket.io-client": "^4.7.4",
     "toast": "^0.5.4",
     "vue": "^3.3.11",
     "vue-router": "^4.2.5",
+    "vue-socket.io-extended": "^4.2.0",
     "vue-toast-notification": "^3.1.2",
     "vue3-toast": "^0.0.1"
   },

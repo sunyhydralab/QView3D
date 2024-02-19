@@ -11,11 +11,14 @@ class PrinterThread(Thread):
         self.printer = printer
 
 class PrinterStatusService:
-    def __init__(self):
+    # in order to access the app context, we need to pass the app to the PrinterStatusService, mainly for the websockets
+    def __init__(self, app):
+        self.app = app
         self.printer_threads = []  # array of printer threads
 
     def start_printer_thread(self, printer):
-        thread = PrinterThread(printer, target=self.update_thread, args=(printer,)) 
+        # also pass the app to the printer thread
+        thread = PrinterThread(printer, target=self.update_thread, args=(printer, self.app)) 
         thread.daemon = True #lets you kill the thread when the main program exits, allows for the server to be shut down
         thread.start()
         return thread
@@ -39,15 +42,17 @@ class PrinterStatusService:
         # creating separate thread to loop through all of the printer threads to ping them for print status
         self.ping_thread = Thread(target=self.pingForStatus)
 
-    def update_thread(self, printer):  # TARGET FUNCTION
-        while True:
-            time.sleep(2)
-            status = printer.getStatus()  # get printer status
+    # passing app here to access the app context
+    def update_thread(self, printer, app):
+        with app.app_context():
+            while True:
+                time.sleep(2)
+                status = printer.getStatus()  # get printer status
 
-            queueSize = printer.getQueue().getSize() # get size of queue 
-            
-            if (status == "ready" and queueSize > 0):
-                printer.printNextInQueue()
+                queueSize = printer.getQueue().getSize() # get size of queue 
+                
+                if (status == "ready" and queueSize > 0):
+                    printer.printNextInQueue()
 
     # this method will be called by the UI to get the printers that have a threads information
     def retrieve_printer_info(self):

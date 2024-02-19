@@ -3,6 +3,13 @@ import { useRouter } from 'vue-router'
 import { api } from './ports'
 import { toast } from './toast'
 import { type Device } from '@/model/ports'
+import { ref } from 'vue';
+import { Socket } from 'vue-socket.io-extended';
+import io from 'socket.io-client';
+
+// socket.io setup for progress updates, using the VITE_API_ROOT environment variable
+export const socket = io(import.meta.env.VITE_API_ROOT)
+
 export interface Job {
   id: number
   name: string
@@ -10,6 +17,7 @@ export interface Job {
   file_name_original: string
   date?: Date
   status?: string
+  progress?: number //store progress of job
   printer: string //store printer name
   printerid: number
   // job_id: number
@@ -167,6 +175,7 @@ export function useReleaseJob(){
     }
   }
 }
+
 export function useGetGcode(){
   return {
     async getgcode(job: Job) {
@@ -179,4 +188,29 @@ export function useGetGcode(){
       }
     }
   }
+}
+
+// function to constantly update progress of job
+export function setupProgressSocket(printers: any) {
+  // Check if the first job in the queue of the first printer is printing
+  if (printers[0]?.queue[0]?.status === 'printing') {
+    socket.on("progress_update", ((data: any) => {
+      const job = printers
+        .flatMap((printer: { queue: any; }) => printer.queue)
+        .find((job: { id: any; }) => job?.id === data.job_id);
+
+      if (job) {
+        job.progress = data.progress;
+        // Update the display value only if progress is defined
+        if (data.progress !== undefined) {
+          job.progress= data.progress;
+        }
+      }
+    }))
+  }
+}
+
+// function needs to disconnect the socket when the component is unmounted
+export function disconnectProgressSocket() {
+  socket.disconnect();
 }

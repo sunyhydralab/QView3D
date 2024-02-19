@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, useSetStatus, type Device } from '@/model/ports';
-import { type Job, useReleaseJob, useRemoveJob } from '@/model/jobs';
+import { type Job, useReleaseJob, useRemoveJob, setupProgressSocket, disconnectProgressSocket } from '@/model/jobs';
 import { useRouter, useRoute } from 'vue-router';
 import { onMounted, onUnmounted, ref } from 'vue';
 
@@ -17,8 +17,6 @@ let intervalId: number | undefined;
 
 onMounted(async () => {
   try {
-    // const printerInfo = await retrieveInfo();
-    // printers.value = printerInfo
     const route = useRoute()
     const printerName = route.params.printerName
     const updatePrinters = async () => {
@@ -34,7 +32,10 @@ onMounted(async () => {
     // Fetch the printer status immediately on mount
     await updatePrinters()
     // Then fetch it every 5 seconds
-    intervalId = window.setInterval(updatePrinters, 3000)
+    //intervalId = window.setInterval(updatePrinters, 5000)
+
+    // Setup the progress socket
+    setupProgressSocket(printers.value)
 
     console.log("PRINTERS: ", printers.value)
 
@@ -48,6 +49,9 @@ onUnmounted(() => {
   if (intervalId) {
     clearInterval(intervalId)
   }
+
+  // Disconnect the progress socket
+  disconnectProgressSocket()
 })
 
 const sendToQueueView = (name: string | undefined) => {
@@ -61,10 +65,10 @@ const setPrinterStatus = async (printer: Device, status: string) => {
   printer.status = status; // update the status in the frontend
   await setStatus(printer.id, status); // update the status in the backend
 
-  if (status == "complete" || status=='offline') {
+  if (status == "complete" || status == 'offline') {
     if (printer.queue && printer.queue.length > 0) {
-        printer.queue[0].status = "cancelled";
-        await removeJob(printer.queue?.[0])
+      printer.queue[0].status = "cancelled";
+      await removeJob(printer.queue?.[0])
     }
     // await removeJob(printer.queue?.[0])
   }
@@ -81,7 +85,6 @@ const setPrinterStatus = async (printer: Device, status: string) => {
 }
 
 const releasePrinter = async (jobToFind: Job | undefined, key: number, printerToFind: Device, printerIdToPrintTo: number | undefined) => {
-  console.log("printer id to print to: ", printerIdToPrintTo)
   // let printerToFind = job?.printerid
   const foundPrinter = printers.value.find(printer => printer === printerToFind); // Find the printer by direct object comparison
   if (!foundPrinter) return; // Return if printer not found
@@ -128,23 +131,30 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
           </select>
         </td>
 
-        <td v-if="(printer.queue?.[0]?.status != 'inqueue') && printer.status!='offline'">{{ printer.queue?.[0]?.name }}</td>
+        <td v-if="(printer.queue?.[0]?.status != 'inqueue') && printer.status != 'offline'">{{ printer.queue?.[0]?.name }}
+        </td>
         <td v-else></td>
-        <td v-if="(printer.queue?.[0]?.status != 'inqueue') && printer.status!='offline'">{{ printer.queue?.[0]?.file_name_original }}</td>
+        <td v-if="(printer.queue?.[0]?.status != 'inqueue') && printer.status != 'offline'">{{
+          printer.queue?.[0]?.file_name_original }}</td>
         <td v-else></td>
 
         <td>
-          <div v-if="printer.status === 'printing'">
-            <div class="progress">
-              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 25%"
-                aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">
-                <p>
-                </p>
+          <div v-if="printer.status === 'printing' && printer.queue">
+            <div v-for="job in printer.queue" :key="job.id">
+              <h5>{{ job.name }}</h5>
+              <div class="progress">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+                  :style="{ width: job.progress + '%' }" :aria-valuenow="job.progress" aria-valuemin="0"
+                  aria-valuemax="100">
+                  <!-- job progress set to 2 decimal places -->
+                  <p v-if="job.progress">{{ job.progress.toFixed(2) }}%</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div v-else-if="(printer?.status === 'complete' || printer?.status=='offline') && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')">
+          <div
+            v-else-if="(printer?.status === 'complete' || printer?.status == 'offline') && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')">
             <button type="button" class="btn btn-danger"
               @click="releasePrinter(printer.queue?.[0], 3, printer, printer.id)">Fail</button>
             <button type="button" class="btn btn-secondary"
@@ -152,14 +162,16 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
 
             <!-- Clear/Rerun dropdown -->
             <div class="dropdown">
-              <button class="btn btn-info dropdown-toggle" type="button" id="rerunDropdown"
-                  data-bs-toggle="dropdown" aria-expanded="false">
-                  Clear/Rerun
+              <button class="btn btn-info dropdown-toggle" type="button" id="rerunDropdown" data-bs-toggle="dropdown"
+                aria-expanded="false">
+                Clear/Rerun
               </button>
               <ul class="dropdown-menu" aria-labelledby="rerunDropdown">
-                  <li v-for="rerunPrinter in printers" :key="rerunPrinter.id">
-                      <a class="dropdown-item" @click="releasePrinter(printer.queue?.[0], 2, rerunPrinter, rerunPrinter.id)">{{ rerunPrinter.name }}</a>
-                  </li>
+                <li v-for="rerunPrinter in printers" :key="rerunPrinter.id">
+                  <a class="dropdown-item"
+                    @click="releasePrinter(printer.queue?.[0], 2, rerunPrinter, rerunPrinter.id)">{{ rerunPrinter.name
+                    }}</a>
+                </li>
               </ul>
             </div>
           </div>
@@ -192,4 +204,5 @@ th {
 
 p {
   margin: 0;
-}</style>
+}
+</style>
