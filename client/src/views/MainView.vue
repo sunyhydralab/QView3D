@@ -143,7 +143,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
           </div>
 
           <div
-            v-else-if="(printer?.status!='printing') && (printer.queue?.[0]?.status!='printing' && printer.queue?.[0]?.status!='inqueue')">
+            v-else-if="(printer?.status!='printing' && printer?.status!='configuring') && (printer.queue && printer.queue.length>0 && printer.queue?.[0]?.status!='printing' && printer.queue?.[0]?.status!='inqueue')">
             <button type="button" class="btn btn-danger"
               @click="releasePrinter(printer.queue?.[0], 3, printer)">Fail</button>
             <button type="button" class="btn btn-secondary"
