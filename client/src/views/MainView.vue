@@ -60,11 +60,10 @@ const sendToQueueView = (name: string | undefined) => {
 const setPrinterStatus = async (printer: Device, status: string) => {
   printer.status = status; // update the status in the frontend
   await setStatus(printer.id, status); // update the status in the backend
-
-  if (status == "complete" || (status=='offline' && printer.queue?.[0]?.status == 'printing')) {
+  if ((status == 'offline' && printer.queue?.[0]?.status == 'printing') || status == "complete") {
     if (printer.queue && printer.queue.length > 0) {
-        printer.queue[0].status = "cancelled";
-        await removeJob(printer.queue?.[0])
+      printer.queue[0].status = "cancelled";
+      await removeJob(printer.queue?.[0])
     }
   }
 
@@ -79,16 +78,17 @@ const setPrinterStatus = async (printer: Device, status: string) => {
   console.log('Setting status of printer:', printer, 'to:', status);
 }
 
-const releasePrinter = async (jobToFind: Job | undefined, key: number, printerToFind: Device) => {
-  // let printerToFind = job?.printerid
+const releasePrinter = async (jobToFind: Job | undefined, key: number, printerToFind: Device, status: string) => {
   const foundPrinter = printers.value.find(printer => printer === printerToFind); // Find the printer by direct object comparison
   if (!foundPrinter) return; // Return if printer not found
-  const jobIndex = foundPrinter.queue?.findIndex(job => job === jobToFind); // Find the index of the job in the printer's queue
-
-  if (jobIndex === undefined || jobIndex === -1) return; // Return if job not found
-  foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
-
-  await releaseJob(jobToFind, key)
+  else {
+    const jobIndex = foundPrinter.queue?.findIndex(job => job === jobToFind); // Find the index of the job in the printer's queue
+    if (jobIndex === undefined || jobIndex === -1) return; // Return if job not found
+    foundPrinter.queue?.shift(); // This will remove the first job from the queue
+    foundPrinter.status = status; // Set the printer status to ready
+    
+    await releaseJob(jobToFind, key)
+  }
 }
 
 </script>
@@ -110,7 +110,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
 
       <tr v-for="printer in printers" :key="printer.name">
         <td
-          v-if="(printer.status === 'printing' || printer.status === 'complete') && (printer.queue?.[0].status != 'inqueue')">
+          v-if="(printer.status && (printer.status === 'printing' || printer.status === 'complete')) && (printer.queue && printer.queue.length > 0 && printer.queue?.[0].status != 'inqueue')">
           {{ printer.queue?.[0].id }}</td>
         <td v-else><i>idle</i></td>
         <td><button type="button" class="btn btn-link" @click="sendToQueueView(printer.name)">{{ printer.name }}</button>
@@ -126,9 +126,11 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
           </select>
         </td>
 
-        <td v-if="(printer.queue?.[0]?.status != 'inqueue') && printer.status!='offline'">{{ printer.queue?.[0]?.name }}</td>
+        <td v-if="(printer.queue && printer.queue.length > 0 && printer.queue?.[0]?.status != 'inqueue')">{{ printer.queue?.[0]?.name }}
+        </td>
         <td v-else></td>
-        <td v-if="(printer.queue?.[0]?.status != 'inqueue') && printer.status!='offline'">{{ printer.queue?.[0]?.file_name_original }}</td>
+        <td v-if="(printer.queue && printer.queue.length > 0 && printer.queue?.[0]?.status != 'inqueue')">{{
+          printer.queue?.[0]?.file_name_original }}</td>
         <td v-else></td>
 
         <td>
@@ -143,13 +145,13 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
           </div>
 
           <div
-            v-else-if="(printer?.status!='printing') && (printer.queue && printer.queue.length>0 && printer.queue?.[0]?.status!='printing' && printer.queue?.[0]?.status!='inqueue')">
+            v-else-if="(printer?.status != 'printing') && (printer.queue && printer.queue.length > 0 && printer.queue?.[0]?.status != 'printing' && printer.queue?.[0]?.status != 'inqueue')">
             <button type="button" class="btn btn-danger"
-              @click="releasePrinter(printer.queue?.[0], 3, printer)">Fail</button>
+              @click="releasePrinter(printer.queue?.[0], 3, printer, 'error')">Fail</button>
             <button type="button" class="btn btn-secondary"
-              @click="releasePrinter(printer.queue?.[0], 1, printer)">Clear</button>
+              @click="releasePrinter(printer.queue?.[0], 1, printer, 'ready')">Clear</button>
             <button type="button" class="btn btn-info"
-              @click="releasePrinter(printer.queue?.[0], 2, printer)">Clear/Rerun</button>
+              @click="releasePrinter(printer.queue?.[0], 2, printer, 'ready')">Clear/Rerun</button>
           </div>
 
         </td>
