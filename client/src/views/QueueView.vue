@@ -21,6 +21,10 @@ function debug() {
   console.log(isActive.value)
 }
 
+const showModal = ref(false);
+const modalJob = ref<Job | null>(null);
+const modalPrinter = ref<Printer | null>(null);
+
 type Printer = Device & { isExpanded?: boolean }
 const printers = ref<Array<Printer>>([]) // Get list of open printer threads 
 
@@ -71,32 +75,42 @@ const handleRerun = async (job: Job, printer: Printer) => {
   }
 };
 
-const showDeleteConfirmation = ref(false);
-
 async function handleCancel(jobToFind: Job, printerToFind: Device) {
   // remove from in-memory array 
-  // if(confirm('Are you sure you want to delete this job?')) 
-  // {
-  //   const foundPrinter = printers.value.find(printer => printer === printerToFind); // Find the printer by direct object comparison
-  //   if (!foundPrinter) return; // Return if printer not found
-  //   const jobIndex = foundPrinter.queue?.findIndex(job => job === jobToFind); // Find the index of the job in the printer's queue
+  // const foundPrinter = printers.value.find(printer => printer === printerToFind); // Find the printer by direct object comparison
+  // if (!foundPrinter) return; // Return if printer not found
+  // const jobIndex = foundPrinter.queue?.findIndex(job => job === jobToFind); // Find the index of the job in the printer's queue
 
-  //   if (jobIndex === undefined || jobIndex === -1) return; // Return if job not found
-  //   foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
+  // if (jobIndex === undefined || jobIndex === -1) return; // Return if job not found
+  // foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
 
-  //   // remove from queue 
-  //   await removeJob(jobToFind)
-  // }
-  const foundPrinter = printers.value.find(printer => printer === printerToFind); // Find the printer by direct object comparison
-  if (!foundPrinter) return; // Return if printer not found
-  const jobIndex = foundPrinter.queue?.findIndex(job => job === jobToFind); // Find the index of the job in the printer's queue
+  showModal.value = true;
+  modalJob.value = jobToFind;
+  modalPrinter.value = printerToFind;
 
-  if (jobIndex === undefined || jobIndex === -1) return; // Return if job not found
-  foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
+  console.log('modalJob:', modalJob.value);
+  console.log('modalPrinter:', modalPrinter.value);
 
   // remove from queue 
-  await removeJob(jobToFind)
+  // await removeJob(jobToFind)
 }
+
+const confirmDelete = async () => {
+  showModal.value = false;
+
+  if (modalJob.value && modalPrinter.value) {
+    const foundPrinter = printers.value.find((printer) => printer === modalPrinter.value);
+    if (!foundPrinter) return;
+    const jobIndex = foundPrinter.queue?.findIndex((job) => job === modalJob.value);
+
+    if (jobIndex === undefined || jobIndex === -1) return;
+    foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
+
+    await removeJob(modalJob.value);
+    console.log(modalJob.value);
+  }
+};
+
 
 function capitalizeFirstLetter(string: string | undefined) {
   return string ? string.charAt(0).toUpperCase() + string.slice(1) : '';
@@ -162,29 +176,31 @@ const canBumpUp = (job: Job, printer: Printer) => {
 </script>
 
 <template>
-  <div class="container">
+    <div class="container">
 
-    <!-- Modal -->
-    <div v-if="isActive">
-    <div class="modal" id="exampleModal" tabindex="-1" role="dialog" style="display: block;">
-      <div class="modal-dialog" role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Welcome Modal</h5>
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-              <span aria-hidden="true">&times;</span>
-            </button>
-          </div>
-          <div class="modal-body">
-            <p>This is a Bootstrap modal. You can put any content you want here.</p>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      <!-- Modal -->
+      <div v-if="showModal">
+        <div class="modal" id="exampleModal" tabindex="-1" role="dialog" style="display: block;">
+          <div class="modal-dialog" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Warning!!!</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" @click="showModal = false">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="modal-body">
+                <p>Are you sure you want to delete this job? This action cannot be undone.</p>
+              </div>
+              <div class="modal-footer">
+                <!-- <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button> -->
+                <button type="button" class="btn btn-secondary" @click="showModal = false">Close</button>
+                <button type="button" class="btn btn-danger" @click="confirmDelete">Delete</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
 
 
     <b>Queue View</b>
@@ -226,8 +242,9 @@ const canBumpUp = (job: Job, printer: Printer) => {
                 <tr v-for="job in printer.queue" :key="job.id">
                   <td>{{ job.id }}</td>
                   <td class="text-center">
-                    <button v-if="job.status == 'inqueue'" type="button" class="btn btn-danger w-100"
-                      @click="isActive = !isActive, debug()">X</button>
+                    <!-- <button v-if="job.status == 'inqueue'" type="button" class="btn btn-danger w-100"
+                      @click="handleCancel(job, printer)">X</button> -->
+                    <button v-if="job.status == 'inqueue'" type="button" class="btn btn-danger w-100" @click="handleCancel(job, printer)">X</button>
                     <button v-else>
                       <RouterLink to="/">Goto release</RouterLink>
                     </button>
