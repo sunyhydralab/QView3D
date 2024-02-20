@@ -161,9 +161,12 @@ class Printer(db.Model):
                 #     self.responseCount+=1 
                 #     if(self.responseCount>=10):
                 #         raise TimeoutError("No response from printer") 
+                if self.getStatus() != "printing":
+                    break 
+                
                 if "ok" in response:
                     break
-                print(f"INSIDE LOOP: Command: {message}, Received: {response}")
+                # print(f"INSIDE LOOP: Command: {message}, Received: {response}")
             print(f"Command: {message}, Received: {response}")
         except serial.SerialException as e:
             self.setStatus("error")
@@ -217,7 +220,7 @@ class Printer(db.Model):
                         return "error"
                     
                     if self.getStatus() != "printing":
-                        self.endingSequence() 
+                        # self.endingSequence() 
                         return "cancelled"
 
             return "complete"
@@ -261,8 +264,6 @@ class Printer(db.Model):
                     self.setStatus("error")
                 elif verdict=="cancelled":
                     self.sendStatusToJob(job, job.id, "cancelled")
-                    # self.getQueue().deleteJob(job.id)
-                    # self.setStatus("complete")
                     
                 self.disconnect()
                 job.removeFileFromPath(path) # remove file from folder after job complete

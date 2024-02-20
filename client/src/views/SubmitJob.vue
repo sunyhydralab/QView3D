@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
-import { useAddJobToQueue, type Job } from '../model/jobs'
+import { useAddJobToQueue, type Job, useAutoQueue } from '../model/jobs'
 import { ref, onMounted } from 'vue'
 import { toast } from '@/model/toast';
 
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { addJobToQueue } = useAddJobToQueue()
+const { auto } = useAutoQueue()
+
 const printers = ref<Array<Device>>([])
 
 // Form reference
@@ -33,11 +35,11 @@ const validateQuantity = () => {
     if (quantity.value < 1) {
         quantity.value = 1
     }
-    if(quantity.value < selectedPrinters.value.length){
+    if (quantity.value < selectedPrinters.value.length) {
         toast.error('Quantity must be greater than or equal to the number of selected printers')
-        return false; 
+        return false;
     }
-    return true; 
+    return true;
 }
 
 // fills printers array with printers that have threads from the database
@@ -51,19 +53,42 @@ onMounted(async () => {
 
 // sends job to printer queue
 const handleSubmit = async () => {
+
+    if (selectedPrinters.value.length == 0) {
+        let numPrints = quantity.value
+        for (let i = 0; i < numPrints; i++) {
+            const formData = new FormData() // create FormData object
+            formData.append('file', file.value as File) // append form data
+            formData.append('name', name.value as string)
+            try {
+                await auto(formData)
+                if (form.value) {
+                    form.value.reset()
+                }
+            } catch (error) {
+                console.error('There has been a problem with your fetch operation:', error)
+            }
+        }
+        selectedPrinters.value = [];
+        quantity.value = 1;
+        priority.value = false;
+        name.value = undefined;
+    }
+
+
     let sub = validateQuantity()
-    if(sub == true){
+    if (sub == true) {
 
         let printsPerPrinter = Math.floor(quantity.value / selectedPrinters.value.length) // number of even prints per printer
         let remainder = quantity.value % selectedPrinters.value.length; //remainder to be evenly distributed 
 
-        for(const printer of selectedPrinters.value){
+        for (const printer of selectedPrinters.value) {
             let numPrints = printsPerPrinter
-            if(remainder > 0){
+            if (remainder > 0) {
                 numPrints += 1
                 remainder -= 1
             }
-            for(let i = 0; i < numPrints; i++){
+            for (let i = 0; i < numPrints; i++) {
                 const formData = new FormData() // create FormData object
                 formData.append('file', file.value as File) // append form data
                 formData.append('name', name.value as string)
@@ -87,10 +112,10 @@ const handleSubmit = async () => {
     }
 }
 
-function appendPrinter(printer: Device){
-    if(!selectedPrinters.value.includes(printer)){
+function appendPrinter(printer: Device) {
+    if (!selectedPrinters.value.includes(printer)) {
         selectedPrinters.value.push(printer)
-    }else{
+    } else {
         selectedPrinters.value = selectedPrinters.value.filter(p => p !== printer)
     }
 }
@@ -104,7 +129,7 @@ function appendPrinter(printer: Device){
             <form @submit.prevent="handleSubmit" ref="form">
 
                 <select required multiple>
-                    <option :value="null">Device: None</option>
+                    <option :value="null">Auto Queue</option>
                     <option v-for="printer in printers" :value="printer" :key="printer.id" @click="appendPrinter(printer)">
                         {{ printer.name }}
                     </option>
@@ -116,7 +141,7 @@ function appendPrinter(printer: Device){
                         <b>{{ printer.name }}</b> status: {{ printer.status }}<br>
                     </p>
                 </div>
-                
+
                 <br><br>
                 Upload your .gcode file
                 <!-- Decide which file types are compatible with which printer. .gcode v-if printer is compatible with .gcode, .x3g if with .x3g, etc -->

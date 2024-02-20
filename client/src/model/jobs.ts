@@ -22,10 +22,11 @@ export interface Job {
 
 export function useGetJobs() {
   return {
-    async jobhistory(page: number, pageSize: number, printerIds?: number[]) {
+    async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean) {
       try {
-        const response = await api(`getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}`)
+        const response = await api(`getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}`)
         return response
+        return "success"
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while retrieving the jobs')
@@ -39,6 +40,33 @@ export function useAddJobToQueue() {
     async addJobToQueue(job: FormData) {
       try {
         const response = await api('addjobtoqueue', job)
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to add job to queue. Unexpected response')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to add job to queue. Unexpected response')
+        }
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while adding the job to the queue')
+      }
+    }
+  }
+}
+
+
+export function useAutoQueue() {
+  return {
+    async auto(job: FormData) {
+      try {
+        const response = await api('autoqueue', job)
         if (response) {
           if (response.success == false) {
             toast.error(response.message)
@@ -96,7 +124,7 @@ export function useRemoveJob() {
     async removeJob(job: Job | undefined) {
       let jobpk = job?.id
       try {
-        const response = await api('canceljob', {jobpk})
+        const response = await api('canceljob', { jobpk })
         if (response) {
           if (response.success == false) {
             toast.error(response.message)
@@ -146,7 +174,7 @@ export function bumpJobs() {
   }
 }
 
-export function useReleaseJob(){
+export function useReleaseJob() {
   return {
     async releaseJob(job: Job | undefined, key: number, printerId: number | undefined){
       try {

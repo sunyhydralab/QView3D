@@ -1,4 +1,3 @@
-from io import BytesIO
 from flask import Blueprint, jsonify, request, make_response
 from models.jobs import Job
 from models.printers import Printer
@@ -6,6 +5,9 @@ from app import printer_status_service
 import json 
 from werkzeug.utils import secure_filename
 import os 
+import gzip
+from flask import current_app
+
 # get data for jobs 
 jobs_bp = Blueprint("jobs", __name__)
 
@@ -14,8 +16,13 @@ def getJobs():
     page = request.args.get('page', default=1, type=int)
     pageSize = request.args.get('pageSize', default=10, type=int)
     printerIds = request.args.get('printerIds', type=json.loads)
+    
+    # convert to boolean 
+    oldestFirst = request.args.get('oldestFirst', default='false')
+    oldestFirst = oldestFirst.lower() in ['true', '1']
+    
     try:
-        res = Job.get_job_history(page, pageSize, printerIds)
+        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst)
         return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -31,12 +38,41 @@ def add_job_to_queue():
         
         name = request.form['name']  # Access other form fields from request.form
         printer_id = int(request.form['printerid'])
-        # quantity = int(request.form['quantity'])
         
         status = 'inqueue' # set status 
         res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original) # insert into DB 
         
         # retrieve job from DB
+        id = res['id']
+        
+        job = Job.query.get(id)
+        
+        base_name, extension = os.path.splitext(file_name_original)
+
+        # Append the ID to the base name
+        file_name_pk = f"{base_name}_{id}{extension}"
+        
+        job.setFileName(file_name_pk) # set unique in-memory file name 
+
+        findPrinterObject(printer_id).getQueue().addToBack(job)
+        
+        return jsonify({"success": True, "message": "Job added to printer queue."}), 200
+    
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
+@jobs_bp.route('/autoqueue', methods=["POST"])
+def auto_queue(): 
+    try: 
+        file = request.files['file']  # Access file directly from request.files
+        file_name_original = file.filename
+        name = request.form['name']  # Access other form fields from request.form
+        status = 'inqueue' # set status 
+        printer_id = getSmallestQueue()
+        
+        res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original) # insert into DB 
+        
         id = res['id']
         
         job = Job.query.get(id)
@@ -64,24 +100,6 @@ def rerun_job():
         jobpk = data['jobpk']
         
         rerunjob(printerpk, jobpk, "back")
-        # job = Job.findJob(jobpk) # retrieve Job to rerun 
-        
-        # status = 'inqueue' # set status 
-        # file_name_original = job.getFileNameOriginal() # get original file name
-        
-        # # Insert new job into DB and return new PK 
-        # res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original) # insert into DB 
-        
-        # id = res['id']
-        # file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
-        
-        # rerunjob = Job.query.get(id)
-        
-        # file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
-        # rerunjob.setFileName(file_name_pk) # set unique file name 
-        
-        # findPrinterObject(printerpk).getQueue().addToBack(rerunjob)
-
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -239,6 +257,11 @@ def findPrinterObject(printer_id):
     threads = printer_status_service.getThreadArray()
     return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer  
 
+def getSmallestQueue():
+    threads = printer_status_service.getThreadArray()
+    smallest_queue_thread = min(threads, key=lambda thread: thread.printer.queue.getSize())
+    return smallest_queue_thread.printer.id
+    
 def rerunjob(printerpk, jobpk, position):
     job = Job.findJob(jobpk) # retrieve Job to rerun 
     
@@ -264,3 +287,4 @@ def rerunjob(printerpk, jobpk, position):
         findPrinterObject(printerpk).getQueue().addToBack(rjob)
     else: 
         findPrinterObject(printerpk).getQueue().addToFront(rjob)
+        
