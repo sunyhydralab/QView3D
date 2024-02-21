@@ -266,7 +266,7 @@ th {
 }
 
 .col-job-id {
-    width: 7vh;
+    width: 8vh;
 }
 
 .col-job-title {
