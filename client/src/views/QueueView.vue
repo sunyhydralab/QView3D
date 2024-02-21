@@ -8,10 +8,8 @@ import { nextTick } from 'vue';
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
-// const { bumpUp, bumpDown, bumpToTop, bumpToBack } = bumpJobs()
 const { bumpjob } = bumpJobs()
 
-const showModal = ref(false);
 const modalJob = ref<Job>();
 const modalPrinter = ref<Printer>();
 
@@ -22,8 +20,6 @@ let intervalId: number | undefined;
 
 onMounted(async () => {
   try {
-    // const printerInfo = await retrieveInfo();
-    // printers.value = printerInfo
     const route = useRoute()
     const printerName = route.params.printerName
     const updatePrinters = async () => {
@@ -38,7 +34,7 @@ onMounted(async () => {
     }
     // Fetch the printer status immediately on mount
     await updatePrinters()
-    // Then fetch it every 5 seconds
+    // Then fetch it every 3 seconds
     intervalId = window.setInterval(updatePrinters, 3000)
   } catch (error) {
     console.error('There has been a problem with your fetch operation:', error)
@@ -66,13 +62,9 @@ const handleRerun = async (job: Job, printer: Printer) => {
 };
 
 async function handleCancel(jobToFind: Job, printerToFind: Device) {
-
   modalJob.value = jobToFind;
   modalPrinter.value = printerToFind;
   await nextTick();
-
-  showModal.value = true;
-
 }
 
 const confirmDelete = async () => {
@@ -93,7 +85,6 @@ const confirmDelete = async () => {
 
     modalJob.value = undefined;
     modalPrinter.value = undefined;
-    showModal.value = false;
   }
 };
 
@@ -165,48 +156,23 @@ const canBumpUp = (job: Job, printer: Printer) => {
   <div class="container">
 
     <!-- Jacks Modals Comments -->
-    <!-- <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="exampleModalLabel">Warning!!!</h5>
+            <h5 class="modal-title" id="exampleModalLabel">Removing <b>{{ modalJob?.name }}</b> from queue</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <p>Are you sure you want to delete this job? This action cannot be undone.</p>
+            <p>Are you sure you want to remove this job from queue? Job will be saved to history with a final status of <i>cancelled</i>.</p>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="confirmDelete">Delete</button>
-          </div>
-        </div>
-      </div>
-    </div> -->
-
-    <!-- Modal -->
-    <div v-if="showModal">
-      <div class="modal d-flex align-items-center justify-content-center" id="exampleModal" tabindex="-1" role="dialog" style="display: block;">
-        <div class="modal-dialog" role="document">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">Warning!!!</h5>
-              <button type="button" class="close" data-dismiss="modal" aria-label="Close" @click="showModal = false">
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-            <div class="modal-body">
-              <p>Are you sure you want to delete this job? This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer">
-              <!-- <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button> -->
-              <button type="button" class="btn btn-secondary" @click="showModal = false">Close</button>
-              <button type="button" class="btn btn-danger" @click="confirmDelete">Delete</button>
-            </div>
+            <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="confirmDelete">Remove</button>
           </div>
         </div>
       </div>
     </div>
-
 
     <b>Queue View</b>
 
@@ -247,14 +213,7 @@ const canBumpUp = (job: Job, printer: Printer) => {
                 <tr v-for="job in printer.queue" :key="job.id">
                   <td>{{ job.id }}</td>
                   <td class="text-center">
-                    <!-- <button v-if="job.status == 'inqueue'" type="button" class="btn btn-danger w-100"
-                      @click="handleCancel(job, printer)">X</button> -->
-
-                      <!-- Jacks Cancel Comment -->
-                      <!-- <button v-if="job.status == 'inqueue'" type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#exampleModal"
-                        @click="handleCancel(job, printer)">X</button> -->
-
-                    <button v-if="job.status == 'inqueue'" type="button" class="btn btn-danger w-100"
+                    <button v-if="job.status == 'inqueue'" type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#exampleModal"
                       @click="handleCancel(job, printer)">X</button>
                     <button v-else>
                       <RouterLink to="/">Goto release</RouterLink>
@@ -418,11 +377,5 @@ th {
 
 .modal-backdrop {
   display: none;
-}
-.modal {
-  z-index: 1051; /* Ensure the modal is above the backdrop */
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 </style>
