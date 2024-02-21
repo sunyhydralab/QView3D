@@ -185,7 +185,7 @@ const canBumpUp = (job: Job, printer: Printer) => {
 
     <!-- Modal -->
     <div v-if="showModal">
-      <div class="modal" id="exampleModal" tabindex="-1" role="dialog" style="display: block;">
+      <div class="modal d-flex align-items-center justify-content-center" id="exampleModal" tabindex="-1" role="dialog" style="display: block;">
         <div class="modal-dialog" role="document">
           <div class="modal-content">
             <div class="modal-header">
@@ -418,5 +418,11 @@ th {
 
 .modal-backdrop {
   display: none;
+}
+.modal {
+  z-index: 1051; /* Ensure the modal is above the backdrop */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>
