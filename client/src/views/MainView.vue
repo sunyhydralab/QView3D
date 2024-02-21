@@ -116,7 +116,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
 
       <tr v-for="printer in printers" :key="printer.name">
         <td
-          v-if="(printer.status && (printer.status === 'printing' || printer.status === 'complete')) && (printer.queue && printer.queue.length > 0 && printer.queue?.[0].status != 'inqueue')">
+          v-if="(printer.status === 'printing' || printer.status === 'complete') && (printer.queue?.[0].status != 'inqueue')">
           {{ printer.queue?.[0].id }}</td>
         <td v-else><i>idle</i></td>
         <td><button type="button" class="btn btn-link" @click="sendToQueueView(printer.name)">{{ printer.name }}</button>
@@ -156,7 +156,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
           </div>
 
           <div
-            v-else-if="(printer?.status != 'printing') && (printer.queue && printer.queue.length > 0 && printer.queue?.[0]?.status != 'printing' && printer.queue?.[0]?.status != 'inqueue')">
+            v-else-if="(printer?.status === 'complete' || printer?.status=='offline') && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')">
             <button type="button" class="btn btn-danger"
               @click="releasePrinter(printer.queue?.[0], 3, printer, printer.id, 'error')">Fail</button>
             <button type="button" class="btn btn-secondary"

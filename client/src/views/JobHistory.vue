@@ -289,7 +289,7 @@ th {
 }
 
 .col-status {
-    width: 11vh;
+    width: 12vh;
 }
 
 .col-printer {

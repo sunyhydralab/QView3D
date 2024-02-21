@@ -167,7 +167,7 @@ class Printer(db.Model):
                 if "ok" in response:
                     break
                 # print(f"INSIDE LOOP: Command: {message}, Received: {response}")
-            print(f"Command: {message}, Received: {response}")
+                print(f"Command: {message}, Received: {response}")
         except serial.SerialException as e:
             self.setStatus("error")
             print(e)
