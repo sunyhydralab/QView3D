@@ -113,6 +113,10 @@ async function submitFilter() {
     oldestFirst.value = order.value === 'oldest';
     const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
 
+    // Get the total number of jobs first, without considering the page number
+    const [, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value);
+    totalJobs.value = total;
+
     // Calculate the total number of pages and store it in totalPages
     totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
 
@@ -124,9 +128,9 @@ async function submitFilter() {
         page.value = totalPages.value;
     }
 
-    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value)
+    // Now fetch the jobs for the current page
+    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value);
     jobs.value = joblist;
-    totalJobs.value = total;
 }
 </script>
 
