@@ -53,6 +53,29 @@ onMounted(async () => {
 
 // sends job to printer queue
 const handleSubmit = async () => {
+
+    if (selectedPrinters.value.length == 0) {
+        let numPrints = quantity.value
+        for (let i = 0; i < numPrints; i++) {
+            const formData = new FormData() // create FormData object
+            formData.append('file', file.value as File) // append form data
+            formData.append('name', name.value as string)
+            try {
+                await auto(formData)
+                if (form.value) {
+                    form.value.reset()
+                }
+            } catch (error) {
+                console.error('There has been a problem with your fetch operation:', error)
+            }
+        }
+        selectedPrinters.value = [];
+        quantity.value = 1;
+        priority.value = false;
+        name.value = undefined;
+    }
+
+
     let sub = validateQuantity()
     let res = null
     if (sub == true) {

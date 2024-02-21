@@ -2,10 +2,9 @@ import base64
 import os
 from models.db import db 
 from datetime import datetime, timezone
-from models.printers import Printer
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from flask import jsonify 
+from flask import jsonify, current_app
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
 from tzlocal import get_localzone
@@ -13,6 +12,9 @@ from io import BytesIO
 from werkzeug.datastructures import FileStorage
 import time 
 import gzip
+
+job_progress = {}
+# model for job history table 
 class Job(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     file = db.Column(db.LargeBinary(16777215), nullable=False)
@@ -183,7 +185,42 @@ class Job(db.Model):
     #setters 
     def setStatus(self, status): 
         self.status = status
-            
+        # self.setDBstatus(self.id, status)
+        
+    # added a setProgress method to update the progress of a job
+    # which sends it to the frontend using socketio
+    # added time!
+    def setProgress(self, progress):
+        global job_progress
+        if self.status == 'printing':
+            if self.id not in job_progress:
+                # If the job is not in the dictionary, add it with the current time as the start time
+                job_progress[self.id] = {'start_time': time.time(), 'progress': progress}
+            else:
+                # If the job is already in the dictionary, just update the progress
+                job_progress[self.id]['progress'] = progress
+
+            elapsed_time = time.time() - job_progress[self.id]['start_time']
+
+            # Emit a 'progress_update' event with the new progress and the elapsed time
+            current_app.socketio.emit('progress_update', {'job_id': self.id, 'progress': progress, 'elapsed_time': elapsed_time})
+        elif self.id in job_progress:
+            del job_progress[self.id]  # Remove the job from the dictionary if it's not printing
+
+    # added a getProgress method to get the progress of a job
+    def getProgress(self):
+        global job_progress
+        return job_progress.get(self.id, 0)
+    
+    @classmethod 
+    def setDBstatus(cls, jobid, status):
+        cls.update_job_status(jobid, status)
+
+    @classmethod 
+    def getPathForDelete(cls, file_name):
+        return os.path.join('../uploads', file_name)
+
+        
     def setPath(self, path): 
         self.path = path 
 
