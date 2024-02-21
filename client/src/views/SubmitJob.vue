@@ -77,39 +77,66 @@ const handleSubmit = async () => {
 
 
     let sub = validateQuantity()
+    let res = null
     if (sub == true) {
-
-        let printsPerPrinter = Math.floor(quantity.value / selectedPrinters.value.length) // number of even prints per printer
-        let remainder = quantity.value % selectedPrinters.value.length; //remainder to be evenly distributed 
-
-        for (const printer of selectedPrinters.value) {
-            let numPrints = printsPerPrinter
-            if (remainder > 0) {
-                numPrints += 1
-                remainder -= 1
-            }
+        if (selectedPrinters.value.length == 0) {
+            let numPrints = quantity.value
             for (let i = 0; i < numPrints; i++) {
                 const formData = new FormData() // create FormData object
                 formData.append('file', file.value as File) // append form data
                 formData.append('name', name.value as string)
-                formData.append('printerid', printer?.id?.toString() || '');
                 try {
-                    await addJobToQueue(formData)
-                    // reset form
+                    res = await auto(formData)
                     if (form.value) {
                         form.value.reset()
                     }
-                    // reset Vue refs
                 } catch (error) {
                     console.error('There has been a problem with your fetch operation:', error)
                 }
             }
+            resetValues()
         }
-        selectedPrinters.value = [];
-        quantity.value = 1;
-        priority.value = false;
-        name.value = undefined;
+        else {
+            let printsPerPrinter = Math.floor(quantity.value / selectedPrinters.value.length) // number of even prints per printer
+            let remainder = quantity.value % selectedPrinters.value.length; //remainder to be evenly distributed 
+            for (const printer of selectedPrinters.value) {
+                let numPrints = printsPerPrinter
+                if (remainder > 0) {
+                    numPrints += 1
+                    remainder -= 1
+                }
+                for (let i = 0; i < numPrints; i++) {
+                    const formData = new FormData() // create FormData object
+                    formData.append('file', file.value as File) // append form data
+                    formData.append('name', name.value as string)
+                    formData.append('printerid', printer?.id?.toString() || '');
+                    try {
+                        res = await addJobToQueue(formData)
+                        // reset form
+                        if (form.value) {
+                            form.value.reset()
+                        }
+                        // reset Vue refs
+                    } catch (error) {
+                        console.error('There has been a problem with your fetch operation:', error)
+                    }
+                }
+            }
+            resetValues()
+        }
     }
+    if (res.success == true) {
+        toast.success('Job added to queue')
+    } else {
+        toast.error('Job failed to add to queue')
+    }
+}
+
+function resetValues() {
+    selectedPrinters.value = [];
+    quantity.value = 1;
+    priority.value = false;
+    name.value = undefined;
 }
 
 function appendPrinter(printer: Device) {

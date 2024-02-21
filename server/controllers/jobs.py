@@ -89,7 +89,7 @@ def auto_queue():
         
         job.setFileName(file_name_pk) # set unique in-memory file name 
 
-        findPrinterObject(printer_id).getQueue().addToBack(job)
+        findPrinterObject(printer_id).getQueue().addToBack(job)  
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     

@@ -161,23 +161,14 @@ class Printer(db.Model):
                 #     self.responseCount+=1 
                 #     if(self.responseCount>=10):
                 #         raise TimeoutError("No response from printer") 
-                if self.getStatus() != "printing":
+                stat = self.getStatus()
+                if stat == "complete":
                     break 
-                
                 if "ok" in response:
                     break
-                # print(f"INSIDE LOOP: Command: {message}, Received: {response}")
                 print(f"Command: {message}, Received: {response}")
-        except serial.SerialException as e:
-            self.setStatus("error")
-            print(e)
-            return "error" 
-        except TimeoutError as e:  # Catch the TimeoutError exception
-            self.setStatus("error")
-            print(e)
-            return "error" 
         except Exception as e: 
-            self.setStatus("error")
+            # self.setStatus("error")
             print(e)
             return "error" 
         
@@ -219,16 +210,15 @@ class Printer(db.Model):
                     if res == "error": 
                         return "error"
                     
-                    if self.getStatus() != "printing":
-                        # self.endingSequence() 
+                    if self.getStatus() =="complete":
+                        # self.endingSequence()
                         return "cancelled"
 
             return "complete"
-        except FileNotFoundError:
-            # if exception, send gcode to reset printer & lower print bed 
-            self.endingSequence() 
-            # self.setStatus('complete')
-            return 
+        except Exception as e: 
+            # self.setStatus("error")
+            print(e)
+            return "error" 
       
     # Function to send "ending" gcode commands   
     def endingSequence(self):
@@ -249,10 +239,9 @@ class Printer(db.Model):
                 job.saveToFolder()
                 path = job.generatePath()
                 
-                # job.setStatus("printing") # set job status to printing 
                 self.setStatus("printing") # set printer status to printing
                 self.sendStatusToJob(job, job.id, "printing")
-                self.reset()
+                # self.reset()
                 # now we pass the job to the parseGcode function, so we can find that jobs progress
                 verdict = self.parseGcode(path, job) # passes file to code. returns "complete" if successful, "error" if not.
 
@@ -264,6 +253,7 @@ class Printer(db.Model):
                     self.setStatus("error")
                 elif verdict=="cancelled":
                     self.sendStatusToJob(job, job.id, "cancelled")
+                    self.endingSequence()
                     
                 self.disconnect()
                 job.removeFileFromPath(path) # remove file from folder after job complete
