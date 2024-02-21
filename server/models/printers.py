@@ -152,7 +152,7 @@ class Printer(db.Model):
             # Encode and send the message to the printer.
             self.ser.write(f"{message}\n".encode("utf-8"))
             # Sleep the printer to give it enough time to get the instruction.
-            # time.sleep(0.1)
+            time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
             while True:
                 # logic here about time elapsed since last response
