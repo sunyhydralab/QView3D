@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.exc import SQLAlchemyError
-from flask import jsonify
+from flask import jsonify, current_app
 from Classes.Queue import Queue
 import serial
 import serial.tools.list_ports
@@ -152,7 +152,7 @@ class Printer(db.Model):
             # Encode and send the message to the printer.
             self.ser.write(f"{message}\n".encode("utf-8"))
             # Sleep the printer to give it enough time to get the instruction.
-            time.sleep(0.1)
+            #time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
             while True:
                 # logic here about time elapsed since last response
@@ -167,7 +167,7 @@ class Printer(db.Model):
                 if "ok" in response:
                     break
                 # print(f"INSIDE LOOP: Command: {message}, Received: {response}")
-            print(f"Command: {message}, Received: {response}")
+                print(f"Command: {message}, Received: {response}")
         except serial.SerialException as e:
             self.setStatus("error")
             print(e)
@@ -180,12 +180,23 @@ class Printer(db.Model):
             self.setStatus("error")
             print(e)
             return "error" 
-    
-    def parseGcode(self, path):
+        
+    def parseGcode(self, path, job):
         try: 
             with open(path, "r") as g:
+                # Read the file and store the lines in a list
+                lines = g.readlines()
+                # Only send the lines that are not empty and don't start with ";"
+                # so we can correctly get the progress
+                command_lines = [line for line in lines if line.strip() and not line.startswith(";")]
+                # store the total to find the percentage later on
+                total_lines = len(command_lines)
+                # set the sent lines to 0
+                sent_lines = 0
+                
                 # Replace file with the path to the file. "r" means read mode. 
-                for line in g:
+                # now instead of reading from 'g', we are reading line by line
+                for line in lines:
                     #remove whitespace
                     line = line.strip() 
                     # Don't send empty lines and comments. ";" is a comment in gcode.
@@ -196,6 +207,14 @@ class Printer(db.Model):
                     # Send the line to the printer.
                     
                     res = self.sendGcode(line)
+                    
+                    # Increment the sent lines
+                    sent_lines += 1
+                    # Calculate the progress
+                    progress = (sent_lines / total_lines) * 100
+                    
+                    # Call the setProgress method
+                    job.setProgress(progress)
                     
                     if res == "error": 
                         return "error"
@@ -234,8 +253,8 @@ class Printer(db.Model):
                 self.setStatus("printing") # set printer status to printing
                 self.sendStatusToJob(job, job.id, "printing")
                 self.reset()
-                
-                verdict = self.parseGcode(path) # passes file to code. returns "complete" if successful, "error" if not.
+                # now we pass the job to the parseGcode function, so we can find that jobs progress
+                verdict = self.parseGcode(path, job) # passes file to code. returns "complete" if successful, "error" if not.
 
                 if verdict =="complete":
                     self.setStatus("complete")
@@ -288,12 +307,14 @@ class Printer(db.Model):
     def setSer(self, port):
         self.ser = port
 
+    #  now when we set the status, we can emit the status to the frontend
     def setStatus(self, newStatus):
-        # if newStatus=='ready': 
-        # if self.getSer():
-        self.status = newStatus
-            # else: 
-                # self.status = "offline"
+        try:
+            self.status = newStatus
+            # Emit a 'status_update' event with the new status
+            current_app.socketio.emit('status_update', {'printer_id': self.id, 'status': newStatus})
+        except Exception as e:
+            print('Error setting status:', e)
         
     def setStopPrint(self, stopPrint):
         self.stopPrint = stopPrint

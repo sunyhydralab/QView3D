@@ -1,8 +1,9 @@
 import { useRouter } from 'vue-router'
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import * as myFetch from './myFetch'
 import { toast } from './toast'
 import { type Job } from './jobs'
+import { socket } from './myFetch'
 
 export function api(action: string, body?: unknown, method?: string, headers?: any) {
   headers = headers ?? {}
@@ -97,4 +98,24 @@ export function useSetStatus(){
       }
     }
   }
+}
+
+// function to set up the socket for status updates
+export function setupStatusSocket(printers: any) {
+  socket.on("status_update", ((data: any) => {    
+    if (printers && printers.value) {
+      const printer = printers.value.find((p: Device) => p.id === data.printer_id)
+
+      if (printer) {
+        printer.status = data.status;
+      }
+    } else {
+      console.error('printers or printers.value is undefined');
+    }
+  }))
+}
+
+// function needs to disconnect the socket when the component is unmounted
+export function disconnectStatusSocket() {
+  socket.disconnect()
 }
