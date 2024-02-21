@@ -11,16 +11,6 @@ const { rerunJob } = useRerunJob()
 // const { bumpUp, bumpDown, bumpToTop, bumpToBack } = bumpJobs()
 const { bumpjob } = bumpJobs()
 
-const isActive = ref(true);
-
-let close = () => {
-  isActive.value = !isActive.value;
-}
-
-function debug() {
-  console.log(isActive.value)
-}
-
 const showModal = ref(false);
 const modalJob = ref<Job>();
 const modalPrinter = ref<Printer>();
