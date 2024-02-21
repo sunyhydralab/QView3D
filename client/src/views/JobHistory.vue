@@ -233,6 +233,7 @@ async function submitFilter() {
                 </tr>
             </tbody>
         </table>
+        <p class="mt-2">Total Jobs: {{ totalJobs }}</p>
         <nav aria-label="Page navigation">
             <ul class="pagination">
                 <li class="page-item" :class="{ 'disabled': page <= 1 }">
