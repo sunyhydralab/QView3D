@@ -25,7 +25,6 @@ export interface Job {
 export function useGetJobs() {
   return {
     async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean) {
-    async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean) {
       try {
         const response = await api(`getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}`)
         return response
@@ -56,47 +55,6 @@ export function useAddJobToQueue() {
     }
   }
 }
-
-
-export function useAutoQueue() {
-  return {
-    async auto(job: FormData) {
-      try {
-        const response = await api('autoqueue', job)
-        if (response) {
-          return response
-        } else {
-          console.error('Response is undefined or null')
-          return { "success": false, "message": "Response is undefined or null." }
-        }
-      } catch (error) {
-        console.error(error)
-        toast.error('An error occurred while adding the job to the queue')
-      }
-    }
-  }
-}
-
-
-export function useAutoQueue() {
-  return {
-    async auto(job: FormData) {
-      try {
-        const response = await api('autoqueue', job)
-        if (response) {
-          return response
-        } else {
-          console.error('Response is undefined or null')
-          return { "success": false, "message": "Response is undefined or null." }
-        }
-      } catch (error) {
-        console.error(error)
-        toast.error('An error occurred while adding the job to the queue')
-      }
-    }
-  }
-}
-
 
 export function useAutoQueue() {
   return {
