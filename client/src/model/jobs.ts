@@ -21,7 +21,6 @@ export function useGetJobs() {
       try {
         const response = await api(`getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}`)
         return response
-        return "success"
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while retrieving the jobs')
@@ -36,17 +35,10 @@ export function useAddJobToQueue() {
       try {
         const response = await api('addjobtoqueue', job)
         if (response) {
-          if (response.success == false) {
-            toast.error(response.message)
-          } else if (response.success === true) {
-            toast.success(response.message)
-          } else {
-            console.error('Unexpected response:', response)
-            toast.error('Failed to add job to queue. Unexpected response')
-          }
+          return response
         } else {
           console.error('Response is undefined or null')
-          toast.error('Failed to add job to queue. Unexpected response')
+          return { "success": false, "message": "Response is undefined or null." }
         }
       } catch (error) {
         console.error(error)
@@ -63,17 +55,10 @@ export function useAutoQueue() {
       try {
         const response = await api('autoqueue', job)
         if (response) {
-          if (response.success == false) {
-            toast.error(response.message)
-          } else if (response.success === true) {
-            toast.success(response.message)
-          } else {
-            console.error('Unexpected response:', response)
-            toast.error('Failed to add job to queue. Unexpected response')
-          }
+          return response
         } else {
           console.error('Response is undefined or null')
-          toast.error('Failed to add job to queue. Unexpected response')
+          return { "success": false, "message": "Response is undefined or null." }
         }
       } catch (error) {
         console.error(error)

@@ -24,6 +24,7 @@ class Job(db.Model):
     printer = db.relationship('Printer', backref='Job')
     file_name_original = db.Column(db.String(50), nullable = False)
     file_name_pk = None
+
     
     def __init__(self, file, name, printer_id, status, file_name_original): 
         self.file = file 
@@ -76,7 +77,6 @@ class Job(db.Model):
                 file_data = file
             else:
                 file_data = file.read()
-
                 
             try:
                 gzip.decompress(file_data)

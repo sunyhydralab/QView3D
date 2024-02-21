@@ -120,7 +120,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
           <p>{{ printer.status }}</p>
           <select @change="setPrinterStatus(printer, ($event.target as HTMLSelectElement).value)">
             <option value="">Change Status</option> <!-- Default option -->
-            <option value="offline">Turn Offline</option>
+            <option v-if='printer.status!="printing"' value="offline">Turn Offline</option>
             <option value="ready">Set to Ready</option>
             <option v-if="printer.status == 'printing'" value="complete">Stop Print</option>
           </select>

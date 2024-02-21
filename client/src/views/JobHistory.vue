@@ -132,7 +132,7 @@ async function submitFilter() {
                     <th>Job Title</th>
                     <th>File</th>
                     <th>Date Completed</th>
-                    <th>Final Status</th>
+                    <th>Most Recent Status</th>
                     <th>Printer</th>
                     <th>Rerun Job</th>
                 </tr>
