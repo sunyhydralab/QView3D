@@ -98,15 +98,15 @@ function appendPrinter(printer: Device) {
     }
 }
 
-watch(oldestFirst, async (newVal, oldVal) => {
-    if (newVal !== oldVal) {
-        // If the sorting order has changed, fetch the jobs for the current page again
-        const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
-        const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value)
-        jobs.value = joblist;
-        totalJobs.value = total;
-    }
-});
+// watch(oldestFirst, async (newVal, oldVal) => {
+//     if (newVal !== oldVal) {
+//         // If the sorting order has changed, fetch the jobs for the current page again
+//         const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
+//         const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value)
+//         jobs.value = joblist;
+//         totalJobs.value = total;
+//     }
+// });
 
 async function submitFilter() {
     jobs.value = []; // Clear the jobs array

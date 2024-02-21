@@ -26,10 +26,9 @@ export function useGetJobs() {
   return {
     async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean) {
       try {
-        const response = await api(
-          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}`
-        )
+        const response = await api(`getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}`)
         return response
+        return "success"
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while retrieving the jobs')
@@ -63,6 +62,7 @@ export function useAddJobToQueue() {
     }
   }
 }
+
 
 export function useAutoQueue() {
   return {
@@ -202,7 +202,6 @@ export function useReleaseJob() {
     }
   }
 }
-
 export function useGetGcode() {
   return {
     async getgcode(job: Job) {

@@ -3,12 +3,15 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
 import { useRerunJob, useRemoveJob, bumpJobs, type Job } from '../model/jobs';
 import { useRoute } from 'vue-router'
+import { nextTick } from 'vue';
 
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
-// const { bumpUp, bumpDown, bumpToTop, bumpToBack } = bumpJobs()
 const { bumpjob } = bumpJobs()
+
+const modalJob = ref<Job>();
+const modalPrinter = ref<Printer>();
 
 type Printer = Device & { isExpanded?: boolean }
 const printers = ref<Array<Printer>>([]) // Get list of open printer threads 
@@ -17,8 +20,6 @@ let intervalId: number | undefined;
 
 onMounted(async () => {
   try {
-    // const printerInfo = await retrieveInfo();
-    // printers.value = printerInfo
     const route = useRoute()
     const printerName = route.params.printerName
     const updatePrinters = async () => {
@@ -33,7 +34,7 @@ onMounted(async () => {
     }
     // Fetch the printer status immediately on mount
     await updatePrinters()
-    // Then fetch it every 5 seconds
+    // Then fetch it every 3 seconds
     intervalId = window.setInterval(updatePrinters, 3000)
   } catch (error) {
     console.error('There has been a problem with your fetch operation:', error)
@@ -58,21 +59,35 @@ const handleRerun = async (job: Job, printer: Printer) => {
       printers.value[printerIndex].queue = foundPrinter.queue
     }
   }
-
 };
 
 async function handleCancel(jobToFind: Job, printerToFind: Device) {
-  // remove from in-memory array 
-  const foundPrinter = printers.value.find(printer => printer === printerToFind); // Find the printer by direct object comparison
-  if (!foundPrinter) return; // Return if printer not found
-  const jobIndex = foundPrinter.queue?.findIndex(job => job === jobToFind); // Find the index of the job in the printer's queue
-
-  if (jobIndex === undefined || jobIndex === -1) return; // Return if job not found
-  foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
-
-  // remove from queue 
-  await removeJob(jobToFind)
+  modalJob.value = jobToFind;
+  modalPrinter.value = printerToFind;
+  await nextTick();
 }
+
+const confirmDelete = async () => {
+  if (modalJob.value && modalPrinter.value) {
+
+    const foundPrinter = printers.value.find((printer) => printer.id === modalPrinter.value!.id);
+
+    if (!foundPrinter) return;
+    const jobIndex = foundPrinter.queue?.findIndex((job) => job.id === modalJob.value!.id);
+
+    if (jobIndex === undefined || jobIndex === -1) return;
+    foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
+
+    printers.value = [...printers.value];
+
+    
+    await removeJob(modalJob.value);
+
+    modalJob.value = undefined;
+    modalPrinter.value = undefined;
+  }
+};
+
 
 function capitalizeFirstLetter(string: string | undefined) {
   return string ? string.charAt(0).toUpperCase() + string.slice(1) : '';
@@ -139,6 +154,26 @@ const canBumpUp = (job: Job, printer: Printer) => {
 
 <template>
   <div class="container">
+
+    <!-- Jacks Modals Comments -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">Removing <b>{{ modalJob?.name }}</b> from queue</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>Are you sure you want to remove this job from queue? Job will be saved to history with a final status of <i>cancelled</i>.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="confirmDelete">Remove</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <b>Queue View</b>
 
     <div v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">here
@@ -178,8 +213,11 @@ const canBumpUp = (job: Job, printer: Printer) => {
                 <tr v-for="job in printer.queue" :key="job.id">
                   <td>{{ job.id }}</td>
                   <td class="text-center">
-                    <button v-if="job.status=='inqueue'" type="button" class="btn btn-danger w-100" @click="handleCancel(job, printer)">X</button>
-                    <button v-else><RouterLink to="/">Goto release</RouterLink></button>
+                    <button v-if="job.status == 'inqueue'" type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#exampleModal"
+                      @click="handleCancel(job, printer)">X</button>
+                    <button v-else>
+                      <RouterLink to="/">Goto release</RouterLink>
+                    </button>
                   </td>
 
                   <td class="text-center">
@@ -211,10 +249,14 @@ const canBumpUp = (job: Job, printer: Printer) => {
                         type="button" data-bs-toggle="dropdown"
                         :disabled="printer.queue && job.status === 'printing'"></button>
                       <ul class="dropdown-menu">
-                        <li class="dropdown-item" v-if="canBumpUp(job, printer)" @click="bump(job, printer, 'up')">Bump Up</li>
-                        <li class="dropdown-item" v-if="canBumpUp(job, printer)" @click="bump(job, printer, 'top')">Send to Top</li>
-                        <li class="dropdown-item" v-if="!isLastJob(job, printer)" @click="bump(job, printer, 'down')">Bump Down</li>
-                        <li class="dropdown-item" v-if="!isLastJob(job, printer)" @click="bump(job, printer, 'bottom')">Send to Bottom</li>
+                        <li class="dropdown-item" v-if="canBumpUp(job, printer)" @click="bump(job, printer, 'up')">Bump Up
+                        </li>
+                        <li class="dropdown-item" v-if="canBumpUp(job, printer)" @click="bump(job, printer, 'top')">Send
+                          to Top</li>
+                        <li class="dropdown-item" v-if="!isLastJob(job, printer)" @click="bump(job, printer, 'down')">Bump
+                          Down</li>
+                        <li class="dropdown-item" v-if="!isLastJob(job, printer)" @click="bump(job, printer, 'bottom')">
+                          Send to Bottom</li>
                       </ul>
                     </div>
                   </td>
@@ -331,5 +373,9 @@ th {
 .printerrerun {
   cursor: pointer;
   padding: 12px 16px;
+}
+
+.modal-backdrop {
+  display: none;
 }
 </style>
