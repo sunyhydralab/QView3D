@@ -3,13 +3,15 @@ import { useRouter } from 'vue-router'
 import { api } from './ports'
 import { toast } from './toast'
 import { type Device } from '@/model/ports'
-import { ref } from 'vue';
+import { onUnmounted, ref } from 'vue'
 import { socket } from './myFetch'
+import { saveAs } from 'file-saver'
 
 export interface Job {
   id: number
   name: string
   file: File
+  download_link?: string
   file_name_original: string
   date?: Date
   status?: string
@@ -24,9 +26,10 @@ export function useGetJobs() {
   return {
     async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean) {
       try {
-        const response = await api(`getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}`)
+        const response = await api(
+          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}`
+        )
         return response
-        return "success"
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while retrieving the jobs')
@@ -60,7 +63,6 @@ export function useAddJobToQueue() {
     }
   }
 }
-
 
 export function useAutoQueue() {
   return {
@@ -176,7 +178,7 @@ export function bumpJobs() {
 
 export function useReleaseJob() {
   return {
-    async releaseJob(job: Job | undefined, key: number, printerId: number | undefined){
+    async releaseJob(job: Job | undefined, key: number, printerId: number | undefined) {
       try {
         let jobpk = job?.id
         const response = await api('releasejob', { jobpk, key, printerId })
@@ -201,7 +203,7 @@ export function useReleaseJob() {
   }
 }
 
-export function useGetGcode(){
+export function useGetGcode() {
   return {
     async getgcode(job: Job) {
       try {
@@ -215,32 +217,42 @@ export function useGetGcode(){
   }
 }
 
-// function to constantly update progress of job
-export function setupProgressSocket(printers: any) {
-  
-  // Check if printers is not an empty array
-  if (printers.length > 0) {
-    // Check if the first job in the queue of the first printer is printing
-    if (printers[0]?.queue[0]?.status === 'printing') {
-      socket.on("progress_update", ((data: any) => {
-        const job = printers
-          .flatMap((printer: { queue: any; }) => printer.queue)
-          .find((job: { id: any; }) => job?.id === data.job_id);
-
-        if (job) {
-          job.progress = data.progress;
-          job.elapsed_time = data.elapsed_time;
-          // Update the display value only if progress is defined
-          if (data.progress !== undefined) {
-            job.progress= data.progress;
-          }
-        }
-      }))
+export function useGetJobFile() {
+  return {
+    async getFile(jobid: number) {
+      try {
+        const response = await api(`getfile?jobid=${jobid}`)
+        const file = new Blob([response.file], {type: 'text/plain'});
+        const file_name = response.file_name
+        saveAs(file, file_name)
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while retrieving the file')
+      }
     }
   }
 }
 
+// function to constantly update progress of job
+export function setupProgressSocket(printers: any) {
+  // Always set up the socket connection and event listener
+  socket.on('progress_update', (data: any) => {
+    const job = printers
+      .flatMap((printer: { queue: any }) => printer.queue)
+      .find((job: { id: any }) => job?.id === data.job_id)
+
+    if (job) {
+      job.progress = data.progress
+      job.elapsed_time = data.elapsed_time
+      // Update the display value only if progress is defined
+      if (data.progress !== undefined) {
+        job.progress = data.progress
+      }
+    }
+  })
+}
+
 // function needs to disconnect the socket when the component is unmounted
 export function disconnectProgressSocket() {
-  socket.disconnect();
+  socket.disconnect()
 }

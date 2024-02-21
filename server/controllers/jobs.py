@@ -1,4 +1,9 @@
-from flask import Blueprint, jsonify, request, make_response
+import base64
+from io import BytesIO
+import io
+import shutil
+import tempfile
+from flask import Blueprint, Response, jsonify, request, make_response, send_file
 from models.jobs import Job
 from models.printers import Printer
 from app import printer_status_service
@@ -249,6 +254,19 @@ def setStatus():
         
         return jsonify({"success": True, "message": "Status updated successfully."}), 200
 
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+
+@jobs_bp.route('/getfile', methods=["GET"])
+def getFile():
+    try:
+        job_id = request.args.get('jobid', default=-1, type=int)        
+        job = Job.findJob(job_id) 
+        file_blob = job.getFile()  # Assuming this returns the file blob
+        decompressed_file = gzip.decompress(file_blob).decode('utf-8')
+        
+        return jsonify({"file": decompressed_file, "file_name": job.getFileNameOriginal()}), 200
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500

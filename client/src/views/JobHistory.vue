@@ -1,22 +1,34 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
-import { useGetJobs, type Job, useRerunJob } from '@/model/jobs';
+import { useGetJobs, type Job, useRerunJob, useGetJobFile } from '@/model/jobs';
 import { computed, onMounted, ref, watch } from 'vue';
 // import { useGetJobs, type Job } from '@/model/jobs';
 // import { computed, onMounted, ref } from 'vue';
 const { jobhistory } = useGetJobs()
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { rerunJob } = useRerunJob()
+const { getFile } = useGetJobFile()
 
 const printers = ref<Array<Device>>([]) // Get list of open printer threads 
 const selectedPrinters = ref<Array<Device>>([])
 let jobs = ref<Array<Job>>([])
 let filter = ref('') // This will hold the current filter value
 let oldestFirst = ref<boolean>(false)
+let order = ref<string>('newest')
 
 let page = ref(1)
 let pageSize = ref(10)
 let totalJobs = ref(0)
+let totalPages = ref(1)
+
+// computed property that returns the filtered list of jobs. 
+let filteredJobs = computed(() => {
+    if (filter.value) {
+        return jobs.value.filter(job => job.printer.includes(filter.value))
+    } else {
+        return jobs.value
+    }
+})
 
 onMounted(async () => {
     try {
@@ -25,6 +37,11 @@ onMounted(async () => {
         const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds)
         jobs.value = joblist;
         totalJobs.value = total;
+
+        // Calculate the total number of pages and store it in totalPages
+        totalPages.value = Math.ceil(total / pageSize.value);
+        // Ensure that totalPages is at least 1
+        totalPages.value = Math.max(totalPages.value, 1);
 
         const printerInfo = await retrieveInfo()
         printers.value = printerInfo
@@ -36,6 +53,7 @@ onMounted(async () => {
 const handleRerun = async (job: Job, printer: Device) => {
     try {
         await rerunJob(job, printer);
+        console.log("JOBS FILE", job.file)
         // Fetch the updated list of jobs after rerunning the job
         // so when a job is rerun, the job history is updated
         const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
@@ -67,18 +85,10 @@ const changePage = async (newPage: any) => {
     // Fetch the updated list of jobs after changing the page
     const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
 
-    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds)
+    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value)
     jobs.value = joblist;
     totalJobs.value = total;
 }
-// computed property that returns the filtered list of jobs. 
-let filteredJobs = computed(() => {
-    if (filter.value) {
-        return jobs.value.filter(job => job.printer.includes(filter.value))
-    } else {
-        return jobs.value
-    }
-})
 
 function appendPrinter(printer: Device) {
     if (!selectedPrinters.value.includes(printer)) {
@@ -88,60 +98,114 @@ function appendPrinter(printer: Device) {
     }
 }
 
+watch(oldestFirst, async (newVal, oldVal) => {
+    if (newVal !== oldVal) {
+        // If the sorting order has changed, fetch the jobs for the current page again
+        const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
+        const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value)
+        jobs.value = joblist;
+        totalJobs.value = total;
+    }
+});
+
 async function submitFilter() {
     jobs.value = []; // Clear the jobs array
-    // console.log(oldestFirst.value)
+    oldestFirst.value = order.value === 'oldest';
     const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
+
     const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value)
     jobs.value = joblist;
     totalJobs.value = total;
+
+    // Calculate the total number of pages and store it in totalPages
+    totalPages.value = Math.ceil(total / pageSize.value);
+
+    // Ensure that totalPages is at least 1
+    totalPages.value = Math.max(totalPages.value, 1);
+
+    // If the current page is greater than the total number of pages, set the current page to the last page
+    if (page.value > totalPages.value) {
+        page.value = totalPages.value;
+    }
 }
 </script>
 
 <template>
     <div class="container">
-        <b>Job History View</b>
-        <div class="mb-3">
-            <br>
-            <label for="pageSize" class="form-label">Jobs per page:</label>
-            <input id="pageSize" type="number" v-model.number="pageSize" min="1" class="form-control" style="width: auto;">
+        <h2 class="mb-2 text-center">Job History View</h2>
+        <div class="mb-2 p-2 border rounded">
+            <div class="row justify-content-center">
+                <div class="col-md-4">
+                    <label for="pageSize" class="form-label">Jobs per page:</label>
+                    <input id="pageSize" type="number" v-model.number="pageSize" min="1" class="form-control">
+                </div>
 
-            <select required multiple>
-                <option :value="null">Device: None</option>
-                <option v-for="printer in printers" :value="printer" :key="printer.id" @click="appendPrinter(printer)">
-                    {{ printer.name }}
-                </option>
-            </select>
-            <select v-model="oldestFirst" required>
-                <option v-bind="{ value: true }">Oldest to Newest</option>
-                <option v-bind="{ value: false }">Newest To Oldest</option>
-            </select>
-            <br>
-            <button @click="submitFilter">Submit Filter</button>
-            <div>
-                Selected printer(s): <br>
-                <p v-for="printer in selectedPrinters">
-                    <b>{{ printer.name }}</b> status: {{ printer.status }}<br>
-                </p>
+                <div class="col-md-4">
+                    <label class="form-label">Device:</label>
+                    <div class="dropdown w-100">
+                        <button class="btn btn-secondary dropdown-toggle w-100" type="button" id="dropdownMenuButton"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            Select Printer
+                        </button>
+                        <ul class="dropdown-menu w-100" aria-labelledby="dropdownMenuButton">
+                            <li v-for="printer in printers" :key="printer.id">
+                                <div class="form-check" @click.stop>
+                                    <input class="form-check-input" type="checkbox" :value="printer"
+                                        @change="appendPrinter(printer)" :id="'printer-' + printer.id">
+                                    <label class="form-check-label" :for="'printer-' + printer.id">
+                                        {{ printer.name }}
+                                    </label>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Order:</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="order" id="orderNewest" value="newest"
+                            v-model="order">
+                        <label class="form-check-label" for="orderNewest">
+                            Newest to Oldest
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="order" id="orderOldest" value="oldest"
+                            v-model="order">
+                        <label class="form-check-label" for="orderOldest">
+                            Oldest to Newest
+                        </label>
+                    </div>
+                </div>
             </div>
+        </div>
+
+        <div class="mb-2">
+            <button @click="submitFilter" class="btn btn-primary">Submit Filter</button>
         </div>
         <table class="table">
             <thead>
                 <tr>
-                    <th>Job ID</th>
-                    <th>Job Title</th>
-                    <th>File</th>
-                    <th>Date Completed</th>
-                    <th>Final Status</th>
-                    <th>Printer</th>
-                    <th>Rerun Job</th>
+                    <th class="col-job-id">Job ID</th>
+                    <th class="col-job-title">Job Title</th>
+                    <th class="col-file">File</th>
+                    <th class="col-date">Date Completed</th>
+                    <th class="col-status">Final Status</th>
+                    <th class="col-printer">Printer</th>
+                    <th class="col-rerun">Rerun Job</th>
                 </tr>
             </thead>
             <tbody v-if="filteredJobs.length > 0">
-                <tr v-for="job in filteredJobs" :key="job.name">
+                <tr v-for="job in filteredJobs" :key="job.id">
                     <td>{{ job.id }}</td>
                     <td>{{ job.name }}</td>
-                    <td>{{ job.file_name_original }}</td>
+                    <td>
+                        {{ job.file_name_original }}
+                        <button class="btn btn-secondary download" @click="getFile(job.id)">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </td>
                     <td>{{ job.date }}</td>
                     <td>{{ job.status }}</td>
                     <td>{{ job.printer }}</td>
@@ -174,9 +238,8 @@ async function submitFilter() {
                 <li class="page-item" :class="{ 'disabled': page <= 1 }">
                     <a class="page-link" href="#" @click.prevent="changePage(page - 1)">Previous</a>
                 </li>
-                <li class="page-item disabled"><a class="page-link">Page {{ page }} of {{ Math.ceil(totalJobs / pageSize)
-                }}</a></li>
-                <li class="page-item" :class="{ 'disabled': page >= Math.ceil(totalJobs / pageSize) }">
+                <li class="page-item disabled"><a class="page-link">Page {{ page }} of {{ totalPages }}</a></li>
+                <li class="page-item" :class="{ 'disabled': page >= totalPages }">
                     <a class="page-link" href="#" @click.prevent="changePage(page + 1)">Next</a>
                 </li>
             </ul>
@@ -202,8 +265,51 @@ th {
     background-color: #f2f2f2;
 }
 
-.rerun {
+.col-job-id {
+    width: 7vh;
+}
+
+.col-job-title {
+    width: 20vh;
+}
+
+.col-file {
+    width: 35vh;
+}
+
+.col-date {
+    width: 26vh;
+    overflow-x: auto;  /* Add a horizontal scrollbar if necessary */
+    white-space: nowrap;  /* Prevent the content from wrapping to the next line */
+}
+
+.col-status {
+    width: 11vh;
+}
+
+.col-printer {
+    width: 20vh;
+}
+
+.col-rerun {
     width: 5vh;
-    height: 5vh;
+}
+
+ul.dropdown-menu.w-100.show li {
+    margin-left: 1rem;
+}
+
+.form-check-input:focus, .form-control:focus {
+    outline: none;
+    box-shadow: none;
+    border-color: #dee2e6;
+}
+
+label.form-check-label {
+    cursor: pointer;
+}
+
+.download {
+    float: right;
 }
 </style>
