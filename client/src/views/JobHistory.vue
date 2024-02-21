@@ -12,6 +12,7 @@ const printers = ref<Array<Device>>([]) // Get list of open printer threads
 const selectedPrinters = ref<Array<Device>>([])
 let jobs = ref<Array<Job>>([])
 let filter = ref('') // This will hold the current filter value
+let oldestFirst = ref<boolean>(false)
 
 let page = ref(1)
 let pageSize = ref(10)
@@ -20,9 +21,11 @@ let totalJobs = ref(0)
 onMounted(async () => {
     try {
         // job history now returns a tuple of joblist and total jobs, not just all the jobs in the database
-        const [joblist, total] = await jobhistory(page.value, pageSize.value)
+        const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
+        const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds)
         jobs.value = joblist;
         totalJobs.value = total;
+
         const printerInfo = await retrieveInfo()
         printers.value = printerInfo
     } catch (error) {
@@ -35,7 +38,9 @@ const handleRerun = async (job: Job, printer: Device) => {
         await rerunJob(job, printer);
         // Fetch the updated list of jobs after rerunning the job
         // so when a job is rerun, the job history is updated
-        const [joblist, total] = await jobhistory(page.value, pageSize.value)
+        const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
+        const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds)
+
         jobs.value = joblist;
         totalJobs.value = total;
     } catch (error) {
@@ -43,13 +48,13 @@ const handleRerun = async (job: Job, printer: Device) => {
     }
 }
 
-watch(pageSize, async (newPageSize) => {
-    jobs.value = []; // Clear the jobs array
-    // Fetch the updated list of jobs after changing the page size
-    const [joblist, total] = await jobhistory(page.value, newPageSize)
-    jobs.value = joblist;
-    totalJobs.value = total;
-})
+// watch(pageSize, async (newPageSize) => {
+//     jobs.value = []; // Clear the jobs array
+//     // Fetch the updated list of jobs after changing the page size
+//     const [joblist, total] = await jobhistory(page.value, newPageSize)
+//     jobs.value = joblist;
+//     totalJobs.value = total;
+// })
 
 const changePage = async (newPage: any) => {
     // Prevent the user from going to a page that doesn't exist
@@ -60,7 +65,9 @@ const changePage = async (newPage: any) => {
     page.value = newPage
     jobs.value = []; // Clear the jobs array
     // Fetch the updated list of jobs after changing the page
-    const [joblist, total] = await jobhistory(page.value, pageSize.value)
+    const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
+
+    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds)
     jobs.value = joblist;
     totalJobs.value = total;
 }
@@ -80,6 +87,15 @@ function appendPrinter(printer: Device) {
         selectedPrinters.value = selectedPrinters.value.filter(p => p !== printer)
     }
 }
+
+async function submitFilter() {
+    jobs.value = []; // Clear the jobs array
+    // console.log(oldestFirst.value)
+    const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
+    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value)
+    jobs.value = joblist;
+    totalJobs.value = total;
+}
 </script>
 
 <template>
@@ -96,12 +112,18 @@ function appendPrinter(printer: Device) {
                     {{ printer.name }}
                 </option>
             </select>
+            <select v-model="oldestFirst" required>
+                <option v-bind="{ value: true }">Oldest to Newest</option>
+                <option v-bind="{ value: false }">Newest To Oldest</option>
+            </select>
+            <br>
+            <button @click="submitFilter">Submit Filter</button>
             <div>
-                    Selected printer(s): <br>
-                    <p v-for="printer in selectedPrinters">
-                        <b>{{ printer.name }}</b> status: {{ printer.status }}<br>
-                    </p>
-                </div>
+                Selected printer(s): <br>
+                <p v-for="printer in selectedPrinters">
+                    <b>{{ printer.name }}</b> status: {{ printer.status }}<br>
+                </p>
+            </div>
         </div>
         <table class="table">
             <thead>

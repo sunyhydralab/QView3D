@@ -13,7 +13,6 @@ from io import BytesIO
 from werkzeug.datastructures import FileStorage
 import time 
 import gzip
-# model for job history table 
 class Job(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     file = db.Column(db.LargeBinary(16777215), nullable=False)
@@ -33,23 +32,24 @@ class Job(db.Model):
         self.status = status 
         self.file_name_original = file_name_original # original file name without PK identifier 
         file_name_pk = None
-        # file_name_pk = None
-        # file name attribute set after job is inserted into DB 
 
     def __repr__(self):
-        # return f"Job(id={self.id}, name={self.name}, printer_id={self.printer_id}, status={self.status}, file_name={self.file_name})"
         return f"Job(id={self.id}, name={self.name}, printer_id={self.printer_id}, status={self.status})"
     
     def getPrinterId(self): 
         return self.printer_id
         
     @classmethod
-    def get_job_history(cls, page, pageSize, printerIds=None):
+    def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False):
         try:
-            query = cls.query.order_by(cls.date.desc())
-
+            query = cls.query
             if printerIds:
                 query = query.filter(cls.printer_id.in_(printerIds))
+
+            if oldestFirst:
+                query = query.order_by(cls.date.asc())
+            else: 
+                query = query.order_by(cls.date.desc())  # Change this line
 
             pagination = query.paginate(page=page, per_page=pageSize, error_out=False)
             jobs = pagination.items
@@ -77,8 +77,13 @@ class Job(db.Model):
             else:
                 file_data = file.read()
 
-            compressed_data = gzip.compress(file_data) # compress data before storing in database
-            
+                
+            try:
+                gzip.decompress(file_data)
+                compressed_data = file_data  # If it decompresses successfully, it's already compressed
+            except OSError:
+                compressed_data = gzip.compress(file_data)  
+                            
             job = cls(
                 file = compressed_data, 
                 name=name,
@@ -125,7 +130,21 @@ class Job(db.Model):
             return job
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
-            return jsonify({"error": "Failed to retrieve job. Database error"}), 500   
+            return jsonify({"error": "Failed to retrieve job. Database error"}), 500  
+        
+    @classmethod
+    def removeFileFromPath(cls, file_path):
+        # file_path = self.generatePath()  # Get the file path
+        if os.path.exists(file_path):    # Check if the file exists
+            os.remove(file_path)         # Remove the file 
+            
+    @classmethod 
+    def setDBstatus(cls, jobid, status):
+        cls.update_job_status(jobid, status)
+
+    @classmethod 
+    def getPathForDelete(cls, file_name):
+        return os.path.join('../uploads', file_name)
            
     def saveToFolder(self):
         file_data = self.getFile()
@@ -136,12 +155,7 @@ class Job(db.Model):
     def generatePath(self):
         return os.path.join('../uploads', self.getFileNamePk())
     
-    @classmethod
-    def removeFileFromPath(cls, file_path):
-        # file_path = self.generatePath()  # Get the file path
-        if os.path.exists(file_path):    # Check if the file exists
-            os.remove(file_path)         # Remove the file
-    
+    #getters 
     def getName(self):
         return self.name
     
@@ -166,22 +180,15 @@ class Job(db.Model):
     def getJobId(self):
         return self.id
     
+    #setters 
     def setStatus(self, status): 
         self.status = status
-        # self.setDBstatus(self.id, status)
-    
-    @classmethod 
-    def setDBstatus(cls, jobid, status):
-        cls.update_job_status(jobid, status)
-
-    @classmethod 
-    def getPathForDelete(cls, file_name):
-        return os.path.join('../uploads', file_name)
-
-        
+            
     def setPath(self, path): 
         self.path = path 
 
     def setFileName(self, filename):
         self.file_name_pk = filename
         
+    def setFile(self, file):
+        self.file = file
