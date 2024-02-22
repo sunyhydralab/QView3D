@@ -12,6 +12,7 @@ from io import BytesIO
 from werkzeug.datastructures import FileStorage
 import time 
 import gzip
+from app import printer_status_service
 # model for job history table 
 class Job(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -136,7 +137,25 @@ class Job(db.Model):
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve job. Database error"}), 500  
-        
+     
+    @classmethod 
+    def findPrinterObject(self, printer_id): 
+        threads = printer_status_service.getThreadArray()
+        return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer   
+      
+    @classmethod 
+    def queueRestore(cls, printer_id):
+        try:
+            jobs = cls.query.filter_by(printer_id=printer_id, status='inqueue').all()
+            for job in jobs:
+                cls.findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
+
+            return {"success": True, "message": "Queue restored successfully."}
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return jsonify({"error": "Failed to restore queue. Database error"}), 500
+    
+
     @classmethod
     def removeFileFromPath(cls, file_path):
         # file_path = self.generatePath()  # Get the file path
@@ -150,6 +169,7 @@ class Job(db.Model):
     @classmethod 
     def getPathForDelete(cls, file_name):
         return os.path.join('../uploads', file_name)
+    
            
     def saveToFolder(self):
         file_data = self.getFile()

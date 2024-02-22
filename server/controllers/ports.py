@@ -57,6 +57,7 @@ def registerPrinter():
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
+
         
 # method to get the queue for a printer
 # unsure if this works tbh, need help!

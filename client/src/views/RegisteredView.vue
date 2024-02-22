@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { useGetPorts, useRegisterPrinter, useRetrievePrinters, useHardReset, type Device } from '../model/ports'
+import { useGetPorts, useRegisterPrinter, useRetrievePrinters, useHardReset, useQueueRestore, type Device } from '../model/ports'
 import { ref, onMounted } from 'vue';
 const { ports } = useGetPorts();
 const { register } = useRegisterPrinter();
 const { retrieve } = useRetrievePrinters();
 const { hardReset } = useHardReset();
+const { queueRestore } = useQueueRestore(); 
 
 let devices = ref<Array<Device>>([]); // Array of all devices -- stores ports for user to select/register
 let selectedDevice = ref<Device | null>(null) // device user selects to register.
@@ -60,6 +61,9 @@ const doHardReset = async (printer: Device) => {
     await hardReset(printer.id)
 }
 
+const doQueueRestore = async (printer: Device) => {
+    await queueRestore(printer.id)
+}
 
 </script>
 <template>
@@ -70,6 +74,7 @@ const doHardReset = async (printer: Device) => {
             <div class="card" style="width: 18rem;" v-for="printer in registered">
                 <div class="card-body">
                     <button @click="doHardReset(printer)">Hard Reset</button>
+                    <button @click="doQueueRestore(printer)">Restore Queue</button>
                     <h6>Name: {{ printer.name }}</h6>
                     <h6 class="card-subtitle mb-2 text-body-secondary">{{ printer.device }}</h6>
                     <h6>Description: {{ printer.description }}</h6>
