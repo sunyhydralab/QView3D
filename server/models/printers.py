@@ -172,6 +172,32 @@ class Printer(db.Model):
             print(e)
             return "error" 
         
+    def gcodeEnding(self, message):
+        try: 
+            # Encode and send the message to the printer.
+            self.ser.write(f"{message}\n".encode("utf-8"))
+            # Sleep the printer to give it enough time to get the instruction.
+            #time.sleep(0.1)
+            # Save and print out the response from the printer. We can use this for error handling and status updates.
+            while True:
+                # logic here about time elapsed since last response
+                response = self.ser.readline().decode("utf-8").strip()
+                # if response == "":
+                #     self.responseCount+=1 
+                #     if(self.responseCount>=10):
+                #         raise TimeoutError("No response from printer") 
+                stat = self.getStatus()
+                # print(stat)
+                # if stat != "complete":
+                #     break 
+                if "ok" in response:
+                    break
+                print(f"Command: {message}, Received: {response}")
+        except Exception as e: 
+            # self.setStatus("error")
+            print(e)
+            return "error" 
+        
     def parseGcode(self, path, job):
         try: 
             with open(path, "r") as g:
@@ -213,7 +239,6 @@ class Printer(db.Model):
                     if self.getStatus() =="complete":
                         # self.endingSequence()
                         return "cancelled"
-
             return "complete"
         except Exception as e: 
             # self.setStatus("error")
@@ -222,14 +247,14 @@ class Printer(db.Model):
       
     # Function to send "ending" gcode commands   
     def endingSequence(self):
-        self.sendGcode("G91")
-        self.sendGcode("G1 F1800 E-3")
-        self.sendGcode("G1 F3000 Z10")
-        self.sendGcode("G90")
-        self.sendGcode("G1 X0 Y220")
-        self.sendGcode("M106 S0")
-        self.sendGcode("M104 S0")
-        self.sendGcode("M140 S0")
+        self.gcodeEnding("G91")
+        self.gcodeEnding("G1 F1800 E-3")
+        self.gcodeEnding("G1 F3000 Z10")
+        self.gcodeEnding("G90")
+        self.gcodeEnding("G1 X0 Y220")
+        self.gcodeEnding("M106 S0")
+        self.gcodeEnding("M104 S0")
+        self.gcodeEnding("M140 S0")
 
     def printNextInQueue(self):
         self.connect()
@@ -244,16 +269,18 @@ class Printer(db.Model):
                 # self.reset()
                 # now we pass the job to the parseGcode function, so we can find that jobs progress
                 verdict = self.parseGcode(path, job) # passes file to code. returns "complete" if successful, "error" if not.
-
+                # self.endingSequence()
                 if verdict =="complete":
                     self.setStatus("complete")
                     self.sendStatusToJob(job, job.id, "complete")
                 elif verdict=="error": 
+                    # self.endingSequence()
                     self.sendStatusToJob(job, job.id, "error")
                     self.setStatus("error")
                 elif verdict=="cancelled":
-                    self.sendStatusToJob(job, job.id, "cancelled")
                     self.endingSequence()
+                    self.sendStatusToJob(job, job.id, "cancelled")
+                    # self.endingSequence()
                     
                 self.disconnect()
                 job.removeFileFromPath(path) # remove file from folder after job complete
@@ -263,7 +290,7 @@ class Printer(db.Model):
                 self.setStatus("error")
                 self.sendStatusToJob(job, job.id, "error")
             return     
-        except serial.SerialException as e:
+        except Exception as e:
             self.setStatus("error")
             job.setStatus("error")
             return "error" 
