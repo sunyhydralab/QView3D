@@ -101,6 +101,32 @@ export function useSetStatus(){
   }
 }
 
+export function useHardReset(){
+  return {
+    async hardReset(printerid: number | undefined){
+      try {
+        const response = await api('hardreset', {printerid})
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to release job. Unexpected response.')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to release job. Unexpected response')
+        }
+        return response 
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
+}
+
 // function to set up the socket for status updates
 export function setupStatusSocket(printers: any) {
   socket.on("status_update", ((data: any) => {    

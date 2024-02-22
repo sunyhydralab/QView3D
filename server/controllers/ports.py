@@ -41,6 +41,7 @@ def registerPrinter():
         id = res['printer_id']
         
         print(id)
+        
         thread_data = {
             "id": id, 
             "device": device,

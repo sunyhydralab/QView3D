@@ -168,10 +168,12 @@ class Printer(db.Model):
                         raise Exception("No response from printer") 
                     
                 stat = self.getStatus()
-                if stat == "complete":
+                if stat == "complete" or stat=="error":
                     break 
+                
                 if "ok" in response:
                     break
+                
                 print(f"Command: {message}, Received: {response}")
         except Exception as e: 
             # self.setStatus("error")
@@ -239,11 +241,15 @@ class Printer(db.Model):
                     # Call the setProgress method
                     job.setProgress(progress)
                     
-                    if res == "error": 
-                        return "error"
+                    # if res == "error": 
+                    #     return "error"
                     
                     if self.getStatus() == "complete":
                         return "cancelled"
+                    
+                    if self.getStatus() == "error":
+                        return "error"
+                    
             return "complete"
         except Exception as e: 
             # self.setStatus("error")
@@ -392,6 +398,7 @@ class Printer(db.Model):
     def setError(self, error):
         self.error = str(error) 
         print(self.id)
+        self.setStatus("error")
         current_app.socketio.emit('error_update', {'printerid': self.id, 'error': self.error})
         
     def sendStatusToJob(self, job, job_id, status):

@@ -3,7 +3,8 @@ from models.printers import Printer
 import serial
 import serial.tools.list_ports
 import time
-import requests 
+import requests
+from flask import jsonify 
 
 class PrinterThread(Thread):
     def __init__(self, printer, *args, **kwargs):
@@ -54,6 +55,26 @@ class PrinterStatusService:
                 if (status == "ready" and queueSize > 0):
                     time.sleep(2) # wait for 2 seconds to allow the printer to process the queue
                     printer.printNextInQueue()
+                    
+    def resetThread(self, printer_id):
+        try: 
+            for thread in self.printer_threads:
+                if thread.printer.id == printer_id:    
+                    printer = thread.printer
+                    thread_data = {
+                        "id": printer.id, 
+                        "device": printer.device,
+                        "description": printer.description,
+                        "hwid": printer.hwid,
+                        "name": printer.name
+                    }
+                    self.printer_threads.remove(thread)
+                    self.create_printer_threads([thread_data])
+                    break
+            return jsonify({"success": True, "message": "Printer thread reset successfully"})
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return jsonify({"success": False, "error": "Unexpected error occurred"}), 500
 
     # this method will be called by the UI to get the printers that have a threads information
     def retrieve_printer_info(self):
