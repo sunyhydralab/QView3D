@@ -172,6 +172,28 @@ class Printer(db.Model):
             print(e)
             return "error" 
         
+    def gcodeEnding(self, message):
+        try: 
+            # Encode and send the message to the printer.
+            self.ser.write(f"{message}\n".encode("utf-8"))
+            # Sleep the printer to give it enough time to get the instruction.
+            #time.sleep(0.1)
+            # Save and print out the response from the printer. We can use this for error handling and status updates.
+            while True:
+                # logic here about time elapsed since last response
+                response = self.ser.readline().decode("utf-8").strip()
+                if response == "":
+                    self.responseCount+=1 
+                    if(self.responseCount>=10):
+                        raise TimeoutError("No response from printer") 
+                if "ok" in response:
+                    break
+                print(f"Command: {message}, Received: {response}")
+        except Exception as e: 
+            # self.setStatus("error")
+            print(e)
+            return "error" 
+        
     def parseGcode(self, path, job):
         try: 
             with open(path, "r") as g:
@@ -222,14 +244,53 @@ class Printer(db.Model):
       
     # Function to send "ending" gcode commands   
     def endingSequence(self):
-        self.sendGcode("G91")
-        self.sendGcode("G1 F1800 E-3")
-        self.sendGcode("G1 F3000 Z10")
-        self.sendGcode("G90")
-        self.sendGcode("G1 X0 Y220")
-        self.sendGcode("M106 S0")
-        self.sendGcode("M104 S0")
-        self.sendGcode("M140 S0")
+        # self.sendGcode("G91")
+        # self.sendGcode("G1 F1800 E-3")
+        # self.sendGcode("G1 F3000 Z10")
+        # self.sendGcode("G90")
+        # self.sendGcode("G1 X0 Y220")
+        # self.sendGcode("M106 S0")
+        # self.sendGcode("M104 S0")
+        # self.sendGcode("M140 S0")
+
+        # *** Ender 3 Pro ending sequence ***
+        # G91 ;Relative positioning
+        # G1 E-2 F2700 ;Retract a bit
+        # G1 E-2 Z0.2 F2400 ;Retract and raise Z
+        # G1 X5 Y5 F3000 ;Wipe out
+        # G1 Z10 ;Raise Z more
+        # G90 ;Absolute positioning
+        # G1 X0 Y{machine_depth} ;Present print
+        # M106 S0 ;Turn-off fan
+        # M104 S0 ;Turn-off hotend
+        # M140 S0 ;Turn-off bed
+        # M84 X Y E ;Disable all steppers but Z
+
+        # ***Prusa i3 MK3 ending sequence***
+        # M104 S0 ; turn off extruder
+        # M140 S0 ; turn off heatbed
+        # M107 ; turn off fan
+        # G1 X0 Y210; home X axis and push Y forward
+        # M84 ; disable motors
+        self.gcodeEnding("M104 S0") # turn off extruder
+        self.gcodeEnding("M140 S0") # turn off heatbed
+        self.gcodeEnding("M107") # turn off fan
+        self.gcodeEnding("G1 X0 Y210") # home X axis and push Y forward
+        self.gcodeEnding("M84") # disable motors
+
+        # *** Prusa MK4 ending sequence ***
+        # {if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+1, max_print_height)} F720 ; Move print head up{endif}
+        # M104 S0 ; turn off temperature
+        # M140 S0 ; turn off heatbed
+        # M107 ; turn off fan
+        # G1 X241 Y170 F3600 ; park
+        # {if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+23, max_print_height)} F300 ; Move print head up{endif}
+        # G4 ; wait
+        # M900 K0 ; reset LA
+        # M142 S36 ; reset heatbreak target temp
+        # M84 X Y E ; disable motors
+        # ; max_layer_z = [max_layer_z]
+
 
     def printNextInQueue(self):
         self.connect()
