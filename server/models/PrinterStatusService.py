@@ -52,6 +52,7 @@ class PrinterStatusService:
                 queueSize = printer.getQueue().getSize() # get size of queue 
                 
                 if (status == "ready" and queueSize > 0):
+                    time.sleep(2) # wait for 2 seconds to allow the printer to process the queue
                     printer.printNextInQueue()
 
     # this method will be called by the UI to get the printers that have a threads information
@@ -68,6 +69,7 @@ class PrinterStatusService:
                 "name": printer.name,
                 "status": printer.status,
                 "id": printer.id,
+                "error": printer.error, 
                 "queue": [] # empty queue to store job objects 
             }
             

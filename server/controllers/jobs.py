@@ -59,7 +59,7 @@ def add_job_to_queue():
         
         job.setFileName(file_name_pk) # set unique in-memory file name 
 
-        findPrinterObject(printer_id).getQueue().addToBack(job)
+        findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     
@@ -89,7 +89,7 @@ def auto_queue():
         
         job.setFileName(file_name_pk) # set unique in-memory file name 
 
-        findPrinterObject(printer_id).getQueue().addToBack(job)  
+        findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)  
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     
@@ -146,17 +146,15 @@ def remove_job():
         printerid = job.getPrinterId() 
 
         jobstatus = job.getStatus()
-
         # retrieve printer object & corresponding queue
         printerobject = findPrinterObject(printerid)
         # printerobject.setStatus("complete")
         queue = printerobject.getQueue()
         inmemjob = queue.getJob(job)
-
         if jobstatus == 'printing': # only change statuses, dont remove from queue 
             printerobject.setStatus("complete")
         else: 
-            queue.deleteJob(jobpk) 
+            queue.deleteJob(jobpk, printerid) 
             
         inmemjob.setStatus("cancelled")
         Job.update_job_status(jobpk, "cancelled")
@@ -177,17 +175,25 @@ def releasejob():
         printerobject = findPrinterObject(printerid)
         queue = printerobject.getQueue()
 
-        queue.deleteJob(jobpk) # remove job from queue 
+        queue.deleteJob(jobpk, printerid) # remove job from queue 
+        
+        currentStatus = printerobject.getStatus()
 
         if key == 3: 
             Job.update_job_status(jobpk, "error")
             printerobject.setStatus("error") # printer ready to accept new prints 
         elif key == 2: 
             rerunjob(printerid, jobpk, "front")
-            printerobject.setStatus("ready") # printer ready to accept new prints 
+            
+            if currentStatus!="offline":
+                printerobject.setStatus("ready") # printer ready to accept new prints 
+                
         elif key == 1: 
-            printerobject.setStatus("ready") # printer ready to accept new prints 
+            if currentStatus!="offline":
+                printerobject.setStatus("ready") # printer ready to accept new prints 
+            
         return jsonify({"success": True, "message": "Job released successfully."}), 200
+    
     except Exception as e: 
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500  
@@ -207,9 +213,9 @@ def bumpjob():
         elif choice == 2: 
             printerobject.queue.bump(False, job_id)
         elif choice == 3: 
-            printerobject.queue.bumpExtreme(True, job_id)
+            printerobject.queue.bumpExtreme(True, job_id, printer_id)
         elif choice == 4: 
-            printerobject.queue.bumpExtreme(False, job_id)
+            printerobject.queue.bumpExtreme(False, job_id, printer_id)
         else: 
             return jsonify({"error": "Unexpected error occurred"}), 500
         
@@ -303,7 +309,7 @@ def rerunjob(printerpk, jobpk, position):
     rjob.setFileName(file_name_pk) # set unique file name 
     
     if position == "back":
-        findPrinterObject(printerpk).getQueue().addToBack(rjob)
+        findPrinterObject(printerpk).getQueue().addToBack(rjob, rjob.printer_id)
     else: 
-        findPrinterObject(printerpk).getQueue().addToFront(rjob)
+        findPrinterObject(printerpk).getQueue().addToFront(rjob, rjob.printer_id)
         

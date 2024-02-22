@@ -227,11 +227,24 @@ export function setupProgressSocket(printers: any) {
 
     if (job) {
       job.progress = data.progress
-      job.elapsed_time = data.elapsed_time
+      // job.elapsed_time = data.elapsed_time
       // Update the display value only if progress is defined
       if (data.progress !== undefined) {
         job.progress = data.progress
       }
+    }
+  })
+}
+
+export function setupJobStatusSocket(printers: any) {
+  // Always set up the socket connection and event listener
+  socket.on('job_status_update', (data: any) => {
+    const job = printers
+      .flatMap((printer: { queue: any }) => printer.queue)
+      .find((job: { id: any }) => job?.id === data.job_id)
+
+    if (job) {
+      job.status = data.status
     }
   })
 }

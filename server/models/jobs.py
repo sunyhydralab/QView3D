@@ -115,6 +115,9 @@ class Job(db.Model):
                 job.status = new_status
                 # Commit the changes to the database
                 db.session.commit()
+                
+                current_app.socketio.emit('job_status_update', {'job_id': job_id, 'status': new_status})
+                
                 return {"success": True, "message": f"Job {job_id} status updated successfully."}
             else:
                 return {"success": False, "message": f"Job {job_id} not found."}, 404
@@ -191,6 +194,7 @@ class Job(db.Model):
     # which sends it to the frontend using socketio
     def setProgress(self, progress):
         if self.status == 'printing':
+            self.progress = progress
             # Emit a 'progress_update' event with the new progress
             current_app.socketio.emit('progress_update', {'job_id': self.id, 'progress': progress})
 
