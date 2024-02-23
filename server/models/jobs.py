@@ -148,6 +148,11 @@ class Job(db.Model):
         try:
             jobs = cls.query.filter_by(printer_id=printer_id, status='inqueue').all()
             for job in jobs:
+                base_name, extension = os.path.splitext(job.file_name_original)
+                # Append the ID to the base name
+                file_name_pk = f"{base_name}_{id}{extension}"
+                job.setFileName(file_name_pk) # set unique file name                 
+                # print(type(job.file))
                 cls.findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
 
             return {"success": True, "message": "Queue restored successfully."}
