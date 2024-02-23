@@ -42,7 +42,7 @@ onMounted(async () => {
 
     setupJobStatusSocket(printers.value)
 
-    setupErrorSocket(printers)
+    setupErrorSocket(printers.value)
 
     console.log("PRINTERS: ", printers.value)
 
@@ -217,19 +217,19 @@ const setCurrentJob = (job: Job, printerName: string) => {
 
         <td style="width: 250px;">
           <div v-if="printer.status === 'printing'">
-            <div v-for="job in printer.queue" :key="job.id">
+            <!-- <div v-for="job in printer.queue" :key="job.id"> -->
               <!-- Display the elapsed time -->
-              <p v-if="job.elapsed_time">{{ new Date(job.elapsed_time * 1000).toISOString().substr(11, 8) }}</p>
+              <p v-if="printer.queue?.[0].elapsed_time">{{ new Date(printer.queue?.[0].elapsed_time * 1000).toISOString().substr(11, 8) }}</p>
               <div class="progress" style="position: relative;">
                 <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
-                  :style="{ width: (job.progress || 0) + '%' }" :aria-valuenow="job.progress" aria-valuemin="0"
+                  :style="{ width: (printer.queue?.[0].progress || 0) + '%' }" :aria-valuenow="printer.queue?.[0].progress" aria-valuemin="0"
                   aria-valuemax="100">
                 </div>
                 <!-- job progress set to 2 decimal places -->
-                <p style="position: absolute; width: 100%; text-align: center; color: black;">{{ job.progress ?
-                  `${job.progress.toFixed(2)}%` : '0.00%' }}</p>
+                <p style="position: absolute; width: 100%; text-align: center; color: black;">{{ printer.queue?.[0].progress ?
+                  `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
               </div>
-            </div>
+            <!-- </div> -->
           </div>
 
           <div

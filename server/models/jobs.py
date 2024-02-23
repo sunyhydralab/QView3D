@@ -34,8 +34,8 @@ class Job(db.Model):
         self.printer_id = printer_id 
         self.status = status 
         self.file_name_original = file_name_original # original file name without PK identifier 
-        file_name_pk = None
-        progress = 0.0
+        self.file_name_pk = None
+        self.progress = 0.0
 
     def __repr__(self):
         return f"Job(id={self.id}, name={self.name}, printer_id={self.printer_id}, status={self.status})"
