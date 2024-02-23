@@ -17,7 +17,14 @@ class Queue:
     def addToFront(self, job): 
         if self.__queue.count(job)>0: 
             raise Exception("Job ID already in queue.") 
-        self.__queue.appendleft(job)
+        # If the queue has at least one job and the first job is printing,
+        # insert at the second position because we don't want to interrupt it.
+        if len(self.__queue) >= 1 and self.__queue[0].status == 'printing':
+            self.__queue.insert(1, job)
+        # If the queue is empty or the first job is not printing,
+        # add the job to the front
+        else:
+            self.__queue.appendleft(job)
     
     def bump(self, up, jobid): # up = boolean. if up = true bump up, else bump down 
         index = next((index for index, queued_job in enumerate(self.__queue) if queued_job.id == jobid), -1)

@@ -59,7 +59,12 @@ def add_job_to_queue():
         
         job.setFileName(file_name_pk) # set unique in-memory file name 
 
-        findPrinterObject(printer_id).getQueue().addToBack(job)
+        priority = request.form['priority']
+        # if priotiry is '1' then add to front of queue, else add to back
+        if priority == 'true':
+            findPrinterObject(printer_id).getQueue().addToFront(job)
+        else:
+            findPrinterObject(printer_id).getQueue().addToBack(job)
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     
