@@ -231,7 +231,23 @@ class Printer(db.Model):
                     if len(line) == 0 or line.startswith(";"): 
                         continue
                     # Send the line to the printer.
+                    
+                    if(self.getStatus()=="paused"):
+                        self.sendGcode("M601")
+                        while(True):
+                            stat = self.getStatus()
+                            if(stat=="printing"):
+                                break 
+                            
                     res = self.sendGcode(line)
+                        
+                        
+                    if("M601" in line):
+                        self.setStatus("paused")
+                        while(True):
+                            stat = self.getStatus()
+                            if(stat=="printing"):
+                                break 
                     
                     # Increment the sent lines
                     sent_lines += 1

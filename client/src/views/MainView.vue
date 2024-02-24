@@ -199,6 +199,8 @@ const setCurrentJob = (job: Job, printerName: string) => {
             <option v-if='printer.status == "configuring" || printer.status == "offline" || printer.status == "error"'
               value="ready">Set to Ready</option>
             <option v-if="printer.status == 'printing'" value="complete">Stop Print</option>
+            <option v-if="printer.status == 'printing'" value="paused">Pause Print</option>
+            <option v-if="printer.status == 'paused'" value="printing">Unpause Print</option>
           </select>
         </td>
 
