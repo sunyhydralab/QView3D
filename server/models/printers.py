@@ -231,7 +231,6 @@ class Printer(db.Model):
                     if len(line) == 0 or line.startswith(";"): 
                         continue
                     # Send the line to the printer.
-                    
                     res = self.sendGcode(line)
                     
                     # Increment the sent lines
@@ -398,6 +397,8 @@ class Printer(db.Model):
         try:
             print("setting status")
             self.status = newStatus
+            
+            # print(self.status)
             # Emit a 'status_update' event with the new status
             current_app.socketio.emit('status_update', {'printer_id': self.id, 'status': newStatus})
         except Exception as e:

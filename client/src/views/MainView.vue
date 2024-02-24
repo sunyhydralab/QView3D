@@ -19,20 +19,22 @@ let intervalId: number | undefined;
 
 onMounted(async () => {
   try {
-    const route = useRoute()
-    const printerName = route.params.printerName
-    const updatePrinters = async () => {
-      const printerInfo = await retrieveInfo()
-      printers.value = []
-      for (const printer of printerInfo) {
-        printers.value.push({
-          ...printer,
-          isExpanded: printer.name === printerName
-        })
-      }
-    }
+
+    printers.value = await retrieveInfo()
+    // const route = useRoute()
+    // const printerName = route.params.printerName
+    // const updatePrinters = async () => {
+    //   const printerInfo = await retrieveInfo()
+    //   printers.value = []
+    //   for (const printer of printerInfo) {
+    //     printers.value.push({
+    //       ...printer,
+    //       isExpanded: printer.name === printerName
+    //     })
+    //   }
+    // }
     // Fetch the printer status immediately on mount
-    await updatePrinters()
+    // await updatePrinters()
     // Setup the satus socket
     setupStatusSocket(printers)
 
@@ -42,7 +44,7 @@ onMounted(async () => {
 
     setupJobStatusSocket(printers.value)
 
-    setupErrorSocket(printers.value)
+    setupErrorSocket(printers)
 
     console.log("PRINTERS: ", printers.value)
 
