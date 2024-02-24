@@ -232,22 +232,29 @@ class Printer(db.Model):
                         continue
                     # Send the line to the printer.
                     # time.sleep(1)
-                    if(self.getStatus()=="paused"):
-                        self.sendGcode("M601")
-                        while(True):
-                            stat = self.getStatus()
-                            if(stat=="printing"):
-                                break 
-                            
-                    res = self.sendGcode(line)
-                        
-                        
-                    if("M601" in line):
+                    if(self.getStatus()=="paused" or ("M601" in line)):
                         self.setStatus("paused")
+                        self.sendGcode("G91") # set relative positioning mode
+                        self.sendGcode("G1 Z10 F300")  # move up 10mm 
+                        self.sendGcode("M601") # pause command 
+                        # self.sendGcode("G1 Z-10 F300")
                         while(True):
                             stat = self.getStatus()
                             if(stat=="printing"):
+                                self.sendGcode("G1 Z-10 F300") # move back to previous position 
+                                self.sendGcode("G90") # set back to absolute positioning 
                                 break 
+                    
+                               
+                    res = self.sendGcode(line)
+                    
+                    # if("M601" in line):
+                    #     self.setStatus("paused")
+                    #     while(True):
+                    #         stat = self.getStatus()
+                    #         if(stat=="printing"):
+                    #             break       
+                    
                     
                     # Increment the sent lines
                     sent_lines += 1
