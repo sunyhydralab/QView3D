@@ -82,7 +82,8 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
 
 const setCurrentJob = (job: Job, printerName: string) => {
   console.log("Setting current job: ", job)
-  currentJob.value = { ...job, printer: printerName };
+  currentJob.value = job;
+  currentJob.value.printer = printerName;
 }
 </script>
 
@@ -104,7 +105,7 @@ const setCurrentJob = (job: Job, printerName: string) => {
                   <h5 class="card-title"><i class="fas fa-chart-line"></i> <b>Progress:</b> {{ currentJob?.progress ?
                     `${currentJob?.progress.toFixed(2)}%` : '0.00%' }}</h5>
                   <div class="progress">
-                    <div class="progress-bar" role="progressbar"
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
                       :style="{ width: `${currentJob?.progress ? currentJob?.progress.toFixed(2) : '0'}%` }"
                       aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
                   </div>
@@ -116,13 +117,6 @@ const setCurrentJob = (job: Job, printerName: string) => {
             <div class="col-sm-4">
               <div class="card bg-light mb-3">
                 <div class="card-body">
-                  <h5 class="card-title"><i class="fas fa-stopwatch"></i> <b>Total Time:</b> 31:43</h5>
-                </div>
-              </div>
-            </div>
-            <div class="col-sm-4">
-              <div class="card bg-light mb-3">
-                <div class="card-body">
                   <h5 class="card-title"><i class="fas fa-hourglass-half"></i> <b>Elapsed Time:</b> 12:41</h5>
                 </div>
               </div>
@@ -131,6 +125,13 @@ const setCurrentJob = (job: Job, printerName: string) => {
               <div class="card bg-light mb-3">
                 <div class="card-body">
                   <h5 class="card-title"><i class="fas fa-hourglass-end"></i> <b>Remaining Time:</b> 19:02</h5>
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-4">
+              <div class="card bg-light mb-3">
+                <div class="card-body">
+                  <h5 class="card-title"><i class="fas fa-stopwatch"></i> <b>Total Time:</b> 31:43</h5>
                 </div>
               </div>
             </div>

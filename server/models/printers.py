@@ -161,11 +161,11 @@ class Printer(db.Model):
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
                 
-                if response == "":
-                    self.responseCount+=1 
-                    if(self.responseCount>=10):
-                        self.setError("No response from printer")
-                        raise Exception("No response from printer") 
+                # if response == "":
+                #     self.responseCount+=1 
+                #     if(self.responseCount>=10):
+                #         self.setError("No response from printer")
+                #         raise Exception("No response from printer") 
                     
                 stat = self.getStatus()
                 if stat == "complete" or stat=="error":
@@ -260,39 +260,25 @@ class Printer(db.Model):
     # Function to send "ending" gcode commands   
     def endingSequence(self):
         try: 
-            # self.sendGcode("G91")
-            # self.sendGcode("G1 F1800 E-3")
-            # self.sendGcode("G1 F3000 Z10")
-            # self.sendGcode("G90")
-            # self.sendGcode("G1 X0 Y220")
-            # self.sendGcode("M106 S0")
-            # self.sendGcode("M104 S0")
-            # self.sendGcode("M140 S0")
-
             # *** Ender 3 Pro ending sequence ***
-            # G91 ;Relative positioning
-            # G1 E-2 F2700 ;Retract a bit
-            # G1 E-2 Z0.2 F2400 ;Retract and raise Z
-            # G1 X5 Y5 F3000 ;Wipe out
-            # G1 Z10 ;Raise Z more
-            # G90 ;Absolute positioning
-            # G1 X0 Y{machine_depth} ;Present print
-            # M106 S0 ;Turn-off fan
-            # M104 S0 ;Turn-off hotend
-            # M140 S0 ;Turn-off bed
-            # M84 X Y E ;Disable all steppers but Z
+            self.gcodeEnding("G91") # Relative positioning
+            self.gcodeEnding("G1 E-2 F2700") # Retract a bit
+            self.gcodeEnding("G1 E-2 Z0.2 F2400") # Retract and raise Z
+            self.gcodeEnding("G1 X5 Y5 F3000") # Wipe out
+            self.gcodeEnding("G1 Z10") # Raise Z more
+            self.gcodeEnding("G90") # Absolute positioning
+            self.gcodeEnding("G1 X0 Y220") # Present print
+            self.gcodeEnding("M106 S0") # Turn-off fan
+            self.gcodeEnding("M104 S0") # Turn-off hotend
+            self.gcodeEnding("M140 S0") # Turn-off bed
+            self.gcodeEnding("M84 X Y E") # Disable all steppers but Z
 
-            # ***Prusa i3 MK3 ending sequence***
-            # M104 S0 ; turn off extruder
-            # M140 S0 ; turn off heatbed
-            # M107 ; turn off fan
-            # G1 X0 Y210; home X axis and push Y forward
-            # M84 ; disable motors
-            self.gcodeEnding("M104 S0") # turn off extruder
-            self.gcodeEnding("M140 S0") # turn off heatbed
-            self.gcodeEnding("M107") # turn off fan
-            self.gcodeEnding("G1 X0 Y210") # home X axis and push Y forward
-            self.gcodeEnding("M84") # disable motors
+            # *** Prusa i3 MK3 ending sequence ***
+            # self.gcodeEnding("M104 S0") # turn off extruder
+            # self.gcodeEnding("M140 S0") # turn off heatbed
+            # self.gcodeEnding("M107") # turn off fan
+            # self.gcodeEnding("G1 X0 Y210") # home X axis and push Y forward
+            # self.gcodeEnding("M84") # disable motors
 
             # *** Prusa MK4 ending sequence ***
             # {if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+1, max_print_height)} F720 ; Move print head up{endif}
@@ -306,6 +292,7 @@ class Printer(db.Model):
             # M142 S36 ; reset heatbreak target temp
             # M84 X Y E ; disable motors
             # ; max_layer_z = [max_layer_z]
+            
         except Exception as e:
             self.setError(e)
             return "error"

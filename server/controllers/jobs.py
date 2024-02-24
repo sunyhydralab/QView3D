@@ -62,9 +62,9 @@ def add_job_to_queue():
         priority = request.form['priority']
         # if priotiry is '1' then add to front of queue, else add to back
         if priority == 'true':
-            findPrinterObject(printer_id).getQueue().addToFront(job)
+            findPrinterObject(printer_id).getQueue().addToFront(job, printer_id)
         else:
-            findPrinterObject(printer_id).getQueue().addToBack(job)
+            findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     
