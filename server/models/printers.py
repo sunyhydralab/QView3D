@@ -245,7 +245,9 @@ class Printer(db.Model):
                                 self.sendGcode("G90") # set back to absolute positioning 
                                 break 
                     
-                               
+                    # right now, if pause is in the line, M601 will be sent twice to avoid duplicate code. 
+                    # test to see if thatll be an issue. 
+                    
                     res = self.sendGcode(line)
                     
                     # if("M601" in line):
