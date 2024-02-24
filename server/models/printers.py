@@ -231,15 +231,15 @@ class Printer(db.Model):
                     if len(line) == 0 or line.startswith(";"): 
                         continue
                     # Send the line to the printer.
-                    time.sleep(1)
+                    # time.sleep(1)
                     if(self.getStatus()=="paused"):
-                        # self.sendGcode("M601")
+                        self.sendGcode("M601")
                         while(True):
                             stat = self.getStatus()
                             if(stat=="printing"):
                                 break 
                             
-                    # res = self.sendGcode(line)
+                    res = self.sendGcode(line)
                         
                         
                     if("M601" in line):
