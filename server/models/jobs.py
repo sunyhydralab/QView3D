@@ -12,6 +12,7 @@ from io import BytesIO
 from werkzeug.datastructures import FileStorage
 import time 
 import gzip
+from app import printer_status_service
 # model for job history table 
 class Job(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -33,8 +34,8 @@ class Job(db.Model):
         self.printer_id = printer_id 
         self.status = status 
         self.file_name_original = file_name_original # original file name without PK identifier 
-        file_name_pk = None
-        progress = 0.0
+        self.file_name_pk = None
+        self.progress = 0.0
 
     def __repr__(self):
         return f"Job(id={self.id}, name={self.name}, printer_id={self.printer_id}, status={self.status})"
@@ -115,6 +116,9 @@ class Job(db.Model):
                 job.status = new_status
                 # Commit the changes to the database
                 db.session.commit()
+                
+                current_app.socketio.emit('job_status_update', {'job_id': job_id, 'status': new_status})
+                
                 return {"success": True, "message": f"Job {job_id} status updated successfully."}
             else:
                 return {"success": False, "message": f"Job {job_id} not found."}, 404
@@ -133,7 +137,30 @@ class Job(db.Model):
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve job. Database error"}), 500  
-        
+     
+    @classmethod 
+    def findPrinterObject(self, printer_id): 
+        threads = printer_status_service.getThreadArray()
+        return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer   
+      
+    @classmethod 
+    def queueRestore(cls, printer_id):
+        try:
+            jobs = cls.query.filter_by(printer_id=printer_id, status='inqueue').all()
+            for job in jobs:
+                base_name, extension = os.path.splitext(job.file_name_original)
+                # Append the ID to the base name
+                file_name_pk = f"{base_name}_{id}{extension}"
+                job.setFileName(file_name_pk) # set unique file name                 
+                # print(type(job.file))
+                cls.findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
+
+            return {"success": True, "message": "Queue restored successfully."}
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return jsonify({"error": "Failed to restore queue. Database error"}), 500
+    
+
     @classmethod
     def removeFileFromPath(cls, file_path):
         # file_path = self.generatePath()  # Get the file path
@@ -147,6 +174,7 @@ class Job(db.Model):
     @classmethod 
     def getPathForDelete(cls, file_name):
         return os.path.join('../uploads', file_name)
+    
            
     def saveToFolder(self):
         file_data = self.getFile()
@@ -191,6 +219,7 @@ class Job(db.Model):
     # which sends it to the frontend using socketio
     def setProgress(self, progress):
         if self.status == 'printing':
+            self.progress = progress
             # Emit a 'progress_update' event with the new progress
             current_app.socketio.emit('progress_update', {'job_id': self.id, 'progress': progress})
 

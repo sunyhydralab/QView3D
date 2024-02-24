@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useRetrievePrintersInfo, useSetStatus, setupStatusSocket, disconnectStatusSocket, type Device } from '@/model/ports';
-import { type Job, useReleaseJob, useRemoveJob, setupProgressSocket, disconnectProgressSocket } from '@/model/jobs';
+import { useRetrievePrintersInfo, useSetStatus, setupStatusSocket, setupQueueSocket, setupErrorSocket, disconnectStatusSocket, type Device } from '@/model/ports';
+import { type Job, useReleaseJob, useRemoveJob, setupProgressSocket, setupJobStatusSocket, disconnectProgressSocket } from '@/model/jobs';
 import { useRouter, useRoute } from 'vue-router';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 
@@ -35,8 +35,14 @@ onMounted(async () => {
     await updatePrinters()
     // Setup the satus socket
     setupStatusSocket(printers)
+
+    setupQueueSocket(printers)
     // Setup the progress socket
     setupProgressSocket(printers.value)
+
+    setupJobStatusSocket(printers.value)
+
+    setupErrorSocket(printers.value)
 
     console.log("PRINTERS: ", printers.value)
 
@@ -52,20 +58,6 @@ onUnmounted(() => {
   }
 })
 
-watch(printers, async (newPrinters, oldPrinters) => {
-  for (let i = 0; i < newPrinters.length; i++) {
-    if (oldPrinters && oldPrinters.length > i && newPrinters[i].status !== oldPrinters[i].status) {
-      // The status of the printer has changed
-      const newStatus = newPrinters[i].status;
-      for (let j = 0; j < newPrinters.length; j++) {
-        if (i !== j) { // Don't update the status of the printer that triggered the change
-          newPrinters[j].status = newStatus;
-        }
-      }
-    }
-  }
-}, { deep: true });
-
 const sendToQueueView = (name: string | undefined) => {
   if (name) {
     router.push({ name: 'QueueViewVue', params: { printerName: name } });
@@ -74,15 +66,7 @@ const sendToQueueView = (name: string | undefined) => {
 
 // set the status of the printer
 const setPrinterStatus = async (printer: Device, status: string) => {
-  printer.status = status; // update the status in the frontend
   await setStatus(printer.id, status); // update the status in the backend
-  if ((status == 'offline' && printer.queue?.[0]?.status == 'printing') || status == "complete") {
-    if (printer.queue && printer.queue.length > 0) {
-      printer.queue[0].status = "cancelled";
-      await removeJob(printer.queue?.[0])
-    }
-  }
-
   setTimeout(() => {
     // Using setTimeout to ensure the value is reset after the change event is processed
     const selectElement = document.querySelector('select');
@@ -92,17 +76,8 @@ const setPrinterStatus = async (printer: Device, status: string) => {
   });
 }
 
-const releasePrinter = async (jobToFind: Job | undefined, key: number, printerToFind: Device, printerIdToPrintTo: number | undefined, status: string) => {
-  const foundPrinter = printers.value.find(printer => printer === printerToFind); // Find the printer by direct object comparison
-  if (!foundPrinter) return; // Return if printer not found
-  else {
-    const jobIndex = foundPrinter.queue?.findIndex(job => job === jobToFind); // Find the index of the job in the printer's queue
-    if (jobIndex === undefined || jobIndex === -1) return; // Return if job not found
-    foundPrinter.queue?.shift(); // This will remove the first job from the queue
-    foundPrinter.status = status; // Set the printer status to ready
-    
-    await releaseJob(jobToFind, key, printerIdToPrintTo)
-  }
+const releasePrinter = async (jobToFind: Job | undefined, key: number, printerToFind: Device, printerIdToPrintTo: number | undefined) => {
+  await releaseJob(jobToFind, key, printerIdToPrintTo)
 }
 
 const setCurrentJob = (job: Job, printerName: string) => {
@@ -112,66 +87,71 @@ const setCurrentJob = (job: Job, printerName: string) => {
 </script>
 
 <template>
-<!-- bootstramp 'infoModal' -->
-<div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-xl">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="infoModalLabel"><b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <!-- Display other attributes of the job -->
-        <div class="row">
-          <div class="col-sm-12">
-            <div class="card bg-light mb-3">
-              <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-chart-line"></i> <b>Progress:</b> {{ currentJob?.progress ? `${currentJob?.progress.toFixed(2)}%` : '0.00%' }}</h5>
-                <div class="progress">
-                  <div class="progress-bar" role="progressbar" :style="{ width: `${currentJob?.progress ? currentJob?.progress.toFixed(2) : '0'}%` }" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+  <!-- bootstramp 'infoModal' -->
+  <div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="infoModalLabel"><b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Display other attributes of the job -->
+          <div class="row">
+            <div class="col-sm-12">
+              <div class="card bg-light mb-3">
+                <div class="card-body">
+                  <h5 class="card-title"><i class="fas fa-chart-line"></i> <b>Progress:</b> {{ currentJob?.progress ?
+                    `${currentJob?.progress.toFixed(2)}%` : '0.00%' }}</h5>
+                  <div class="progress">
+                    <div class="progress-bar" role="progressbar"
+                      :style="{ width: `${currentJob?.progress ? currentJob?.progress.toFixed(2) : '0'}%` }"
+                      aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <div class="row">
-          <div class="col-sm-4">
-            <div class="card bg-light mb-3">
-              <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-stopwatch"></i> <b>Total Time:</b> 31:43</h5>
+          <div class="row">
+            <div class="col-sm-4">
+              <div class="card bg-light mb-3">
+                <div class="card-body">
+                  <h5 class="card-title"><i class="fas fa-stopwatch"></i> <b>Total Time:</b> 31:43</h5>
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-4">
+              <div class="card bg-light mb-3">
+                <div class="card-body">
+                  <h5 class="card-title"><i class="fas fa-hourglass-half"></i> <b>Elapsed Time:</b> 12:41</h5>
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-4">
+              <div class="card bg-light mb-3">
+                <div class="card-body">
+                  <h5 class="card-title"><i class="fas fa-hourglass-end"></i> <b>Remaining Time:</b> 19:02</h5>
+                </div>
               </div>
             </div>
           </div>
-          <div class="col-sm-4">
-            <div class="card bg-light mb-3">
-              <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-hourglass-half"></i> <b>Elapsed Time:</b> 12:41</h5>
+          <div class="row">
+            <div class="col-sm-12 col-md-6">
+              <div class="card bg-light mb-3 h-100">
+                <div class="card-body">
+                  <h5 class="card-title"><i class="fas fa-file-alt"></i> <b>Job ID:</b> {{ currentJob?.id }}</h5>
+                  <h5 class="card-title"><i class="fas fa-clock"></i> <b>Job Status:</b> {{ currentJob?.status }}</h5>
+                  <h5 class="card-title"><i class="fas fa-file"></i> <b>File Name:</b> {{ currentJob?.file_name_original
+                  }}</h5>
+                </div>
               </div>
             </div>
-          </div>
-          <div class="col-sm-4">
-            <div class="card bg-light mb-3">
-              <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-hourglass-end"></i> <b>Remaining Time:</b> 19:02</h5>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-sm-12 col-md-6">
-            <div class="card bg-light mb-3 h-100">
-              <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-file-alt"></i> <b>Job ID:</b> {{ currentJob?.id }}</h5>
-                <h5 class="card-title"><i class="fas fa-clock"></i> <b>Job Status:</b> {{ currentJob?.status }}</h5>
-                <h5 class="card-title"><i class="fas fa-file"></i> <b>File Name:</b> {{ currentJob?.file_name_original }}</h5>
-              </div>
-            </div>
-          </div>
-          <div class="col-sm-12 col-md-6">
-            <div class="card bg-light mb-3 h-100">
-              <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-thermometer-full"></i> <b>Nozzle Temp:</b> 200&deg;C</h5>
-                <h5 class="card-title"><i class="fas fa-thermometer-half"></i> <b>Bed Temp:</b> 60&deg;C</h5>
+            <div class="col-sm-12 col-md-6">
+              <div class="card bg-light mb-3 h-100">
+                <div class="card-body">
+                  <h5 class="card-title"><i class="fas fa-thermometer-full"></i> <b>Nozzle Temp:</b> 200&deg;C</h5>
+                  <h5 class="card-title"><i class="fas fa-thermometer-half"></i> <b>Bed Temp:</b> 60&deg;C</h5>
+                </div>
               </div>
             </div>
           </div>
@@ -179,7 +159,6 @@ const setCurrentJob = (job: Job, printerName: string) => {
       </div>
     </div>
   </div>
-</div>
 
   <div class="container">
     <b>Home</b>
@@ -198,10 +177,12 @@ const setCurrentJob = (job: Job, printerName: string) => {
       <tr v-for="printer in printers" :key="printer.name">
         <td
           v-if="(printer.status && (printer.status === 'printing' || printer.status === 'complete')) && (printer.queue && printer.queue.length > 0 && printer.queue?.[0].status != 'inqueue')">
-          <button type="button" class="btn btn-primary btn-circle" data-bs-toggle="modal" data-bs-target="#infoModal" v-bind:job="printer.queue[0]" @click="printer.name && setCurrentJob(printer.queue[0], printer.name)">
+          <button type="button" class="btn btn-primary btn-circle" data-bs-toggle="modal" data-bs-target="#infoModal"
+            v-bind:job="printer.queue[0]" @click="printer.name && setCurrentJob(printer.queue[0], printer.name)">
             <i class="fas fa-info"></i>
           </button>
-          {{ printer.queue?.[0].id }}</td>
+          {{ printer.queue?.[0].id }}
+        </td>
         <td v-else><i>idle</i></td>
         <td><button type="button" class="btn btn-link" @click="sendToQueueView(printer.name)">{{ printer.name }}</button>
         </td>
@@ -210,41 +191,53 @@ const setCurrentJob = (job: Job, printerName: string) => {
           <p>{{ printer.status }}</p>
           <select @change="setPrinterStatus(printer, ($event.target as HTMLSelectElement).value)">
             <option value="">Change Status</option> <!-- Default option -->
-            <option v-if='printer.status!="printing"' value="offline">Turn Offline</option>
-            <option value="ready">Set to Ready</option>
+            <option
+              v-if='printer.status == "configuring" || printer.status == "ready" || printer.status == "error" || printer.status == "complete"'
+              value="offline">Turn Offline</option>
+            <option v-if='printer.status == "configuring" || printer.status == "offline" || printer.status == "error"'
+              value="ready">Set to Ready</option>
             <option v-if="printer.status == 'printing'" value="complete">Stop Print</option>
           </select>
         </td>
 
-        <td v-if="(printer.queue && printer.queue.length > 0 && printer.queue?.[0]?.status != 'inqueue')">{{ printer.queue?.[0]?.name }}
+        <td
+          v-if="(printer.status == 'printing' || printer.status == 'complete' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+          {{ printer.queue?.[0]?.name }}
         </td>
         <td v-else></td>
-        <td v-if="(printer.queue && printer.queue.length > 0 && printer.queue?.[0]?.status != 'inqueue')">{{
-          printer.queue?.[0]?.file_name_original }}</td>
+        <td
+          v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+          {{
+            printer.queue?.[0]?.file_name_original }}</td>
         <td v-else></td>
 
+        <!-- <div class="spinner-border" role="status">
+          <span class="sr-only">Loading...</span>
+        </div> -->
+
         <td style="width: 250px;">
-          <div v-if="printer.status === 'printing' && printer.queue">
-            <div v-for="job in printer.queue" :key="job.id">
+          <div v-if="printer.status === 'printing'">
+            <!-- <div v-for="job in printer.queue" :key="job.id"> -->
               <!-- Display the elapsed time -->
-              <p v-if="job.elapsed_time">{{ new Date(job.elapsed_time * 1000).toISOString().substr(11, 8) }}</p>
+              <p v-if="printer.queue?.[0].elapsed_time">{{ new Date(printer.queue?.[0].elapsed_time * 1000).toISOString().substr(11, 8) }}</p>
               <div class="progress" style="position: relative;">
                 <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
-                  :style="{ width: (job.progress || 0) + '%' }" :aria-valuenow="job.progress" aria-valuemin="0"
+                  :style="{ width: (printer.queue?.[0].progress || 0) + '%' }" :aria-valuenow="printer.queue?.[0].progress" aria-valuemin="0"
                   aria-valuemax="100">
                 </div>
                 <!-- job progress set to 2 decimal places -->
-                <p style="position: absolute; width: 100%; text-align: center; color: black;">{{ job.progress ? `${job.progress.toFixed(2)}%` : '0.00%' }}</p>
+                <p style="position: absolute; width: 100%; text-align: center; color: black;">{{ printer.queue?.[0].progress ?
+                  `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
               </div>
-            </div>
+            <!-- </div> -->
           </div>
 
           <div
-            v-else-if="(printer?.status != 'printing') && (printer.queue && printer.queue.length > 0 && printer.queue?.[0]?.status != 'printing' && printer.queue?.[0]?.status != 'inqueue')">
+            v-else-if="printer.queue?.[0] && (printer.queue?.[0].status == 'complete' || printer.queue?.[0].status == 'cancelled')">
             <button type="button" class="btn btn-danger"
-              @click="releasePrinter(printer.queue?.[0], 3, printer, printer.id, 'error')">Fail</button>
+              @click="releasePrinter(printer.queue?.[0], 3, printer, printer.id)">Fail</button>
             <button type="button" class="btn btn-secondary"
-              @click="releasePrinter(printer.queue?.[0], 1, printer, printer.id, 'ready')">Clear</button>
+              @click="releasePrinter(printer.queue?.[0], 1, printer, printer.id)">Clear</button>
 
             <!-- Clear/Rerun dropdown -->
             <div class="dropdown">
@@ -255,14 +248,23 @@ const setCurrentJob = (job: Job, printerName: string) => {
               <ul class="dropdown-menu" aria-labelledby="rerunDropdown">
                 <li v-for="rerunPrinter in printers" :key="rerunPrinter.id">
                   <a class="dropdown-item"
-                    @click="releasePrinter(printer.queue?.[0], 2, rerunPrinter, rerunPrinter.id, 'ready')">{{ rerunPrinter.name
+                    @click="releasePrinter(printer.queue?.[0], 2, rerunPrinter, rerunPrinter.id)">{{
+                      rerunPrinter.name
                     }}</a>
                 </li>
               </ul>
             </div>
           </div>
-
+          <div
+            v-else-if="printer.queue?.[0] && (printer.queue?.[0].status == 'printing' && printer.status == 'complete')">
+            <button class="btn btn-primary" type="button" disabled>
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              <span class="sr-only">Finishing print...</span>
+            </button>
+          </div>
+          <div v-else-if="printer.status=='error'" class="alert alert-danger" role="alert">{{printer?.error}}</div>
         </td>
+
 
 
       </tr>
@@ -300,5 +302,4 @@ p {
   text-align: center;
   font-size: 12px;
   line-height: 1.42857;
-}
-</style>
+}</style>
