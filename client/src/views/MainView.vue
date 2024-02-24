@@ -178,7 +178,7 @@ const setCurrentJob = (job: Job, printerName: string) => {
 
       <tr v-for="printer in printers" :key="printer.name">
         <td
-          v-if="(printer.status && (printer.status === 'printing' || printer.status === 'complete')) && (printer.queue && printer.queue.length > 0 && printer.queue?.[0].status != 'inqueue')">
+          v-if="(printer.status && (printer.status === 'printing' || printer.status === 'complete' || printer.status=='paused')) && (printer.queue && printer.queue.length > 0 && printer.queue?.[0].status != 'inqueue')">
           <button type="button" class="btn btn-primary btn-circle" data-bs-toggle="modal" data-bs-target="#infoModal"
             v-bind:job="printer.queue[0]" @click="printer.name && setCurrentJob(printer.queue[0], printer.name)">
             <i class="fas fa-info"></i>
@@ -205,12 +205,12 @@ const setCurrentJob = (job: Job, printerName: string) => {
         </td>
 
         <td
-          v-if="(printer.status == 'printing' || printer.status == 'complete' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+          v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status=='paused' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
           {{ printer.queue?.[0]?.name }}
         </td>
         <td v-else></td>
         <td
-          v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+          v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status=='paused') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
           {{
             printer.queue?.[0]?.file_name_original }}</td>
         <td v-else></td>
@@ -220,7 +220,7 @@ const setCurrentJob = (job: Job, printerName: string) => {
         </div> -->
 
         <td style="width: 250px;">
-          <div v-if="printer.status === 'printing'">
+          <div v-if="printer.status === 'printing' || printer.status=='paused'">
             <!-- <div v-for="job in printer.queue" :key="job.id"> -->
               <!-- Display the elapsed time -->
               <p v-if="printer.queue?.[0].elapsed_time">{{ new Date(printer.queue?.[0].elapsed_time * 1000).toISOString().substr(11, 8) }}</p>
