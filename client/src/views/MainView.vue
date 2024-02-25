@@ -19,20 +19,22 @@ let intervalId: number | undefined;
 
 onMounted(async () => {
   try {
-    const route = useRoute()
-    const printerName = route.params.printerName
-    const updatePrinters = async () => {
-      const printerInfo = await retrieveInfo()
-      printers.value = []
-      for (const printer of printerInfo) {
-        printers.value.push({
-          ...printer,
-          isExpanded: printer.name === printerName
-        })
-      }
-    }
+
+    printers.value = await retrieveInfo()
+    // const route = useRoute()
+    // const printerName = route.params.printerName
+    // const updatePrinters = async () => {
+    //   const printerInfo = await retrieveInfo()
+    //   printers.value = []
+    //   for (const printer of printerInfo) {
+    //     printers.value.push({
+    //       ...printer,
+    //       isExpanded: printer.name === printerName
+    //     })
+    //   }
+    // }
     // Fetch the printer status immediately on mount
-    await updatePrinters()
+    // await updatePrinters()
     // Setup the satus socket
     setupStatusSocket(printers)
 
@@ -42,7 +44,7 @@ onMounted(async () => {
 
     setupJobStatusSocket(printers.value)
 
-    setupErrorSocket(printers.value)
+    setupErrorSocket(printers)
 
     console.log("PRINTERS: ", printers.value)
 
@@ -177,7 +179,7 @@ const setCurrentJob = (job: Job, printerName: string) => {
 
       <tr v-for="printer in printers" :key="printer.name">
         <td
-          v-if="(printer.status && (printer.status === 'printing' || printer.status === 'complete')) && (printer.queue && printer.queue.length > 0 && printer.queue?.[0].status != 'inqueue')">
+          v-if="(printer.status && (printer.status === 'printing' || printer.status === 'complete' || printer.status=='paused')) && (printer.queue && printer.queue.length > 0 && printer.queue?.[0].status != 'inqueue')">
           <button type="button" class="btn btn-primary btn-circle" data-bs-toggle="modal" data-bs-target="#infoModal"
             v-bind:job="printer.queue[0]" @click="printer.name && setCurrentJob(printer.queue[0], printer.name)">
             <i class="fas fa-info"></i>
@@ -198,16 +200,18 @@ const setCurrentJob = (job: Job, printerName: string) => {
             <option v-if='printer.status == "configuring" || printer.status == "offline" || printer.status == "error"'
               value="ready">Set to Ready</option>
             <option v-if="printer.status == 'printing'" value="complete">Stop Print</option>
+            <option v-if="printer.status == 'printing'" value="paused">Pause Print</option>
+            <option v-if="printer.status == 'paused'" value="printing">Unpause Print</option>
           </select>
         </td>
 
         <td
-          v-if="(printer.status == 'printing' || printer.status == 'complete' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+          v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status=='paused' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
           {{ printer.queue?.[0]?.name }}
         </td>
         <td v-else></td>
         <td
-          v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+          v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status=='paused') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
           {{
             printer.queue?.[0]?.file_name_original }}</td>
         <td v-else></td>
@@ -217,7 +221,7 @@ const setCurrentJob = (job: Job, printerName: string) => {
         </div> -->
 
         <td style="width: 250px;">
-          <div v-if="printer.status === 'printing'">
+          <div v-if="printer.status === 'printing' || printer.status=='paused'">
             <!-- <div v-for="job in printer.queue" :key="job.id"> -->
               <!-- Display the elapsed time -->
               <p v-if="printer.queue?.[0].elapsed_time">{{ new Date(printer.queue?.[0].elapsed_time * 1000).toISOString().substr(11, 8) }}</p>

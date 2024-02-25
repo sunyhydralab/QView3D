@@ -231,8 +231,32 @@ class Printer(db.Model):
                     if len(line) == 0 or line.startswith(";"): 
                         continue
                     # Send the line to the printer.
+                    # time.sleep(1)
+                    if(self.getStatus()=="paused" or ("M601" in line)):
+                        self.setStatus("paused")
+                        self.sendGcode("G91") # set relative positioning mode
+                        self.sendGcode("G1 Z10 F300")  # move up 10mm 
+                        self.sendGcode("M601") # pause command 
+                        # self.sendGcode("G1 Z-10 F300")
+                        while(True):
+                            stat = self.getStatus()
+                            if(stat=="printing"):
+                                self.sendGcode("G1 Z-10 F300") # move back to previous position 
+                                self.sendGcode("G90") # set back to absolute positioning 
+                                break 
+                    
+                    # right now, if pause is in the line, M601 will be sent twice to avoid duplicate code. 
+                    # test to see if thatll be an issue. 
                     
                     res = self.sendGcode(line)
+                    
+                    # if("M601" in line):
+                    #     self.setStatus("paused")
+                    #     while(True):
+                    #         stat = self.getStatus()
+                    #         if(stat=="printing"):
+                    #             break       
+                    
                     
                     # Increment the sent lines
                     sent_lines += 1
@@ -385,6 +409,8 @@ class Printer(db.Model):
         try:
             print("setting status")
             self.status = newStatus
+            
+            # print(self.status)
             # Emit a 'status_update' event with the new status
             current_app.socketio.emit('status_update', {'printer_id': self.id, 'status': newStatus})
         except Exception as e:
