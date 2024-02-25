@@ -1,5 +1,7 @@
+import asyncio
 import base64
 import os
+import re
 from models.db import db 
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
@@ -26,6 +28,10 @@ class Job(db.Model):
     file_name_original = db.Column(db.String(50), nullable = False)
     file_name_pk = None
     progress = 0.0
+    total_time = 0
+    start_time = 0
+    elapsed_time = 0
+    pause_time = 0
 
     
     def __init__(self, file, name, printer_id, status, file_name_original): 
@@ -36,6 +42,10 @@ class Job(db.Model):
         self.file_name_original = file_name_original # original file name without PK identifier 
         self.file_name_pk = None
         self.progress = 0.0
+        self.total_time = 0
+        self.start_time = 0
+        self.elapsed_time = 0
+        self.pause_time = 0
 
     def __repr__(self):
         return f"Job(id={self.id}, name={self.name}, printer_id={self.printer_id}, status={self.status})"
@@ -221,11 +231,40 @@ class Job(db.Model):
         if self.status == 'printing':
             self.progress = progress
             # Emit a 'progress_update' event with the new progress
-            current_app.socketio.emit('progress_update', {'job_id': self.id, 'progress': progress})
+            current_app.socketio.emit('progress_update', {'job_id': self.id, 'progress': self.progress})
 
     # added a getProgress method to get the progress of a job
     def getProgress(self):
         return self.progress
+    
+    def getTimeSeconds(self, comment_lines):
+        # job_line can look two ways:
+        # 1. ;TIME:seconds
+        # 2. ; estimated printing time (normal mode) = minutes seconds
+        # if first line contains "FLAVOR", then the second line contains the time estimate in the format of ";TIME:seconds"
+        if "FLAVOR" in comment_lines[0]:
+            time_line = comment_lines[1]
+            time_seconds = int(time_line.split(":")[1])
+        else:
+            # search for the line that contains "printing time", then the time estimate is in the format of "; estimated printing time (normal mode) = minutes seconds"
+            time_line = next(line for line in comment_lines if "printing time" in line)
+            time_minutes, time_seconds = map(int, re.findall(r'\d+', time_line))
+            time_seconds += time_minutes * 60
+        return time_seconds
+
+    def startTime(self, time_seconds):
+        self.total_time = time_seconds
+        self.start_time = time.time()
+        current_app.socketio.emit('job_time', {'job_id': self.id, 'start_time': self.start_time, 'total_time': self.total_time})
+    
+    def setPauseTime(self):
+        self.pause_time = time.time()
+        self.elapsed_time += self.pause_time - self.start_time
+        current_app.socketio.emit('job_pause', {'job_id': self.id, 'pause_time': self.pause_time, 'elapsed_time': self.elapsed_time})
+
+    def resumeTime(self):
+        self.start_time = time.time()
+        current_app.socketio.emit('job_resume', {'job_id': self.id, 'start_time': self.start_time, 'elapsed_time': self.elapsed_time}) 
     
     @classmethod 
     def setDBstatus(cls, jobid, status):

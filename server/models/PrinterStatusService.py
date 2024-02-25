@@ -103,7 +103,11 @@ class PrinterStatusService:
                     "date": job.date.strftime('%a, %d %b %Y %H:%M:%S'),
                     "printerid": job.printer_id, 
                     "file_name_original": job.file_name_original, 
-                    "progress": job.progress
+                    "progress": job.progress,
+                    "total_time": job.total_time,
+                    "start_time": job.start_time,
+                    "elapsed_time": job.elapsed_time,
+                    "pause_time": job.pause_time,
                 }
                 printer_info['queue'].append(job_info)
             

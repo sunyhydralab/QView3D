@@ -1,3 +1,4 @@
+import asyncio
 from models.db import db
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
@@ -212,6 +213,12 @@ class Printer(db.Model):
             with open(path, "r") as g:
                 # Read the file and store the lines in a list
                 lines = g.readlines()
+                
+                #  Time handling
+                comment_lines = [line for line in lines if line.strip() and line.startswith(";")]
+                time_seconds = job.getTimeSeconds(comment_lines)
+                job.startTime(time_seconds)
+                
                 # Only send the lines that are not empty and don't start with ";"
                 # so we can correctly get the progress
                 command_lines = [line for line in lines if line.strip() and not line.startswith(";")]
@@ -233,6 +240,7 @@ class Printer(db.Model):
                     # Send the line to the printer.
                     # time.sleep(1)
                     if(self.getStatus()=="paused" or ("M601" in line)):
+                        job.setPauseTime()
                         self.setStatus("paused")
                         self.sendGcode("G91") # set relative positioning mode
                         self.sendGcode("G1 Z10 F300")  # move up 10mm 
@@ -241,6 +249,7 @@ class Printer(db.Model):
                         while(True):
                             stat = self.getStatus()
                             if(stat=="printing"):
+                                job.resumeTime()
                                 self.sendGcode("G1 Z-10 F300") # move back to previous position 
                                 self.sendGcode("G90") # set back to absolute positioning 
                                 break 

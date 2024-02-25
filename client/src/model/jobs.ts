@@ -16,18 +16,23 @@ export interface Job {
   date?: Date
   status?: string
   progress?: number //store progress of job
-  elapsed_time?: number //store elapsed time of job
   printer: string //store printer name
   printerid: number
   priority?: string
   // job_id: number
+  total_time?: number
+  elapsed_time?: number
+  remaining_time?: number
+  timer?: NodeJS.Timeout
 }
 
 export function useGetJobs() {
   return {
     async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean) {
       try {
-        const response = await api(`getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}`)
+        const response = await api(
+          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}`
+        )
         return response
       } catch (error) {
         console.error(error)
@@ -46,7 +51,7 @@ export function useAddJobToQueue() {
           return response
         } else {
           console.error('Response is undefined or null')
-          return { "success": false, "message": "Response is undefined or null." }
+          return { success: false, message: 'Response is undefined or null.' }
         }
       } catch (error) {
         console.error(error)
@@ -65,7 +70,7 @@ export function useAutoQueue() {
           return response
         } else {
           console.error('Response is undefined or null')
-          return { "success": false, "message": "Response is undefined or null." }
+          return { success: false, message: 'Response is undefined or null.' }
         }
       } catch (error) {
         console.error(error)
@@ -206,7 +211,7 @@ export function useGetJobFile() {
     async getFile(jobid: number) {
       try {
         const response = await api(`getfile?jobid=${jobid}`)
-        const file = new Blob([response.file], {type: 'text/plain'});
+        const file = new Blob([response.file], { type: 'text/plain' })
         const file_name = response.file_name
         saveAs(file, file_name)
       } catch (error) {
@@ -245,11 +250,118 @@ export function setupJobStatusSocket(printers: any) {
 
     if (job) {
       job.status = data.status
+
+      // If the job is complete, cancelled, or errored, stop the timer
+      if (['complete', 'cancelled', 'error'].includes(data.status)) {
+        if (job.timer) {
+          clearInterval(job.timer)
+          delete job.timer
+        }
+      }
+    }
+  })
+
+  // Listen for the 'job_pause' event
+  socket.on('job_pause', (data: any) => {
+    const job = printers
+      .flatMap((printer: { queue: any }) => printer.queue)
+      .find((job: { id: any }) => job?.id === data.job_id)
+
+    if (job) {
+      if (job.timer) {
+        clearInterval(job.timer)
+        delete job.timer
+      }
+
+      // Calculate the elapsed time
+      const pauseTime = Math.floor(Date.now() / 1000)
+      job.elapsed_time = pauseTime - job.start_time
+
+      // Update job.start_time to the pause time
+      job.start_time = pauseTime
+    }
+  })
+
+  // Listen for the 'job_resume' event
+  socket.on('job_resume', (data: any) => {
+    const job = printers
+      .flatMap((printer: { queue: any }) => printer.queue)
+      .find((job: { id: any }) => job?.id === data.job_id)
+
+    if (job) {
+      // Clear any existing timer
+      if (job.timer) {
+        clearInterval(job.timer)
+        delete job.timer
+      }
+
+      // Update job.start_time to the current timestamp
+      job.start_time = Math.floor(Date.now() / 1000)
+
+      // Start the timer
+      job.timer = startTimer(job, job.start_time, job.elapsed_time)
     }
   })
 }
 
-// function needs to disconnect the socket when the component is unmounted
-export function disconnectProgressSocket() {
-  socket.disconnect()
+function startTimer(job: any, start_time: number, elapsed_time: number) {
+  // Ensure start_time and elapsed_time are defined and are numbers
+  start_time = start_time || 0
+  elapsed_time = elapsed_time || 0
+
+  return setInterval(() => {
+    // Calculate the elapsed time
+    let current_elapsed_time = Math.floor(Date.now() / 1000) - start_time + elapsed_time
+    if (current_elapsed_time > job.total_time) {
+      current_elapsed_time = job.total_time
+    }
+
+    // Calculate the remaining time
+    const remaining_time = job.total_time - current_elapsed_time
+
+    // Update the job's time variables
+    job.total_time = job.total_time
+    job.elapsed_time = current_elapsed_time
+    job.remaining_time = remaining_time
+
+    // If the job is finished, stop the timer
+    if (current_elapsed_time >= job.total_time) {
+      clearInterval(job.timer)
+      delete job.timer
+    }
+  }, 1000)
+}
+
+export function setupTimeSocket(printers: any) {
+  // Listen for the 'job_time' event
+  socket.on('job_time', (data: any) => {
+    // Get the start time and total time from the server
+    const job_id = data.job_id
+    const total_time = data.total_time
+
+    // Find the job with the matching id
+    const job = printers
+      .flatMap((printer: { queue: any }) => printer.queue)
+      .find((job: { id: any }) => job?.id === data.job_id)
+
+    if (!job) {
+      console.error(`Job with id ${job_id} not found`)
+      return
+    }
+
+    // Clear any existing timer
+    if (job.timer) {
+      clearInterval(job.timer)
+      delete job.timer
+    }
+
+    // Set the total time for the job
+    job.total_time = total_time
+
+    // Set the start time to the current timestamp
+    job.start_time = Math.floor(Date.now() / 1000)
+
+    // Create a timer that updates the time every second
+    job.timer = startTimer(job, job.start_time, 0)
+  })
 }

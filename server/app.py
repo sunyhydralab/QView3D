@@ -9,7 +9,7 @@ from flask_migrate import Migrate
 from dotenv import load_dotenv
 from controllers.ports import getRegisteredPrinters
 import shutil
-from flask_socketio import SocketIO  # Add this import
+from flask_socketio import SocketIO
 
 # moved this up here so we can pass the app to the PrinterStatusService
 # Basic app setup 

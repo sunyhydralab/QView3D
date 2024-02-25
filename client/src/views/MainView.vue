@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, useSetStatus, setupStatusSocket, setupQueueSocket, setupErrorSocket, disconnectStatusSocket, type Device } from '@/model/ports';
-import { type Job, useReleaseJob, useRemoveJob, setupProgressSocket, setupJobStatusSocket, disconnectProgressSocket } from '@/model/jobs';
+import { type Job, useReleaseJob, useRemoveJob, setupProgressSocket, setupJobStatusSocket, setupTimeSocket } from '@/model/jobs';
 import { useRouter, useRoute } from 'vue-router';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 
@@ -46,6 +46,8 @@ onMounted(async () => {
 
     setupErrorSocket(printers)
 
+    setupTimeSocket(printers.value)
+
     console.log("PRINTERS: ", printers.value)
 
   } catch (error) {
@@ -87,6 +89,14 @@ const setCurrentJob = (job: Job, printerName: string) => {
   currentJob.value = job;
   currentJob.value.printer = printerName;
 }
+
+const toTime = (seconds: number | undefined) => {
+  if (seconds) {
+    const date = new Date(seconds * 1000).toISOString().substr(11, 8);
+    return date;
+  }
+  return "00:00:00";
+}
 </script>
 
 <template>
@@ -119,21 +129,21 @@ const setCurrentJob = (job: Job, printerName: string) => {
             <div class="col-sm-4">
               <div class="card bg-light mb-3">
                 <div class="card-body">
-                  <h5 class="card-title"><i class="fas fa-hourglass-half"></i> <b>Elapsed Time:</b> 12:41</h5>
+                  <h5 class="card-title"><i class="fas fa-hourglass-half"></i> <b>Elapsed Time:</b> {{ toTime(currentJob?.elapsed_time) }} </h5>
                 </div>
               </div>
             </div>
             <div class="col-sm-4">
               <div class="card bg-light mb-3">
                 <div class="card-body">
-                  <h5 class="card-title"><i class="fas fa-hourglass-end"></i> <b>Remaining Time:</b> 19:02</h5>
+                  <h5 class="card-title"><i class="fas fa-hourglass-end"></i> <b>Remaining Time:</b> {{ toTime(currentJob?.remaining_time) }} </h5>
                 </div>
               </div>
             </div>
             <div class="col-sm-4">
               <div class="card bg-light mb-3">
                 <div class="card-body">
-                  <h5 class="card-title"><i class="fas fa-stopwatch"></i> <b>Total Time:</b> 31:43</h5>
+                  <h5 class="card-title"><i class="fas fa-stopwatch"></i> <b>Total Time:</b> {{ toTime(currentJob?.total_time) }} </h5>
                 </div>
               </div>
             </div>
@@ -224,7 +234,6 @@ const setCurrentJob = (job: Job, printerName: string) => {
           <div v-if="printer.status === 'printing' || printer.status=='paused'">
             <!-- <div v-for="job in printer.queue" :key="job.id"> -->
               <!-- Display the elapsed time -->
-              <p v-if="printer.queue?.[0].elapsed_time">{{ new Date(printer.queue?.[0].elapsed_time * 1000).toISOString().substr(11, 8) }}</p>
               <div class="progress" style="position: relative;">
                 <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
                   :style="{ width: (printer.queue?.[0].progress || 0) + '%' }" :aria-valuenow="printer.queue?.[0].progress" aria-valuemin="0"
