@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
-import { useGetJobs, type Job, useRerunJob, useGetJobFile } from '@/model/jobs';
+import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob } from '@/model/jobs';
 import { computed, onMounted, ref, watch } from 'vue';
 // import { useGetJobs, type Job } from '@/model/jobs';
 // import { computed, onMounted, ref } from 'vue';
@@ -8,9 +8,12 @@ const { jobhistory } = useGetJobs()
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { rerunJob } = useRerunJob()
 const { getFile } = useGetJobFile()
+const { deleteJob } = useDeleteJob()
 
 const printers = ref<Array<Device>>([]) // Get list of open printer threads 
 const selectedPrinters = ref<Array<Device>>([])
+const selectedJobs = ref<Array<Job>>([]);
+
 let jobs = ref<Array<Job>>([])
 let filter = ref('') // This will hold the current filter value
 let oldestFirst = ref<boolean>(false)
@@ -132,6 +135,27 @@ async function submitFilter() {
     const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value);
     jobs.value = joblist;
 }
+
+const handleJobSelection = () => {
+    // Do something with the selected jobs (stored in selectedJobs.value)
+    console.log('Selected Jobs:', selectedJobs.value);
+};
+
+const handleDeleteJobs = async () => {
+    const deletionPromises = selectedJobs.value.map(job => deleteJob(job));
+    await Promise.all(deletionPromises);
+
+    // Remove deleted jobs from the local state
+    // jobs.value = jobs.value.filter(job => !selectedJobs.value.some(selectedJob => selectedJob.id === job.id));
+
+    const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
+    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value);
+    jobs.value = joblist;
+    totalJobs.value = total;
+
+    // Clear the selected jobs array
+    selectedJobs.value = [];
+};
 </script>
 
 <template>
@@ -164,7 +188,6 @@ async function submitFilter() {
                         </ul>
                     </div>
                 </div>
-
                 <div class="col-md-4">
                     <label class="form-label">Order:</label>
                     <div class="form-check">
@@ -184,13 +207,14 @@ async function submitFilter() {
                 </div>
             </div>
         </div>
-
+        <button @click="handleDeleteJobs" class="btn btn-danger">Delete Selected Jobs</button>
         <div class="mb-2">
             <button @click="submitFilter" class="btn btn-primary">Submit Filter</button>
         </div>
         <table class="table">
             <thead>
                 <tr>
+                    <th class="col-checkbox"></th>
                     <th class="col-job-id">Job ID</th>
                     <th class="col-job-title">Job Title</th>
                     <th class="col-file">File</th>
@@ -202,6 +226,9 @@ async function submitFilter() {
             </thead>
             <tbody v-if="filteredJobs.length > 0">
                 <tr v-for="job in filteredJobs" :key="job.id">
+                    <td>
+                        <input type="checkbox" v-model="selectedJobs" :value="job" @change="handleJobSelection">
+                    </td>
                     <td>{{ job.id }}</td>
                     <td>{{ job.name }}</td>
                     <td>
@@ -270,6 +297,9 @@ th {
     background-color: #f2f2f2;
 }
 
+.col-checkbox {
+    width: 1vh;
+}
 .col-job-id {
     width: 8vh;
 }

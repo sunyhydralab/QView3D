@@ -124,6 +124,24 @@ class Job(db.Model):
                 jsonify({"error": "Failed to update job status. Database error"}),
                 500,
             )
+            
+    @classmethod
+    def delete_job(cls, job_id):
+        try:
+            job = cls.query.get(job_id)
+            if job:
+                db.session.delete(job)
+                db.session.commit()
+                return {"success": True, "message": f"Job with ID {job_id} deleted from the database."}
+            else:
+                return {"error": f"Job with ID {job_id} not found in the database."}
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            # When an error occurs or an exception is raised during a database operation (such as adding, 
+            # updating, or deleting records), it may leave the database in an inconsistent state. To handle such 
+            # situations, a rollback is performed to revert any changes made within the current session to maintain the integrity of the database.
+            db.session.rollback()
+            return {"error": "Unexpected error occurred during job deletion."}
                     
     @classmethod 
     def findJob(cls, job_id):
