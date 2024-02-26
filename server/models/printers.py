@@ -162,11 +162,16 @@ class Printer(db.Model):
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
                 
-                # if response == "":
-                #     self.responseCount+=1 
-                #     if(self.responseCount>=10):
-                #         self.setError("No response from printer")
-                #         raise Exception("No response from printer") 
+                if response == "":
+                    self.responseCount+=1 
+                    if(self.responseCount>=10):
+                        self.setError("No response from printer")
+                        raise Exception("No response from printer")
+                elif "error" in response.lower():
+                    self.setError(response)
+                    break
+                else:
+                    self.responseCount = 0
                     
                 stat = self.getStatus()
                 if stat == "complete" or stat=="error":
@@ -239,7 +244,7 @@ class Printer(db.Model):
                         continue
                     # Send the line to the printer.
                     # time.sleep(1)
-                    if(self.getStatus()=="paused" or ("M601" in line)):
+                    if(self.getStatus()=="paused" or ("M601" in line) or ("M0" in line)):
                         job.setPauseTime()
                         self.setStatus("paused")
                         self.sendGcode("G91") # set relative positioning mode
