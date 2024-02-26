@@ -21,7 +21,7 @@ const selectedPrinters = ref<Array<Device>>([])
 
 const file = ref<File>()
 const quantity = ref<number>(1)
-const priority = ref<boolean>(false)
+const priority = ref<number>(0)
 const name = ref<string>()
 
 // file upload
@@ -53,13 +53,13 @@ onMounted(async () => {
 
 // sends job to printer queue
 const handleSubmit = async () => {
-
     if (selectedPrinters.value.length == 0) {
         let numPrints = quantity.value
         for (let i = 0; i < numPrints; i++) {
             const formData = new FormData() // create FormData object
             formData.append('file', file.value as File) // append form data
             formData.append('name', name.value as string)
+            formData.append('priority', priority.value.toString())
             try {
                 await auto(formData)
                 if (form.value) {
@@ -69,12 +69,8 @@ const handleSubmit = async () => {
                 console.error('There has been a problem with your fetch operation:', error)
             }
         }
-        selectedPrinters.value = [];
-        quantity.value = 1;
-        priority.value = false;
-        name.value = undefined;
+        resetValues()
     }
-
 
     let sub = validateQuantity()
     let res = null
@@ -85,6 +81,7 @@ const handleSubmit = async () => {
                 const formData = new FormData() // create FormData object
                 formData.append('file', file.value as File) // append form data
                 formData.append('name', name.value as string)
+                formData.append('priority', priority.value.toString())
                 try {
                     res = await auto(formData)
                     if (form.value) {
@@ -110,6 +107,7 @@ const handleSubmit = async () => {
                     formData.append('file', file.value as File) // append form data
                     formData.append('name', name.value as string)
                     formData.append('printerid', printer?.id?.toString() || '');
+                    formData.append('priority', priority.value.toString())
                     try {
                         res = await addJobToQueue(formData)
                         // reset form
@@ -135,7 +133,7 @@ const handleSubmit = async () => {
 function resetValues() {
     selectedPrinters.value = [];
     quantity.value = 1;
-    priority.value = false;
+    priority.value = 0;
     name.value = undefined;
 }
 

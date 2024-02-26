@@ -18,6 +18,7 @@ export interface Device {
   status?: string
   date?: Date
   id?: number 
+  error?: string
   queue?: Job[] //  Store job array to store queue for each printer. 
 }
 
@@ -100,12 +101,64 @@ export function useSetStatus(){
   }
 }
 
+export function useHardReset(){
+  return {
+    async hardReset(printerid: number | undefined){
+      try {
+        const response = await api('hardreset', {printerid})
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to release job. Unexpected response.')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to release job. Unexpected response')
+        }
+        return response 
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
+}
+
+export function useQueueRestore(){
+  return {
+    async queueRestore(printerid: number | undefined){
+      try {
+        const response = await api('queuerestore', {printerid})
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to restore queue. Unexpected response.')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to restore queue. Unexpected response')
+        }
+        return response 
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
+
+}
+
 // function to set up the socket for status updates
 export function setupStatusSocket(printers: any) {
   socket.on("status_update", ((data: any) => {    
     if (printers && printers.value) {
       const printer = printers.value.find((p: Device) => p.id === data.printer_id)
-
       if (printer) {
         printer.status = data.status;
       }
@@ -113,6 +166,38 @@ export function setupStatusSocket(printers: any) {
       console.error('printers or printers.value is undefined');
     }
   }))
+}
+
+export function setupQueueSocket(printers: any) {
+  socket.on("queue_update", ((data: any) => {
+    if (printers && printers.value) {
+      const printer = printers.value.find((p: Device) => p.id === data.printerid)
+      console.log(printer)
+      if (printer) {
+        printer.queue = data.queue;
+      }
+    } else {
+      console.error('printers or printers.value is undefined');
+    }
+  }
+  ))
+  console.log('queue socket set up')
+}
+
+export function setupErrorSocket(printers: any){
+  socket.on("error_update", ((data: any) => {
+    if (printers && printers.value) {
+      const printer = printers.value.find((p: Device) => p.id === data.printerid)
+      console.log(printer)
+      if (printer) {
+        printer.error = data.error;
+      }
+    } else {
+      console.error('printers or printers.value is undefined');
+    }
+  }
+  ))
+  console.log('queue socket set up')
 }
 
 // function needs to disconnect the socket when the component is unmounted

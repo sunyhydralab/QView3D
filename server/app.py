@@ -9,7 +9,7 @@ from flask_migrate import Migrate
 from dotenv import load_dotenv
 from controllers.ports import getRegisteredPrinters
 import shutil
-from flask_socketio import SocketIO  # Add this import
+from flask_socketio import SocketIO
 
 # moved this up here so we can pass the app to the PrinterStatusService
 # Basic app setup 
@@ -19,6 +19,11 @@ app.config.from_object(__name__) # update application instantly
 # moved this before importing the blueprints so that it can be accessed by the PrinterStatusService
 printer_status_service = PrinterStatusService(app)
 
+# Initialize SocketIO, which will be used to send printer status updates to the frontend
+# and this specific socketit will be used throughout the backend
+socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False, async_mode='threading') # Initialize SocketIO with the Flask app
+app.socketio = socketio  # Add the SocketIO object to the app object
+
 # IMPORTING BLUEPRINTS 
 from controllers.display import display_bp
 from controllers.ports import ports_bp
@@ -26,11 +31,6 @@ from controllers.jobs import jobs_bp
 from controllers.statusService import status_bp, getStatus 
 
 CORS(app)
-
-# Initialize SocketIO, which will be used to send printer status updates to the frontend
-# and this specific socketit will be used throughout the backend
-socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False, async_mode='threading') # Initialize SocketIO with the Flask app
-app.socketio = socketio  # Add the SocketIO object to the app object
 
 @app.before_request
 def handle_preflight():

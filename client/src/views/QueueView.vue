@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useRetrievePrintersInfo, type Device } from '../model/ports'
+import { useRetrievePrintersInfo, setupQueueSocket, setupStatusSocket, type Device } from '../model/ports'
 import { useRerunJob, useRemoveJob, bumpJobs, type Job } from '../model/jobs';
 import { useRoute } from 'vue-router'
 import { nextTick } from 'vue';
@@ -20,22 +20,10 @@ let intervalId: number | undefined;
 
 onMounted(async () => {
   try {
-    const route = useRoute()
-    const printerName = route.params.printerName
-    const updatePrinters = async () => {
-      const printerInfo = await retrieveInfo()
-      printers.value = []
-      for (const printer of printerInfo) {
-        printers.value.push({
-          ...printer,
-          isExpanded: printer.name === printerName
-        })
-      }
-    }
-    // Fetch the printer status immediately on mount
-    await updatePrinters()
-    // Then fetch it every 3 seconds
-    intervalId = window.setInterval(updatePrinters, 3000)
+    const printerInfo = await retrieveInfo()
+    printers.value = printerInfo 
+    setupQueueSocket(printers)
+    setupStatusSocket(printers)
   } catch (error) {
     console.error('There has been a problem with your fetch operation:', error)
   }
@@ -50,15 +38,6 @@ onUnmounted(() => {
 
 const handleRerun = async (job: Job, printer: Printer) => {
   await rerunJob(job, printer)
-  // Re-fetch the printer's queue from the backend
-  const printerInfo = await retrieveInfo()
-  const foundPrinter = printerInfo.find((p: any) => p.id === printer.id)
-  if (foundPrinter) {
-    const printerIndex = printers.value.findIndex(p => p.id === printer.id)
-    if (printerIndex !== -1) {
-      printers.value[printerIndex].queue = foundPrinter.queue
-    }
-  }
 };
 
 async function handleCancel(jobToFind: Job, printerToFind: Device) {
@@ -69,17 +48,6 @@ async function handleCancel(jobToFind: Job, printerToFind: Device) {
 
 const confirmDelete = async () => {
   if (modalJob.value && modalPrinter.value) {
-
-    const foundPrinter = printers.value.find((printer) => printer.id === modalPrinter.value!.id);
-
-    if (!foundPrinter) return;
-    const jobIndex = foundPrinter.queue?.findIndex((job) => job.id === modalJob.value!.id);
-
-    if (jobIndex === undefined || jobIndex === -1) return;
-    foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
-
-    printers.value = [...printers.value];
-
     
     await removeJob(modalJob.value);
 

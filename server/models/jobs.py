@@ -1,5 +1,7 @@
+import asyncio
 import base64
 import os
+import re
 from models.db import db 
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
@@ -12,8 +14,7 @@ from io import BytesIO
 from werkzeug.datastructures import FileStorage
 import time 
 import gzip
-
-job_progress = {}
+from app import printer_status_service
 # model for job history table 
 class Job(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -26,6 +27,11 @@ class Job(db.Model):
     printer = db.relationship('Printer', backref='Job')
     file_name_original = db.Column(db.String(50), nullable = False)
     file_name_pk = None
+    progress = 0.0
+    total_time = 0
+    start_time = 0
+    elapsed_time = 0
+    pause_time = 0
 
     
     def __init__(self, file, name, printer_id, status, file_name_original): 
@@ -34,7 +40,12 @@ class Job(db.Model):
         self.printer_id = printer_id 
         self.status = status 
         self.file_name_original = file_name_original # original file name without PK identifier 
-        file_name_pk = None
+        self.file_name_pk = None
+        self.progress = 0.0
+        self.total_time = 0
+        self.start_time = 0
+        self.elapsed_time = 0
+        self.pause_time = 0
 
     def __repr__(self):
         return f"Job(id={self.id}, name={self.name}, printer_id={self.printer_id}, status={self.status})"
@@ -115,6 +126,9 @@ class Job(db.Model):
                 job.status = new_status
                 # Commit the changes to the database
                 db.session.commit()
+                
+                current_app.socketio.emit('job_status_update', {'job_id': job_id, 'status': new_status})
+                
                 return {"success": True, "message": f"Job {job_id} status updated successfully."}
             else:
                 return {"success": False, "message": f"Job {job_id} not found."}, 404
@@ -133,7 +147,30 @@ class Job(db.Model):
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve job. Database error"}), 500  
-        
+     
+    @classmethod 
+    def findPrinterObject(self, printer_id): 
+        threads = printer_status_service.getThreadArray()
+        return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer   
+      
+    @classmethod 
+    def queueRestore(cls, printer_id):
+        try:
+            jobs = cls.query.filter_by(printer_id=printer_id, status='inqueue').all()
+            for job in jobs:
+                base_name, extension = os.path.splitext(job.file_name_original)
+                # Append the ID to the base name
+                file_name_pk = f"{base_name}_{id}{extension}"
+                job.setFileName(file_name_pk) # set unique file name                 
+                # print(type(job.file))
+                cls.findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
+
+            return {"success": True, "message": "Queue restored successfully."}
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return jsonify({"error": "Failed to restore queue. Database error"}), 500
+    
+
     @classmethod
     def removeFileFromPath(cls, file_path):
         # file_path = self.generatePath()  # Get the file path
@@ -147,6 +184,7 @@ class Job(db.Model):
     @classmethod 
     def getPathForDelete(cls, file_name):
         return os.path.join('../uploads', file_name)
+    
            
     def saveToFolder(self):
         file_data = self.getFile()
@@ -189,28 +227,44 @@ class Job(db.Model):
         
     # added a setProgress method to update the progress of a job
     # which sends it to the frontend using socketio
-    # added time!
     def setProgress(self, progress):
-        global job_progress
         if self.status == 'printing':
-            if self.id not in job_progress:
-                # If the job is not in the dictionary, add it with the current time as the start time
-                job_progress[self.id] = {'start_time': time.time(), 'progress': progress}
-            else:
-                # If the job is already in the dictionary, just update the progress
-                job_progress[self.id]['progress'] = progress
-
-            elapsed_time = time.time() - job_progress[self.id]['start_time']
-
-            # Emit a 'progress_update' event with the new progress and the elapsed time
-            current_app.socketio.emit('progress_update', {'job_id': self.id, 'progress': progress, 'elapsed_time': elapsed_time})
-        elif self.id in job_progress:
-            del job_progress[self.id]  # Remove the job from the dictionary if it's not printing
+            self.progress = progress
+            # Emit a 'progress_update' event with the new progress
+            current_app.socketio.emit('progress_update', {'job_id': self.id, 'progress': self.progress})
 
     # added a getProgress method to get the progress of a job
     def getProgress(self):
-        global job_progress
-        return job_progress.get(self.id, 0)
+        return self.progress
+    
+    def getTimeSeconds(self, comment_lines):
+        # job_line can look two ways:
+        # 1. ;TIME:seconds
+        # 2. ; estimated printing time (normal mode) = minutes seconds
+        # if first line contains "FLAVOR", then the second line contains the time estimate in the format of ";TIME:seconds"
+        if "FLAVOR" in comment_lines[0]:
+            time_line = comment_lines[1]
+            time_seconds = int(time_line.split(":")[1])
+        else:
+            # search for the line that contains "printing time", then the time estimate is in the format of "; estimated printing time (normal mode) = minutes seconds"
+            time_line = next(line for line in comment_lines if "printing time" in line)
+            time_minutes, time_seconds = map(int, re.findall(r'\d+', time_line))
+            time_seconds += time_minutes * 60
+        return time_seconds
+
+    def startTime(self, time_seconds):
+        self.total_time = time_seconds
+        self.start_time = time.time()
+        current_app.socketio.emit('job_time', {'job_id': self.id, 'start_time': self.start_time, 'total_time': self.total_time})
+    
+    def setPauseTime(self):
+        self.pause_time = time.time()
+        self.elapsed_time += self.pause_time - self.start_time
+        current_app.socketio.emit('job_pause', {'job_id': self.id, 'pause_time': self.pause_time, 'elapsed_time': self.elapsed_time})
+
+    def resumeTime(self):
+        self.start_time = time.time()
+        current_app.socketio.emit('job_resume', {'job_id': self.id, 'start_time': self.start_time, 'elapsed_time': self.elapsed_time}) 
     
     @classmethod 
     def setDBstatus(cls, jobid, status):

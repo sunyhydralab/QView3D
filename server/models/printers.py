@@ -1,3 +1,4 @@
+import asyncio
 from models.db import db
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
@@ -28,6 +29,7 @@ class Printer(db.Model):
     status = None  # default setting on printer start. Runs initialization and status switches to "ready" automatically.
     # stopPrint = False
     responseCount = 0 # if count == 10 & no response, set error 
+    error = ""
 
     def __init__(self, device, description, hwid, name, status=status, id=None):
         self.device = device
@@ -38,6 +40,8 @@ class Printer(db.Model):
         self.date = datetime.now(get_localzone())
         self.queue = Queue()
         self.stopPrint = False 
+        self.error = ""
+        
         if id is not None:
             self.id = id
         self.responseCount = 0
@@ -157,19 +161,29 @@ class Printer(db.Model):
             while True:
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
-                # if response == "":
-                #     self.responseCount+=1 
-                #     if(self.responseCount>=10):
-                #         raise TimeoutError("No response from printer") 
+                
+                if response == "":
+                    self.responseCount+=1 
+                    if(self.responseCount>=10):
+                        self.setError("No response from printer")
+                        raise Exception("No response from printer")
+                elif "error" in response.lower():
+                    self.setError(response)
+                    break
+                else:
+                    self.responseCount = 0
+                    
                 stat = self.getStatus()
-                if stat == "complete":
+                if stat == "complete" or stat=="error":
                     break 
+                
                 if "ok" in response:
                     break
+                
                 print(f"Command: {message}, Received: {response}")
         except Exception as e: 
-            # self.setStatus("error")
-            print(e)
+            print("exception in sendGcode")
+            self.setError(e)
             return "error" 
         
     def gcodeEnding(self, message):
@@ -188,14 +202,15 @@ class Printer(db.Model):
                 #         raise TimeoutError("No response from printer") 
                 stat = self.getStatus()
                 # print(stat)
-                # if stat != "complete":
-                #     break 
+                if stat != "complete":
+                    break 
                 if "ok" in response:
                     break
                 print(f"Command: {message}, Received: {response}")
         except Exception as e: 
             # self.setStatus("error")
             print(e)
+            self.setError(e)
             return "error" 
         
     def parseGcode(self, path, job):
@@ -203,6 +218,12 @@ class Printer(db.Model):
             with open(path, "r") as g:
                 # Read the file and store the lines in a list
                 lines = g.readlines()
+                
+                #  Time handling
+                comment_lines = [line for line in lines if line.strip() and line.startswith(";")]
+                time_seconds = job.getTimeSeconds(comment_lines)
+                job.startTime(time_seconds)
+                
                 # Only send the lines that are not empty and don't start with ";"
                 # so we can correctly get the progress
                 command_lines = [line for line in lines if line.strip() and not line.startswith(";")]
@@ -222,8 +243,34 @@ class Printer(db.Model):
                     if len(line) == 0 or line.startswith(";"): 
                         continue
                     # Send the line to the printer.
+                    # time.sleep(1)
+                    if(self.getStatus()=="paused" or ("M601" in line) or ("M0" in line)):
+                        job.setPauseTime()
+                        self.setStatus("paused")
+                        self.sendGcode("G91") # set relative positioning mode
+                        self.sendGcode("G1 Z10 F300")  # move up 10mm 
+                        self.sendGcode("M601") # pause command 
+                        # self.sendGcode("G1 Z-10 F300")
+                        while(True):
+                            stat = self.getStatus()
+                            if(stat=="printing"):
+                                job.resumeTime()
+                                self.sendGcode("G1 Z-10 F300") # move back to previous position 
+                                self.sendGcode("G90") # set back to absolute positioning 
+                                break 
+                    
+                    # right now, if pause is in the line, M601 will be sent twice to avoid duplicate code. 
+                    # test to see if thatll be an issue. 
                     
                     res = self.sendGcode(line)
+                    
+                    # if("M601" in line):
+                    #     self.setStatus("paused")
+                    #     while(True):
+                    #         stat = self.getStatus()
+                    #         if(stat=="printing"):
+                    #             break       
+                    
                     
                     # Increment the sent lines
                     sent_lines += 1
@@ -233,28 +280,61 @@ class Printer(db.Model):
                     # Call the setProgress method
                     job.setProgress(progress)
                     
-                    if res == "error": 
+                    # if res == "error": 
+                    #     return "error"
+                    
+                    if self.getStatus() == "complete":
+                        return "cancelled"
+                    
+                    if self.getStatus() == "error":
                         return "error"
                     
-                    if self.getStatus() =="complete":
-                        # self.endingSequence()
-                        return "cancelled"
             return "complete"
         except Exception as e: 
             # self.setStatus("error")
-            print(e)
+            self.setError(e)
             return "error" 
       
     # Function to send "ending" gcode commands   
     def endingSequence(self):
-        self.gcodeEnding("G91")
-        self.gcodeEnding("G1 F1800 E-3")
-        self.gcodeEnding("G1 F3000 Z10")
-        self.gcodeEnding("G90")
-        self.gcodeEnding("G1 X0 Y220")
-        self.gcodeEnding("M106 S0")
-        self.gcodeEnding("M104 S0")
-        self.gcodeEnding("M140 S0")
+        try: 
+            # *** Ender 3 Pro ending sequence ***
+            self.gcodeEnding("G91") # Relative positioning
+            self.gcodeEnding("G1 E-2 F2700") # Retract a bit
+            self.gcodeEnding("G1 E-2 Z0.2 F2400") # Retract and raise Z
+            self.gcodeEnding("G1 X5 Y5 F3000") # Wipe out
+            self.gcodeEnding("G1 Z10") # Raise Z more
+            self.gcodeEnding("G90") # Absolute positioning
+            self.gcodeEnding("G1 X0 Y220") # Present print
+            self.gcodeEnding("M106 S0") # Turn-off fan
+            self.gcodeEnding("M104 S0") # Turn-off hotend
+            self.gcodeEnding("M140 S0") # Turn-off bed
+            self.gcodeEnding("M84 X Y E") # Disable all steppers but Z
+
+            # *** Prusa i3 MK3 ending sequence ***
+            # self.gcodeEnding("M104 S0") # turn off extruder
+            # self.gcodeEnding("M140 S0") # turn off heatbed
+            # self.gcodeEnding("M107") # turn off fan
+            # self.gcodeEnding("G1 X0 Y210") # home X axis and push Y forward
+            # self.gcodeEnding("M84") # disable motors
+
+            # *** Prusa MK4 ending sequence ***
+            # {if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+1, max_print_height)} F720 ; Move print head up{endif}
+            # M104 S0 ; turn off temperature
+            # M140 S0 ; turn off heatbed
+            # M107 ; turn off fan
+            # G1 X241 Y170 F3600 ; park
+            # {if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+23, max_print_height)} F300 ; Move print head up{endif}
+            # G4 ; wait
+            # M900 K0 ; reset LA
+            # M142 S36 ; reset heatbreak target temp
+            # M84 X Y E ; disable motors
+            # ; max_layer_z = [max_layer_z]
+            
+        except Exception as e:
+            self.setError(e)
+            return "error"
+
 
     def printNextInQueue(self):
         self.connect()
@@ -269,31 +349,40 @@ class Printer(db.Model):
                 # self.reset()
                 # now we pass the job to the parseGcode function, so we can find that jobs progress
                 verdict = self.parseGcode(path, job) # passes file to code. returns "complete" if successful, "error" if not.
-                # self.endingSequence()
+                
                 if verdict =="complete":
+                    self.disconnect()
                     self.setStatus("complete")
                     self.sendStatusToJob(job, job.id, "complete")
                 elif verdict=="error": 
-                    # self.endingSequence()
-                    self.sendStatusToJob(job, job.id, "error")
+                    self.disconnect()
+                    self.getQueue().deleteJob(job.id, self.id)
                     self.setStatus("error")
+                    self.sendStatusToJob(job, job.id, "error")
                 elif verdict=="cancelled":
-                    self.endingSequence()
-                    self.sendStatusToJob(job, job.id, "cancelled")
                     # self.endingSequence()
+                    self.disconnect()
+                    self.sendStatusToJob(job, job.id, "cancelled")
+                else: 
+                    self.disconnect()
                     
-                self.disconnect()
                 job.removeFileFromPath(path) # remove file from folder after job complete
             # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready. 
-            
             else:
-                self.setStatus("error")
+                print("exception in else of verdict")
+                self.getQueue().deleteJob(job.id, self.id)
+                # self.setStatus("error")
+                self.setError("Printer not connected")
                 self.sendStatusToJob(job, job.id, "error")
+                
             return     
         except Exception as e:
-            self.setStatus("error")
-            job.setStatus("error")
-            return "error" 
+            print(e)
+            # print("exception in printNextInQueue except")
+            self.getQueue().deleteJob(job.id, self.id)
+            # self.setStatus("error")
+            self.sendStatusToJob(job, job.id, "error")
+            self.setError(e)
 
     def fileExistsInPath(self, path): 
         if os.path.exists(path):
@@ -305,6 +394,11 @@ class Printer(db.Model):
 
     def getQueue(self):
         return self.queue
+    
+    # def removeJobFromQueue(self, job_id):
+    #     self.queue.removeJob(job_id)
+        
+    #     current_app.socketio.emit('job_removed', {'printer_id': self.id, 'job_id': job_id})
 
     def getStatus(self):
         return self.status
@@ -327,7 +421,10 @@ class Printer(db.Model):
     #  now when we set the status, we can emit the status to the frontend
     def setStatus(self, newStatus):
         try:
+            print("setting status")
             self.status = newStatus
+            
+            # print(self.status)
             # Emit a 'status_update' event with the new status
             current_app.socketio.emit('status_update', {'printer_id': self.id, 'status': newStatus})
         except Exception as e:
@@ -335,6 +432,14 @@ class Printer(db.Model):
         
     def setStopPrint(self, stopPrint):
         self.stopPrint = stopPrint
+        
+        
+    def setError(self, error):
+        # print("in seterror")
+        self.error = str(error) 
+        print(self.id)
+        self.setStatus("error")
+        current_app.socketio.emit('error_update', {'printerid': self.id, 'error': self.error})
         
     def sendStatusToJob(self, job, job_id, status):
         try:
