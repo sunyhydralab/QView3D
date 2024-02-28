@@ -248,19 +248,6 @@ export function useDeleteJob() {
       let jobid = job?.id;
       try {
         const response = await api(`deletejob`, { jobid })
-        // if (response) {
-        //   if (response.success == false) {
-        //     toast.error(response.message)
-        //   } else if (response.success === true) {
-        //     toast.success(response.message)
-        //   } else {
-        //     console.error('Unexpected response:', response)
-        //     toast.error('Failed to delete job. Unexpected response.')
-        //   }
-        // } else {
-        //   console.error('Response is undefined or null')
-        //   toast.error('Failed to delete job. Unexpected response')
-        // }
         return response;
       } catch (error) {
         console.error(error)

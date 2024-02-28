@@ -136,8 +136,8 @@ async function submitFilter() {
     jobs.value = joblist;
 }
 
+// This just displays the selectedJobs on the console for me to see while working. Would be removed before final merge
 const handleJobSelection = () => {
-    // Do something with the selected jobs (stored in selectedJobs.value)
     console.log('Selected Jobs:', selectedJobs.value);
 };
 

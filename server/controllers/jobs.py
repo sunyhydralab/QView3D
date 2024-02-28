@@ -298,24 +298,6 @@ def getFile():
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
     
-# @jobs_bp.route('/deletejob/<int:job_id>', methods=["POST"])
-# def deleteJob(job_id):
-#     try:
-#         job = Job.findJob(job_id) 
-#         printer_id = job.getPrinterId() 
-        
-#         # Retrieve printer object & corresponding queue
-#         printerobject = findPrinterObject(printer_id)
-#         queue = printerobject.getQueue()
-        
-#         queue.deleteJob(job_id) # remove job from queue 
-#         Job.deleteJob(job_id) # remove job from DB 
-        
-#         return jsonify({"success": True, "message": "Job deleted successfully."}), 200
-#     except Exception as e:
-#         print(f"Unexpected error: {e}")
-#         return jsonify({"error": "Unexpected error occurred"}), 500
-    
 def findPrinterObject(printer_id): 
     threads = printer_status_service.getThreadArray()
     return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer  
