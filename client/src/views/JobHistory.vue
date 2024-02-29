@@ -23,6 +23,7 @@ let page = ref(1)
 let pageSize = ref(10)
 let totalJobs = ref(0)
 let totalPages = ref(1)
+let selectAllCheckbox = ref(false);
 
 // computed property that returns the filtered list of jobs. 
 let filteredJobs = computed(() => {
@@ -82,6 +83,10 @@ const changePage = async (newPage: any) => {
     if (newPage < 1 || newPage > Math.ceil(totalJobs.value / pageSize.value)) {
         return;
     }
+
+    // Reset the 'Select All' checkbox state
+    selectAllCheckbox.value = false;
+
     // Assign the new page value based on the parameter passed in
     page.value = newPage
     jobs.value = []; // Clear the jobs array
@@ -155,6 +160,11 @@ const handleDeleteJobs = async () => {
 
     // Clear the selected jobs array
     selectedJobs.value = [];
+    selectAllCheckbox.value = false;
+};
+
+const selectAllJobs = () => {
+    selectedJobs.value = selectAllCheckbox.value ? [...filteredJobs.value] : [];
 };
 </script>
 
@@ -207,14 +217,25 @@ const handleDeleteJobs = async () => {
                 </div>
             </div>
         </div>
-        <button @click="handleDeleteJobs" class="btn btn-danger">Delete Selected Jobs</button>
+        <!-- <button @click="handleDeleteJobs" class="btn btn-danger">Delete Selected Jobs</button> -->
         <div class="mb-2">
             <button @click="submitFilter" class="btn btn-primary">Submit Filter</button>
         </div>
+
+        <div class="mb-2 me-auto">
+            <!-- <button @click="submitFilter" class="btn btn-primary">Submit Filter</button> -->
+            <button  @click="handleDeleteJobs" class="btn btn-danger">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+        
+        
         <table class="table">
             <thead>
                 <tr>
-                    <th class="col-checkbox"></th>
+                    <th class="col-checkbox">
+                        <input type="checkbox" @change="selectAllJobs" v-model="selectAllCheckbox">
+                    </th>
                     <th class="col-job-id">Job ID</th>
                     <th class="col-job-title">Job Title</th>
                     <th class="col-file">File</th>
