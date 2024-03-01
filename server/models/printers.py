@@ -441,7 +441,6 @@ class Printer(db.Model):
             return     
         except Exception as e:
             print(e)
-            print("1")
             # print("exception in printNextInQueue except")
             self.getQueue().deleteJob(job.id, self.id)
             # self.setStatus("error")
