@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
 import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob } from '@/model/jobs';
+import { toast } from '@/model/toast';
 import { computed, onMounted, ref, watch } from 'vue';
 // import { useGetJobs, type Job } from '@/model/jobs';
 // import { computed, onMounted, ref } from 'vue';
@@ -147,11 +148,30 @@ const handleJobSelection = () => {
 };
 
 const handleDeleteJobs = async () => {
+    if(selectedJobs.value.length === 0) {
+        toast.warning("Please select one or more jobs to be deleted")
+    }
+    // const deletionPromises = selectedJobs.value.map(job => deleteJob(job));
+    // await Promise.all(deletionPromises);
+
+    // // Remove deleted jobs from the local state
+    // // jobs.value = jobs.value.filter(job => !selectedJobs.value.some(selectedJob => selectedJob.id === job.id));
+
+    // const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
+    // const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value);
+    // jobs.value = joblist;
+    // totalJobs.value = total;
+
+    // // Clear the selected jobs array
+    // selectedJobs.value = [];
+    // selectAllCheckbox.value = false;
+};
+
+const confirmDelete = async () => {
+    // isDeleteModalOpen.value = false;
+
     const deletionPromises = selectedJobs.value.map(job => deleteJob(job));
     await Promise.all(deletionPromises);
-
-    // Remove deleted jobs from the local state
-    // jobs.value = jobs.value.filter(job => !selectedJobs.value.some(selectedJob => selectedJob.id === job.id));
 
     const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
     const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value);
@@ -161,7 +181,7 @@ const handleDeleteJobs = async () => {
     // Clear the selected jobs array
     selectedJobs.value = [];
     selectAllCheckbox.value = false;
-};
+}
 
 const selectAllJobs = () => {
     selectedJobs.value = selectAllCheckbox.value ? [...filteredJobs.value] : [];
@@ -170,6 +190,25 @@ const selectAllJobs = () => {
 
 <template>
     <div class="container">
+
+        <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Deleting {{ selectedJobs.length }} job(s) from database</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this job? This action cannot be <i>undone</i>.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="confirmDelete">Delete</button>
+                </div>
+                </div>
+            </div>
+        </div>
+
         <h2 class="mb-2 text-center">Job History View</h2>
         <div class="mb-2 p-2 border rounded">
             <div class="row justify-content-center">
@@ -224,11 +263,11 @@ const selectAllJobs = () => {
 
         <div class="mb-2 me-auto">
             <!-- <button @click="submitFilter" class="btn btn-primary">Submit Filter</button> -->
-            <button  @click="handleDeleteJobs" class="btn btn-danger">
+            <button  @click="handleDeleteJobs" type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#exampleModal">
                 <i class="fas fa-trash-alt"></i>
             </button>
+            <p>{{ selectedJobs.length }} job(s) selected.</p>
         </div>
-        
         
         <table class="table">
             <thead>
