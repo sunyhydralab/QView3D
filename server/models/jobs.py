@@ -18,7 +18,7 @@ from app import printer_status_service
 # model for job history table 
 class Job(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    file = db.Column(db.LargeBinary(16777215), nullable=False)
+    file = db.Column(db.LargeBinary(16777215), nullable=True)
     name = db.Column(db.String(50), nullable = False)
     status = db.Column(db.String(50), nullable=False)
     date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).astimezone(), nullable=False)
@@ -157,23 +157,23 @@ class Job(db.Model):
     def queueRestore(cls, printer_id):
         try:
             jobs = cls.query.filter_by(printer_id=printer_id, status='inqueue').all()
-
             printingJob = cls.query.filter_by(printer_id=printer_id, status='printing').all()
             for job in printingJob: 
                 cls.update_job_status(job.id, 'inqueue')
                 jobs.append(job)
             
             for job in jobs:
-                base_name, extension = os.path.splitext(job.file_name_original)
-                # Append the ID to the base name
-                file_name_pk = f"{base_name}_{id}{extension}"
-                job.setFileName(file_name_pk) # set unique file name                 
-                # print(type(job.file))
-                queue = cls.findPrinterObject(printer_id).getQueue()
-                if not queue.jobExists(job.id):
-                    queue.addToBack(job, printer_id)
-                
-                #.addToBack(job, printer_id)
+                if(job.file!=None):
+                    base_name, extension = os.path.splitext(job.file_name_original)
+                    # Append the ID to the base name
+                    file_name_pk = f"{base_name}_{job.id}{extension}"
+                    job.setFileName(file_name_pk) # set unique file name    
+                    
+                    print(file_name_pk)             
+                    # print(type(job.file))
+                    queue = cls.findPrinterObject(printer_id).getQueue()
+                    if not queue.jobExists(job.id):
+                        queue.addToBack(job, printer_id)
 
             return {"success": True, "message": "Queue restored successfully."}
         except SQLAlchemyError as e:
