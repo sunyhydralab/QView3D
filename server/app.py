@@ -103,10 +103,10 @@ with app.app_context():
             os.makedirs(uploads_folder)
             print("Uploads folder created successfully.")
             
+        scheduled_task() # run on server start 
         # Start the scheduler to delete files from DB > 6 months old. Runs every 4 weeks. 
         scheduler.add_job(id='Scheduled task', func=scheduled_task, trigger='interval', weeks=4)        
         # scheduler.add_job(id='Scheduled task', func=scheduled_task, trigger='interval', seconds=10)
-        
         scheduler.start()   
         
             

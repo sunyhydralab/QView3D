@@ -172,9 +172,8 @@ class Job(db.Model):
                     print(file_name_pk)             
                     # print(type(job.file))
                     queue = cls.findPrinterObject(printer_id).getQueue()
-                    if not queue.jobExists(job.id):
+                    if not queue.jobExists(job.id) and job.file is not None:
                         queue.addToBack(job, printer_id)
-
             return {"success": True, "message": "Queue restored successfully."}
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
