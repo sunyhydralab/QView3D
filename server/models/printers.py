@@ -60,26 +60,27 @@ class Printer(db.Model):
 
     @classmethod
     def create_printer(cls, device, description, hwid, name, status):
-        printerExists = cls.searchByDevice(hwid)
-        # if printerExists:
-        #     return {"success": False, "message": "Printer already registered."}
-        # else:
         try:
-            printer = cls(
-                device=device,
-                description=description,
-                hwid=hwid,
-                name=name,
-                status=status,
-            )
-            db.session.add(printer)
-            db.session.commit()
-            return {"success": True, "message": "Printer successfully registered.", "printer_id": printer.id}
+            printerExists = cls.searchByDevice(hwid)
+            if printerExists:
+                printer = cls.query.filter_by(hwid=hwid).first()
+                return {"success": False, "message": f"Port already registered under hwid: {printer.name}."}
+            else:
+                printer = cls(
+                    device=device,
+                    description=description,
+                    hwid=hwid,
+                    name=name,
+                    status=status,
+                )
+                db.session.add(printer)
+                db.session.commit()
+                return {"success": True, "message": "Printer successfully registered.", "printer_id": printer.id}
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return (
                 jsonify({"error": "Failed to register printer. Database error"}),
-                500,
+                    500,
             )
 
     @classmethod
@@ -127,6 +128,35 @@ class Printer(db.Model):
         return printerList
     
     @classmethod 
+    def diagnosePrinter(cls, deviceToDiagnose): # deviceToDiagnose = port 
+        try: 
+            diagnoseString = ''
+            ports = serial.tools.list_ports.comports()
+            for port in ports: 
+                if port.device == deviceToDiagnose:
+                    diagnoseString += f"The system has found a matching port with the following details: <br><br> Device: {port.device}, <br> Description: {port.description}, <br> HWID: {port.hwid}<br><br>"
+                    printerExists = cls.searchByDevice(port.hwid)
+                    if(printerExists):
+                        printer = cls.query.filter_by(hwid=port.hwid).first()
+                        diagnoseString += f"Device {port.device} is registered with the following details: <br><br> Name: {printer.name} <br> Device: {printer.device}, <br> Description: {printer.description}, <br> HWID: {printer.hwid}<br><br>"
+            # return diagnoseString
+            return {"success": True, "message": "Printer successfully diagnosed.", "diagnoseString": diagnoseString}
+
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return jsonify({"error": "Unexpected error occurred"}), 500
+                    
+                
+    # def searchByHwid(cls, hwid):
+    #     try:
+    #         # Query the database to find a printer by device
+    #         printer = cls.query.filter_by(hwid=hwid).first()
+    #         return printer
+    #     except SQLAlchemyError as e:
+    #         print(f"Database error: {e}")
+    #         return None
+                
+    @classmethod 
     def findPrinter(cls, id):
         try:
             printer = cls.query.get(id)
@@ -137,9 +167,41 @@ class Printer(db.Model):
                 jsonify({"error": "Failed to retrieve printer. Database error"}),
                 500,
             )
+            
+    @classmethod 
+    def deletePrinter(cls, printerid):
+        try:   
+            printer = cls.query.get(printerid)
+            db.session.delete(printer)
+            db.session.commit()
+            return {"success": True, "message": "Printer successfully deleted."}
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return (
+                jsonify({"error": "Failed to delete printer. Database error"}),
+                500,
+            )
+            
+    @classmethod
+    def editName(cls, printerid, name):
+        try:
+            printer = cls.query.get(printerid)
+            printer.name = name
+            db.session.commit()
+            return {"success": True, "message": "Printer name successfully updated."}
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return (
+                jsonify({"error": "Failed to update printer name. Database error"}),
+                500,
+            )
 
     def connect(self):
-        self.ser = serial.Serial(self.device, 115200, timeout=1)
+        try: 
+            self.ser = serial.Serial(self.device, 115200, timeout=1)
+        except Exception as e: 
+            self.setError(e)
+            return "error"
 
     def disconnect(self):
         if self.ser:
@@ -167,6 +229,7 @@ class Printer(db.Model):
                     if(self.responseCount>=10):
                         self.setError("No response from printer")
                         raise Exception("No response from printer")
+                    
                 elif "error" in response.lower():
                     self.setError(response)
                     break
@@ -359,6 +422,7 @@ class Printer(db.Model):
                     self.getQueue().deleteJob(job.id, self.id)
                     self.setStatus("error")
                     self.sendStatusToJob(job, job.id, "error")
+                    self.setError("Timeout Error")
                 elif verdict=="cancelled":
                     # self.endingSequence()
                     self.disconnect()
@@ -374,10 +438,10 @@ class Printer(db.Model):
                 # self.setStatus("error")
                 self.setError("Printer not connected")
                 self.sendStatusToJob(job, job.id, "error")
-                
             return     
         except Exception as e:
             print(e)
+            print("1")
             # print("exception in printNextInQueue except")
             self.getQueue().deleteJob(job.id, self.id)
             # self.setStatus("error")

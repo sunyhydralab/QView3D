@@ -75,6 +75,39 @@ class PrinterStatusService:
         except Exception as e:
             print(f"Unexpected error: {e}")
             return jsonify({"success": False, "error": "Unexpected error occurred"}), 500
+        
+    def deleteThread(self, printer_id):
+        try: 
+            for thread in self.printer_threads:
+                if thread.printer.id == printer_id:    
+                    printer = thread.printer
+                    thread_data = {
+                        "id": printer.id, 
+                        "device": printer.device,
+                        "description": printer.description,
+                        "hwid": printer.hwid,
+                        "name": printer.name
+                    }
+                    self.printer_threads.remove(thread)
+                    break
+            return jsonify({"success": True, "message": "Printer thread reset successfully"})
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return jsonify({"success": False, "error": "Unexpected error occurred"}), 500
+        
+    def editName(self, printer_id, name):
+        try: 
+            print("in thread")
+            for thread in self.printer_threads:
+                if thread.printer.id == printer_id:    
+                    printer = thread.printer
+                    printer.name = name
+                    break
+            return jsonify({"success": True, "message": "Printer name updated successfully"})
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return jsonify({"success": False, "error": "Unexpected error occurred"}), 500
+        
 
     # this method will be called by the UI to get the printers that have a threads information
     def retrieve_printer_info(self):
