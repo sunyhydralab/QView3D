@@ -265,16 +265,20 @@ const selectAllJobs = () => {
             </div>
         </div>
         <!-- <button @click="handleDeleteJobs" class="btn btn-danger">Delete Selected Jobs</button> -->
-        <div class="mb-2">
-            <button @click="submitFilter" class="btn btn-primary">Submit Filter</button>
-        </div>
-
-        <div class="mb-2 me-auto">
-            <!-- <button @click="submitFilter" class="btn btn-primary">Submit Filter</button> -->
-            <button  @click="handleDeleteJobs" type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#exampleModal">
-                <i class="fas fa-trash-alt"></i>
-            </button>
-            <p>{{ selectedJobs.length }} job(s) selected.</p>
+        <div class="row w-100" style="margin-bottom: 0.5rem;">
+            <div class="col-1 text-start" style="padding-left: 0">
+                <button @click="handleDeleteJobs" type="button" class="btn btn-danger" data-bs-toggle="modal"
+                    data-bs-target="#exampleModal" :disabled="selectedJobs.length === 0">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+                
+            </div>
+            <div class="col-10 text-center">
+                <button @click="submitFilter" class="btn btn-primary">Submit Filter</button>
+            </div>
+            <div class="col-1">
+                <!-- Empty column to push the other columns to the left -->
+            </div>
         </div>
         
         <table class="table">
