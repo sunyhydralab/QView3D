@@ -139,6 +139,8 @@ class Printer(db.Model):
                     if(printerExists):
                         printer = cls.query.filter_by(hwid=port.hwid).first()
                         diagnoseString += f"Device {port.device} is registered with the following details: <br><br> Name: {printer.name} <br> Device: {printer.device}, <br> Description: {printer.description}, <br> HWID: {printer.hwid}<br><br>"
+            if diagnoseString == '':
+                diagnoseString = "The port this printer is registered under is not found. Please check the connection and try again."
             # return diagnoseString
             return {"success": True, "message": "Printer successfully diagnosed.", "diagnoseString": diagnoseString}
 
