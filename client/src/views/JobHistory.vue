@@ -147,25 +147,25 @@ const handleJobSelection = () => {
     console.log('Selected Jobs:', selectedJobs.value);
 };
 
-const handleDeleteJobs = async () => {
-    if(selectedJobs.value.length === 0) {
-        toast.warning("Please select one or more jobs to be deleted")
-    }
-    // const deletionPromises = selectedJobs.value.map(job => deleteJob(job));
-    // await Promise.all(deletionPromises);
+// const handleDeleteJobs = async () => {
+//     if(selectedJobs.value.length === 0) {
+//         toast.warning("Please select one or more jobs to be deleted")
+//     }
+//     // const deletionPromises = selectedJobs.value.map(job => deleteJob(job));
+//     // await Promise.all(deletionPromises);
 
-    // // Remove deleted jobs from the local state
-    // // jobs.value = jobs.value.filter(job => !selectedJobs.value.some(selectedJob => selectedJob.id === job.id));
+//     // // Remove deleted jobs from the local state
+//     // // jobs.value = jobs.value.filter(job => !selectedJobs.value.some(selectedJob => selectedJob.id === job.id));
 
-    // const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
-    // const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value);
-    // jobs.value = joblist;
-    // totalJobs.value = total;
+//     // const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
+//     // const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value);
+//     // jobs.value = joblist;
+//     // totalJobs.value = total;
 
-    // // Clear the selected jobs array
-    // selectedJobs.value = [];
-    // selectAllCheckbox.value = false;
-};
+//     // // Clear the selected jobs array
+//     // selectedJobs.value = [];
+//     // selectAllCheckbox.value = false;
+// };
 
 const confirmDelete = async () => {
     // isDeleteModalOpen.value = false;
@@ -184,14 +184,22 @@ const confirmDelete = async () => {
 }
 
 const selectAllJobs = () => {
+    // if (selectAllCheckbox.value) {
+    //     // Add jobs from the current page to the selectedJobs array
+    //     selectedJobs.value = [...selectedJobs.value, ...filteredJobs.value];
+    // } else {
+    //     // Remove jobs from the current page from the selectedJobs array
+    //     selectedJobs.value = selectedJobs.value.filter(
+    //         (job) => !filteredJobs.value.includes(job)
+    //     );
+    // }
     if (selectAllCheckbox.value) {
         // Add jobs from the current page to the selectedJobs array
-        selectedJobs.value = [...selectedJobs.value, ...filteredJobs.value];
+        const newSelectedJobs = filteredJobs.value.filter(job => !selectedJobs.value.includes(job));
+        selectedJobs.value = [...selectedJobs.value, ...newSelectedJobs];
     } else {
         // Remove jobs from the current page from the selectedJobs array
-        selectedJobs.value = selectedJobs.value.filter(
-            (job) => !filteredJobs.value.includes(job)
-        );
+        selectedJobs.value = selectedJobs.value.filter(job => !filteredJobs.value.includes(job));
     }
 };
 </script>
@@ -267,7 +275,7 @@ const selectAllJobs = () => {
         <!-- <button @click="handleDeleteJobs" class="btn btn-danger">Delete Selected Jobs</button> -->
         <div class="row w-100" style="margin-bottom: 0.5rem;">
             <div class="col-1 text-start" style="padding-left: 0">
-                <button @click="handleDeleteJobs" type="button" class="btn btn-danger" data-bs-toggle="modal"
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal"
                     data-bs-target="#exampleModal" :disabled="selectedJobs.length === 0">
                     <i class="fas fa-trash-alt"></i>
                 </button>
