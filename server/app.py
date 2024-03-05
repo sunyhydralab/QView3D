@@ -10,15 +10,12 @@ from dotenv import load_dotenv
 from controllers.ports import getRegisteredPrinters
 import shutil
 from flask_socketio import SocketIO
-from flask_apscheduler import APScheduler
 from datetime import datetime, timedelta
 from sqlalchemy import text
-# from models.jobs import Job
 # moved this up here so we can pass the app to the PrinterStatusService
 # Basic app setup 
 app = Flask(__name__)
 app.config.from_object(__name__) # update application instantly 
-scheduler = APScheduler()
 
 # moved this before importing the blueprints so that it can be accessed by the PrinterStatusService
 printer_status_service = PrinterStatusService(app)
@@ -60,27 +57,6 @@ app.register_blueprint(ports_bp)
 app.register_blueprint(jobs_bp)
 app.register_blueprint(status_bp)
 
-
-def scheduled_task():
-    with app.app_context():
-        from models.jobs import Job
-        
-        six_months_ago = datetime.now() - timedelta(months=6)  # 6 months ago
-        # Assuming you have a Job model with a date field and a file field
-        old_jobs = Job.query.filter(Job.date < six_months_ago).all()
-        
-        # thirty_seconds_ago = datetime.now() - timedelta(seconds=30)  # 30 seconds ago
-        # # Assuming you have a Job model with a date field and a file field
-        # old_jobs = Job.query.filter(Job.date < thirty_seconds_ago).all()
-        
-        for job in old_jobs:
-            job.file = None  # Set file to None
-            if "Removed after 6 months" not in job.file_name_original:
-                job.file_name_original = f"{job.file_name_original}: Removed after 6 months"
-        db.session.commit()  # Commit the changes
-        print("Finished running scheduled task.")
-
-# on server start, create a Printer object for each printer in the database and assign it to its 
 # own thread
 with app.app_context():
     try:
@@ -101,15 +77,7 @@ with app.app_context():
         else:
             # Create the uploads folder if it doesn't exist
             os.makedirs(uploads_folder)
-            print("Uploads folder created successfully.")
-            
-        scheduled_task() # run on server start 
-        # Start the scheduler to delete files from DB > 6 months old. Runs every 4 weeks. 
-        scheduler.add_job(id='Scheduled task', func=scheduled_task, trigger='interval', weeks=4)        
-        # scheduler.add_job(id='Scheduled task', func=scheduled_task, trigger='interval', seconds=10)
-        scheduler.start()   
-        
-            
+            print("Uploads folder created successfully.")  
     except Exception as e:
         print(f"Unexpected error: {e}")
             

@@ -307,7 +307,6 @@ export function useDiagnosePrinter(){
       }
     }
   }
-
 }
 
 // function to set up the socket for status updates

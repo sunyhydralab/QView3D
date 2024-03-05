@@ -3,7 +3,7 @@ import base64
 import os
 import re
 from models.db import db 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta 
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from flask import jsonify, current_app
@@ -205,6 +205,25 @@ class Job(db.Model):
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to nullify printer ID. Database error"}), 500
+        
+    @classmethod
+    def clearSpace(cls): 
+        try:
+            six_months_ago = datetime.now() - timedelta(months=6)  # 6 months ago
+            old_jobs = Job.query.filter(Job.date < six_months_ago).all()
+            
+            # thirty_seconds_ago = datetime.now() - timedelta(seconds=30)  # 30 seconds ago
+            # old_jobs = Job.query.filter(Job.date < thirty_seconds_ago).all()
+            
+            for job in old_jobs:
+                job.file = None  # Set file to None
+                if "Removed after 6 months" not in job.file_name_original:
+                    job.file_name_original = f"{job.file_name_original}: Removed after 6 months"
+            db.session.commit()  # Commit the changes
+            return {"success": True, "message": "Space cleared successfully."}
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return jsonify({"error": "Failed to clear space. Database error"}), 500
     
            
     def saveToFolder(self):
