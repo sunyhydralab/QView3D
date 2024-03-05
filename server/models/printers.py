@@ -122,7 +122,7 @@ class Printer(db.Model):
                 'description': port.description,
                 'hwid': port.hwid,
             }
-            supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
+            # supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
             # if port.description in supportedPrinters:
             printerList.append(port_info)
         return printerList
@@ -147,16 +147,6 @@ class Printer(db.Model):
         except Exception as e:
             print(f"Unexpected error: {e}")
             return jsonify({"error": "Unexpected error occurred"}), 500
-                    
-                
-    # def searchByHwid(cls, hwid):
-    #     try:
-    #         # Query the database to find a printer by device
-    #         printer = cls.query.filter_by(hwid=hwid).first()
-    #         return printer
-    #     except SQLAlchemyError as e:
-    #         print(f"Database error: {e}")
-    #         return None
                 
     @classmethod 
     def findPrinter(cls, id):
@@ -231,7 +221,6 @@ class Printer(db.Model):
                     if(self.responseCount>=10):
                         self.setError("No response from printer")
                         raise Exception("No response from printer")
-                    
                 elif "error" in response.lower():
                     self.setError(response)
                     break
@@ -261,10 +250,18 @@ class Printer(db.Model):
             while True:
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
-                # if response == "":
-                #     self.responseCount+=1 
-                #     if(self.responseCount>=10):
-                #         raise TimeoutError("No response from printer") 
+                
+                if response == "":
+                    self.responseCount+=1 
+                    if(self.responseCount>=10):
+                        self.setError("No response from printer")
+                        raise Exception("No response from printer")
+                elif "error" in response.lower():
+                    self.setError(response)
+                    break
+                else:
+                    self.responseCount = 0
+                    
                 stat = self.getStatus()
                 # print(stat)
                 if stat != "complete":
