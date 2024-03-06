@@ -54,15 +54,15 @@ class PrinterStatusService:
                 
                 if (status == "ready" and queueSize > 0):
                     time.sleep(2) # wait for 2 seconds to allow the printer to process the queue
-                    ports = Printer.getConnectedPorts() # get connected ports
-                    for port in ports: 
-                        if port.device == printer.device: 
-                            if port.hwid == printer.hwid: 
-                                printer.printNextInQueue()
-                            else: 
-                                printer.setError("The port this printer is registered under is not the same as the port it is connected to. Click the Diagnose Printer button under Registered Printers to troubleshoot.")
-                        else: 
-                            printer.setError("Printer port not found. Please check your connection and try again.")
+                    # ports = Printer.getConnectedPorts() # get connected ports
+                    # for port in ports: 
+                    #     if port.device == printer.device: 
+                    #         if port.hwid == printer.hwid: 
+                    printer.printNextInQueue()
+                        #     else: 
+                        #         printer.setError("The port this printer is registered under is not the same as the port it is connected to. Click the Diagnose Printer button under Registered Printers to troubleshoot.")
+                        # else: 
+                        #     printer.setError("Printer port not found. Please check your connection and try again.")
                     
     def resetThread(self, printer_id):
         try: 

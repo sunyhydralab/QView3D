@@ -421,7 +421,7 @@ class Printer(db.Model):
                     self.getQueue().deleteJob(job.id, self.id)
                     self.setStatus("error")
                     self.sendStatusToJob(job, job.id, "error")
-                    self.setError("Timeout Error")
+                    self.setError("Error")
                 elif verdict=="cancelled":
                     # self.endingSequence()
                     self.disconnect()
