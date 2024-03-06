@@ -209,7 +209,7 @@ class Job(db.Model):
     @classmethod
     def clearSpace(cls): 
         try:
-            six_months_ago = datetime.now() - timedelta(months=6)  # 6 months ago
+            six_months_ago = datetime.now() - timedelta(days=182)  # 6 months ago
             old_jobs = Job.query.filter(Job.date < six_months_ago).all()
             
             # thirty_seconds_ago = datetime.now() - timedelta(seconds=30)  # 30 seconds ago
