@@ -14,6 +14,8 @@ const modalJob = ref<Job>();
 const modalPrinter = ref<Printer>();
 const selectedJobs = ref<Array<Job>>([]);
 const selectedJobsMap = ref<Record<string, Job[]>>({});
+// Map to track the state of "Select All" checkbox for each printer
+const selectAllCheckboxMap = ref<Record<string, boolean>>({});
 
 type Printer = Device & { isExpanded?: boolean }
 const printers = ref<Array<Printer>>([]) // Get list of open printer threads 
@@ -64,33 +66,6 @@ const handleRerun = async (job: Job, printer: Printer) => {
   }
 };
 
-// async function handleCancel(jobToFind: Job, printerToFind: Device) {
-//   modalJob.value = jobToFind;
-//   modalPrinter.value = printerToFind;
-//   await nextTick();
-// }
-
-// const confirmDelete = async () => {
-//   if (modalJob.value && modalPrinter.value) {
-
-//     const foundPrinter = printers.value.find((printer) => printer.id === modalPrinter.value!.id);
-
-//     if (!foundPrinter) return;
-//     const jobIndex = foundPrinter.queue?.findIndex((job) => job.id === modalJob.value!.id);
-
-//     if (jobIndex === undefined || jobIndex === -1) return;
-//     foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
-
-//     printers.value = [...printers.value];
-
-    
-//     await removeJob(modalJob.value);
-
-//     modalJob.value = undefined;
-//     modalPrinter.value = undefined;
-//   }
-// };
-
 const deleteSelectedJobs = async () => {
   // Loop through the selected jobs and remove them from the printer's queue
   for (const selectedJob of selectedJobs.value) {
@@ -110,23 +85,6 @@ const deleteSelectedJobs = async () => {
   selectAllCheckbox.value = false;
 };
 
-async function handleCancel(jobToFind: Job, printerToFind: Device) {
-  modalJob.value = jobToFind;
-  modalPrinter.value = printerToFind;
-  await nextTick();
-
-  // If the job is already selected, remove it; otherwise, add it
-  const index = selectedJobs.value.findIndex((job) => job.id === jobToFind.id);
-  if (index !== -1) {
-    selectedJobs.value.splice(index, 1);
-  } else {
-    selectedJobs.value.push(jobToFind);
-  }
-}
-
-// Map to track the state of "Select All" checkbox for each printer
-const selectAllCheckboxMap = ref<Record<string, boolean>>({});
-
 const SelectAllJobs = (printer: Printer | undefined) => {
   if (printer !== undefined && printer.queue !== undefined) {
     // Toggle the "Select All" checkbox state for the current printer
@@ -138,13 +96,6 @@ const SelectAllJobs = (printer: Printer | undefined) => {
     // Update the selectedJobs array by combining selected jobs from all printers
     selectedJobs.value = Object.values(selectedJobsMap.value).flat();
   }
-  // if (printer !== undefined) {
-  // if (selectAllCheckbox.get(printer.id)) {
-  //   selectedJobsMap.value[printer.id!] = printer.queue || [];
-  // } else {
-  //   selectedJobsMap.value[printer.id!] = [];
-  // }
-  // selectedJobs.value = Object.values(selectedJobsMap.value).flat();
 };
 
 
@@ -215,7 +166,6 @@ const canBumpUp = (job: Job, printer: Printer) => {
 <template>
   <div class="container">
 
-    <!-- Jacks Modals Comments -->
     <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -228,7 +178,6 @@ const canBumpUp = (job: Job, printer: Printer) => {
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            <!-- <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="confirmDelete">Remove</button> -->
             <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="deleteSelectedJobs">Remove</button>
 
           </div>
@@ -266,7 +215,7 @@ const canBumpUp = (job: Job, printer: Printer) => {
                 <tr>
                   <th class="col-1">Job ID</th>
                   <th class="col-checkbox">
-                    <input type="checkbox" v-model="selectAllCheckbox" @change="() => SelectAllJobs(printer)" />
+                    <input type="checkbox" @change="() => SelectAllJobs(printer)" />
                   </th>
                   <th class="col-2">Rerun Job</th>
                   <th class="col-1">Position</th>
@@ -281,11 +230,6 @@ const canBumpUp = (job: Job, printer: Printer) => {
                 <tr v-for="job in printer.queue" :key="job.id">
                   <td>{{ job.id }}</td>
                   <td class="text-center">
-                    <!-- <button v-if="job.status == 'inqueue'" type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#exampleModal"
-                      @click="handleCancel(job, printer)">X</button>
-                    <button v-else>
-                      <RouterLink to="/">Goto release</RouterLink>
-                    </button> -->
                     <input type="checkbox" v-model="selectedJobs" :value="job" />
                   </td>
 
