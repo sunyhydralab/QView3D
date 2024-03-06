@@ -184,15 +184,6 @@ const confirmDelete = async () => {
 }
 
 const selectAllJobs = () => {
-    // if (selectAllCheckbox.value) {
-    //     // Add jobs from the current page to the selectedJobs array
-    //     selectedJobs.value = [...selectedJobs.value, ...filteredJobs.value];
-    // } else {
-    //     // Remove jobs from the current page from the selectedJobs array
-    //     selectedJobs.value = selectedJobs.value.filter(
-    //         (job) => !filteredJobs.value.includes(job)
-    //     );
-    // }
     if (selectAllCheckbox.value) {
         // Add jobs from the current page to the selectedJobs array
         const newSelectedJobs = filteredJobs.value.filter(job => !selectedJobs.value.includes(job));
@@ -211,7 +202,7 @@ const selectAllJobs = () => {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Deleting {{ selectedJobs.length }} job(s) from database</h5>
+                    <h5 class="modal-title" id="exampleModalLabel">Deleting {{ selectedJobs.length }} job(s) from database!</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -272,7 +263,6 @@ const selectAllJobs = () => {
                 </div>
             </div>
         </div>
-        <!-- <button @click="handleDeleteJobs" class="btn btn-danger">Delete Selected Jobs</button> -->
         <div class="row w-100" style="margin-bottom: 0.5rem;">
             <div class="col-1 text-start" style="padding-left: 0">
                 <button type="button" class="btn btn-danger" data-bs-toggle="modal"
