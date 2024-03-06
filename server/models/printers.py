@@ -213,6 +213,7 @@ class Printer(db.Model):
             #time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
             while True:
+                print("in send")
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
                 
@@ -263,9 +264,10 @@ class Printer(db.Model):
                     self.responseCount = 0
                     
                 stat = self.getStatus()
-                # print(stat)
+                
                 if stat != "complete":
                     break 
+                
                 if "ok" in response:
                     break
                 print(f"Command: {message}, Received: {response}")
@@ -279,13 +281,14 @@ class Printer(db.Model):
         try: 
             with open(path, "r") as g:
                 # Read the file and store the lines in a list
+
                 lines = g.readlines()
                 
                 #  Time handling
                 comment_lines = [line for line in lines if line.strip() and line.startswith(";")]
                 time_seconds = job.getTimeSeconds(comment_lines)
                 job.startTime(time_seconds)
-                
+
                 # Only send the lines that are not empty and don't start with ";"
                 # so we can correctly get the progress
                 command_lines = [line for line in lines if line.strip() and not line.startswith(";")]
@@ -325,15 +328,6 @@ class Printer(db.Model):
                     # test to see if thatll be an issue. 
                     
                     res = self.sendGcode(line)
-                    
-                    # if("M601" in line):
-                    #     self.setStatus("paused")
-                    #     while(True):
-                    #         stat = self.getStatus()
-                    #         if(stat=="printing"):
-                    #             break       
-                    
-                    
                     # Increment the sent lines
                     sent_lines += 1
                     # Calculate the progress
@@ -342,8 +336,6 @@ class Printer(db.Model):
                     # Call the setProgress method
                     job.setProgress(progress)
                     
-                    # if res == "error": 
-                    #     return "error"
                     
                     if self.getStatus() == "complete":
                         return "cancelled"
@@ -408,8 +400,7 @@ class Printer(db.Model):
                 
                 self.setStatus("printing") # set printer status to printing
                 self.sendStatusToJob(job, job.id, "printing")
-                # self.reset()
-                # now we pass the job to the parseGcode function, so we can find that jobs progress
+
                 verdict = self.parseGcode(path, job) # passes file to code. returns "complete" if successful, "error" if not.
                 
                 if verdict =="complete":
@@ -421,7 +412,7 @@ class Printer(db.Model):
                     self.getQueue().deleteJob(job.id, self.id)
                     self.setStatus("error")
                     self.sendStatusToJob(job, job.id, "error")
-                    self.setError("Error")
+                    # self.setError("Error")
                 elif verdict=="cancelled":
                     # self.endingSequence()
                     self.disconnect()
@@ -432,14 +423,12 @@ class Printer(db.Model):
                 job.removeFileFromPath(path) # remove file from folder after job complete
             # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready. 
             else:
-                print("exception in else of verdict")
                 self.getQueue().deleteJob(job.id, self.id)
                 # self.setStatus("error")
                 self.setError("Printer not connected")
                 self.sendStatusToJob(job, job.id, "error")
             return     
         except Exception as e:
-            print(e)
             # print("exception in printNextInQueue except")
             self.getQueue().deleteJob(job.id, self.id)
             # self.setStatus("error")
@@ -483,9 +472,7 @@ class Printer(db.Model):
     #  now when we set the status, we can emit the status to the frontend
     def setStatus(self, newStatus):
         try:
-            print("setting status")
-            self.status = newStatus
-            
+            self.status = newStatus 
             # print(self.status)
             # Emit a 'status_update' event with the new status
             current_app.socketio.emit('status_update', {'printer_id': self.id, 'status': newStatus})
@@ -497,9 +484,7 @@ class Printer(db.Model):
         
         
     def setError(self, error):
-        # print("in seterror")
         self.error = str(error) 
-        print(self.id)
         self.setStatus("error")
         current_app.socketio.emit('error_update', {'printerid': self.id, 'error': self.error})
         
