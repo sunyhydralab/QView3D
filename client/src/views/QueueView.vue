@@ -74,7 +74,6 @@ const deleteSelectedJobs = async () => {
       const jobIndex = foundPrinter.queue?.findIndex((job) => job.id === selectedJob.id);
       if (jobIndex !== undefined && jobIndex !== -1) {
         foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
-        console.log("Heyyyyyyyyy")
       }
     }
     await removeJob(selectedJob);
