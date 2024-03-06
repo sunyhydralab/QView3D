@@ -309,25 +309,70 @@ class Printer(db.Model):
                         continue
                     # Send the line to the printer.
                     # time.sleep(1)
-                    if(self.getStatus()=="paused" or ("M601" in line) or ("M0" in line)):
+                    # if(self.getStatus()=="paused" or ("M601" in line) or ("M0" in line)):
+                    #     job.setPauseTime()
+                    #     self.setStatus("paused")
+                    #     self.sendGcode("G91") # set relative positioning mode
+                    #     self.sendGcode("G1 Z10 F300")  # move up 10mm 
+                    #     self.sendGcode("M601") # pause command 
+                    #     # self.sendGcode("G1 Z-10 F300")
+                    #     while(True):
+                    #         stat = self.getStatus()
+                    #         if(stat=="printing"):
+                    #             job.resumeTime()
+                    #             self.sendGcode("G1 Z-10 F300") # move back to previous position 
+                    #             self.sendGcode("G90") # set back to absolute positioning 
+                                # break 
+                    res = self.sendGcode(line)
+
+                    #  software pausing        
+                    if (self.getStatus()=="paused"):
+                        self.sendGcode("M601") # pause command
                         job.setPauseTime()
-                        self.setStatus("paused")
-                        self.sendGcode("G91") # set relative positioning mode
-                        self.sendGcode("G1 Z10 F300")  # move up 10mm 
-                        self.sendGcode("M601") # pause command 
-                        # self.sendGcode("G1 Z-10 F300")
                         while(True):
                             stat = self.getStatus()
                             if(stat=="printing"):
                                 job.resumeTime()
-                                self.sendGcode("G1 Z-10 F300") # move back to previous position 
-                                self.sendGcode("G90") # set back to absolute positioning 
-                                break 
+                                self.sendGcode("M602") # resume command
+                                break
+                    
+                    # software color change
+                    if (self.getStatus()=="colorchange"):
+                        self.sendGcode("M600") # color change command
+                        self.setStatus("printing")
+                        # job.setPauseTime()
+                        # while(True):
+                        #     stat = self.getStatus()
+                        #     if(stat=="printing"):
+                        #         job.resumeTime()
+                        #         break       
+
+                    # pause in file
+                    # if ("M601" in line) or ("M0" in line) or ("M600" in line):
+                    #     # self.setStatus("paused")
+                    #     # job.setPauseTime()
+                    #     # while True:
+                    #     #     if self.getStatus()=="printing":
+                    #     #         job.resumeTime()
+                    #     job.setPauseTime()
+                    #     self.setStatus("paused")
+                    #     self.sendGcode("G91") # set relative positioning mode
+                    #     self.sendGcode("G1 Z10 F300")  # move up 10mm 
+                    #     # self.sendGcode("M601") # pause command 
+                    #     # self.sendGcode("G1 Z-10 F300")
+                    #     while(True):
+                    #         stat = self.getStatus()
+                    #         if(stat=="printing"):
+                    #             job.resumeTime()
+                    #             self.sendGcode("G1 Z-10 F300") # move back to previous position 
+                    #             self.sendGcode("G90") # set back to absolute positioning 
+                    #             break 
+                            
                     
                     # right now, if pause is in the line, M601 will be sent twice to avoid duplicate code. 
                     # test to see if thatll be an issue. 
                     
-                    res = self.sendGcode(line)
+                    # res = self.sendGcode(line)
                     # Increment the sent lines
                     sent_lines += 1
                     # Calculate the progress

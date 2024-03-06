@@ -246,7 +246,9 @@ const toTime = (seconds: number | undefined) => {
                       @click="setPrinterStatus(printer, 'complete')">Stop Print</a></li>
                   <li v-if="printer.status == 'printing'"><a class="dropdown-item" href="#"
                       @click="setPrinterStatus(printer, 'paused')">Pause Print</a></li>
-                  <li v-if="printer.status == 'paused'"><a class="dropdown-item" href="#"
+                  <li v-if="printer.status == 'printing'"><a class="dropdown-item" href="#"
+                        @click="setPrinterStatus(printer, 'colorchange')">Change Color</a></li>
+                  <li v-if="printer.status == 'paused' || printer.status=='colorchange'"><a class="dropdown-item" href="#"
                       @click="setPrinterStatus(printer, 'printing')">Unpause Print</a></li>
                 </ul>
               </div>
@@ -254,12 +256,12 @@ const toTime = (seconds: number | undefined) => {
           </td>
 
           <td
-            v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+            v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
             {{ printer.queue?.[0]?.name }}
           </td>
           <td v-else></td>
           <td
-            v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+            v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
             {{
               printer.queue?.[0]?.file_name_original }}</td>
           <td v-else></td>
@@ -269,7 +271,7 @@ const toTime = (seconds: number | undefined) => {
         </div> -->
 
           <td style="width: 250px;">
-            <div v-if="printer.status === 'printing' || printer.status == 'paused'">
+            <div v-if="printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange'">
               <!-- <div v-for="job in printer.queue" :key="job.id"> -->
               <!-- Display the elapsed time -->
               <div class="progress" style="position: relative;">
