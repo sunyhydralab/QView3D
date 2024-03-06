@@ -231,7 +231,7 @@ const toTime = (seconds: number | undefined) => {
 
           <td>
             <div class="d-flex align-items-center">
-              <div v-if="printer.status=='printing' && printer.queue![0].file_pause==1"><i style="color:red">Waiting for color change</i></div>
+              <div v-if="printer.status=='printing' && printer.queue![0].file_pause==1"><i style="color:red; padding-right: 10px">Waiting for color change</i></div>
               <div v-else>
                 <p class="mb-0 me-2">{{ printer.status }}</p>
               </div>
