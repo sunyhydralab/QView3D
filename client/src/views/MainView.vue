@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, useSetStatus, setupStatusSocket, setupQueueSocket, setupErrorSocket, disconnectStatusSocket, type Device } from '@/model/ports';
-import { type Job, useReleaseJob, useRemoveJob, setupProgressSocket, setupJobStatusSocket, setupTimeSocket } from '@/model/jobs';
+import { type Job, useReleaseJob, useRemoveJob, setupProgressSocket, setupJobStatusSocket, setupTimeSocket, setupPauseFeedbackSocket } from '@/model/jobs';
 import { useRouter, useRoute } from 'vue-router';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 
@@ -47,6 +47,8 @@ onMounted(async () => {
     setupErrorSocket(printers)
 
     setupTimeSocket(printers.value)
+
+    setupPauseFeedbackSocket(printers.value)
 
     console.log("PRINTERS: ", printers.value)
 
@@ -229,7 +231,10 @@ const toTime = (seconds: number | undefined) => {
 
           <td>
             <div class="d-flex align-items-center">
-              <p class="mb-0 me-2">{{ printer.status }}</p>
+              <div v-if="printer.status=='printing' && printer.queue![0].file_pause==1"><i style="color:red">Waiting for color change</i></div>
+              <div v-else>
+                <p class="mb-0 me-2">{{ printer.status }}</p>
+              </div>
               <div class="dropdown">
                 <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton"
                   data-bs-toggle="dropdown" aria-expanded="false">
@@ -253,6 +258,7 @@ const toTime = (seconds: number | undefined) => {
                 </ul>
               </div>
             </div>
+            <!-- <div v-if="printer.status=='printing' && printer.queue![0].file_pause==1"><i style="color:red">Waiting for color change</i></div> -->
           </td>
 
           <td

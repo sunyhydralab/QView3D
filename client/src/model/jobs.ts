@@ -18,6 +18,7 @@ export interface Job {
   progress?: number //store progress of job
   printer: string //store printer name
   printerid: number
+  file_pause: number 
   priority?: string
   // job_id: number
   total_time?: number
@@ -284,6 +285,19 @@ export function setupJobStatusSocket(printers: any) {
           delete job.timer
         }
       }
+    }
+  })
+}
+
+export function setupPauseFeedbackSocket(printers: any) {
+  // Always set up the socket connection and event listener
+  socket.on('file_pause_update', (data: any) => {
+    const job = printers
+    .flatMap((printer: { queue: any }) => printer.queue)
+    .find((job: { id: any }) => job?.id === data.job_id)
+
+  if (job) {
+    job.file_pause = data.file_pause
     }
   })
 }
