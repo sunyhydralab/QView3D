@@ -17,7 +17,7 @@ export interface Device {
   name?: string
   status?: string
   date?: Date
-  id?: number 
+  id?: number
   error?: string
   queue?: Job[] //  Store job array to store queue for each printer. 
 }
@@ -88,11 +88,11 @@ export function useRetrievePrintersInfo() {
   }
 }
 
-export function useSetStatus(){
+export function useSetStatus() {
   return {
-    async setStatus(printerid: number | undefined, status: string){
+    async setStatus(printerid: number | undefined, status: string) {
       try {
-        const response = await api('setstatus', {printerid, status})
+        const response = await api('setstatus', { printerid, status })
         return response
       } catch (error) {
         console.error(error)
@@ -101,11 +101,11 @@ export function useSetStatus(){
   }
 }
 
-export function useHardReset(){
+export function useHardReset() {
   return {
-    async hardReset(printerid: number | undefined){
+    async hardReset(printerid: number | undefined) {
       try {
-        const response = await api('hardreset', {printerid})
+        const response = await api('hardreset', { printerid })
         if (response) {
           if (response.success == false) {
             toast.error(response.message)
@@ -119,7 +119,7 @@ export function useHardReset(){
           console.error('Response is undefined or null')
           toast.error('Failed to release job. Unexpected response')
         }
-        return response 
+        return response
       } catch (error) {
         console.error(error)
       }
@@ -127,11 +127,11 @@ export function useHardReset(){
   }
 }
 
-export function useQueueRestore(){
+export function useQueueRestore() {
   return {
-    async queueRestore(printerid: number | undefined){
+    async queueRestore(printerid: number | undefined) {
       try {
-        const response = await api('queuerestore', {printerid})
+        const response = await api('queuerestore', { printerid })
         if (response) {
           if (response.success == false) {
             toast.error(response.message)
@@ -145,18 +145,173 @@ export function useQueueRestore(){
           console.error('Response is undefined or null')
           toast.error('Failed to restore queue. Unexpected response')
         }
-        return response 
+        return response
       } catch (error) {
         console.error(error)
       }
     }
   }
+}
 
+export function useNullifyJobs() {
+  return {
+    async nullifyJobs(printerid: number | undefined) {
+      try {
+        const response = await api('nullifyjobs', { printerid })
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to nullify jobs. Unexpected response.')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to nullify jobs. Unexpected response')
+        }
+        return response
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
+}
+
+export function useDeletePrinter() {
+  return {
+    async deletePrinter(printerid: number | undefined) {
+      try {
+        const response = await api('deleteprinter', { printerid })
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to delete printer. Unexpected response.')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to delete printer. Unexpected response')
+        }
+        return response
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
+}
+
+export function useRemoveThread() {
+  return {
+    async removeThread(printerid: number | undefined) {
+      try {
+        const response = await api('removethread', { printerid })
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to remove thread. Unexpected response.')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to remove thread. Unexpected response')
+        }
+        return response
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
+}
+
+export function useEditName() {
+  return {
+    async editName(printerid: number | undefined, name: string) {
+      try {
+        const response = await api('editname', { printerid, name })
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to edit name. Unexpected response.')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to edit name. Unexpected response')
+        }
+        return response
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
+}
+
+export function useEditThread() {
+  return {
+    async editThread(printerid: number | undefined, newname: string) {
+      try {
+        const response = await api('editNameInThread', { printerid, newname })
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to edit thread. Unexpected response.')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to edit thread. Unexpected response')
+        }
+        return response
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
+}
+
+export function useDiagnosePrinter(){
+  return {
+    async diagnose(device: string){
+      try {
+        const response = await api('diagnose', { device })
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to diagnose printer. Unexpected response.')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to diagnose printer. Unexpected response')
+        }
+        return response
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
 }
 
 // function to set up the socket for status updates
 export function setupStatusSocket(printers: any) {
-  socket.on("status_update", ((data: any) => {    
+  socket.on("status_update", ((data: any) => {
     if (printers && printers.value) {
       const printer = printers.value.find((p: Device) => p.id === data.printer_id)
       if (printer) {
@@ -184,7 +339,7 @@ export function setupQueueSocket(printers: any) {
   console.log('queue socket set up')
 }
 
-export function setupErrorSocket(printers: any){
+export function setupErrorSocket(printers: any) {
   socket.on("error_update", ((data: any) => {
     if (printers && printers.value) {
       const printer = printers.value.find((p: Device) => p.id === data.printerid)
