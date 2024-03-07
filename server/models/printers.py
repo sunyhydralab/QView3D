@@ -53,7 +53,19 @@ class Printer(db.Model):
             # Query the database to find a printer by device
             printer = cls.query.filter_by(hwid=hwid).first()
             return printer is not None
-
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return None
+        
+    @classmethod
+    def getPrinterByHwid(cls, hwid):
+        try:
+            # Query the database to find a printer by device
+            printer = cls.query.filter_by(hwid=hwid).first()
+            if printer: 
+                return printer
+            else: 
+                return None
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return None
@@ -147,6 +159,19 @@ class Printer(db.Model):
         except Exception as e:
             print(f"Unexpected error: {e}")
             return jsonify({"error": "Unexpected error occurred"}), 500
+        
+    # @classmethod 
+    # def repairPorts(cls):
+    #     try: 
+    #         ports = serial.tools.list_ports.comports()
+    #         for port in ports: 
+    #             hwid = port.hwid # get hwid associated with port 
+    #             printer = cls.findPrinter()
+
+    #     except Exception as e:
+    #         print(f"Unexpected error: {e}")
+    #         return jsonify({"error": "Unexpected error occurred"}), 500
+
                 
     @classmethod 
     def findPrinter(cls, id):
@@ -187,6 +212,22 @@ class Printer(db.Model):
                 jsonify({"error": "Failed to update printer name. Database error"}),
                 500,
             )
+        
+    @classmethod 
+    def editPort(cls, printerid, printerport): 
+        try:
+            printer = cls.query.get(printerid)
+            printer.device = printerport
+            db.session.commit()
+            return {"success": True, "message": "Printer port successfully updated."}
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return (
+                jsonify({"error": "Failed to update printer port. Database error"}),
+                500,
+            )
+        
+
 
     def connect(self):
         try: 
@@ -499,6 +540,8 @@ class Printer(db.Model):
     def getQueue(self):
         return self.queue
     
+    def getHwid(self):
+        return self.hwid 
     # def removeJobFromQueue(self, job_id):
     #     self.queue.removeJob(job_id)
         
@@ -515,6 +558,7 @@ class Printer(db.Model):
     
     def getId(self):
         return self.id
+    
     
     def getStopPrint(self):
         return self.stopPrint

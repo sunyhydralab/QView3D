@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useGetPorts, useRegisterPrinter, useRetrievePrinters, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, type Device } from '../model/ports'
+import { useGetPorts, useRegisterPrinter, useRetrievePrinters, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device } from '../model/ports'
 import { ref, onMounted } from 'vue';
 const { ports } = useGetPorts();
 const { register } = useRegisterPrinter();
@@ -12,6 +12,7 @@ const { editName } = useEditName();
 const { removeThread } = useRemoveThread();
 const { editThread } = useEditThread();
 const { diagnose } = useDiagnosePrinter();
+const {repair} = useRepair()
 
 let devices = ref<Array<Device>>([]); // Array of all devices -- stores ports for user to select/register
 let selectedDevice = ref<Device | null>(null) // device user selects to register.
@@ -96,6 +97,10 @@ const doDiagnose = async (printer: Device) => {
     message.value += "<br><br>" + resstr
 }
 
+const doRepair = async () => {
+    await repair()
+}
+
 const clearMessage = () => {
     showMessage.value = false
     messageId.value = 0
@@ -171,6 +176,7 @@ const clearMessage = () => {
                 </div>
             </form>
         </div>
+        <button @click="doRepair">Repair Ports</button>
     </div>
 </template>
 

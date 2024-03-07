@@ -93,3 +93,21 @@ def diagnose_printer():
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
     
+@ports_bp.route("/repairports", methods=["POST", "GET"])
+def repair_ports(): 
+    try:
+        ports = serial.tools.list_ports.comports()
+        for port in ports: 
+            hwid = port.hwid # get hwid 
+            printer = Printer.getPrinterByHwid(hwid)
+            if printer is not None: 
+                if(printer.getDevice()!=port.device): 
+                    print("printer device ", printer.getDevice(), "port device", port.device)
+                    print(printer.getId())
+                    printer.editPort(printer.getId(), port.device)
+        return {"success": True, "message": "Printer port(s) successfully updated."}
+
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    

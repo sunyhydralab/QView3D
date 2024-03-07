@@ -4,7 +4,7 @@
 <template>
   <section class="section">
     <nav class="navbar navbar-expand-lg bg-body-tertiary d-flex justify-content-between">
-      <RouterLink to='/' class="navbar-brand">Clever Name</RouterLink>
+      <RouterLink to='/' class="navbar-brand">FilaForge</RouterLink>
       <!-- <button class="btn btn-outline-success" type="submit">Submit Job</button> -->
       <button class="btn btn-outline-success"><RouterLink to="/submit">Submit job </RouterLink></button>
     </nav>

@@ -309,6 +309,32 @@ export function useDiagnosePrinter(){
   }
 }
 
+export function useRepair() {
+  return {
+    async repair(){
+      try {
+        const response = await api('repairports')
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to repair ports. Unexpected response.')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to repair ports. Unexpected response')
+        }
+        return response
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
+}
+
 // function to set up the socket for status updates
 export function setupStatusSocket(printers: any) {
   socket.on("status_update", ((data: any) => {
