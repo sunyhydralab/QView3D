@@ -15,6 +15,7 @@ const { clearSpace } = useClearSpace()
 const printers = ref<Array<Device>>([]) // Get list of open printer threads 
 const selectedPrinters = ref<Array<Device>>([])
 const selectedJobs = ref<Array<Job>>([]);
+const deleteModalTitle = computed(() => `Deleting ${selectedJobs.value.length} job(s) from database!`);
 
 let jobs = ref<Array<Job>>([])
 let filter = ref('') // This will hold the current filter value
@@ -26,6 +27,10 @@ let pageSize = ref(10)
 let totalJobs = ref(0)
 let totalPages = ref(1)
 let selectAllCheckbox = ref(false);
+
+let modalTitle = ref('');
+let modalMessage = ref('');
+let modalAction = ref('');
 
 // computed property that returns the filtered list of jobs. 
 let filteredJobs = computed(() => {
@@ -176,6 +181,13 @@ const clear = async () => {
     await clearSpace()
     console.log("Clearing space")
 }
+
+const openModal = (title, message, action) => {
+    modalTitle.value = title;
+    modalMessage.value = message;
+    modalAction.value = action;
+};
+
 </script>
 
 <template>
@@ -185,15 +197,17 @@ const clear = async () => {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Deleting {{ selectedJobs.length }} job(s) from database!</h5>
+                    <h5 class="modal-title" id="exampleModalLabel">{{ modalTitle }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to delete these jobs? This action cannot be <b>undone</b>.</p>
+                    <p v-html="modalMessage"></p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="confirmDelete">Delete</button>
+                    <!-- <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="confirmDelete">Delete</button> -->
+                    <button v-if="modalAction === 'confirmDelete'" type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="confirmDelete">Delete</button>
+                    <button v-if="modalAction === 'clear'" type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="clear">Clear Space</button>
                 </div>
                 </div>
             </div>
@@ -248,8 +262,8 @@ const clear = async () => {
         </div>
         <div class="row w-100" style="margin-bottom: 0.5rem;">
             <div class="col-1 text-start" style="padding-left: 0">
-                <button type="button" class="btn btn-danger" data-bs-toggle="modal"
-                    data-bs-target="#exampleModal" :disabled="selectedJobs.length === 0">
+                <button type="button" @click="openModal(deleteModalTitle, 'Are you sure you want to delete these jobs? This action cannot be <b>undone</b>.', 'confirmDelete')"
+                    class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#exampleModal" :disabled="selectedJobs.length === 0">
                     <i class="fas fa-trash-alt"></i>
                 </button>
                 
@@ -329,7 +343,8 @@ const clear = async () => {
                 </li>
             </ul>
         </nav>
-        <button @click="clearSpace">Clear space</button>
+        <button @click="openModal('Clear Space', 'Are you sure you want to clear space? This will remove the file from jobs <strong>>6 months old</strong>. All other fields will remain in the database.', 'clear')" 
+            data-bs-toggle="modal" data-bs-target="#exampleModal">Clear space</button>
     </div>
 </template>
   
