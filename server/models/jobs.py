@@ -27,11 +27,13 @@ class Job(db.Model):
     printer = db.relationship('Printer', backref='Job')
     file_name_original = db.Column(db.String(50), nullable = False)
     file_name_pk = None
+    filePause = 0
     progress = 0.0
     total_time = 0
     start_time = 0
     elapsed_time = 0
     pause_time = 0
+
 
     
     def __init__(self, file, name, printer_id, status, file_name_original): 
@@ -46,6 +48,7 @@ class Job(db.Model):
         self.start_time = 0
         self.elapsed_time = 0
         self.pause_time = 0
+        self.filePause = 0
 
     def __repr__(self):
         return f"Job(id={self.id}, name={self.name}, printer_id={self.printer_id}, status={self.status})"
@@ -277,6 +280,14 @@ class Job(db.Model):
     
     def getJobId(self):
         return self.id
+    
+    def getFilePause(self):
+        return self.filePause
+
+    def setFilePause(self, pause):
+        self.filePause = pause
+        current_app.socketio.emit('file_pause_update', {'job_id': self.id, 'file_pause': self.filePause})
+
     
     #setters 
     def setStatus(self, status): 
