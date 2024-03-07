@@ -213,7 +213,6 @@ class Printer(db.Model):
             #time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
             while True:
-                print("in send")
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
                 
@@ -309,25 +308,79 @@ class Printer(db.Model):
                         continue
                     # Send the line to the printer.
                     # time.sleep(1)
-                    if(self.getStatus()=="paused" or ("M601" in line) or ("M0" in line)):
+                    # if(self.getStatus()=="paused" or ("M601" in line) or ("M0" in line)):
+                    #     job.setPauseTime()
+                    #     self.setStatus("paused")
+                    #     self.sendGcode("G91") # set relative positioning mode
+                    #     self.sendGcode("G1 Z10 F300")  # move up 10mm 
+                    #     self.sendGcode("M601") # pause command 
+                    #     # self.sendGcode("G1 Z-10 F300")
+                    #     while(True):
+                    #         stat = self.getStatus()
+                    #         if(stat=="printing"):
+                    #             job.resumeTime()
+                    #             self.sendGcode("G1 Z-10 F300") # move back to previous position 
+                    #             self.sendGcode("G90") # set back to absolute positioning 
+                                # break 
+                    
+
+                    if("M600" in line):
+                        # self.setStatus("paused")
+                        job.setFilePause(1)
+
+                    res = self.sendGcode(line)
+
+                    if(job.getFilePause() == 1):
+                        job.setFilePause(0)
+                        
+                    #  software pausing        
+                    if (self.getStatus()=="paused"):
+                        self.sendGcode("M601") # pause command
                         job.setPauseTime()
-                        self.setStatus("paused")
-                        self.sendGcode("G91") # set relative positioning mode
-                        self.sendGcode("G1 Z10 F300")  # move up 10mm 
-                        self.sendGcode("M601") # pause command 
-                        # self.sendGcode("G1 Z-10 F300")
                         while(True):
                             stat = self.getStatus()
                             if(stat=="printing"):
                                 job.resumeTime()
-                                self.sendGcode("G1 Z-10 F300") # move back to previous position 
-                                self.sendGcode("G90") # set back to absolute positioning 
-                                break 
+                                self.sendGcode("M602") # resume command
+                                break
+                    
+                    # software color change
+                    if (self.getStatus()=="colorchange"):
+                        self.sendGcode("M600") # color change command
+                        self.setStatus("printing")
+                        # job.setPauseTime()
+                        # while(True):
+                        #     stat = self.getStatus()
+                        #     if(stat=="printing"):
+                        #         job.resumeTime()
+                        #         break       
+
+                    # pause in file
+                    # if ("M601" in line) or ("M0" in line) or ("M600" in line):
+                    #     # self.setStatus("paused")
+                    #     # job.setPauseTime()
+                    #     # while True:
+                    #     #     if self.getStatus()=="printing":
+                    #     #         job.resumeTime()
+                    #     job.setPauseTime()
+                    #     self.setStatus("paused")
+                    #     self.sendGcode("G91") # set relative positioning mode
+                    #     self.sendGcode("G1 Z10 F300")  # move up 10mm 
+                    #     # self.sendGcode("M601") # pause command 
+                    #     # self.sendGcode("G1 Z-10 F300")
+                    #     while(True):
+                    #         stat = self.getStatus()
+                    #         if(stat=="printing"):
+                    #             job.resumeTime()
+                    #             self.sendGcode("G1 Z-10 F300") # move back to previous position 
+                    #             self.sendGcode("G90") # set back to absolute positioning 
+                    #             break 
+                            
                     
                     # right now, if pause is in the line, M601 will be sent twice to avoid duplicate code. 
                     # test to see if thatll be an issue. 
                     
-                    res = self.sendGcode(line)
+                    # res = self.sendGcode(line)
                     # Increment the sent lines
                     sent_lines += 1
                     # Calculate the progress
@@ -353,17 +406,17 @@ class Printer(db.Model):
     def endingSequence(self):
         try: 
             # *** Ender 3 Pro ending sequence ***
-            self.gcodeEnding("G91") # Relative positioning
-            self.gcodeEnding("G1 E-2 F2700") # Retract a bit
-            self.gcodeEnding("G1 E-2 Z0.2 F2400") # Retract and raise Z
-            self.gcodeEnding("G1 X5 Y5 F3000") # Wipe out
-            self.gcodeEnding("G1 Z10") # Raise Z more
-            self.gcodeEnding("G90") # Absolute positioning
-            self.gcodeEnding("G1 X0 Y220") # Present print
-            self.gcodeEnding("M106 S0") # Turn-off fan
-            self.gcodeEnding("M104 S0") # Turn-off hotend
-            self.gcodeEnding("M140 S0") # Turn-off bed
-            self.gcodeEnding("M84 X Y E") # Disable all steppers but Z
+            # self.gcodeEnding("G91") # Relative positioning
+            # self.gcodeEnding("G1 E-2 F2700") # Retract a bit
+            # self.gcodeEnding("G1 E-2 Z0.2 F2400") # Retract and raise Z
+            # self.gcodeEnding("G1 X5 Y5 F3000") # Wipe out
+            # self.gcodeEnding("G1 Z10") # Raise Z more
+            # self.gcodeEnding("G90") # Absolute positioning
+            # self.gcodeEnding("G1 X0 Y220") # Present print
+            # self.gcodeEnding("M106 S0") # Turn-off fan
+            # self.gcodeEnding("M104 S0") # Turn-off hotend
+            # self.gcodeEnding("M140 S0") # Turn-off bed
+            # self.gcodeEnding("M84 X Y E") # Disable all steppers but Z
 
             # *** Prusa i3 MK3 ending sequence ***
             # self.gcodeEnding("M104 S0") # turn off extruder
@@ -373,16 +426,16 @@ class Printer(db.Model):
             # self.gcodeEnding("M84") # disable motors
 
             # *** Prusa MK4 ending sequence ***
-            # {if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+1, max_print_height)} F720 ; Move print head up{endif}
-            # M104 S0 ; turn off temperature
-            # M140 S0 ; turn off heatbed
-            # M107 ; turn off fan
-            # G1 X241 Y170 F3600 ; park
-            # {if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+23, max_print_height)} F300 ; Move print head up{endif}
-            # G4 ; wait
-            # M900 K0 ; reset LA
-            # M142 S36 ; reset heatbreak target temp
-            # M84 X Y E ; disable motors
+            self.gcodeEnding("{if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+1, max_print_height)} F720 ; Move print head up{endif}")
+            self.gcodeEnding("M104 S0")# ; turn off temperature
+            self.gcodeEnding("M140 S0")# ; turn off heatbed
+            self.gcodeEnding("M107")# ; turn off fan
+            self.gcodeEnding("G1 X241 Y170 F3600")# ; park
+            self.gcodeEnding("{if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+23, max_print_height)} F300")# ; Move print head up{endif}
+            self.gcodeEnding("G4")# ; wait
+            self.gcodeEnding("M900 K0")# ; reset LA
+            self.gcodeEnding("M142 S36")# ; reset heatbreak target temp
+            self.gcodeEnding("M84 X Y E")# ; disable motors
             # ; max_layer_z = [max_layer_z]
             
         except Exception as e:
@@ -414,7 +467,7 @@ class Printer(db.Model):
                     self.sendStatusToJob(job, job.id, "error")
                     # self.setError("Error")
                 elif verdict=="cancelled":
-                    # self.endingSequence()
+                    self.endingSequence()
                     self.disconnect()
                     self.sendStatusToJob(job, job.id, "cancelled")
                 else: 
@@ -468,6 +521,7 @@ class Printer(db.Model):
     
     def setSer(self, port):
         self.ser = port
+
 
     #  now when we set the status, we can emit the status to the frontend
     def setStatus(self, newStatus):
