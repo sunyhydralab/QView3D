@@ -262,13 +262,15 @@ def delete_job():
         # Retrieve job to delete & printer id 
         job = Job.findJob(job_id) 
         printer_id = job.getPrinterId() 
-
-        # Retrieve printer object & corresponding queue
-        printer_object = findPrinterObject(printer_id)
-        queue = printer_object.getQueue()
-
-        # Delete job from the queue
-        queue.deleteJob(job_id, printer_id) 
+        print("ID: ", printer_id)
+        
+        if printer_id != 0:
+            # Retrieve printer object & corresponding queue
+            printer_object = findPrinterObject(printer_id)
+            queue = printer_object.getQueue()
+            
+            # Delete job from the queue
+            queue.deleteJob(job_id, printer_id) 
 
         # Delete job from the database
         Job.delete_job(job_id)

@@ -92,6 +92,7 @@ const changePage = async (newPage: any) => {
     }
 
     // Reset the 'Select All' checkbox state
+    selectedJobs.value = [];
     selectAllCheckbox.value = false;
 
     // Assign the new page value based on the parameter passed in
@@ -146,6 +147,9 @@ async function submitFilter() {
     // Now fetch the jobs for the current page
     const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value);
     jobs.value = joblist;
+
+    selectedJobs.value = [];
+    selectAllCheckbox.value = false;
 }
 
 // This just displays the selectedJobs on the console for me to see while working. Would be removed before final merge
