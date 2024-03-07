@@ -29,10 +29,13 @@ class Job(db.Model):
     file_name_pk = None
     filePause = 0
     progress = 0.0
-    total_time = 0
-    start_time = 0
-    elapsed_time = 0
-    pause_time = 0
+    # total_time = 0
+    # start_time = 0
+    # elapsed_time = 0
+    # pause_time = 0
+
+    #total, eta, timestart, extra time 
+    job_time = [datetime(0, 0, 0, 0, 0, 0)]*4
 
 
     
@@ -44,10 +47,11 @@ class Job(db.Model):
         self.file_name_original = file_name_original # original file name without PK identifier 
         self.file_name_pk = None
         self.progress = 0.0
-        self.total_time = 0
-        self.start_time = 0
-        self.elapsed_time = 0
-        self.pause_time = 0
+        # self.total_time = 0
+        # self.start_time = 0
+        # self.elapsed_time = 0
+        # self.pause_time = 0
+        job_time = [datetime(0, 0, 0, 0, 0, 0)]*4
         self.filePause = 0
 
     def __repr__(self):
@@ -245,7 +249,15 @@ class Job(db.Model):
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to clear space. Database error"}), 500
-    
+
+    @classmethod 
+    def setDBstatus(cls, jobid, status):
+        cls.update_job_status(jobid, status)
+
+    @classmethod 
+    def getPathForDelete(cls, file_name):
+        return os.path.join('../uploads', file_name)
+   
            
     def saveToFolder(self):
         file_data = self.getFile()
@@ -334,16 +346,7 @@ class Job(db.Model):
     def resumeTime(self):
         self.start_time = time.time()
         current_app.socketio.emit('job_resume', {'job_id': self.id, 'start_time': self.start_time, 'elapsed_time': self.elapsed_time}) 
-    
-    @classmethod 
-    def setDBstatus(cls, jobid, status):
-        cls.update_job_status(jobid, status)
 
-    @classmethod 
-    def getPathForDelete(cls, file_name):
-        return os.path.join('../uploads', file_name)
-
-        
     def setPath(self, path): 
         self.path = path 
 
@@ -352,3 +355,9 @@ class Job(db.Model):
         
     def setFile(self, file):
         self.file = file
+
+    def setTime(self, index, y, m, d, h, min, s):
+        timeData = datetime(y, m, d, h, min, s)
+        self.job_time[index] = timeData
+        current_app.socketio.emit('set_time', {'new_time': timeData.isoformat(), 'index': index}) 
+
