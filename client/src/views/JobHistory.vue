@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
-import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob } from '@/model/jobs';
+import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace } from '@/model/jobs';
 import { toast } from '@/model/toast';
 import { computed, onMounted, ref, watch } from 'vue';
 // import { useGetJobs, type Job } from '@/model/jobs';
@@ -10,6 +10,7 @@ const { retrieveInfo } = useRetrievePrintersInfo()
 const { rerunJob } = useRerunJob()
 const { getFile } = useGetJobFile()
 const { deleteJob } = useDeleteJob()
+const { clearSpace } = useClearSpace()
 
 const printers = ref<Array<Device>>([]) // Get list of open printer threads 
 const selectedPrinters = ref<Array<Device>>([])
@@ -171,6 +172,10 @@ const selectAllJobs = () => {
         selectedJobs.value = selectedJobs.value.filter(job => !filteredJobs.value.includes(job));
     }
 };
+const clear = async () => {
+    await clearSpace()
+    console.log("Clearing space")
+}
 </script>
 
 <template>
@@ -324,6 +329,7 @@ const selectAllJobs = () => {
                 </li>
             </ul>
         </nav>
+        <button @click="clearSpace">Clear space</button>
     </div>
 </template>
   
