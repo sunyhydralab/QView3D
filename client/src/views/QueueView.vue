@@ -10,10 +10,7 @@ const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
 const { bumpjob } = bumpJobs()
 
-const modalJob = ref<Job>();
-const modalPrinter = ref<Printer>();
 const selectedJobs = ref<Array<Job>>([]);
-const selectedJobsMap = ref<Record<string, Job[]>>({});
 // Map to track the state of "Select All" checkbox for each printer
 const selectAllCheckboxMap = ref<Record<string, boolean>>({});
 
@@ -89,11 +86,14 @@ const SelectAllJobs = (printer: Printer | undefined) => {
     // Toggle the "Select All" checkbox state for the current printer
     selectAllCheckboxMap.value[printer.id!] = !selectAllCheckboxMap.value[printer.id!];
 
-    // Update the selected jobs for the current printer based on the "Select All" checkbox state
-    selectedJobsMap.value[printer.id!] = selectAllCheckboxMap.value[printer.id!] ? [...printer.queue] : [];
-
-    // Update the selectedJobs array by combining selected jobs from all printers
-    selectedJobs.value = Object.values(selectedJobsMap.value).flat();
+    if (selectAllCheckboxMap.value[printer.id!]) {
+      // If the "Select All" checkbox for the current printer is checked,
+      // add all jobs from the current printer to the selectedJobs array
+      selectedJobs.value = [...selectedJobs.value, ...printer.queue];
+    } else {
+      // Otherwise, remove all jobs from the current printer from the selectedJobs array
+      selectedJobs.value = selectedJobs.value.filter(job => job.printerid !== printer.id);
+    }
   }
 };
 
