@@ -389,3 +389,19 @@ function startTimer(job: any, start_time: number, elapsed_time: number, isPaused
     }
   }, 1000)
 }
+
+// function to delete job from db
+export function useDeleteJob() {
+  return {
+    async deleteJob(job: Job) {
+      let jobid = job?.id;
+      try {
+        const response = await api(`deletejob`, { jobid })
+        return response;
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while deleting the job')
+      }
+    }
+  }
+}

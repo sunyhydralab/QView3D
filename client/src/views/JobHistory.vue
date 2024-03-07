@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
-import { useGetJobs, type Job, useRerunJob, useGetJobFile, useClearSpace } from '@/model/jobs';
+import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace } from '@/model/jobs';
+import { toast } from '@/model/toast';
 import { computed, onMounted, ref, watch } from 'vue';
 // import { useGetJobs, type Job } from '@/model/jobs';
 // import { computed, onMounted, ref } from 'vue';
@@ -8,10 +9,13 @@ const { jobhistory } = useGetJobs()
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { rerunJob } = useRerunJob()
 const { getFile } = useGetJobFile()
+const { deleteJob } = useDeleteJob()
 const { clearSpace } = useClearSpace()
 
 const printers = ref<Array<Device>>([]) // Get list of open printer threads 
 const selectedPrinters = ref<Array<Device>>([])
+const selectedJobs = ref<Array<Job>>([]);
+
 let jobs = ref<Array<Job>>([])
 let filter = ref('') // This will hold the current filter value
 let oldestFirst = ref<boolean>(false)
@@ -21,6 +25,7 @@ let page = ref(1)
 let pageSize = ref(10)
 let totalJobs = ref(0)
 let totalPages = ref(1)
+let selectAllCheckbox = ref(false);
 
 // computed property that returns the filtered list of jobs. 
 let filteredJobs = computed(() => {
@@ -80,6 +85,10 @@ const changePage = async (newPage: any) => {
     if (newPage < 1 || newPage > Math.ceil(totalJobs.value / pageSize.value)) {
         return;
     }
+
+    // Reset the 'Select All' checkbox state
+    selectAllCheckbox.value = false;
+
     // Assign the new page value based on the parameter passed in
     page.value = newPage
     jobs.value = []; // Clear the jobs array
@@ -134,6 +143,35 @@ async function submitFilter() {
     jobs.value = joblist;
 }
 
+// This just displays the selectedJobs on the console for me to see while working. Would be removed before final merge
+const handleJobSelection = () => {
+    console.log('Selected Jobs:', selectedJobs.value);
+};
+
+const confirmDelete = async () => {
+    const deletionPromises = selectedJobs.value.map(job => deleteJob(job));
+    await Promise.all(deletionPromises);
+
+    const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
+    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value);
+    jobs.value = joblist;
+    totalJobs.value = total;
+
+    // Clear the selected jobs array
+    selectedJobs.value = [];
+    selectAllCheckbox.value = false;
+}
+
+const selectAllJobs = () => {
+    if (selectAllCheckbox.value) {
+        // Add jobs from the current page to the selectedJobs array
+        const newSelectedJobs = filteredJobs.value.filter(job => !selectedJobs.value.includes(job));
+        selectedJobs.value = [...selectedJobs.value, ...newSelectedJobs];
+    } else {
+        // Remove jobs from the current page from the selectedJobs array
+        selectedJobs.value = selectedJobs.value.filter(job => !filteredJobs.value.includes(job));
+    }
+};
 const clear = async () => {
     await clearSpace()
     console.log("Clearing space")
@@ -142,6 +180,25 @@ const clear = async () => {
 
 <template>
     <div class="container">
+
+        <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Deleting {{ selectedJobs.length }} job(s) from database!</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete these jobs? This action cannot be <b>undone</b>.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="confirmDelete">Delete</button>
+                </div>
+                </div>
+            </div>
+        </div>
+
         <h2 class="mb-2 text-center">Job History View</h2>
         <div class="mb-2 p-2 border rounded">
             <div class="row justify-content-center">
@@ -170,7 +227,6 @@ const clear = async () => {
                         </ul>
                     </div>
                 </div>
-
                 <div class="col-md-4">
                     <label class="form-label">Order:</label>
                     <div class="form-check">
@@ -190,13 +246,28 @@ const clear = async () => {
                 </div>
             </div>
         </div>
-
-        <div class="mb-2">
-            <button @click="submitFilter" class="btn btn-primary">Submit Filter</button>
+        <div class="row w-100" style="margin-bottom: 0.5rem;">
+            <div class="col-1 text-start" style="padding-left: 0">
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal"
+                    data-bs-target="#exampleModal" :disabled="selectedJobs.length === 0">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+                
+            </div>
+            <div class="col-10 text-center">
+                <button @click="submitFilter" class="btn btn-primary">Submit Filter</button>
+            </div>
+            <div class="col-1">
+                <!-- Empty column to push the other columns to the left -->
+            </div>
         </div>
+        
         <table class="table">
             <thead>
                 <tr>
+                    <th class="col-checkbox">
+                        <input type="checkbox" @change="selectAllJobs" v-model="selectAllCheckbox">
+                    </th>
                     <th class="col-job-id">Job ID</th>
                     <th class="col-job-title">Job Title</th>
                     <th class="col-file">File</th>
@@ -208,6 +279,9 @@ const clear = async () => {
             </thead>
             <tbody v-if="filteredJobs.length > 0">
                 <tr v-for="job in filteredJobs" :key="job.id">
+                    <td>
+                        <input type="checkbox" v-model="selectedJobs" :value="job" @change="handleJobSelection">
+                    </td>
                     <td>{{ job.id }}</td>
                     <td>{{ job.name }}</td>
                     <td>
@@ -277,6 +351,9 @@ th {
     background-color: #f2f2f2;
 }
 
+.col-checkbox {
+    width: 1vh;
+}
 .col-job-id {
     width: 8vh;
 }
