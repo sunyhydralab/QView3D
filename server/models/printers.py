@@ -267,6 +267,8 @@ class Printer(db.Model):
                     break
                 else:
                     self.responseCount = 0
+
+                
                     
                 stat = self.getStatus()
                 if stat == "complete" or stat=="error":
@@ -326,8 +328,9 @@ class Printer(db.Model):
                 
                 #  Time handling
                 comment_lines = [line for line in lines if line.strip() and line.startswith(";")]
-                time_seconds = job.getTimeSeconds(comment_lines)
-                job.startTime(time_seconds)
+
+                total_time = job.getTimeFromFile(comment_lines)
+                # job.setTime(total_time, 0)
 
                 # Only send the lines that are not empty and don't start with ";"
                 # so we can correctly get the progress
@@ -336,7 +339,6 @@ class Printer(db.Model):
                 total_lines = len(command_lines)
                 # set the sent lines to 0
                 sent_lines = 0
-                
                 # Replace file with the path to the file. "r" means read mode. 
                 # now instead of reading from 'g', we are reading line by line
                 for line in lines:
@@ -347,23 +349,12 @@ class Printer(db.Model):
                         line = line.split(";")[0].strip()  # Remove comments starting with ";"
                     if len(line) == 0 or line.startswith(";"): 
                         continue
-                    # Send the line to the printer.
-                    # time.sleep(1)
-                    # if(self.getStatus()=="paused" or ("M601" in line) or ("M0" in line)):
-                    #     job.setPauseTime()
-                    #     self.setStatus("paused")
-                    #     self.sendGcode("G91") # set relative positioning mode
-                    #     self.sendGcode("G1 Z10 F300")  # move up 10mm 
-                    #     self.sendGcode("M601") # pause command 
-                    #     # self.sendGcode("G1 Z-10 F300")
-                    #     while(True):
-                    #         stat = self.getStatus()
-                    #         if(stat=="printing"):
-                    #             job.resumeTime()
-                    #             self.sendGcode("G1 Z-10 F300") # move back to previous position 
-                    #             self.sendGcode("G90") # set back to absolute positioning 
-                                # break 
-                    
+
+                    if("M190" in line or "M109" in line) and job.getTimeStarted()==False:
+                        job.setTimeStarted(True)
+                        job.setTime(total_time, 0)
+                        job.setTime(job.calculateEta(), 1)
+                        job.setTime(datetime.now(), 2)
 
                     if("M600" in line):
                         # self.setStatus("paused")
@@ -377,12 +368,16 @@ class Printer(db.Model):
                     #  software pausing        
                     if (self.getStatus()=="paused"):
                         self.sendGcode("M601") # pause command
-                        job.setPauseTime()
+                        # job.setPauseTime()
                         while(True):
+                            job.setTime(time.now(), 3)
+                            job.setTime(job.calculateEta(), 1)
+                            job.setTime(job.calculateTotalTime(), 0)
                             stat = self.getStatus()
                             if(stat=="printing"):
-                                job.resumeTime()
+                                # job.resumeTime()
                                 self.sendGcode("M602") # resume command
+                                job.setTime(datetime(0, 0, 0, 0, 0, 0), 3)
                                 break
                     
                     # software color change
@@ -390,38 +385,8 @@ class Printer(db.Model):
                         self.sendGcode("M600") # color change command
                         self.setStatus("printing")
                         # job.setPauseTime()
-                        # while(True):
-                        #     stat = self.getStatus()
-                        #     if(stat=="printing"):
-                        #         job.resumeTime()
-                        #         break       
 
-                    # pause in file
-                    # if ("M601" in line) or ("M0" in line) or ("M600" in line):
-                    #     # self.setStatus("paused")
-                    #     # job.setPauseTime()
-                    #     # while True:
-                    #     #     if self.getStatus()=="printing":
-                    #     #         job.resumeTime()
-                    #     job.setPauseTime()
-                    #     self.setStatus("paused")
-                    #     self.sendGcode("G91") # set relative positioning mode
-                    #     self.sendGcode("G1 Z10 F300")  # move up 10mm 
-                    #     # self.sendGcode("M601") # pause command 
-                    #     # self.sendGcode("G1 Z-10 F300")
-                    #     while(True):
-                    #         stat = self.getStatus()
-                    #         if(stat=="printing"):
-                    #             job.resumeTime()
-                    #             self.sendGcode("G1 Z-10 F300") # move back to previous position 
-                    #             self.sendGcode("G90") # set back to absolute positioning 
-                    #             break 
-                            
                     
-                    # right now, if pause is in the line, M601 will be sent twice to avoid duplicate code. 
-                    # test to see if thatll be an issue. 
-                    
-                    # res = self.sendGcode(line)
                     # Increment the sent lines
                     sent_lines += 1
                     # Calculate the progress

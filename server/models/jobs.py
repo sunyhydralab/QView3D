@@ -29,13 +29,9 @@ class Job(db.Model):
     file_name_pk = None
     filePause = 0
     progress = 0.0
-    # total_time = 0
-    # start_time = 0
-    # elapsed_time = 0
-    # pause_time = 0
-
-    #total, eta, timestart, extra time 
-    job_time = [datetime(0, 0, 0, 0, 0, 0)]*4
+    time_started = False
+    #total, eta, timestart, pause time 
+    job_time = [datetime.min]*4
 
 
     
@@ -46,13 +42,10 @@ class Job(db.Model):
         self.status = status 
         self.file_name_original = file_name_original # original file name without PK identifier 
         self.file_name_pk = None
-        self.progress = 0.0
-        # self.total_time = 0
-        # self.start_time = 0
-        # self.elapsed_time = 0
-        # self.pause_time = 0
-        job_time = [datetime(0, 0, 0, 0, 0, 0)]*4
         self.filePause = 0
+        self.progress = 0.0
+        self.time_started = False
+        self.job_time = [datetime.min]*4
 
     def __repr__(self):
         return f"Job(id={self.id}, name={self.name}, printer_id={self.printer_id}, status={self.status})"
@@ -317,8 +310,8 @@ class Job(db.Model):
     # added a getProgress method to get the progress of a job
     def getProgress(self):
         return self.progress
-    
-    def getTimeSeconds(self, comment_lines):
+
+    def getTimeFromFile(self, comment_lines):
         # job_line can look two ways:
         # 1. ;TIME:seconds
         # 2. ; estimated printing time (normal mode) = minutes seconds
@@ -329,23 +322,57 @@ class Job(db.Model):
         else:
             # search for the line that contains "printing time", then the time estimate is in the format of "; estimated printing time (normal mode) = minutes seconds"
             time_line = next(line for line in comment_lines if "time" in line)
-            time_minutes, time_seconds = map(int, re.findall(r'\d+', time_line))
-            time_seconds += time_minutes * 60
-        return time_seconds
+            time_values = re.findall(r'\d+', time_line)
 
-    def startTime(self, time_seconds):
-        self.total_time = time_seconds
-        self.start_time = time.time()
-        current_app.socketio.emit('job_time', {'job_id': self.id, 'start_time': self.start_time, 'total_time': self.total_time})
+            # Initialize all time units to 0
+            time_days = time_hours = time_minutes = time_seconds = 0
+
+            # Assign values from right to left (seconds, minutes, hours, days)
+            time_values = time_values[::-1]
+            if len(time_values) > 0:
+                time_seconds = int(time_values[0])
+            if len(time_values) > 1:
+                time_minutes = int(time_values[1])
+            if len(time_values) > 2:
+                time_hours = int(time_values[2])
+            if len(time_values) > 3:
+                time_days = int(time_values[3])
+
+            # Calculate total time in seconds
+            time_seconds = time_days * 24 * 60 * 60 + time_hours * 60 * 60 + time_minutes * 60 + time_seconds
+
+        date = datetime.fromtimestamp(time_seconds)
+        return date
     
-    def setPauseTime(self):
-        self.pause_time = time.time()
-        self.elapsed_time += self.pause_time - self.start_time
-        current_app.socketio.emit('job_pause', {'job_id': self.id, 'pause_time': self.pause_time, 'elapsed_time': self.elapsed_time})
+    def getTimeStarted(self):
+        return self.time_started
+    
+    def calculateEta(self):
+        now = datetime.now()
+        total_time = self.getJobTime()[0]
+        delta = total_time - now
+        return datetime.now() + delta
+    
+    def calculateTotalTime(self):
+        self.getJobTime()[0] += datetime.now() - self.getJobTime()[4]
+        return  self.getJobTime()[0]
+    
+    def getJobTime(self):
+        return self.job_time
+    
+    # def startTime(self, time_seconds):
+    #     self.total_time = time_seconds
+    #     self.start_time = time.time()
+    #     current_app.socketio.emit('job_time', {'job_id': self.id, 'start_time': self.start_time, 'total_time': self.total_time})
+    
+    # def setPauseTime(self):
+    #     self.pause_time = time.time()
+    #     self.elapsed_time += self.pause_time - self.start_time
+    #     current_app.socketio.emit('job_pause', {'job_id': self.id, 'pause_time': self.pause_time, 'elapsed_time': self.elapsed_time})
 
-    def resumeTime(self):
-        self.start_time = time.time()
-        current_app.socketio.emit('job_resume', {'job_id': self.id, 'start_time': self.start_time, 'elapsed_time': self.elapsed_time}) 
+    # def resumeTime(self):
+    #     self.start_time = time.time()
+    #     current_app.socketio.emit('job_resume', {'job_id': self.id, 'start_time': self.start_time, 'elapsed_time': self.elapsed_time}) 
 
     def setPath(self, path): 
         self.path = path 
@@ -356,8 +383,12 @@ class Job(db.Model):
     def setFile(self, file):
         self.file = file
 
-    def setTime(self, index, y, m, d, h, min, s):
-        timeData = datetime(y, m, d, h, min, s)
+    def setTimeStarted(self, time_started):
+        self.time_started = time_started
+
+    def setTime(self, timeData, index):
+        # timeData = datetime(y, m, d, h, min, s)
         self.job_time[index] = timeData
-        current_app.socketio.emit('set_time', {'new_time': timeData.isoformat(), 'index': index}) 
+        print(timeData.isoformat())
+        current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData.isoformat(), 'index': index}) 
 

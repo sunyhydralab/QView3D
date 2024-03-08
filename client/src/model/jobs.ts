@@ -18,7 +18,7 @@ export interface Job {
   progress?: number //store progress of job
   printer: string //store printer name
   printerid: number
-  file_pause: number 
+  file_pause: number
   priority?: string
   // job_id: number
   // total_time?: number
@@ -26,27 +26,62 @@ export interface Job {
   // remaining_time?: number
 
   // total, eta, timestart, extra time 
-  job_server: [Date, Date, Date, Date] // this saves all of the data from the backend.Only changed if there is a pause involved. 
+  job_server?: [Date, Date, Date, Date] // this saves all of the data from the backend.Only changed if there is a pause involved. 
 
-  job_client: { // this is frontend data CALCULATED based on the backend data 
-    elapsed_time: number 
-    remaining_time: number 
-    total_time: number 
-    eta: number 
-    extra_time: number 
+  job_client?: { // this is frontend data CALCULATED based on the backend data 
+    total_time: number
+    eta: number
+    elapsed_time: number
+    extra_time: number
+    remaining_time: number
   }
-
   timer?: NodeJS.Timeout
+}
+
+export function jobTime(job: Job, printers: any){
+  const printerid = job.printerid 
+  const printer = printers.find((printer: { id: number }) => printer.id === printerid)
+
+  job.timer = setInterval(() => {
+
+    let status = printer.status
+    job.job_client!.eta = job.job_server![1].getTime()
+    // job.job_client!.elapsed_time = Date.now() - toSeconds(job.job_server![2])
+    job.job_client!.elapsed_time = Date.now() - job.job_server![2].getTime()
+    if (status === "printing"){
+      job.job_client!.total_time = job.job_server![0].getTime()
+      if (job.job_client!.elapsed_time > job.job_client!.total_time){
+        job.job_client!.extra_time = Date.now() - job.job_server![1].getTime()
+      }
+      job.job_client!.remaining_time = job.job_server![0].getTime() - job.job_client!.elapsed_time
+    }else{
+      clearInterval(job.timer)
+    }
+
+  }, 1000)
+
 }
 
 export function setupTimeSocket(printers: any) {
   // Always set up the socket connection and event listener
   socket.on('set_time', (data: any) => {
-    // const job = printers
-    // .flatMap((printer: { queue: any }) => printer.queue)
-    // .find((job: { id: any }) => job?.id === data.job_id)
+    const job = printers
+      .flatMap((printer: { queue: any }) => printer.queue)
+      .find((job: { id: any }) => job?.id === data.job_id)
     
+    if(!job.job_client || !job.job_server){
+      job.job_client = {
+        total_time: 0,
+        eta: 0,
+        elapsed_time: 0,
+        extra_time: 0,
+        remaining_time: 0
+      }
+      job.job_server = ["00:00:00", "00:00:00", "00:00:00", "00:00:00"]
+    }
 
+    job.job_server[data.index] = Date.parse(data.new_time)
+    jobTime(job, printers)
   })
 }
 
@@ -247,9 +282,9 @@ export function useGetJobFile() {
   }
 }
 
-export function useClearSpace(){
+export function useClearSpace() {
   return {
-    async clearSpace(){
+    async clearSpace() {
       try {
         const response = await api('clearspace')
         if (response) {
@@ -302,29 +337,29 @@ export function setupJobStatusSocket(printers: any) {
     if (job) {
       job.status = data.status
 
-      // If the job is complete, cancelled, or errored, stop the timer
-      if (['complete', 'cancelled', 'error'].includes(data.status)) {
-        if (job.timer) {
-          clearInterval(job.timer)
-          delete job.timer
-        }
-      }
+      // // If the job is complete, cancelled, or errored, stop the timer
+      // if (['complete', 'cancelled', 'error'].includes(data.status)) {
+      //   if (job.timer) {
+      //     clearInterval(job.timer)
+      //     delete job.timer
+      //   }
+      // }
     }
   })
 }
 
-export function setupPauseFeedbackSocket(printers: any) {
-  // Always set up the socket connection and event listener
-  socket.on('file_pause_update', (data: any) => {
-    const job = printers
-    .flatMap((printer: { queue: any }) => printer.queue)
-    .find((job: { id: any }) => job?.id === data.job_id)
+// export function setupPauseFeedbackSocket(printers: any) {
+//   // Always set up the socket connection and event listener
+//   socket.on('file_pause_update', (data: any) => {
+//     const job = printers
+//       .flatMap((printer: { queue: any }) => printer.queue)
+//       .find((job: { id: any }) => job?.id === data.job_id)
 
-  if (job) {
-    job.file_pause = data.file_pause
-    }
-  })
-}
+//     if (job) {
+//       job.file_pause = data.file_pause
+//     }
+//   })
+// }
 
 // export function setupTimeSocket(printers: any) {
 //   // Listen for the 'job_time' event
@@ -403,30 +438,30 @@ export function setupPauseFeedbackSocket(printers: any) {
 //   })
 // }
 
-function startTimer(job: any, start_time: number, elapsed_time: number, isPaused: boolean) {
-  // Ensure start_time and elapsed_time are defined and are numbers
-  start_time = start_time || 0
-  elapsed_time = elapsed_time || 0
+// function startTimer(job: any, start_time: number, elapsed_time: number, isPaused: boolean) {
+//   // Ensure start_time and elapsed_time are defined and are numbers
+//   start_time = start_time || 0
+//   elapsed_time = elapsed_time || 0
 
-  return setInterval(() => {
-    // Calculate the elapsed time
-    let current_elapsed_time = Math.floor(Date.now() / 1000) - start_time + elapsed_time
+//   return setInterval(() => {
+//     // Calculate the elapsed time
+//     let current_elapsed_time = Math.floor(Date.now() / 1000) - start_time + elapsed_time
 
-    // Calculate the remaining time
-    const remaining_time = isPaused ? job.remaining_time : job.total_time - current_elapsed_time
+//     // Calculate the remaining time
+//     const remaining_time = isPaused ? job.remaining_time : job.total_time - current_elapsed_time
 
-    // Update the job's time variables
-    job.total_time = isPaused ? job.total_time + 1 : job.total_time
-    job.elapsed_time = current_elapsed_time
-    job.remaining_time = remaining_time
+//     // Update the job's time variables
+//     job.total_time = isPaused ? job.total_time + 1 : job.total_time
+//     job.elapsed_time = current_elapsed_time
+//     job.remaining_time = remaining_time
 
-    // If the job is finished, stop the timer
-    if (current_elapsed_time >= job.total_time) {
-      clearInterval(job.timer)
-      delete job.timer
-    }
-  }, 1000)
-}
+//     // If the job is finished, stop the timer
+//     if (current_elapsed_time >= job.total_time) {
+//       clearInterval(job.timer)
+//       delete job.timer
+//     }
+//   }, 1000)
+// }
 
 // function to delete job from db
 export function useDeleteJob() {
