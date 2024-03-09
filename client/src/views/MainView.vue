@@ -65,17 +65,32 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
 }
 
 const setCurrentJob = (job: Job, printerName: string) => {
-  console.log("Setting current job: ", job)
   currentJob.value = job;
   currentJob.value.printer = printerName;
 }
 
-const toTime = (seconds: number | undefined) => {
-  if (seconds) {
-    const date = new Date(seconds * 1000).toISOString().substr(11, 8);
-    return date;
+function formatTime(milliseconds: number): string {
+  const seconds = Math.floor((milliseconds / 1000) % 60)
+  const minutes = Math.floor((milliseconds / (1000 * 60)) % 60)
+  const hours = Math.floor((milliseconds / (1000 * 60 * 60)) % 24)
+
+  const hoursStr = hours < 10 ? '0' + hours : hours
+  const minutesStr = minutes < 10 ? '0' + minutes : minutes
+  const secondsStr = seconds < 10 ? '0' + seconds : seconds
+
+  if ((hoursStr + ':' + minutesStr + ':' + secondsStr === 'NaN:NaN:NaN') || (hoursStr + ':' + minutesStr + ':' + secondsStr === '00:00:00')) return 'Waiting to start heating...'
+  return hoursStr + ':' + minutesStr + ':' + secondsStr
+}
+
+function formatETA(milliseconds: number): string {
+  const date = new Date(milliseconds)
+  const timeString = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+  
+  if (isNaN(date.getTime()) || timeString === "07:00 PM") {
+    return 'Waiting to start heating...'
   }
-  return "00:00:00";
+  
+  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
 }
 </script>
 
@@ -113,7 +128,7 @@ const toTime = (seconds: number | undefined) => {
                     <div class="col-12">
                       <h5 class="card-title"><i class="fas fa-hourglass-half"></i> <b>Elapsed Time:</b></h5>
                     </div>
-                    <div class="col-12">{{ currentJob?.job_client?.elapsed_time ?? "Waiting to start heating..." }}</div>
+                    <div class="col-12">{{ formatTime(currentJob?.job_client?.elapsed_time!) }}</div>
                   </div>
                 </div>
               </div>
@@ -125,7 +140,7 @@ const toTime = (seconds: number | undefined) => {
                     <div class="col-12">
                       <h5 class="card-title"><i class="fas fa-hourglass-end"></i> <b>Remaining Time:</b></h5>
                     </div>
-                    <div class="col-12">{{ currentJob?.job_client?.remaining_time ?? "Waiting to start heating..." }}</div>
+                    <div class="col-12">{{ formatTime(currentJob?.job_client?.remaining_time!) }}</div>
                   </div>
                 </div>
               </div>
@@ -139,10 +154,10 @@ const toTime = (seconds: number | undefined) => {
                     </div>
                     <div class="col-12">
                       <div v-if="currentJob?.job_client?.extra_time && currentJob?.job_client.extra_time > 0">
-                        {{ currentJob?.job_client.total_time + ' + ' + currentJob?.job_client.extra_time }}
+                        {{ formatTime(currentJob?.job_client.total_time!) + ' + ' + formatTime(currentJob?.job_client.extra_time!) }}
                       </div>
                       <div v-else>
-                        {{ currentJob?.job_client?.total_time ?? "Waiting to start heating..." }}
+                        {{ formatTime(currentJob?.job_client?.total_time!) }}
                       </div>
                     </div>
                   </div>
@@ -156,7 +171,7 @@ const toTime = (seconds: number | undefined) => {
                     <div class="col-12">
                       <h5 class="card-title"><i class="fas fa-stopwatch"></i> <b>ETA:</b></h5>
                     </div>
-                    <div class="col-12">{{ ((currentJob?.job_client?.eta) ?? "Waiting to start heating..." ) }}</div>
+                    <div class="col-12">{{ formatETA(currentJob?.job_client?.eta!) ?? "Waiting to start heating..."  }}</div>
                   </div>
                 </div>
               </div>

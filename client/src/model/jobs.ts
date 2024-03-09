@@ -20,15 +20,10 @@ export interface Job {
   printerid: number
   file_pause: number
   priority?: string
-  // job_id: number
-  // total_time?: number
-  // elapsed_time?: number
-  // remaining_time?: number
+  job_server?: [Date, Date, Date, Date] // this saves all of the data from the backend.Only changed if there is a pause involved.
 
-  // total, eta, timestart, extra time 
-  job_server?: [Date, Date, Date, Date] // this saves all of the data from the backend.Only changed if there is a pause involved. 
-
-  job_client?: { // this is frontend data CALCULATED based on the backend data 
+  job_client?: {
+    // this is frontend data CALCULATED based on the backend data
     total_time: number
     eta: number
     elapsed_time: number
@@ -38,28 +33,31 @@ export interface Job {
   timer?: NodeJS.Timeout
 }
 
-export function jobTime(job: Job, printers: any){
-  const printerid = job.printerid 
+export function jobTime(job: Job, printers: any) {
+  const printerid = job.printerid
   const printer = printers.find((printer: { id: number }) => printer.id === printerid)
 
   job.timer = setInterval(() => {
-
-    let status = printer.status
-    job.job_client!.eta = job.job_server![1].getTime()
-    // job.job_client!.elapsed_time = Date.now() - toSeconds(job.job_server![2])
-    job.job_client!.elapsed_time = Date.now() - job.job_server![2].getTime()
-    if (status === "printing"){
-      job.job_client!.total_time = job.job_server![0].getTime()
-      if (job.job_client!.elapsed_time > job.job_client!.total_time){
-        job.job_client!.extra_time = Date.now() - job.job_server![1].getTime()
-      }
-      job.job_client!.remaining_time = job.job_server![0].getTime() - job.job_client!.elapsed_time
-    }else{
+    if (printer.status !== 'printing') {
       clearInterval(job.timer)
+      delete job.timer
+      return
     }
 
-  }, 1000)
+    let eta = job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
+    let startTime = job.job_server![2] instanceof Date ? job.job_server![2].getTime() : job.job_server![2]
+    job.job_client!.eta = eta
+    job.job_client!.elapsed_time = Date.now() - startTime
 
+    let totalTime =
+      job.job_server![0] instanceof Date ? job.job_server![0].getTime() : job.job_server![0]
+    job.job_client!.total_time = totalTime
+    if (job.job_client!.elapsed_time > job.job_client!.total_time) {
+      job.job_client!.extra_time = Date.now() - eta
+    }
+    job.job_client!.remaining_time = totalTime - job.job_client!.elapsed_time + 1
+
+  }, 1000)
 }
 
 export function setupTimeSocket(printers: any) {
@@ -68,8 +66,8 @@ export function setupTimeSocket(printers: any) {
     const job = printers
       .flatMap((printer: { queue: any }) => printer.queue)
       .find((job: { id: any }) => job?.id === data.job_id)
-    
-    if(!job.job_client || !job.job_server){
+
+    if (!job.job_client || !job.job_server) {
       job.job_client = {
         total_time: 0,
         eta: 0,
@@ -77,14 +75,13 @@ export function setupTimeSocket(printers: any) {
         extra_time: 0,
         remaining_time: 0
       }
-      job.job_server = ["00:00:00", "00:00:00", "00:00:00", "00:00:00"]
+      job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
     }
 
     job.job_server[data.index] = Date.parse(data.new_time)
     jobTime(job, printers)
   })
 }
-
 
 export function useGetJobs() {
   return {
@@ -467,10 +464,10 @@ export function setupJobStatusSocket(printers: any) {
 export function useDeleteJob() {
   return {
     async deleteJob(job: Job) {
-      let jobid = job?.id;
+      let jobid = job?.id
       try {
         const response = await api(`deletejob`, { jobid })
-        return response;
+        return response
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while deleting the job')
