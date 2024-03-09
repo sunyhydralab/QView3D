@@ -28,7 +28,7 @@ let messageId = ref<number | undefined>(0)
 let modalTitle = ref('');
 let modalMessage = ref('');
 let modalAction = ref('');
-let selectedPrinter = ref(null);
+const selectedPrinter = ref<Device | null>(null);
 
 // fetch list of connected ports from backend and automatically load them into the form dropdown 
 onMounted(async () => {
@@ -108,7 +108,7 @@ const clearMessage = () => {
     message.value = ''
 }
 
-const openModal = (title, message, action, printer) => {
+const openModal = (title: any, message: any, action: any, printer: Device) => {
     modalTitle.value = title;
     modalMessage.value = message;
     modalAction.value = action;
@@ -132,8 +132,8 @@ const openModal = (title, message, action, printer) => {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button v-if="modalAction === 'doHardReset'" type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="doHardReset(selectedPrinter)">Reset</button>
-                    <button v-if="modalAction === 'doDelete'" type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="doDelete(selectedPrinter)">Deregister</button>
+                    <button v-if="modalAction === 'doHardReset'" type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="doHardReset(selectedPrinter!)">Reset</button>
+                    <button v-if="modalAction === 'doDelete'" type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="doDelete(selectedPrinter!)">Deregister</button>
                 </div>
                 </div>
             </div>

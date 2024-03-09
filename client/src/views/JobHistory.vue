@@ -186,7 +186,7 @@ const clear = async () => {
     console.log("Clearing space")
 }
 
-const openModal = (title, message, action) => {
+const openModal = (title: any, message: any, action: any) => {
     modalTitle.value = title;
     modalMessage.value = message;
     modalAction.value = action;
