@@ -369,7 +369,7 @@ class Printer(db.Model):
                         # self.sendGcode("M25") # pause command for ender
                         # job.setPauseTime()
                         while(True):
-                            job.setTime(datetime.now(), 2)
+                            job.setTime(datetime.now(), 3)
                             job.setTime(job.calculateEta(), 1)
                             job.setTime(job.calculateTotalTime(), 0)
                             stat = self.getStatus()
@@ -377,7 +377,7 @@ class Printer(db.Model):
                                 # job.resumeTime()
                                 self.sendGcode("M602") # resume command for prusa
                                 # self.sendGcode("M24") # resume command for ender
-                                job.setTime(datetime(0, 0, 0, 0, 0, 0), 2)
+                                job.setTime(datetime(0, 0, 0, 0, 0, 0), 3)
                                 break
                     
                     # software color change
