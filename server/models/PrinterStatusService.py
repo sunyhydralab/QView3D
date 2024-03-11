@@ -54,12 +54,13 @@ class PrinterStatusService:
                 
                 if (status == "ready" and queueSize > 0):
                     time.sleep(2) # wait for 2 seconds to allow the printer to process the queue
+                    if status != "offline": 
                     # ports = serial.tools.list_ports.comports()
                     # printerport = printer.getDevice() 
                     # printerhwid = printer.getHwid()
                     # for port in ports: 
                     #     if port.device==printerport and port.hwid == printerhwid: 
-                    printer.printNextInQueue()
+                        printer.printNextInQueue()
                     # else: 
                         # printer.setError("The port this printer is registered under is not the same as the port it is connected to, or it is not connected. Click the Diagnose Printer button under Registered Printers to troubleshoot.")
 

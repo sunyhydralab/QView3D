@@ -38,7 +38,7 @@ export function jobTime(job: Job, printers: any) {
   const printer = printers.find((printer: { id: number }) => printer.id === printerid)
 
   job.timer = setInterval(() => {
-    if (printer.status !== 'printing') {
+    if (printer.status !== 'printing' && printer.status !== 'paused') {
       clearInterval(job.timer)
       delete job.timer
       return
@@ -51,11 +51,14 @@ export function jobTime(job: Job, printers: any) {
 
     let totalTime =
       job.job_server![0] instanceof Date ? job.job_server![0].getTime() : job.job_server![0]
+
     job.job_client!.total_time = totalTime
+    
     if (job.job_client!.elapsed_time > job.job_client!.total_time) {
       job.job_client!.extra_time = Date.now() - eta
+    }else{
+      job.job_client!.remaining_time = totalTime - job.job_client!.elapsed_time + 1
     }
-    job.job_client!.remaining_time = totalTime - job.job_client!.elapsed_time + 1
 
   }, 1000)
 }

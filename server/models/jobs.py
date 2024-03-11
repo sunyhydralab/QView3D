@@ -351,14 +351,12 @@ class Job(db.Model):
         now = datetime.now()
         total_time = self.getJobTime()[0]  # this returns a datetime
         job_duration = total_time - datetime.fromtimestamp(0)  # convert to timedelta
-        print("NOW: ", now)
-        print("JOB DURATION: ", job_duration)
         eta = now + job_duration
-        print("ETA: ", eta)
         return eta
     
     def calculateTotalTime(self):
-        self.getJobTime()[0] += datetime.now() - self.getJobTime()[4]
+        self.getJobTime()[0] += datetime.now() - self.getJobTime()[3]
+        print("Total time: ", self.getJobTime()[0])
         return  self.getJobTime()[0]
     
     def getJobTime(self):
@@ -392,7 +390,7 @@ class Job(db.Model):
 
     def setTime(self, timeData, index):
         # timeData = datetime(y, m, d, h, min, s)
-        print("TimeData: ", timeData, " Index: ", index)
+        # print("TimeData: ", timeData, " Index: ", index)
         self.job_time[index] = timeData
         current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData.isoformat(), 'index': index}) 
 

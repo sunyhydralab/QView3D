@@ -267,11 +267,16 @@ def delete_job():
         printer_object = findPrinterObject(printer_id)
         queue = printer_object.getQueue()
 
-        # Delete job from the queue
-        queue.deleteJob(job_id) 
+        jobstatus = job.getStatus()
 
-        # Delete job from the database
-        Job.delete_job(job_id)
+        if jobstatus == 'printing': # only change statuses, dont remove from queue 
+            printer_object.setStatus("complete")
+        else: 
+            # Delete job from the queue
+            queue.deleteJob(job_id) 
+
+            # Delete job from the database
+            Job.delete_job(job_id)
 
         return jsonify({"success": True, "message": f"Job with ID {job_id} deleted successfully."}), 200
 
