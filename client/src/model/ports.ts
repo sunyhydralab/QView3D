@@ -19,8 +19,13 @@ export interface Device {
   date?: Date
   id?: number
   error?: string
-  queue?: Job[] //  Store job array to store queue for each printer. 
+  queue?: Job[] //  Store job array to store queue for each printer.
+  isExpanded?: boolean
+  extruder_temp?: number
+  bed_temp?: number
 }
+
+export let printers = ref<Device[]>([])
 
 export function useGetPorts() {
   return {
@@ -283,9 +288,9 @@ export function useEditThread() {
   }
 }
 
-export function useDiagnosePrinter(){
+export function useDiagnosePrinter() {
   return {
-    async diagnose(device: string){
+    async diagnose(device: string) {
       try {
         const response = await api('diagnose', { device })
         if (response) {
@@ -311,7 +316,7 @@ export function useDiagnosePrinter(){
 
 export function useRepair() {
   return {
-    async repair(){
+    async repair() {
       try {
         const response = await api('repairports')
         if (response) {
@@ -333,55 +338,4 @@ export function useRepair() {
       }
     }
   }
-}
-
-// function to set up the socket for status updates
-export function setupStatusSocket(printers: any) {
-  socket.on("status_update", ((data: any) => {
-    if (printers && printers.value) {
-      const printer = printers.value.find((p: Device) => p.id === data.printer_id)
-      if (printer) {
-        printer.status = data.status;
-      }
-    } else {
-      console.error('printers or printers.value is undefined');
-    }
-  }))
-}
-
-export function setupQueueSocket(printers: any) {
-  socket.on("queue_update", ((data: any) => {
-    if (printers && printers.value) {
-      const printer = printers.value.find((p: Device) => p.id === data.printerid)
-      console.log(printer)
-      if (printer) {
-        printer.queue = data.queue;
-      }
-    } else {
-      console.error('printers or printers.value is undefined');
-    }
-  }
-  ))
-  console.log('queue socket set up')
-}
-
-export function setupErrorSocket(printers: any) {
-  socket.on("error_update", ((data: any) => {
-    if (printers && printers.value) {
-      const printer = printers.value.find((p: Device) => p.id === data.printerid)
-      console.log(printer)
-      if (printer) {
-        printer.error = data.error;
-      }
-    } else {
-      console.error('printers or printers.value is undefined');
-    }
-  }
-  ))
-  console.log('queue socket set up')
-}
-
-// function needs to disconnect the socket when the component is unmounted
-export function disconnectStatusSocket() {
-  socket.disconnect()
 }

@@ -41,6 +41,16 @@ class Queue:
             self.__queue.insert(index-1, job_to_move)
         elif not up and index < len(self.__queue): 
             self.__queue.insert(index+1, job_to_move)
+            
+    def reorder(self, arr): 
+        # arr is an array of job ids in the order they should be in the queue
+        new_queue = deque()
+        for jobid in arr: 
+            for job in self.__queue: 
+                if job.getJobId() == jobid: 
+                    new_queue.append(job)
+                    break
+        self.__queue = new_queue
     
     def deleteJob(self, jobid, printerid):
         deletedjob = None
