@@ -352,17 +352,15 @@ class Job(db.Model):
         total_time = self.getJobTime()[0]  # this returns a datetime
         job_duration = total_time - datetime.fromtimestamp(0)  # convert to timedelta
         eta = now + job_duration
+        # eta = self.getJobTime()[1] + total_time
+        # eta += timedelta(seconds=1)
         return eta
     
     def calculateTotalTime(self):
-        # self.job_time[0] = self.getJobTime()[0] + (datetime.now() - self.getJobTime()[3])
-        # return  self.getJobTime()[0]
-        now = datetime.now()
         total_time = self.getJobTime()[0]
-        duration = now - self.getJobTime()[3]
 
-        total_time += duration
-        print("Total time: ", total_time)
+        # Add one second to total_time
+        total_time += timedelta(seconds=1)
         return total_time
     
     def getJobTime(self):

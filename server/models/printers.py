@@ -9,6 +9,7 @@ from Classes.Queue import Queue
 import serial
 import serial.tools.list_ports
 import time
+from datetime import datetime, timezone, timedelta 
 from tzlocal import get_localzone
 import os 
 import json 
@@ -376,6 +377,8 @@ class Printer(db.Model):
                             time.sleep(1)
                             job.setTime(datetime.now(), 3)
                             job.setTime(job.calculateEta(), 1)
+                            # job.setTime(job.job_time[1]+timedelta(seconds=1), 1)
+
                             job.setTime(job.calculateTotalTime(), 0)
                             stat = self.getStatus()
                             if(stat=="complete"):
