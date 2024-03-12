@@ -78,7 +78,7 @@ function formatTime(milliseconds: number): string {
   const minutesStr = minutes < 10 ? '0' + minutes : minutes
   const secondsStr = seconds < 10 ? '0' + seconds : seconds
 
-  if ((hoursStr + ':' + minutesStr + ':' + secondsStr === 'NaN:NaN:NaN') || (hoursStr + ':' + minutesStr + ':' + secondsStr === '00:00:00')) return 'Waiting to start heating...'
+  if ((hoursStr + ':' + minutesStr + ':' + secondsStr === 'NaN:NaN:NaN')) return 'Waiting to start heating...'
   return hoursStr + ':' + minutesStr + ':' + secondsStr
 }
 

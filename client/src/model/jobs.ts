@@ -57,7 +57,7 @@ export function jobTime(job: Job, printers: any) {
     if (job.job_client!.elapsed_time > job.job_client!.total_time) {
       job.job_client!.extra_time = Date.now() - eta
     }else{
-      job.job_client!.remaining_time = totalTime - job.job_client!.elapsed_time + 1
+      job.job_client!.remaining_time = job.job_client!.total_time - job.job_client!.elapsed_time + 1
     }
 
   }, 1000)

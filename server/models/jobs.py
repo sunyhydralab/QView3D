@@ -31,7 +31,7 @@ class Job(db.Model):
     progress = 0.0
     time_started = False
     #total, eta, timestart, pause time 
-    job_time = [datetime.min]*4
+    job_time = job_time = [datetime.min, datetime.min, datetime.min, datetime.min]
 
 
     
@@ -355,9 +355,15 @@ class Job(db.Model):
         return eta
     
     def calculateTotalTime(self):
-        self.getJobTime()[0] += datetime.now() - self.getJobTime()[3]
-        print("Total time: ", self.getJobTime()[0])
-        return  self.getJobTime()[0]
+        # self.job_time[0] = self.getJobTime()[0] + (datetime.now() - self.getJobTime()[3])
+        # return  self.getJobTime()[0]
+        now = datetime.now()
+        total_time = self.getJobTime()[0]
+        duration = now - self.getJobTime()[3]
+
+        total_time += duration
+        print("Total time: ", total_time)
+        return total_time
     
     def getJobTime(self):
         return self.job_time
