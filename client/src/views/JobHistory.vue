@@ -270,7 +270,6 @@ const openModal = (title: any, message: any, action: any) => {
                     class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#exampleModal" :disabled="selectedJobs.length === 0">
                     <i class="fas fa-trash-alt"></i>
                 </button>
-                
             </div>
             <div class="col-10 text-center">
                 <button @click="submitFilter" class="btn btn-primary">Submit Filter</button>

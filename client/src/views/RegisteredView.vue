@@ -144,12 +144,9 @@ const openModal = (title: any, message: any, action: any, printer: Device) => {
         <div v-if="registered.length != 0">
             <div class="card" style="width: 18rem;" v-for="printer in registered">
                 <div class="card-body">
-                    <!-- <button data-bs-toggle="modal" data-bs-target="#exampleModal">Hard Reset</button> -->
-                    <!-- <button @click="doHardReset(printer)">Hard Reset</button> -->
                     <button @click="openModal('Hard Reset', 'Are you sure you want to do a hard reset of this printer?', 'doHardReset', printer)" data-bs-toggle="modal"
                     data-bs-target="#exampleModal">Hard Reset</button>
                     <button @click="doQueueRestore(printer)">Restore Queue</button>
-                    <!-- <button @click="doDelete(printer)">Deregister</button> -->
                     <button @click="openModal('Deregister Printer', 'Are you sure you want to deregister this printer? This will nullify the <strong>printer_id</strong> section in job history.', 'doDelete', printer)" 
                     data-bs-toggle="modal" data-bs-target="#exampleModal">Deregister</button>
 
