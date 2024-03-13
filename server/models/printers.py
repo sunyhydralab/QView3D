@@ -271,7 +271,7 @@ class Printer(db.Model):
                     
                 stat = self.getStatus()
                 if stat == "complete":
-                    self.sendGcode("M603") # resume command for prusa
+                    # self.sendGcode("M603") # resume command for prusa
                     break 
                 
                 if "ok" in response:
@@ -283,40 +283,36 @@ class Printer(db.Model):
             return "error" 
         
     def gcodeEnding(self, message):
-        # try: 
-            # Encode and send the message to the printer.
-        self.ser.write(f"{message}\n".encode("utf-8"))
-        # Sleep the printer to give it enough time to get the instruction.
-        #time.sleep(0.1)
-        # Save and print out the response from the printer. We can use this for error handling and status updates.
-        while True:
-            # logic here about time elapsed since last response
-            response = self.ser.readline().decode("utf-8").strip()
-            
-            if response == "":
-                self.responseCount+=1 
-                if(self.responseCount>=10):
-                    self.setError("No response from printer")
-                    raise Exception("No response from printer")
-            elif "error" in response.lower():
-                self.setError(response)
-                break
-            else:
-                self.responseCount = 0
+        try: 
+            self.ser.write(f"{message}\n".encode("utf-8"))
+            # Save and print out the response from the printer. We can use this for error handling and status updates.
+            while True:
+                # logic here about time elapsed since last response
+                response = self.ser.readline().decode("utf-8").strip()
                 
-            stat = self.getStatus()
-            
-            if stat != "complete":
-                break 
-            
-            if "ok" in response:
-                break
-            print(f"Command: {message}, Received: {response}")
-        # except Exception as e: 
-        #     # self.setStatus("error")
-        #     print(e)
-        #     self.setError(e)
-        #     return "error" 
+                # if response == "":
+                #     self.responseCount+=1 
+                #     if(self.responseCount>=10):
+                #         self.setError("No response from printer")
+                #         raise Exception("No response from printer")
+                # elif "error" in response.lower():
+                #     self.setError(response)
+                #     break
+                # else:
+                #     self.responseCount = 0
+                    
+                # stat = self.getStatus()
+                # if stat != "complete":
+                #     break 
+                
+                if "ok" in response:
+                    break
+                print(f"Command: {message}, Received: {response}")
+        except Exception as e: 
+            # self.setStatus("error")
+            print(e)
+            self.setError(e)
+            return "error" 
         
     def parseGcode(self, path, job):
         try: 
@@ -358,8 +354,8 @@ class Printer(db.Model):
                     if("M600" in line):
                         # self.setStatus("paused")
                         job.setTime(datetime.now(), 3)
-                        job.setTime(job.calculateEta(), 1)
                         job.setTime(job.calculateTotalTime(), 0)
+                        job.setTime(job.calculateEta(), 1)
                         job.setFilePause(1)
 
                     res = self.sendGcode(line)
@@ -376,10 +372,8 @@ class Printer(db.Model):
                         while(True):
                             time.sleep(1)
                             job.setTime(datetime.now(), 3)
-                            job.setTime(job.calculateEta(), 1)
-                            # job.setTime(job.job_time[1]+timedelta(seconds=1), 1)
-
                             job.setTime(job.calculateTotalTime(), 0)
+                            job.setTime(job.calculateEta(), 1)
                             stat = self.getStatus()
                             if(stat=="complete"):
                                 self.sendGcode("M603") # resume command for prusa
@@ -395,8 +389,8 @@ class Printer(db.Model):
                     # software color change
                     if (self.getStatus()=="colorchange"):
                         job.setTime(datetime.now(), 3)
-                        job.setTime(job.calculateEta(), 1)
                         job.setTime(job.calculateTotalTime(), 0)
+                        job.setTime(job.calculateEta(), 1)
                         self.sendGcode("M600") # color change command
                         job.setTime(datetime.min, 3)
                         self.setStatus("printing")
@@ -410,7 +404,7 @@ class Printer(db.Model):
                     
                     # Call the setProgress method
                     job.setProgress(progress)
-                    
+                
                     
                     if self.getStatus() == "complete":
                         return "cancelled"
@@ -483,7 +477,7 @@ class Printer(db.Model):
                     self.setStatus("complete")
                     self.sendStatusToJob(job, job.id, "complete")
                 elif verdict=="error": 
-                    self.endingSequence()
+                    # self.endingSequence()
                     self.disconnect()
                     self.getQueue().deleteJob(job.id, self.id)
                     self.setStatus("error")
