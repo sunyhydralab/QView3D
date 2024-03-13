@@ -349,13 +349,20 @@ class Job(db.Model):
 
     def calculateEta(self):
         now = datetime.now()
-        total_time = self.getJobTime()[0]  # this returns a datetime
-        job_duration = total_time - datetime.fromtimestamp(0)  # convert to timedelta
-        eta = now + job_duration
-        # eta = self.getJobTime()[1] + total_time
-        # eta += timedelta(seconds=1)
+        duration = now - self.job_time[0]
+        eta = self.job_time[0] + duration
         return eta
-    
+
+    def updateEta(self):
+        now = datetime.now()
+        pause_time = self.getJobTime()[3]
+
+        duration = now - pause_time
+
+        new_eta = self.getJobTime()[1] + duration
+        print("New ETA: ", new_eta)
+        return new_eta
+
     def calculateTotalTime(self):
         total_time = self.getJobTime()[0]
 

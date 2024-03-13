@@ -290,20 +290,20 @@ class Printer(db.Model):
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
                 
-                # if response == "":
-                #     self.responseCount+=1 
-                #     if(self.responseCount>=10):
-                #         self.setError("No response from printer")
-                #         raise Exception("No response from printer")
-                # elif "error" in response.lower():
-                #     self.setError(response)
-                #     break
-                # else:
-                #     self.responseCount = 0
+                if response == "":
+                    self.responseCount+=1 
+                    if(self.responseCount>=10):
+                        self.setError("No response from printer")
+                        raise Exception("No response from printer")
+                elif "error" in response.lower():
+                    self.setError(response)
+                    break
+                else:
+                    self.responseCount = 0
                     
-                # stat = self.getStatus()
-                # if stat != "complete":
-                #     break 
+                stat = self.getStatus()
+                if stat != "complete":
+                    break 
                 
                 if "ok" in response:
                     break
@@ -355,7 +355,7 @@ class Printer(db.Model):
                         # self.setStatus("paused")
                         job.setTime(datetime.now(), 3)
                         job.setTime(job.calculateTotalTime(), 0)
-                        job.setTime(job.calculateEta(), 1)
+                        job.setTime(job.updateEta(), 1)
                         job.setFilePause(1)
 
                     res = self.sendGcode(line)
@@ -369,15 +369,15 @@ class Printer(db.Model):
                         self.sendGcode("M601") # pause command for prusa
                         # self.sendGcode("M25") # pause command for ender
                         # job.setPauseTime()
+                        job.setTime(datetime.now(), 3)
                         while(True):
                             time.sleep(1)
-                            job.setTime(datetime.now(), 3)
                             job.setTime(job.calculateTotalTime(), 0)
-                            job.setTime(job.calculateEta(), 1)
+                            job.setTime(job.updateEta(), 1)
                             stat = self.getStatus()
-                            if(stat=="complete"):
-                                self.sendGcode("M603") # resume command for prusa
-                                return "cancelled"
+                            # if(stat=="complete"):
+                            #     self.sendGcode("M603") # resume command for prusa
+                            #     return "cancelled"
                             if(stat=="printing"):
                                 # job.resumeTime()
                                 self.sendGcode("M602") # resume command for prusa
@@ -390,7 +390,7 @@ class Printer(db.Model):
                     if (self.getStatus()=="colorchange"):
                         job.setTime(datetime.now(), 3)
                         job.setTime(job.calculateTotalTime(), 0)
-                        job.setTime(job.calculateEta(), 1)
+                        job.setTime(job.updateEta(), 1)
                         self.sendGcode("M600") # color change command
                         job.setTime(datetime.min, 3)
                         self.setStatus("printing")
@@ -435,24 +435,25 @@ class Printer(db.Model):
             # self.gcodeEnding("M84 X Y E") # Disable all steppers but Z
 
             # *** Prusa i3 MK3 ending sequence ***
-            self.gcodeEnding("M104 S0") # turn off extruder
-            self.gcodeEnding("M140 S0") # turn off heatbed
-            self.gcodeEnding("M107") # turn off fan
-            self.gcodeEnding("G1 X0 Y210") # home X axis and push Y forward
-            self.gcodeEnding("M84") # disable motors
+            # self.gcodeEnding("M104 S0") # turn off extruder
+            # self.gcodeEnding("M140 S0") # turn off heatbed
+            # self.gcodeEnding("M107") # turn off fan
+            # self.gcodeEnding("G1 X0 Y210") # home X axis and push Y forward
+            # self.gcodeEnding("M84") # disable motors
 
             # *** Prusa MK4 ending sequence ***
-            # self.gcodeEnding("{if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+1, max_print_height)} F720 ; Move print head up{endif}")
-            # self.gcodeEnding("M104 S0")# ; turn off temperature
-            # self.gcodeEnding("M140 S0")# ; turn off heatbed
-            # self.gcodeEnding("M107")# ; turn off fan
-            # self.gcodeEnding("G1 X241 Y170 F3600")# ; park
-            # self.gcodeEnding("{if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+23, max_print_height)} F300")# ; Move print head up{endif}
-            # self.gcodeEnding("G4")# ; wait
-            # self.gcodeEnding("M900 K0")# ; reset LA
-            # self.gcodeEnding("M142 S36")# ; reset heatbreak target temp
-            # self.gcodeEnding("M84 X Y E")# ; disable motors
-            # # ; max_layer_z = [max_layer_z]
+            self.gcodeEnding("{if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+1, max_print_height)} F720 ; Move print head up{endif}")
+            self.gcodeEnding("M104 S0")# ; turn off temperature
+            self.gcodeEnding("M140 S0")# ; turn off heatbed
+            self.gcodeEnding("M107")# ; turn off fan
+            self.gcodeEnding("G1 X241 Y170 F3600")# ; park
+            self.gcodeEnding("{if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+23, max_print_height)} F300")# ; Move print head up{endif}
+            self.gcodeEnding("G4")# ; wait
+            self.gcodeEnding("M900 K0")# ; reset LA
+            self.gcodeEnding("M142 S36")# ; reset heatbreak target temp
+            self.gcodeEnding("M84 X Y E")# ; disable motors
+            # self.gcodeEnding("M602")# ; unpause 
+            # ; max_layer_z = [max_layer_z]
             
         except Exception as e:
             self.setError(e)
@@ -477,7 +478,7 @@ class Printer(db.Model):
                     self.setStatus("complete")
                     self.sendStatusToJob(job, job.id, "complete")
                 elif verdict=="error": 
-                    # self.endingSequence()
+                    self.endingSequence()
                     self.disconnect()
                     self.getQueue().deleteJob(job.id, self.id)
                     self.setStatus("error")
