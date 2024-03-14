@@ -155,8 +155,7 @@ class Printer(db.Model):
             ports = serial.tools.list_ports.comports()
             for port in ports:
                 if port.device == deviceToDiagnose:
-                    diagnoseString += f"The system has found a matching port with the following details: <br><br> Device: {
-                        port.device}, <br> Description: {port.description}, <br> HWID: {port.hwid}<br><br>"
+                    diagnoseString += f"The system has found a matching port with the following details: <br><br> Device: {port.device}, <br> Description: {port.description}, <br> HWID: {port.hwid}<br><br>"
                     printerExists = cls.searchByDevice(port.hwid)
                     if (printerExists):
                         printer = cls.query.filter_by(hwid=port.hwid).first()

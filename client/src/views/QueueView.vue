@@ -79,6 +79,9 @@ const handleDragEnd = async (evt: any) => {
   }
 };
 
+const isInqueue = (evt: any) => {
+  return evt.relatedContext.element.status === 'inqueue';
+}
 </script>
 
 <template>
@@ -152,7 +155,8 @@ const handleDragEnd = async (evt: any) => {
                 </tr>
               </thead>
               <draggable v-model="printer.queue" tag="tbody" :animation="300" itemKey="job.id" handle=".handle"
-                dragClass="hidden-ghost" :onEnd="handleDragEnd" v-if="printer.queue && printer.queue.length">
+                dragClass="hidden-ghost" :onEnd="handleDragEnd" v-if="printer.queue && printer.queue.length"
+                :move="isInqueue">
                 <template #item="{ element: job }">
                   <tr :id="job.id.toString()" :data-printer-id="printer.id" :data-job-id="job.id"
                     :data-job-status="job.status" :key="job.id" :class="{ 'printing': job.status === 'printing' }">
@@ -200,11 +204,6 @@ const handleDragEnd = async (evt: any) => {
 </template>
 
 <style scoped>
-.not-draggable {
-  user-select: none;
-  pointer-events: none;
-}
-
 .sortable-chosen {
   opacity: 0.5;
   background-color: #f2f2f2;

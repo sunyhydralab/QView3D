@@ -272,7 +272,13 @@ const openModal = (title: any, message: any, action: any) => {
                         <input type="checkbox" v-model="selectedJobs" :value="job">
                     </td>
                     <td>{{ job.id }}</td>
-                    <td>{{ job.name }}</td>
+                    <td>
+                        {{ job.name }}
+                        <!-- if job.favorite === true, then display a fas fa star icon next to the jobs name -->
+                        <!-- else, then display the same fas fa star just not solid -->
+                        <i v-if="job.favorite === 'true'" class="fas fa-star"></i>
+                        <i v-else class="far fa-star"></i>
+                    </td>
                     <td>
                         {{ job.file_name_original }}
                         <button class="btn btn-secondary download" @click="getFile(job.id)"

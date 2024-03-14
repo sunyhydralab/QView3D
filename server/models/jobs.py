@@ -30,6 +30,7 @@ class Job(db.Model):
         db.Integer, db.ForeignKey('printer.id'), nullable=True)
     printer = db.relationship('Printer', backref='Job')
     file_name_original = db.Column(db.String(50), nullable=False)
+    favorite = db.Column(db.String(1), nullable=False)
     file_name_pk = None
     filePause = 0
     progress = 0.0
@@ -39,13 +40,14 @@ class Job(db.Model):
     pause_time = 0
     time_started = False
 
-    def __init__(self, file, name, printer_id, status, file_name_original):
+    def __init__(self, file, name, printer_id, status, file_name_original, favorite):
         self.file = file
         self.name = name
         self.printer_id = printer_id
         self.status = status
         # original file name without PK identifier
         self.file_name_original = file_name_original
+        self.favorite = favorite
         self.file_name_pk = None
         self.progress = 0.0
         self.total_time = 0
@@ -83,7 +85,8 @@ class Job(db.Model):
                 "status": job.status,
                 "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",
                 "printer": job.printer.name if job.printer else 'None',
-                "file_name_original": job.file_name_original
+                "file_name_original": job.file_name_original,
+                "favorite": job.favorite
             } for job in jobs]
 
             return jobs_data, pagination.total
@@ -92,7 +95,7 @@ class Job(db.Model):
             return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500
 
     @classmethod
-    def jobHistoryInsert(cls, name, printer_id, status, file, file_name_original):
+    def jobHistoryInsert(cls, name, printer_id, status, file, file_name_original, favorite):
         try:
             if isinstance(file, bytes):
                 file_data = file
@@ -111,7 +114,8 @@ class Job(db.Model):
                 name=name,
                 printer_id=printer_id,
                 status=status,
-                file_name_original=file_name_original
+                file_name_original=file_name_original,
+                favorite=favorite
             )
 
             db.session.add(job)
@@ -248,8 +252,7 @@ class Job(db.Model):
             for job in old_jobs:
                 job.file = None  # Set file to None
                 if "Removed after 6 months" not in job.file_name_original:
-                    job.file_name_original = f"{
-                        job.file_name_original}: Removed after 6 months"
+                    job.file_name_original = f"{job.file_name_original}: Removed after 6 months"
             db.session.commit()  # Commit the changes
             return {"success": True, "message": "Space cleared successfully."}
         except SQLAlchemyError as e:
@@ -283,6 +286,9 @@ class Job(db.Model):
 
     def getFileNameOriginal(self):
         return self.file_name_original
+    
+    def getFileFavorite(self):
+        return self.favorite
 
     def getPrinterId(self):
         return self.printer_id

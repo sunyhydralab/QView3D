@@ -22,6 +22,7 @@ const selectedPrinters = ref<Array<Device>>([])
 const file = ref<File>()
 const quantity = ref<number>(1)
 const priority = ref<number>(0)
+const favorite = ref<number>(0)
 const name = ref<string>()
 
 // file upload
@@ -73,6 +74,7 @@ const handleSubmit = async () => {
             formData.append('file', file.value as File) // append form data
             formData.append('name', name.value as string)
             formData.append('priority', priority.value.toString())
+            formData.append('favorite', favorite.value.toString())
             try {
                 await auto(formData)
                 if (form.value) {
@@ -95,6 +97,7 @@ const handleSubmit = async () => {
                 formData.append('file', file.value as File) // append form data
                 formData.append('name', name.value as string)
                 formData.append('priority', priority.value.toString())
+                formData.append('favorite', favorite.value.toString())
                 try {
                     res = await auto(formData)
                     if (form.value) {
@@ -121,6 +124,7 @@ const handleSubmit = async () => {
                     formData.append('name', name.value as string)
                     formData.append('printerid', printer?.id?.toString() || '');
                     formData.append('priority', priority.value.toString())
+                    formData.append('favorite', favorite.value.toString())
                     try {
                         res = await addJobToQueue(formData)
                         // reset form
@@ -147,6 +151,7 @@ function resetValues() {
     selectedPrinters.value = [];
     quantity.value = 1;
     priority.value = 0;
+    favorite.value = 0;
     name.value = undefined;
 }
 
@@ -196,10 +201,16 @@ function appendPrinter(printer: Device) {
                         <input v-model="quantity" class="form-control" type="number" id="quantity" name="quantity"
                             min="1" required @keydown="onlyNumber($event)">
                     </div>
-                    <div class="mb-3 form-check">
-                        <input v-model="priority" class="form-check-input" type="checkbox" id="priority"
-                            name="priority">
-                        <label class="form-check-label" for="priority">Priority job?</label>
+
+                    <div class="d-flex justify-content-between mb-3">
+                        <div class="form-check">
+                            <input v-model="priority" class="form-check-input" type="checkbox" id="priority" name="priority">
+                            <label class="form-check-label" for="priority">Priority?</label>
+                        </div>
+                        <div class="form-check">
+                            <input v-model="favorite" class="form-check-input" type="checkbox" id="favorite" name="favorite">
+                            <label class="form-check-label" for="favorite">Favorite?</label>
+                        </div>
                     </div>
 
                     <div class="mb-3">

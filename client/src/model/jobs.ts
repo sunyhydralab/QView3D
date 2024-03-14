@@ -18,6 +18,7 @@ export interface Job {
   printerid: number
   file_pause: number 
   priority?: string
+  favorite?: string
   // job_id: number
   total_time?: number
   elapsed_time?: number

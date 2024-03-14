@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { useGetPorts, useRegisterPrinter, useRetrievePrinters, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device } from '../model/ports'
+import { printers, useGetPorts, useRegisterPrinter, useRetrievePrintersInfo, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device } from '../model/ports'
 import { ref, onMounted } from 'vue';
 
 const { ports } = useGetPorts();
 const { register } = useRegisterPrinter();
-const { retrieve } = useRetrievePrinters();
+const { retrieveInfo } = useRetrievePrintersInfo();
 const { hardReset } = useHardReset();
 const { queueRestore } = useQueueRestore();
 const { deletePrinter } = useDeletePrinter();
@@ -18,7 +18,7 @@ const { repair } = useRepair()
 let devices = ref<Array<Device>>([]); // Array of all devices -- stores ports for user to select/register
 let selectedDevice = ref<Device | null>(null) // device user selects to register.
 let customname = ref('') // Stores the user input name of printer 
-let registered = ref<Array<Device>>([]) // Stores array of printers already registered in the system
+// let registered = ref<Array<Device>>([]) // Stores array of printers already registered in the system
 let editMode = ref(false)
 let editNum = ref<number | undefined>(0)
 let newName = ref('')
@@ -35,7 +35,7 @@ const selectedPrinter = ref<Device | null>(null);
 onMounted(async () => {
     try {
         const allDevices = await ports();  // load all ports
-        registered.value = await retrieve();  // loads registered printers into registered array
+        printers.value = await retrieveInfo();  // loads registered printers into registered array
 
         devices.value = allDevices
 
@@ -56,12 +56,12 @@ const doRegister = async () => {
         await register(selectedDevice.value);
 
         // Fetch the updated list after registration
-        registered.value = await retrieve();
+        printers.value = await retrieveInfo();
 
         // Refresh the devices list
         const allDevices = await ports();
         devices.value = allDevices.filter((device: Device) =>
-            !registered.value.some(registeredDevice => registeredDevice.device === device.device)
+            !printers.value.some(registeredDevice => registeredDevice.device === device.device)
         );
     }
 
@@ -79,7 +79,7 @@ const doQueueRestore = async (printer: Device) => {
 }
 
 const doDelete = async (printer: Device) => {
-    registered.value = registered.value.filter(p => p.id !== printer.id)
+    printers.value = printers.value.filter(p => p.id !== printer.id)
     await removeThread(printer.id)
     await nullifyJobs(printer.id)
     await deletePrinter(printer.id)
@@ -149,8 +149,8 @@ const openModal = (title: any, message: any, action: any, printer: Device) => {
 
         <b>Registered View</b>
 
-        <div v-if="registered.length != 0">
-            <div class="card" style="width: 18rem;" v-for="printer in registered">
+        <div v-if="printers.length != 0">
+            <div class="card" style="width: 18rem;" v-for="printer in printers">
                 <div class="card-body">
                     <button
                         @click="openModal('Hard Reset', 'Are you sure you want to do a hard reset of this printer?', 'doHardReset', printer)"
