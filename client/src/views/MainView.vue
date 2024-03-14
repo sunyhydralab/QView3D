@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, useSetStatus, setupStatusSocket, setupQueueSocket, setupErrorSocket, disconnectStatusSocket, type Device } from '@/model/ports';
-import { type Job, useReleaseJob, useRemoveJob, useStartJob, setupProgressSocket, setupJobStatusSocket, setupTimeSocket, setupPauseFeedbackSocket } from '@/model/jobs';
+import { type Job, useReleaseJob, useRemoveJob, useStartJob, setupProgressSocket, setupJobStatusSocket, setupTimeSocket, setupPauseFeedbackSocket, setupReleaseSocket } from '@/model/jobs';
 import { useRouter, useRoute } from 'vue-router';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 
@@ -50,6 +50,8 @@ onMounted(async () => {
     setupTimeSocket(printers.value)
 
     setupPauseFeedbackSocket(printers.value)
+
+    setupReleaseSocket(printers.value)
 
     console.log("PRINTERS: ", printers.value)
 
@@ -103,7 +105,7 @@ const toTime = (seconds: number | undefined) => {
 
 const startPrint = async (printerid: number, jobid: number) => {
   console.log("Starting print: ", printerid, jobid)
-  await start(printerid, jobid)
+  await start(jobid, printerid)
 }
 </script>
 
@@ -283,7 +285,12 @@ const startPrint = async (printerid: number, jobid: number) => {
         </div> -->
 
           <td style="width: 250px;">
-            <div v-if="printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange'">
+            <div v-if="printer.status === 'printing' && printer.queue?.[0] && printer.queue?.[0].status == 'printing' && printer.queue[0].released==0">
+              <button type="button" class="btn btn-danger"
+                @click="startPrint(printer.id!, printer.queue?.[0].id)">Start Print</button>
+            </div>
+
+            <div v-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange') && printer.queue && printer.queue[0].released==1">
               <!-- <div v-for="job in printer.queue" :key="job.id"> -->
               <!-- Display the elapsed time -->
               <div class="progress" style="position: relative;">
@@ -333,11 +340,6 @@ const startPrint = async (printerid: number, jobid: number) => {
             </div>
             <div v-else-if="printer.status == 'error'" class="alert alert-danger" role="alert">{{ printer?.error }}</div>
             
-            <div v-if="printer.status === 'printing' && printer.queue?.[0] && printer.queue?.[0].status == 'printing' && printer.queue[0].released==0">
-              <button type="button" class="btn btn-danger"
-                @click="startPrint(printer.id!, printer.queue?.[0].id)">Start Print</button>
-            </div>
-
           </td>
 
           <td style="width: 1%; white-space: nowrap;">

@@ -337,13 +337,9 @@ def startPrint():
         data = request.get_json()
         printerid = data['printerid']
         jobid = data['jobid']
-
         printerobject = findPrinterObject(printerid)
-        # printerobject.setStatus("complete")
         queue = printerobject.getQueue()
-        
         inmemjob = queue.getJobById(jobid)
-        
         inmemjob.setReleased(1)
         
         return jsonify({"success": True, "message": "Job started successfully."}), 200
