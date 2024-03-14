@@ -27,6 +27,7 @@ class Job(db.Model):
     printer = db.relationship('Printer', backref='Job')
     file_name_original = db.Column(db.String(50), nullable = False)
     file_name_pk = None
+    released = 0 
     filePause = 0
     progress = 0.0
     total_time = 0
@@ -43,6 +44,7 @@ class Job(db.Model):
         self.status = status 
         self.file_name_original = file_name_original # original file name without PK identifier 
         self.file_name_pk = None
+        self.released = 0 
         self.progress = 0.0
         self.total_time = 0
         self.start_time = 0
@@ -342,6 +344,9 @@ class Job(db.Model):
     @classmethod 
     def getPathForDelete(cls, file_name):
         return os.path.join('../uploads', file_name)
+    
+    def getReleased(self): 
+        return self.released
 
         
     def setPath(self, path): 
@@ -352,3 +357,7 @@ class Job(db.Model):
         
     def setFile(self, file):
         self.file = file
+        
+    def setReleased(self, released):
+        self.released = released
+        current_app.socketio.emit('release_job', {'job_id': self.id, 'released': self.released}) 

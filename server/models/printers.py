@@ -494,6 +494,10 @@ class Printer(db.Model):
                 
                 self.setStatus("printing") # set printer status to printing
                 self.sendStatusToJob(job, job.id, "printing")
+                
+                while True: 
+                    if job.getReleased() == 1: 
+                        break 
 
                 verdict = self.parseGcode(path, job) # passes file to code. returns "complete" if successful, "error" if not.
                 
@@ -565,7 +569,6 @@ class Printer(db.Model):
     
     def setSer(self, port):
         self.ser = port
-
 
     #  now when we set the status, we can emit the status to the frontend
     def setStatus(self, newStatus):

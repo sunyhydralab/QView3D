@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, useSetStatus, setupStatusSocket, setupQueueSocket, setupErrorSocket, disconnectStatusSocket, type Device } from '@/model/ports';
-import { type Job, useReleaseJob, useRemoveJob, setupProgressSocket, setupJobStatusSocket, setupTimeSocket, setupPauseFeedbackSocket } from '@/model/jobs';
+import { type Job, useReleaseJob, useRemoveJob, useStartJob, setupProgressSocket, setupJobStatusSocket, setupTimeSocket, setupPauseFeedbackSocket } from '@/model/jobs';
 import { useRouter, useRoute } from 'vue-router';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 
@@ -8,6 +8,7 @@ const { retrieveInfo } = useRetrievePrintersInfo();
 const { setStatus } = useSetStatus();
 const { releaseJob } = useReleaseJob()
 const { removeJob } = useRemoveJob()
+const {start} = useStartJob()
 
 const router = useRouter();
 
@@ -98,6 +99,11 @@ const toTime = (seconds: number | undefined) => {
     return date;
   }
   return "00:00:00";
+}
+
+const startPrint = async (printerid: number, jobid: number) => {
+  console.log("Starting print: ", printerid, jobid)
+  await start(printerid, jobid)
 }
 </script>
 
@@ -317,6 +323,7 @@ const toTime = (seconds: number | undefined) => {
                 </ul>
               </div>
             </div>
+
             <div
               v-else-if="printer.queue?.[0] && (printer.queue?.[0].status == 'printing' && printer.status == 'complete')">
               <button class="btn btn-primary" type="button" disabled>
@@ -325,6 +332,12 @@ const toTime = (seconds: number | undefined) => {
               </button>
             </div>
             <div v-else-if="printer.status == 'error'" class="alert alert-danger" role="alert">{{ printer?.error }}</div>
+            
+            <div v-if="printer.status === 'printing' && printer.queue?.[0] && printer.queue?.[0].status == 'printing' && printer.queue[0].released==0">
+              <button type="button" class="btn btn-danger"
+                @click="startPrint(printer.id!, printer.queue?.[0].id)">Start Print</button>
+            </div>
+
           </td>
 
           <td style="width: 1%; white-space: nowrap;">

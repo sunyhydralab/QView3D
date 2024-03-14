@@ -92,6 +92,12 @@ class Queue:
                 return job
         return None  # Return None if job is not found in the queue
     
+    def getJobById(self, job_to_find):
+        for job in self.__queue:
+            if job.getJobId() == job_to_find:
+                return job
+        return None  # Return None if job is not found in the queue
+    
     def jobExists(self, jobid):
         for job in self.__queue:
             if job.id == jobid:
