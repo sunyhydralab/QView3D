@@ -153,7 +153,8 @@ function formatETA(milliseconds: number): string {
                       <h5 class="card-title"><i class="fas fa-stopwatch"></i> <b>Total Time:</b></h5>
                     </div>
                     <div class="col-12">
-                      <div v-if="currentJob?.job_client?.extra_time && currentJob?.job_client.extra_time > 0">
+                      <!-- <div v-if="currentJob?.job_client?.extra_time && currentJob?.job_client.extra_time > 0"> -->
+                        <div v-if="currentJob?.job_client?.extra_time">
                         {{ formatTime(currentJob?.job_client.total_time!) + ' + ' + formatTime(currentJob?.job_client.extra_time!) }}
                       </div>
                       <div v-else>
@@ -275,7 +276,7 @@ function formatETA(milliseconds: number): string {
                 </li>
                 <li v-if="printer.status == 'printing'"><a class="dropdown-item" href="#"
                     @click="setPrinterStatus(printer, 'complete')">Stop Print</a></li>
-                <li v-if="printer.status == 'printing'"><a class="dropdown-item" href="#"
+                <li v-if="printer.status == 'printing' && printer.canPause==1"><a class="dropdown-item" href="#"
                     @click="setPrinterStatus(printer, 'paused')">Pause Print</a></li>
                 <li v-if="printer.status == 'printing'"><a class="dropdown-item" href="#"
                     @click="setPrinterStatus(printer, 'colorchange')">Change Color</a></li>

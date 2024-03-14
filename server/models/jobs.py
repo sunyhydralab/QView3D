@@ -31,7 +31,7 @@ class Job(db.Model):
     progress = 0.0
     time_started = False
     #total, eta, timestart, pause time 
-    job_time = job_time = [datetime.min, datetime.min, datetime.min, datetime.min]
+    job_time = job_time = [0, datetime.min, datetime.min, datetime.min]
 
 
     
@@ -45,7 +45,7 @@ class Job(db.Model):
         self.filePause = 0
         self.progress = 0.0
         self.time_started = False
-        self.job_time = [datetime.min]*4
+        self.job_time = [0, datetime.min, datetime.min, datetime.min]
 
     def __repr__(self):
         return f"Job(id={self.id}, name={self.name}, printer_id={self.printer_id}, status={self.status})"
@@ -341,16 +341,19 @@ class Job(db.Model):
             # Calculate total time in seconds
             time_seconds = time_days * 24 * 60 * 60 + time_hours * 60 * 60 + time_minutes * 60 + time_seconds
 
-        date = datetime.fromtimestamp(time_seconds)
-        return date
+        print(f"Time in seconds: {time_seconds}")
+        # date = datetime.fromtimestamp(time_seconds)
+        return time_seconds
     
     def getTimeStarted(self):
         return self.time_started
 
     def calculateEta(self):
         now = datetime.now()
-        duration = now - self.job_time[0]
-        eta = self.job_time[0] + duration
+        # duration = now - self.job_time[0]
+        print(type(self.job_time[0]))
+        print(type(now))
+        eta = timedelta(seconds=self.job_time[0]) + now
         return eta
 
     def updateEta(self):
@@ -359,15 +362,14 @@ class Job(db.Model):
 
         duration = now - pause_time
 
-        new_eta = self.getJobTime()[1] + duration
-        print("New ETA: ", new_eta)
+        new_eta = self.getJobTime()[1] + timedelta(seconds=1)
         return new_eta
 
     def calculateTotalTime(self):
         total_time = self.getJobTime()[0]
 
         # Add one second to total_time
-        total_time += timedelta(seconds=1)
+        total_time+=1
         return total_time
     
     def getJobTime(self):
@@ -403,5 +405,8 @@ class Job(db.Model):
         # timeData = datetime(y, m, d, h, min, s)
         # print("TimeData: ", timeData, " Index: ", index)
         self.job_time[index] = timeData
-        current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData.isoformat(), 'index': index}) 
+        if index==0: 
+            current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData, 'index': index}) 
+        else: 
+            current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData.isoformat(), 'index': index}) 
 

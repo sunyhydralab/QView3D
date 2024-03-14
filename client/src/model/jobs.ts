@@ -20,7 +20,7 @@ export interface Job {
   printerid: number
   file_pause: number
   priority?: string
-  job_server?: [Date, Date, Date, Date] // this saves all of the data from the backend.Only changed if there is a pause involved.
+  job_server?: [number, Date, Date, Date] // this saves all of the data from the backend.Only changed if there is a pause involved.
 
   job_client?: {
     // this is frontend data CALCULATED based on the backend data
@@ -49,15 +49,20 @@ export function jobTime(job: Job, printers: any) {
     job.job_client!.eta = eta
     job.job_client!.elapsed_time = Date.now() - startTime
 
-    let totalTime =
-      job.job_server![0] instanceof Date ? job.job_server![0].getTime() : job.job_server![0]
+    // let totalTime = job.job_server![0] instanceof Date ? job.job_server![0].getTime() : job.job_server![0]
+    let totalTime = job.job_server![0] 
+
+    console.log('totalTime', totalTime)
 
     job.job_client!.total_time = totalTime
     
     if (job.job_client!.elapsed_time > job.job_client!.total_time) {
       job.job_client!.extra_time = Date.now() - eta
     }else{
-      job.job_client!.remaining_time = job.job_client!.total_time - job.job_client!.elapsed_time
+      // job.job_client!.remaining_time = job.job_client!.total_time - job.job_client!.elapsed_time
+      job.job_client!.remaining_time = totalTime - job.job_client!.elapsed_time
+      console.log('remaining time', job.job_client!.remaining_time)
+
     }
 
   }, 1000)
@@ -76,12 +81,20 @@ export function setupTimeSocket(printers: any) {
         eta: 0,
         elapsed_time: 0,
         extra_time: 0,
-        remaining_time: 0
+        remaining_time: 1
       }
-      job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
+      // job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
+      job.job_server = [0, '00:00:00', '00:00:00', '00:00:00']
+
     }
 
-    job.job_server[data.index] = Date.parse(data.new_time)
+
+    if(typeof(data.new_time) === 'number'){
+      job.job_server[data.index] = data.new_time
+    }else{
+      job.job_server[data.index] = Date.parse(data.new_time)
+    }
+
     jobTime(job, printers)
   })
 }

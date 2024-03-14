@@ -132,6 +132,7 @@ class PrinterStatusService:
                 "status": printer.status,
                 "id": printer.id,
                 "error": printer.error, 
+                "canPause": printer.canPause,
                 "queue": [] # empty queue to store job objects 
             }
             
