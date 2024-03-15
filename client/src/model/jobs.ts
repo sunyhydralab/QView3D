@@ -37,7 +37,9 @@ export function jobTime(job: Job, printers: any) {
   const printerid = job.printerid
   const printer = printers.find((printer: { id: number }) => printer.id === printerid)
 
-  job.timer = setInterval(() => {
+  let startTime: number | null = null;
+
+  const updateJobTime = () => {
     if (printer.status !== 'printing' && printer.status !== 'paused') {
       clearInterval(job.timer)
       delete job.timer
@@ -45,27 +47,34 @@ export function jobTime(job: Job, printers: any) {
     }
 
     let eta = job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
-    let startTime = job.job_server![2] instanceof Date ? job.job_server![2].getTime() : job.job_server![2]
     job.job_client!.eta = eta
-    job.job_client!.elapsed_time = Date.now() - startTime
 
-    // let totalTime = job.job_server![0] instanceof Date ? job.job_server![0].getTime() : job.job_server![0]
+    if (printer.status === 'printing') {
+      if (startTime === null) {
+        startTime = Date.now();
+      }
+      job.job_client!.elapsed_time = Math.round((Date.now() - startTime) / 1000) * 1000
+    }
+
     let totalTime = job.job_server![0] 
-
-    console.log('totalTime', totalTime)
-
-    job.job_client!.total_time = totalTime
+    // Convert totalTime to milliseconds
+    job.job_client!.total_time = totalTime * 1000
     
     if (job.job_client!.elapsed_time > job.job_client!.total_time) {
       job.job_client!.extra_time = Date.now() - eta
-    }else{
-      // job.job_client!.remaining_time = job.job_client!.total_time - job.job_client!.elapsed_time
-      job.job_client!.remaining_time = totalTime - job.job_client!.elapsed_time
-      console.log('remaining time', job.job_client!.remaining_time)
-
+    } else {
+      // Only decrease remaining time if printer status is 'printing'
+      if (printer.status === 'printing') {
+        job.job_client!.remaining_time = job.job_client!.total_time - job.job_client!.elapsed_time
+      }
     }
+  }
 
-  }, 1000)
+  // Call updateJobTime immediately when jobTime is called
+  updateJobTime();
+
+  // Continue to call updateJobTime at regular intervals
+  job.timer = setInterval(updateJobTime, 1000)
 }
 
 export function setupTimeSocket(printers: any) {
@@ -81,7 +90,7 @@ export function setupTimeSocket(printers: any) {
         eta: 0,
         elapsed_time: 0,
         extra_time: 0,
-        remaining_time: 1
+        remaining_time: 0
       }
       // job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
       job.job_server = [0, '00:00:00', '00:00:00', '00:00:00']
