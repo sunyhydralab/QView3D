@@ -3,19 +3,18 @@ import { printers, type Device } from '../model/ports'
 import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob } from '../model/jobs';
 import { computed, onMounted, ref } from 'vue';
 
-const { jobhistory } = useGetJobs()
+const { jobhistory, getFavoriteJobs } = useGetJobs()
 const { rerunJob } = useRerunJob()
 const { getFile } = useGetJobFile()
 const { deleteJob } = useDeleteJob()
 const { clearSpace } = useClearSpace()
-const { favoriteJob } = useFavoriteJob()
+const { favorite } = useFavoriteJob()
 
 const selectedPrinters = ref<Array<Device>>([])
 const selectedJobs = ref<Array<Job>>([]);
 const deleteModalTitle = computed(() => `Deleting ${selectedJobs.value.length} job(s) from database!`);
 
 let jobs = ref<Array<Job>>([])
-let favoriteJobs = ref<Array<Job>>([])
 let filter = ref('')
 let oldestFirst = ref<boolean>(false)
 let order = ref<string>('newest')
@@ -31,6 +30,8 @@ let modalMessage = ref('');
 let modalAction = ref('');
 
 let buttonTransform = ref(0);
+let favoriteJobs = ref<Array<Job>>([])
+let jobToUnfavorite: Job | null = null;
 
 let filteredJobs = computed(() => {
     if (filter.value) {
@@ -49,6 +50,8 @@ onMounted(async () => {
 
         totalPages.value = Math.ceil(total / pageSize.value);
         totalPages.value = Math.max(totalPages.value, 1);
+
+        favoriteJobs.value = await getFavoriteJobs()
     } catch (error) {
         console.error(error)
     }
@@ -148,6 +151,20 @@ const openModal = (title: any, message: any, action: any) => {
     modalAction.value = action;
 }
 
+const favoriteJob = async (job: Job, fav: boolean) => {
+    await favorite(job, fav);
+    favoriteJobs.value = await getFavoriteJobs();
+
+    jobs.value = jobs.value.map(j => {
+        if (j.id === job.id) {
+            j.favorite = fav;
+        }
+        return j;
+    })
+
+    jobToUnfavorite = null;
+}
+
 const toggleButton = () => {
     buttonTransform.value = buttonTransform.value === 0 ? -400 : 0;
 }
@@ -157,22 +174,63 @@ const toggleButton = () => {
 <template>
     <!-- bootstrap off canvas to the right -->
     <div class="offcanvas offcanvas-end" data-bs-backdrop="static" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">
-        <div class="offcanvas-header">
-            <h5 class="offcanvas-title" id="offcanvasRightLabel">Favorite Prints</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close" v-on:click="toggleButton"></button>
-        </div>
-        <div class="offcanvas-body">
-            <div v-for="job in favoriteJobs" :key="job.id">
-                <p>{{ job.name }}</p>
+        <div class="offcanvas-header bg-primary text-white">
+            <div class="container-fluid">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h5 class="offcanvas-title" id="offcanvasRightLabel">Favorite Prints</h5>
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close" v-on:click="toggleButton"></button>
+                    </div>
+                </div>
             </div>
         </div>
+        <div class="offcanvas-body">
+            <div v-if="favoriteJobs.length > 0" v-for="job in favoriteJobs" :key="job.id" class="mb-3">
+                <div class="d-flex justify-content-between align-items-start bg-light p-3 rounded">
+                    <p class="mb-0">{{ job.name }}</p>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-star text-warning" style="margin-right: 15px;" data-bs-toggle="modal" data-bs-target="#favoriteModal" @click="jobToUnfavorite = job"></i>
+                        <div class="dropdown">
+                            <button class="btn btn-secondary dropdown-toggle" type="button" id="printerDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                Rerun Job
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="printerDropdown">
+                                <li v-for="printer in printers" :key="printer.id">
+                                    <a class="dropdown-item" @click="handleRerun(job, printer)">{{ printer.name }}</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p v-else class="text-center text-muted">No favorite jobs found. Favorite your first job!</p>
+        </div>
     </div>
-    <div>
-        <div class="offcanvas-btn-box" :style="{ transform: `translateX(${buttonTransform}px)` }">
-            <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight" v-on:click="toggleButton">
-                <span><i class="fas fa-chevron-left"></i></span>
-                <span><i class="fas fa-star"></i></span>
-            </button>
+    <div class="offcanvas-btn-box" :style="{ transform: `translateX(${buttonTransform}px)` }">
+        <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight" v-on:click="toggleButton" style="border-top-right-radius: 0; border-bottom-right-radius: 0; padding: 5px 10px;">
+            <span><i class="fas fa-chevron-left"></i></span>
+            <span><i class="fas fa-star"></i></span>
+        </button>
+    </div>
+
+    <!-- modal to unfavorite a job in the off canvas -->
+    <div class="modal fade" id="favoriteModal" tabindex="-1" aria-labelledby="favoriteModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="favoriteModalLabel">Unfavorite Job</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to unfavorite this job?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="favoriteJob(jobToUnfavorite!, false)">Unfavorite</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -302,9 +360,13 @@ const toggleButton = () => {
                     </td>
                     <td>{{ job.id }}</td>
                     <td>
-                        {{ job.name }}
-                        <i v-if="job.favorite === true" class="fas fa-star" @click="favoriteJob(job, false)"></i>
-                        <i v-else class="far fa-star" @click="favoriteJob(job, true)"></i>
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <div>{{ job.name }}</div>
+                            <div>
+                                <i v-if="job.favorite === true" class="fas fa-star text-warning" @click="favoriteJob(job, false)"></i>
+                                <i v-else class="far fa-star text-warning" @click="favoriteJob(job, true)"></i>
+                            </div>
+                        </div>
                     </td>
                     <td>
                         {{ job.file_name_original }}
@@ -331,12 +393,10 @@ const toggleButton = () => {
                         </div>
                     </td>
                 </tr>
-
             </tbody>
-
             <tbody v-else>
                 <tr>
-                    <td colspan="7">No jobs found. Submit your first job <RouterLink to="/submit">here!</RouterLink>
+                    <td colspan="8">No jobs found. Submit your first job <RouterLink to="/submit">here!</RouterLink>
                     </td>
                 </tr>
             </tbody>
@@ -360,7 +420,7 @@ const toggleButton = () => {
     position: fixed; 
     top: 50%; 
     right: 0; 
-    z-index: 1100; 
+    z-index: 1041; 
 }
 
 

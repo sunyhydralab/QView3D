@@ -258,6 +258,26 @@ class Job(db.Model):
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to clear space. Database error"}), 500
+        
+    @classmethod
+    def getFavoriteJobs(cls):
+        try:
+            jobs = cls.query.filter_by(favorite=True).all()
+
+            jobs_data = [{
+                "id": job.id,
+                "name": job.name,
+                "status": job.status,
+                "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",
+                "printer": job.printer.name if job.printer else 'None',
+                "file_name_original": job.file_name_original,
+                "favorite": job.favorite
+            } for job in jobs]
+
+            return jobs_data
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return jsonify({"error": "Failed to retrieve favorite jobs. Database error"}), 500
 
     def saveToFolder(self):
         file_data = self.getFile()

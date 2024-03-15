@@ -40,6 +40,15 @@ export function useGetJobs() {
         console.error(error)
         toast.error('An error occurred while retrieving the jobs')
       }
+    },
+    async getFavoriteJobs() {
+      try {
+        const response = await api('getfavoritejobs')
+        return response
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while retrieving the jobs')
+      }
     }
   }
 }
@@ -286,7 +295,7 @@ export function useDeleteJob() {
 
 export function useFavoriteJob() {
   return {
-    async favoriteJob(job: Job, favorite: boolean) {
+    async favorite(job: Job, favorite: boolean) {
       let jobid = job?.id;
       try {
         const response = await api(`favoritejob`, { jobid, favorite })

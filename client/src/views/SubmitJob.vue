@@ -22,7 +22,7 @@ const selectedPrinters = ref<Array<Device>>([])
 const file = ref<File>()
 const quantity = ref<number>(1)
 const priority = ref<number>(0)
-const favorite = ref<number>(0)
+const favorite = ref<boolean>(false)
 const name = ref<string>()
 
 // file upload
@@ -151,7 +151,7 @@ function resetValues() {
     selectedPrinters.value = [];
     quantity.value = 1;
     priority.value = 0;
-    favorite.value = 0;
+    favorite.value = false;
     name.value = undefined;
 }
 

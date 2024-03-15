@@ -43,7 +43,9 @@ def add_job_to_queue():
         
         name = request.form['name']  # Access other form fields from request.form
         printer_id = int(request.form['printerid'])
-        favorite = request.form['favorite']
+        _favorite = request.form['favorite']
+        favorite = 1 if _favorite == 'true' else 0
+        
         
         status = 'inqueue' # set status 
         res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite) # insert into DB 
@@ -344,6 +346,15 @@ def clearSpace():
     try: 
         res = Job.clearSpace()
         return res 
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
+@jobs_bp.route('/getfavoritejobs', methods=["GET"])
+def getFavoriteJobs():
+    try:
+        res = Job.getFavoriteJobs()
+        return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
