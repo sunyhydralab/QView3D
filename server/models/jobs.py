@@ -360,4 +360,4 @@ class Job(db.Model):
         
     def setReleased(self, released):
         self.released = released
-        current_app.socketio.emit('release_job', {'job_id': self.id, 'released': self.released}) 
+        current_app.socketio.emit('release_job', {'job_id': self.id, 'released': released}) 

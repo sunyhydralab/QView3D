@@ -352,6 +352,7 @@ export function setupStatusSocket(printers: any) {
 export function setupQueueSocket(printers: any) {
   socket.on("queue_update", ((data: any) => {
     if (printers && printers.value) {
+      console.log("QUEUE SOCKET: ", printers.value)
       const printer = printers.value.find((p: Device) => p.id === data.printerid)
       console.log(printer)
       if (printer) {

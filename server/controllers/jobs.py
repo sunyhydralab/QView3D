@@ -65,6 +65,8 @@ def add_job_to_queue():
             findPrinterObject(printer_id).getQueue().addToFront(job, printer_id)
         else:
             findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
+            
+        print("released: ", job.released)
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     
@@ -340,6 +342,7 @@ def startPrint():
         printerobject = findPrinterObject(printerid)
         queue = printerobject.getQueue()
         inmemjob = queue.getJobById(jobid)
+        print(inmemjob)
         inmemjob.setReleased(1)
         
         return jsonify({"success": True, "message": "Job started successfully."}), 200

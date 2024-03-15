@@ -154,6 +154,7 @@ class PrinterStatusService:
                 printer_info['queue'].append(job_info)
             
             printer_info_list.append(printer_info)
+            
         return printer_info_list
 
     def pingForStatus(self):

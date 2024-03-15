@@ -22,21 +22,7 @@ onMounted(async () => {
   try {
 
     printers.value = await retrieveInfo()
-    // const route = useRoute()
-    // const printerName = route.params.printerName
-    // const updatePrinters = async () => {
-    //   const printerInfo = await retrieveInfo()
-    //   printers.value = []
-    //   for (const printer of printerInfo) {
-    //     printers.value.push({
-    //       ...printer,
-    //       isExpanded: printer.name === printerName
-    //     })
-    //   }
-    // }
-    // Fetch the printer status immediately on mount
-    // await updatePrinters()
-    // Setup the satus socket
+
     setupStatusSocket(printers)
 
     setupQueueSocket(printers)
@@ -257,9 +243,9 @@ const startPrint = async (printerid: number, jobid: number) => {
                     <a class="dropdown-item" href="#" @click="setPrinterStatus(printer, 'ready')">Set to Ready</a></li>
                   <li v-if="printer.status == 'printing'"><a class="dropdown-item" href="#"
                       @click="setPrinterStatus(printer, 'complete')">Stop Print</a></li>
-                  <li v-if="printer.status == 'printing'"><a class="dropdown-item" href="#"
+                  <li v-if="printer.status == 'printing' && printer.queue?.[0].released==1"><a class="dropdown-item" href="#"
                       @click="setPrinterStatus(printer, 'paused')">Pause Print</a></li>
-                  <li v-if="printer.status == 'printing'"><a class="dropdown-item" href="#"
+                  <li v-if="printer.status == 'printing' && printer.queue?.[0].released==1"><a class="dropdown-item" href="#"
                         @click="setPrinterStatus(printer, 'colorchange')">Change Color</a></li>
                   <li v-if="printer.status == 'paused' || printer.status=='colorchange'"><a class="dropdown-item" href="#"
                       @click="setPrinterStatus(printer, 'printing')">Unpause Print</a></li>
@@ -290,7 +276,7 @@ const startPrint = async (printerid: number, jobid: number) => {
                 @click="startPrint(printer.id!, printer.queue?.[0].id)">Start Print</button>
             </div>
 
-            <div v-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange') && printer.queue && printer.queue[0].released==1">
+            <div v-else-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange') && printer.queue && printer.queue[0].released==1">
               <!-- <div v-for="job in printer.queue" :key="job.id"> -->
               <!-- Display the elapsed time -->
               <div class="progress" style="position: relative;">

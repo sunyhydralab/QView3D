@@ -20,7 +20,7 @@ export interface Job {
   printerid: number
   file_pause: number 
   priority?: string
-  released?: number 
+  released: number 
   total_time?: number
   elapsed_time?: number
   remaining_time?: number
@@ -275,6 +275,7 @@ export function setupReleaseSocket(printers: any) {
       .flatMap((printer: { queue: any }) => printer.queue)
       .find((job: { id: any }) => job?.id === data.job_id)
     if (job) {
+      console.log(data.released)
       job.released = data.released
     }
   })
