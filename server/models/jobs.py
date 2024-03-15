@@ -30,7 +30,7 @@ class Job(db.Model):
         db.Integer, db.ForeignKey('printer.id'), nullable=True)
     printer = db.relationship('Printer', backref='Job')
     file_name_original = db.Column(db.String(50), nullable=False)
-    favorite = db.Column(db.String(1), nullable=False)
+    favorite = db.Column(db.Boolean, nullable=False)
     file_name_pk = None
     filePause = 0
     progress = 0.0
@@ -289,6 +289,11 @@ class Job(db.Model):
     
     def getFileFavorite(self):
         return self.favorite
+    
+    def setFileFavorite(self, favorite):
+        self.favorite = favorite
+        db.session.commit()
+        return {"success": True, "message": "Favorite status updated successfully."}
 
     def getPrinterId(self):
         return self.printer_id

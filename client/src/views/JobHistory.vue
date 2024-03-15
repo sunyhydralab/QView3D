@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers, type Device } from '../model/ports'
-import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace } from '../model/jobs';
+import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob } from '../model/jobs';
 import { computed, onMounted, ref } from 'vue';
 
 const { jobhistory } = useGetJobs()
@@ -8,6 +8,7 @@ const { rerunJob } = useRerunJob()
 const { getFile } = useGetJobFile()
 const { deleteJob } = useDeleteJob()
 const { clearSpace } = useClearSpace()
+const { favoriteJob } = useFavoriteJob()
 
 const selectedPrinters = ref<Array<Device>>([])
 const selectedJobs = ref<Array<Job>>([]);
@@ -274,10 +275,8 @@ const openModal = (title: any, message: any, action: any) => {
                     <td>{{ job.id }}</td>
                     <td>
                         {{ job.name }}
-                        <!-- if job.favorite === true, then display a fas fa star icon next to the jobs name -->
-                        <!-- else, then display the same fas fa star just not solid -->
-                        <i v-if="job.favorite === 'true'" class="fas fa-star"></i>
-                        <i v-else class="far fa-star"></i>
+                        <i v-if="job.favorite === true" class="fas fa-star" @click="favoriteJob(job, false)"></i>
+                        <i v-else class="far fa-star" @click="favoriteJob(job, true)"></i>
                     </td>
                     <td>
                         {{ job.file_name_original }}

@@ -18,7 +18,7 @@ export interface Job {
   printerid: number
   file_pause: number 
   priority?: string
-  favorite?: string
+  favorite?: boolean
   // job_id: number
   total_time?: number
   elapsed_time?: number
@@ -279,6 +279,24 @@ export function useDeleteJob() {
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while deleting the job')
+      }
+    }
+  }
+}
+
+export function useFavoriteJob() {
+  return {
+    async favoriteJob(job: Job, favorite: boolean) {
+      let jobid = job?.id;
+      try {
+        const response = await api(`favoritejob`, { jobid, favorite })
+        if (response.success) {
+          job.favorite = favorite ? true : false;
+        }
+        return response;
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while favoriting the job')
       }
     }
   }
