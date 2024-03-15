@@ -15,6 +15,7 @@ const selectedJobs = ref<Array<Job>>([]);
 const deleteModalTitle = computed(() => `Deleting ${selectedJobs.value.length} job(s) from database!`);
 
 let jobs = ref<Array<Job>>([])
+let favoriteJobs = ref<Array<Job>>([])
 let filter = ref('')
 let oldestFirst = ref<boolean>(false)
 let order = ref<string>('newest')
@@ -28,6 +29,8 @@ let selectAllCheckbox = ref(false);
 let modalTitle = ref('');
 let modalMessage = ref('');
 let modalAction = ref('');
+
+let buttonTransform = ref(0);
 
 let filteredJobs = computed(() => {
     if (filter.value) {
@@ -143,11 +146,36 @@ const openModal = (title: any, message: any, action: any) => {
     modalTitle.value = title;
     modalMessage.value = message;
     modalAction.value = action;
-};
+}
+
+const toggleButton = () => {
+    buttonTransform.value = buttonTransform.value === 0 ? -400 : 0;
+}
 
 </script>
 
 <template>
+    <!-- bootstrap off canvas to the right -->
+    <div class="offcanvas offcanvas-end" data-bs-backdrop="static" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="offcanvasRightLabel">Favorite Prints</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close" v-on:click="toggleButton"></button>
+        </div>
+        <div class="offcanvas-body">
+            <div v-for="job in favoriteJobs" :key="job.id">
+                <p>{{ job.name }}</p>
+            </div>
+        </div>
+    </div>
+    <div>
+        <div class="offcanvas-btn-box" :style="{ transform: `translateX(${buttonTransform}px)` }">
+            <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight" v-on:click="toggleButton">
+                <span><i class="fas fa-chevron-left"></i></span>
+                <span><i class="fas fa-star"></i></span>
+            </button>
+        </div>
+    </div>
+
     <div class="container">
 
         <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
@@ -326,8 +354,16 @@ const openModal = (title: any, message: any, action: any) => {
         </nav>
     </div>
 </template>
-
 <style scoped>
+.offcanvas-btn-box { 
+    transition: transform .3s ease-in-out; 
+    position: fixed; 
+    top: 50%; 
+    right: 0; 
+    z-index: 1100; 
+}
+
+
 table {
     width: 100%;
     border-collapse: collapse;
