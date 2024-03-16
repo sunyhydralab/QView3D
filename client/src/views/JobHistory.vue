@@ -128,6 +128,10 @@ const confirmDelete = async () => {
 
     selectedJobs.value = [];
     selectAllCheckbox.value = false;
+
+    submitFilter();
+
+    favoriteJobs.value = await getFavoriteJobs();
 }
 
 const selectAllJobs = () => {
@@ -166,7 +170,7 @@ const favoriteJob = async (job: Job, fav: boolean) => {
 }
 
 const toggleButton = () => {
-    buttonTransform.value = buttonTransform.value === 0 ? -400 : 0;
+    buttonTransform.value = buttonTransform.value === 0 ? -700 : 0;
 }
 
 </script>
@@ -188,24 +192,33 @@ const toggleButton = () => {
                 </div>
             </div>
         </div>
-        <div class="offcanvas-body">
+        <div class="offcanvas-body" style="max-height: 100vh; overflow-y: auto;">
+            <div class="grid-container header">
+                <h5>Job Name</h5>
+                <h5>File Name</h5>
+                <h5>Actions</h5>
+            </div>
             <div v-if="favoriteJobs.length > 0" v-for="job in favoriteJobs" :key="job.id" class="mb-3">
-                <div class="d-flex justify-content-between align-items-start bg-light p-3 rounded">
-                    <p class="mb-0">{{ job.name }}</p>
+                <div class="grid-container job">
+                    <p class="my-auto">{{ job.name }}</p>
+                    <p class="my-auto">{{ job.file_name_original }}</p>
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-star text-warning" style="margin-right: 15px;" data-bs-toggle="modal"
-                            data-bs-target="#favoriteModal" @click="jobToUnfavorite = job"></i>
-                        <div class="dropdown">
-                            <button class="btn btn-secondary dropdown-toggle" type="button" id="printerDropdown"
-                                data-bs-toggle="dropdown" aria-expanded="false">
-                                Rerun Job
-                            </button>
-                            <ul class="dropdown-menu" aria-labelledby="printerDropdown">
-                                <li v-for="printer in printers" :key="printer.id">
-                                    <a class="dropdown-item" @click="handleRerun(job, printer)">{{ printer.name }}</a>
-                                </li>
-                            </ul>
-                        </div>
+                        <i class="fas fa-star text-warning" style="margin-right: 10px;" data-bs-toggle="modal" data-bs-target="#favoriteModal"
+                            @click="jobToUnfavorite = job"></i>
+                        <button class="btn btn-secondary download" style="margin-right: 10px;" @click="getFile(job.id)"
+                            :disabled="job.file_name_original.includes('.gcode:')">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="btn btn-secondary dropdown-toggle" type="button" id="printerDropdown"
+                            data-bs-toggle="dropdown" aria-expanded="false"
+                            :disabled="job.file_name_original.includes('.gcode:')">
+                            <i class="fa-solid fa-arrow-rotate-right"></i>
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="printerDropdown">
+                            <li v-for="printer in printers" :key="printer.id">
+                                <a class="dropdown-item" @click="handleRerun(job, printer)">{{ printer.name }}</a>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -352,13 +365,13 @@ const toggleButton = () => {
                     <th class="col-checkbox">
                         <input type="checkbox" @change="selectAllJobs" v-model="selectAllCheckbox">
                     </th>
-                    <th class="col-job-id">Job ID</th>
-                    <th class="col-job-title">Job Title</th>
-                    <th class="col-file">File</th>
-                    <th class="col-date">Date Completed</th>
-                    <th class="col-status">Final Status</th>
-                    <th class="col-printer">Printer</th>
-                    <th class="col-rerun">Rerun Job</th>
+                    <th>Job ID</th>
+                    <th>Job Title</th>
+                    <th>File</th>
+                    <th>Date Completed</th>
+                    <th>Final Status</th>
+                    <th>Printer</th>
+                    <th>Rerun Job</th>
                 </tr>
             </thead>
             <tbody v-if="filteredJobs.length > 0">
@@ -367,7 +380,7 @@ const toggleButton = () => {
                         <input type="checkbox" v-model="selectedJobs" :value="job">
                     </td>
                     <td>{{ job.id }}</td>
-                    <td class="job-row">
+                    <td>
                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                             <div>{{ job.name }}</div>
                             <div class="star-icon">
@@ -392,7 +405,7 @@ const toggleButton = () => {
                             <button class="btn btn-secondary dropdown-toggle" type="button" id="printerDropdown"
                                 data-bs-toggle="dropdown" aria-expanded="false"
                                 :disabled="job.file_name_original.includes('.gcode:')">
-                                Rerun Job
+                                <i class="fa-solid fa-arrow-rotate-right"></i>
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="printerDropdown">
                                 <li v-for="printer in printers" :key="printer.id">
@@ -424,6 +437,35 @@ const toggleButton = () => {
     </div>
 </template>
 <style scoped>
+.grid-container {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 10px;
+}
+
+.header {
+    border: 1px solid #e0e0e0;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    background-color: #f2f2f2;
+}
+
+.header h5 {
+    text-decoration: underline;
+}
+
+.job {
+    border: 1px solid #e0e0e0;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.offcanvas {
+    width: 700px;
+}
+
 .offcanvas-btn-box {
     transition: transform .3s ease-in-out;
     position: fixed;
@@ -432,12 +474,8 @@ const toggleButton = () => {
     z-index: 1041;
 }
 
-.job-row .star-icon {
-    visibility: hidden;
-}
-
-.job-row:hover .star-icon {
-    visibility: visible;
+.offcanvas-end {
+    border-left: 0;
 }
 
 table {
@@ -454,42 +492,6 @@ td {
 
 th {
     background-color: #f2f2f2;
-}
-
-.col-checkbox {
-    width: 1vh;
-}
-
-.col-job-id {
-    width: 8vh;
-}
-
-.col-job-title {
-    width: 20vh;
-}
-
-.col-file {
-    width: 35vh;
-}
-
-.col-date {
-    width: 26vh;
-    overflow-x: auto;
-    /* Add a horizontal scrollbar if necessary */
-    white-space: nowrap;
-    /* Prevent the content from wrapping to the next line */
-}
-
-.col-status {
-    width: 12vh;
-}
-
-.col-printer {
-    width: 20vh;
-}
-
-.col-rerun {
-    width: 5vh;
 }
 
 ul.dropdown-menu.w-100.show li {

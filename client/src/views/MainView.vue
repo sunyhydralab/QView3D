@@ -444,9 +444,6 @@ function formatETA(milliseconds: number): string {
               </div>
               <!-- </div> -->
             </td>
-            <!-- <td class="text-center handle" :class="{ 'not-draggable': job.status !== 'inqueue' }">
-              <i class="fas fa-grip-vertical" :class="{ 'icon-disabled': job.status !== 'inqueue' }"></i>
-            </td> -->
             <td class="text-center handle" :class="{ 'not-draggable': printers.length <= 1 }">
               <i class="fas fa-grip-vertical" :class="{ 'icon-disabled': printers.length <= 1 }"></i>
             </td>

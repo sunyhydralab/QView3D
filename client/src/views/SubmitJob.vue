@@ -67,6 +67,8 @@ const onlyNumber = ($event: KeyboardEvent) => {
 
 // sends job to printer queue
 const handleSubmit = async () => {
+    let isFavoriteSet = false;
+
     if (selectedPrinters.value.length == 0) {
         let numPrints = quantity.value
         for (let i = 0; i < numPrints; i++) {
@@ -74,7 +76,15 @@ const handleSubmit = async () => {
             formData.append('file', file.value as File) // append form data
             formData.append('name', name.value as string)
             formData.append('priority', priority.value.toString())
-            formData.append('favorite', favorite.value.toString())
+
+            // If favorite is true and it's not set yet, set it for the first job only
+            if (favorite.value && !isFavoriteSet) {
+                formData.append('favorite', 'true')
+                isFavoriteSet = true;
+            } else {
+                formData.append('favorite', 'false')
+            }
+
             try {
                 await auto(formData)
                 if (form.value) {
@@ -97,7 +107,15 @@ const handleSubmit = async () => {
                 formData.append('file', file.value as File) // append form data
                 formData.append('name', name.value as string)
                 formData.append('priority', priority.value.toString())
-                formData.append('favorite', favorite.value.toString())
+
+                // If favorite is true and it's not set yet, set it for the first job only
+                if (favorite.value && !isFavoriteSet) {
+                    formData.append('favorite', 'true')
+                    isFavoriteSet = true;
+                } else {
+                    formData.append('favorite', 'false')
+                }
+
                 try {
                     res = await auto(formData)
                     if (form.value) {
@@ -108,8 +126,7 @@ const handleSubmit = async () => {
                 }
             }
             resetValues()
-        }
-        else {
+        } else {
             let printsPerPrinter = Math.floor(quantity.value / selectedPrinters.value.length) // number of even prints per printer
             let remainder = quantity.value % selectedPrinters.value.length; //remainder to be evenly distributed 
             for (const printer of selectedPrinters.value) {
@@ -124,7 +141,15 @@ const handleSubmit = async () => {
                     formData.append('name', name.value as string)
                     formData.append('printerid', printer?.id?.toString() || '');
                     formData.append('priority', priority.value.toString())
-                    formData.append('favorite', favorite.value.toString())
+
+                    // If favorite is true and it's not set yet, set it for the first job only
+                    if (favorite.value && !isFavoriteSet) {
+                        formData.append('favorite', 'true')
+                        isFavoriteSet = true;
+                    } else {
+                        formData.append('favorite', 'false')
+                    }
+
                     try {
                         res = await addJobToQueue(formData)
                         // reset form
@@ -204,11 +229,13 @@ function appendPrinter(printer: Device) {
 
                     <div class="d-flex justify-content-between mb-3">
                         <div class="form-check">
-                            <input v-model="priority" class="form-check-input" type="checkbox" id="priority" name="priority">
+                            <input v-model="priority" class="form-check-input" type="checkbox" id="priority"
+                                name="priority">
                             <label class="form-check-label" for="priority">Priority?</label>
                         </div>
                         <div class="form-check">
-                            <input v-model="favorite" class="form-check-input" type="checkbox" id="favorite" name="favorite">
+                            <input v-model="favorite" class="form-check-input" type="checkbox" id="favorite"
+                                name="favorite">
                             <label class="form-check-label" for="favorite">Favorite?</label>
                         </div>
                     </div>

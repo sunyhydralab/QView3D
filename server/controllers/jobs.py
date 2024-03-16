@@ -46,7 +46,6 @@ def add_job_to_queue():
         _favorite = request.form['favorite']
         favorite = 1 if _favorite == 'true' else 0
         
-        
         status = 'inqueue' # set status 
         res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite) # insert into DB 
         
@@ -83,8 +82,10 @@ def auto_queue():
         name = request.form['name']  # Access other form fields from request.form
         status = 'inqueue' # set status 
         printer_id = getSmallestQueue()
+        _favorite = request.form['favorite']
+        favorite = 1 if _favorite == 'true' else 0
         
-        res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original) # insert into DB 
+        res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite) # insert into DB 
         
         id = res['id']
         
