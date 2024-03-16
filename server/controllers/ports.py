@@ -111,3 +111,16 @@ def repair_ports():
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
     
+@ports_bp.route("/movehead", methods=["POST"])
+def moveHead():
+    try: 
+        data = request.get_json()
+        port = data['port']
+        
+        Printer.moveHead(port)
+        
+        return {"success": True, "message": "Printer port(s) successfully updated."}
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+        

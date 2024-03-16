@@ -177,18 +177,6 @@ class Printer(db.Model):
             print(f"Unexpected error: {e}")
             return jsonify({"error": "Unexpected error occurred"}), 500
 
-    # @classmethod
-    # def repairPorts(cls):
-    #     try:
-    #         ports = serial.tools.list_ports.comports()
-    #         for port in ports:
-    #             hwid = port.hwid # get hwid associated with port
-    #             printer = cls.findPrinter()
-
-    #     except Exception as e:
-    #         print(f"Unexpected error: {e}")
-    #         return jsonify({"error": "Unexpected error occurred"}), 500
-
     @classmethod
     def findPrinter(cls, id):
         try:
@@ -242,7 +230,24 @@ class Printer(db.Model):
                 jsonify({"error": "Failed to update printer port. Database error"}),
                 500,
             )
-
+            
+    @classmethod 
+    def moveHead(cls, device):
+        ser = serial.Serial(device, 115200, timeout=1)
+        message = "G1 Z10 F3000"
+         # Encode and send the message to the printer.
+        ser.write(f"{message}\n".encode("utf-8"))
+            # Sleep the printer to give it enough time to get the instruction.
+            # time.sleep(0.1)
+            # Save and print out the response from the printer. We can use this for error handling and status updates.
+        # while True:
+            # logic here about time elapsed since last response
+        response = ser.readline().decode("utf-8").strip()
+            # if "ok" in response:
+            #     break
+        ser.close()
+        return 
+        
     def connect(self):
         try:
             self.ser = serial.Serial(self.device, 115200, timeout=1)
@@ -367,22 +372,6 @@ class Printer(db.Model):
                         ].strip()  # Remove comments starting with ";"
                     if len(line) == 0 or line.startswith(";"):
                         continue
-                    # Send the line to the printer.
-                    # time.sleep(1)
-                    # if(self.getStatus()=="paused" or ("M601" in line) or ("M0" in line)):
-                    #     job.setPauseTime()
-                    #     self.setStatus("paused")
-                    #     self.sendGcode("G91") # set relative positioning mode
-                    #     self.sendGcode("G1 Z10 F300")  # move up 10mm
-                    #     self.sendGcode("M601") # pause command
-                    #     # self.sendGcode("G1 Z-10 F300")
-                    #     while(True):
-                    #         stat = self.getStatus()
-                    #         if(stat=="printing"):
-                    #             job.resumeTime()
-                    #             self.sendGcode("G1 Z-10 F300") # move back to previous position
-                    #             self.sendGcode("G90") # set back to absolute positioning
-                    # break
 
                     if "M600" in line:
                         # self.setStatus("paused")
@@ -408,38 +397,7 @@ class Printer(db.Model):
                     if self.getStatus() == "colorchange":
                         self.sendGcode("M600")  # color change command
                         self.setStatus("printing")
-                        # job.setPauseTime()
-                        # while(True):
-                        #     stat = self.getStatus()
-                        #     if(stat=="printing"):
-                        #         job.resumeTime()
-                        #         break
 
-                    # pause in file
-                    # if ("M601" in line) or ("M0" in line) or ("M600" in line):
-                    #     # self.setStatus("paused")
-                    #     # job.setPauseTime()
-                    #     # while True:
-                    #     #     if self.getStatus()=="printing":
-                    #     #         job.resumeTime()
-                    #     job.setPauseTime()
-                    #     self.setStatus("paused")
-                    #     self.sendGcode("G91") # set relative positioning mode
-                    #     self.sendGcode("G1 Z10 F300")  # move up 10mm
-                    #     # self.sendGcode("M601") # pause command
-                    #     # self.sendGcode("G1 Z-10 F300")
-                    #     while(True):
-                    #         stat = self.getStatus()
-                    #         if(stat=="printing"):
-                    #             job.resumeTime()
-                    #             self.sendGcode("G1 Z-10 F300") # move back to previous position
-                    #             self.sendGcode("G90") # set back to absolute positioning
-                    #             break
-
-                    # right now, if pause is in the line, M601 will be sent twice to avoid duplicate code.
-                    # test to see if thatll be an issue.
-
-                    # res = self.sendGcode(line)
                     # Increment the sent lines
                     sent_lines += 1
                     # Calculate the progress
@@ -484,16 +442,16 @@ class Printer(db.Model):
             # self.gcodeEnding("M84") # disable motors
 
             # *** Prusa MK4 ending sequence ***
-            self.gcodeEnding(
-                "{if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+1, max_print_height)} F720 ; Move print head up{endif}"
-            )
+            # self.gcodeEnding(
+            #     "{if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+1, max_print_height)} F720 ; Move print head up{endif}"
+            # )
             self.gcodeEnding("M104 S0")  # ; turn off temperature
             self.gcodeEnding("M140 S0")  # ; turn off heatbed
             self.gcodeEnding("M107")  # ; turn off fan
             self.gcodeEnding("G1 X241 Y170 F3600")  # ; park
-            self.gcodeEnding(
-                "{if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+23, max_print_height)} F300"
-            )  # ; Move print head up{endif}
+            # self.gcodeEnding(
+            #     "{if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+23, max_print_height)} F300"
+            # )  # ; Move print head up{endif}
             self.gcodeEnding("G4")  # ; wait
             self.gcodeEnding("M900 K0")  # ; reset LA
             self.gcodeEnding("M142 S36")  # ; reset heatbreak target temp
@@ -518,29 +476,10 @@ class Printer(db.Model):
                 begin = self.beginPrint(job)
                 
                 if begin==True: 
-                    # self.setStatus("printing")  # set printer status to printing
-                    # self.sendStatusToJob(job, job.id, "printing")
                     verdict = self.parseGcode(path, job)  # passes file to code. returns "complete" if successful, "error" if not.
                     self.handleVerdict(verdict, job)
                 else: 
                     self.handleVerdict("misprint", job)    
-                    
-                # if verdict == "complete":
-                #     self.disconnect()
-                #     self.setStatus("complete")
-                #     self.sendStatusToJob(job, job.id, "complete")
-                # elif verdict == "error":
-                #     self.disconnect()
-                #     self.getQueue().deleteJob(job.id, self.id)
-                #     self.setStatus("error")
-                #     self.sendStatusToJob(job, job.id, "error")
-                #     # self.setError("Error")
-                # elif verdict == "cancelled":
-                #     self.endingSequence()
-                #     self.disconnect()
-                #     self.sendStatusToJob(job, job.id, "cancelled")
-                # else:
-                #     self.disconnect()
 
                 job.removeFileFromPath(path)  # remove file from folder after job complete
             # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready.
@@ -565,7 +504,6 @@ class Printer(db.Model):
             if self.getStatus() == "complete": 
                 return False 
             
-
     def handleVerdict(self, verdict, job):
         # self.disconnect()
         
