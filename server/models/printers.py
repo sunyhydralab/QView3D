@@ -518,6 +518,8 @@ class Printer(db.Model):
                 begin = self.beginPrint(job)
                 
                 if begin==True: 
+                    # self.setStatus("printing")  # set printer status to printing
+                    # self.sendStatusToJob(job, job.id, "printing")
                     verdict = self.parseGcode(path, job)  # passes file to code. returns "complete" if successful, "error" if not.
                     self.handleVerdict(verdict, job)
                 else: 
