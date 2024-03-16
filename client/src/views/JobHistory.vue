@@ -173,7 +173,8 @@ const toggleButton = () => {
 
 <template>
     <!-- bootstrap off canvas to the right -->
-    <div class="offcanvas offcanvas-end" data-bs-backdrop="static" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">
+    <div class="offcanvas offcanvas-end" data-bs-backdrop="static" tabindex="-1" id="offcanvasRight"
+        aria-labelledby="offcanvasRightLabel">
         <div class="offcanvas-header bg-primary text-white">
             <div class="container-fluid">
                 <div class="row align-items-center">
@@ -181,7 +182,8 @@ const toggleButton = () => {
                         <h5 class="offcanvas-title" id="offcanvasRightLabel">Favorite Prints</h5>
                     </div>
                     <div class="col-auto">
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close" v-on:click="toggleButton"></button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
+                            aria-label="Close" v-on:click="toggleButton"></button>
                     </div>
                 </div>
             </div>
@@ -191,9 +193,11 @@ const toggleButton = () => {
                 <div class="d-flex justify-content-between align-items-start bg-light p-3 rounded">
                     <p class="mb-0">{{ job.name }}</p>
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-star text-warning" style="margin-right: 15px;" data-bs-toggle="modal" data-bs-target="#favoriteModal" @click="jobToUnfavorite = job"></i>
+                        <i class="fas fa-star text-warning" style="margin-right: 15px;" data-bs-toggle="modal"
+                            data-bs-target="#favoriteModal" @click="jobToUnfavorite = job"></i>
                         <div class="dropdown">
-                            <button class="btn btn-secondary dropdown-toggle" type="button" id="printerDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <button class="btn btn-secondary dropdown-toggle" type="button" id="printerDropdown"
+                                data-bs-toggle="dropdown" aria-expanded="false">
                                 Rerun Job
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="printerDropdown">
@@ -209,14 +213,17 @@ const toggleButton = () => {
         </div>
     </div>
     <div class="offcanvas-btn-box" :style="{ transform: `translateX(${buttonTransform}px)` }">
-        <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight" v-on:click="toggleButton" style="border-top-right-radius: 0; border-bottom-right-radius: 0; padding: 5px 10px;">
+        <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight"
+            aria-controls="offcanvasRight" v-on:click="toggleButton"
+            style="border-top-right-radius: 0; border-bottom-right-radius: 0; padding: 5px 10px;">
             <span><i class="fas fa-chevron-left"></i></span>
             <span><i class="fas fa-star"></i></span>
         </button>
     </div>
 
     <!-- modal to unfavorite a job in the off canvas -->
-    <div class="modal fade" id="favoriteModal" tabindex="-1" aria-labelledby="favoriteModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal fade" id="favoriteModal" tabindex="-1" aria-labelledby="favoriteModalLabel" aria-hidden="true"
+        data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
@@ -228,7 +235,8 @@ const toggleButton = () => {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="favoriteJob(jobToUnfavorite!, false)">Unfavorite</button>
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
+                        @click="favoriteJob(jobToUnfavorite!, false)">Unfavorite</button>
                 </div>
             </div>
         </div>
@@ -359,11 +367,12 @@ const toggleButton = () => {
                         <input type="checkbox" v-model="selectedJobs" :value="job">
                     </td>
                     <td>{{ job.id }}</td>
-                    <td>
+                    <td class="job-row">
                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                             <div>{{ job.name }}</div>
-                            <div>
-                                <i v-if="job.favorite === true" class="fas fa-star text-warning" @click="favoriteJob(job, false)"></i>
+                            <div class="star-icon">
+                                <i v-if="job.favorite === true" class="fas fa-star text-warning"
+                                    @click="favoriteJob(job, false)"></i>
                                 <i v-else class="far fa-star text-warning" @click="favoriteJob(job, true)"></i>
                             </div>
                         </div>
@@ -415,14 +424,21 @@ const toggleButton = () => {
     </div>
 </template>
 <style scoped>
-.offcanvas-btn-box { 
-    transition: transform .3s ease-in-out; 
-    position: fixed; 
-    top: 50%; 
-    right: 0; 
-    z-index: 1041; 
+.offcanvas-btn-box {
+    transition: transform .3s ease-in-out;
+    position: fixed;
+    top: 50%;
+    right: 0;
+    z-index: 1041;
 }
 
+.job-row .star-icon {
+    visibility: hidden;
+}
+
+.job-row:hover .star-icon {
+    visibility: visible;
+}
 
 table {
     width: 100%;
@@ -432,7 +448,6 @@ table {
 th,
 td {
     border: 2px solid #dddddd;
-    /* Set border width and color */
     text-align: left;
     padding: 8px;
 }
