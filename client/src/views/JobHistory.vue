@@ -13,7 +13,7 @@ const { deleteJob } = useDeleteJob()
 const { clearSpace } = useClearSpace()
 
 const printers = ref<Array<Device>>([]) // Get list of open printer threads 
-const selectedPrinters = ref<Array<Device>>([])
+const selectedPrinters = ref<Array<Number>>([])
 const selectedJobs = ref<Array<Job>>([]);
 const deleteModalTitle = computed(() => `Deleting ${selectedJobs.value.length} job(s) from database!`);
 
@@ -44,7 +44,7 @@ let filteredJobs = computed(() => {
 onMounted(async () => {
     try {
         // job history now returns a tuple of joblist and total jobs, not just all the jobs in the database
-        const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
+        const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
         const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds)
         jobs.value = joblist;
         totalJobs.value = total;
@@ -67,7 +67,7 @@ const handleRerun = async (job: Job, printer: Device) => {
         console.log("JOBS FILE", job.file)
         // Fetch the updated list of jobs after rerunning the job
         // so when a job is rerun, the job history is updated
-        const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
+        const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
         const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds)
 
         jobs.value = joblist;
@@ -99,7 +99,7 @@ const changePage = async (newPage: any) => {
     page.value = newPage
     jobs.value = []; // Clear the jobs array
     // Fetch the updated list of jobs after changing the page
-    const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
+    const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
     const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value)
     jobs.value = joblist;
@@ -107,10 +107,10 @@ const changePage = async (newPage: any) => {
 }
 
 function appendPrinter(printer: Device) {
-    if (!selectedPrinters.value.includes(printer)) {
-        selectedPrinters.value.push(printer)
+    if (!selectedPrinters.value.includes(printer.id!)) {
+        selectedPrinters.value.push(printer.id!)
     } else {
-        selectedPrinters.value = selectedPrinters.value.filter(p => p !== printer)
+        selectedPrinters.value = selectedPrinters.value.filter(p => p !== printer.id)
     }
 }
 
@@ -127,7 +127,7 @@ function appendPrinter(printer: Device) {
 async function submitFilter() {
     jobs.value = []; // Clear the jobs array
     oldestFirst.value = order.value === 'oldest';
-    const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
+    const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
     // Get the total number of jobs first, without considering the page number
     const [, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value);
@@ -161,7 +161,7 @@ const confirmDelete = async () => {
     const deletionPromises = selectedJobs.value.map(job => deleteJob(job));
     await Promise.all(deletionPromises);
 
-    const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
+    const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
     const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value);
     jobs.value = joblist;
     totalJobs.value = total;
@@ -242,6 +242,17 @@ const openModal = (title: any, message: any, action: any) => {
                                     </label>
                                 </div>
                             </li>
+                            <li class="dropdown-divider"></li>
+                            <li>
+                                <div class="form-check" @click.stop>
+                                <input class="form-check-input" type="checkbox" id="deregistered-printers"
+                                    @click="selectedPrinters.push(0)">
+                                <label class="form-check-label" for="deregistered-printers">
+                                    Deregistered printers
+                                </label>
+                                </div>
+                            </li>
+
                         </ul>
                     </div>
                 </div>
