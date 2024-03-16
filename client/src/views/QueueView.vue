@@ -232,6 +232,10 @@ const isInqueue = (evt: any) => {
   color: #6e7073;
 }
 
+.not-draggable {
+  pointer-events: none;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

@@ -444,8 +444,11 @@ function formatETA(milliseconds: number): string {
               </div>
               <!-- </div> -->
             </td>
-            <td class="text-center handle">
-              <i class="fas fa-grip-vertical"></i>
+            <!-- <td class="text-center handle" :class="{ 'not-draggable': job.status !== 'inqueue' }">
+              <i class="fas fa-grip-vertical" :class="{ 'icon-disabled': job.status !== 'inqueue' }"></i>
+            </td> -->
+            <td class="text-center handle" :class="{ 'not-draggable': printers.length <= 1 }">
+              <i class="fas fa-grip-vertical" :class="{ 'icon-disabled': printers.length <= 1 }"></i>
             </td>
           </tr>
         </template>
@@ -455,6 +458,13 @@ function formatETA(milliseconds: number): string {
 </template>
 
 <style scoped>
+.icon-disabled {
+  color: #6e7073;
+}
+
+.not-draggable {
+  pointer-events: none;
+}
 .sortable-chosen {
   opacity: 0.5;
   background-color: #f2f2f2;
