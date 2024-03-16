@@ -74,11 +74,11 @@ export function useAutoQueue() {
             toast.success(response.message)
           } else {
             console.error('Unexpected response:', response)
-            toast.error('Failed to register printer. Unexpected response')
+            toast.error('Failed to queue job. Unexpected response')
           }
         } else {
           console.error('Response is undefined or null')
-          toast.error('Failed to register printer. Unexpected response')
+          toast.error('Failed to queue job. Unexpected response')
         }
       } catch (error) {
         console.error(error)
