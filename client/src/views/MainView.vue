@@ -277,7 +277,7 @@ const startPrint = async (printerid: number, jobid: number) => {
 
         <td style="width: 250px;">
           <div
-            v-if="printer.status === 'printing' && printer.queue?.[0] && printer.queue?.[0].status == 'printing' && printer.queue[0].released == 0">
+            v-if="printer.status == 'printing' && printer.queue?.[0].released == 0">
             <button type="button" class="btn btn-danger" @click="startPrint(printer.id!, printer.queue?.[0].id)">Start
               Print</button>
           </div>
