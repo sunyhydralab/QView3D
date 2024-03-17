@@ -70,64 +70,68 @@ const handleSubmit = async () => {
             }
         }
         resetValues()
-    }
-
-    let sub = validateQuantity()
-    let res = null
-    if (sub == true) {
-        if (selectedPrinters.value.length == 0) {
-            let numPrints = quantity.value
-            for (let i = 0; i < numPrints; i++) {
-                const formData = new FormData() // create FormData object
-                formData.append('file', file.value as File) // append form data
-                formData.append('name', name.value as string)
-                formData.append('priority', priority.value.toString())
-                try {
-                    res = await auto(formData)
-                    if (form.value) {
-                        form.value.reset()
-                    }
-                } catch (error) {
-                    console.error('There has been a problem with your fetch operation:', error)
-                }
-            }
-            resetValues()
-        }
-        else {
-            let printsPerPrinter = Math.floor(quantity.value / selectedPrinters.value.length) // number of even prints per printer
-            let remainder = quantity.value % selectedPrinters.value.length; //remainder to be evenly distributed 
-            for (const printer of selectedPrinters.value) {
-                let numPrints = printsPerPrinter
-                if (remainder > 0) {
-                    numPrints += 1
-                    remainder -= 1
-                }
+    } else {
+        let sub = validateQuantity()
+        let res = null
+        if (sub == true) {
+            if (selectedPrinters.value.length == 0) {
+                let numPrints = quantity.value
                 for (let i = 0; i < numPrints; i++) {
                     const formData = new FormData() // create FormData object
                     formData.append('file', file.value as File) // append form data
                     formData.append('name', name.value as string)
-                    formData.append('printerid', printer?.id?.toString() || '');
                     formData.append('priority', priority.value.toString())
                     try {
-                        res = await addJobToQueue(formData)
-                        // reset form
+                        res = await auto(formData)
                         if (form.value) {
                             form.value.reset()
                         }
-                        // reset Vue refs
                     } catch (error) {
                         console.error('There has been a problem with your fetch operation:', error)
                     }
                 }
+                resetValues()
             }
-            resetValues()
+            else {
+                console.log(selectedPrinters.value)
+                let printsPerPrinter = Math.floor(quantity.value / selectedPrinters.value.length) // number of even prints per printer
+                let remainder = quantity.value % selectedPrinters.value.length; //remainder to be evenly distributed 
+                for (const printer of selectedPrinters.value) {
+                    let numPrints = printsPerPrinter
+                    if (remainder > 0) {
+                        numPrints += 1
+                        remainder -= 1
+                    }
+                    for (let i = 0; i < numPrints; i++) {
+                        const formData = new FormData() // create FormData object
+                        formData.append('file', file.value as File) // append form data
+                        formData.append('name', name.value as string)
+                        formData.append('printerid', printer?.id?.toString() || '');
+                        formData.append('priority', priority.value.toString())
+                        try {
+                            res = await addJobToQueue(formData)
+                            // reset form
+                            if (form.value) {
+                                form.value.reset()
+                            }
+                            // reset Vue refs
+                        } catch (error) {
+                            console.error('There has been a problem with your fetch operation:', error)
+                        }
+                    }
+                }
+                resetValues()
+            }
         }
+        if (res.success == true) {
+            toast.success('Job added to queue')
+        } else {
+            toast.error('Job failed to add to queue')
+        }
+
     }
-    if (res.success == true) {
-        toast.success('Job added to queue')
-    } else {
-        toast.error('Job failed to add to queue')
-    }
+
+
 }
 
 function resetValues() {
@@ -143,6 +147,7 @@ function appendPrinter(printer: Device) {
     } else {
         selectedPrinters.value = selectedPrinters.value.filter(p => p !== printer)
     }
+    console.log(selectedPrinters.value)
 }
 
 </script>
@@ -155,7 +160,8 @@ function appendPrinter(printer: Device) {
 
                 <select required multiple>
                     <option :value="null">Auto Queue</option>
-                    <option v-for="printer in printers" :value="printer" :key="printer.id" @click="appendPrinter(printer)">
+                    <option v-for="printer in printers" :value="printer" :key="printer.id"
+                        @click="appendPrinter(printer)">
                         {{ printer.name }}
                     </option>
                 </select>

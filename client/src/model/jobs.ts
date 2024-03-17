@@ -18,7 +18,7 @@ export interface Job {
   progress?: number //store progress of job
   printer: string //store printer name
   printerid: number
-  file_pause: number 
+  file_pause: number
   priority?: string
   released: number 
   total_time?: number
@@ -68,10 +68,17 @@ export function useAutoQueue() {
       try {
         const response = await api('autoqueue', job)
         if (response) {
-          return response
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to queue job. Unexpected response')
+          }
         } else {
           console.error('Response is undefined or null')
-          return { success: false, message: 'Response is undefined or null.' }
+          toast.error('Failed to queue job. Unexpected response')
         }
       } catch (error) {
         console.error(error)
@@ -223,9 +230,9 @@ export function useGetJobFile() {
   }
 }
 
-export function useClearSpace(){
+export function useClearSpace() {
   return {
-    async clearSpace(){
+    async clearSpace() {
       try {
         const response = await api('clearspace')
         if (response) {
@@ -308,11 +315,11 @@ export function setupPauseFeedbackSocket(printers: any) {
   // Always set up the socket connection and event listener
   socket.on('file_pause_update', (data: any) => {
     const job = printers
-    .flatMap((printer: { queue: any }) => printer.queue)
-    .find((job: { id: any }) => job?.id === data.job_id)
+      .flatMap((printer: { queue: any }) => printer.queue)
+      .find((job: { id: any }) => job?.id === data.job_id)
 
-  if (job) {
-    job.file_pause = data.file_pause
+    if (job) {
+      job.file_pause = data.file_pause
     }
   })
 }
