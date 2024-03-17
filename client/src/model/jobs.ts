@@ -20,6 +20,7 @@ export interface Job {
   printerid: number
   file_pause: number
   priority?: string
+  favorite?: boolean
   // job_id: number
   total_time?: number
   elapsed_time?: number
@@ -34,6 +35,15 @@ export function useGetJobs() {
         const response = await api(
           `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}`
         )
+        return response
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while retrieving the jobs')
+      }
+    },
+    async getFavoriteJobs() {
+      try {
+        const response = await api('getfavoritejobs')
         return response
       } catch (error) {
         console.error(error)
@@ -251,6 +261,24 @@ export function useClearSpace() {
         return response
       } catch (error) {
         console.error(error)
+      }
+    }
+  }
+}
+
+export function useFavoriteJob() {
+  return {
+    async favorite(job: Job, favorite: boolean) {
+      let jobid = job?.id;
+      try {
+        const response = await api(`favoritejob`, { jobid, favorite })
+        if (response.success) {
+          job.favorite = favorite ? true : false;
+        }
+        return response;
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while favoriting the job')
       }
     }
   }

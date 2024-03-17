@@ -144,6 +144,7 @@ class PrinterStatusService:
                     "printerid": job.printer_id, 
                     "file_name_original": job.file_name_original, 
                     "progress": job.progress,
+                    "favorite": job.favorite,
                     "total_time": job.total_time,
                     "start_time": job.start_time,
                     "elapsed_time": job.elapsed_time,

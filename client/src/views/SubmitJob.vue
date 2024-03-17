@@ -22,12 +22,19 @@ const selectedPrinters = ref<Array<Device>>([])
 const file = ref<File>()
 const quantity = ref<number>(1)
 const priority = ref<number>(0)
+const favorite = ref<boolean>(false)
 const name = ref<string>()
 
 // file upload
 const handleFileUpload = (event: Event) => {
-    const target = event.target as HTMLInputElement
-    file.value = target.files ? target.files[0] : undefined
+    const target = event.target as HTMLInputElement;
+    const uploadedFile = target.files ? target.files[0] : undefined;
+    if (uploadedFile && uploadedFile.name.length > 50) {
+        toast.error('The file name should not be longer than 50 characters');
+        target.value = ''
+    } else {
+        file.value = uploadedFile;
+    }
 }
 
 // validate quantity
@@ -51,8 +58,17 @@ onMounted(async () => {
     }
 })
 
+const onlyNumber = ($event: KeyboardEvent) => {
+    let keyCode = $event.keyCode;
+    if ((keyCode < 48 || keyCode > 57) && keyCode !== 8) { // 48-57 are the keycodes for 0-9, 8 is for backspace
+        $event.preventDefault();
+    }
+}
+
 // sends job to printer queue
 const handleSubmit = async () => {
+    let isFavoriteSet = false;
+
     if (selectedPrinters.value.length == 0) {
         let numPrints = quantity.value
         for (let i = 0; i < numPrints; i++) {
@@ -60,6 +76,15 @@ const handleSubmit = async () => {
             formData.append('file', file.value as File) // append form data
             formData.append('name', name.value as string)
             formData.append('priority', priority.value.toString())
+
+            // If favorite is true and it's not set yet, set it for the first job only
+            if (favorite.value && !isFavoriteSet) {
+                formData.append('favorite', 'true')
+                isFavoriteSet = true;
+            } else {
+                formData.append('favorite', 'false')
+            }
+
             try {
                 await auto(formData)
                 if (form.value) {
@@ -81,6 +106,15 @@ const handleSubmit = async () => {
                     formData.append('file', file.value as File) // append form data
                     formData.append('name', name.value as string)
                     formData.append('priority', priority.value.toString())
+
+                    // If favorite is true and it's not set yet, set it for the first job only
+                    if (favorite.value && !isFavoriteSet) {
+                        formData.append('favorite', 'true')
+                        isFavoriteSet = true;
+                    } else {
+                        formData.append('favorite', 'false')
+                    }
+
                     try {
                         res = await auto(formData)
                         if (form.value) {
@@ -108,6 +142,15 @@ const handleSubmit = async () => {
                         formData.append('name', name.value as string)
                         formData.append('printerid', printer?.id?.toString() || '');
                         formData.append('priority', priority.value.toString())
+
+                        // If favorite is true and it's not set yet, set it for the first job only
+                        if (favorite.value && !isFavoriteSet) {
+                            formData.append('favorite', 'true')
+                            isFavoriteSet = true;
+                        } else {
+                            formData.append('favorite', 'false')
+                        }
+
                         try {
                             res = await addJobToQueue(formData)
                             // reset form
@@ -138,6 +181,7 @@ function resetValues() {
     selectedPrinters.value = [];
     quantity.value = 1;
     priority.value = 0;
+    favorite.value = false;
     name.value = undefined;
 }
 
@@ -152,49 +196,71 @@ function appendPrinter(printer: Device) {
 
 </script>
 <template>
-    <div class="container">
-        <p>Submit Job View</p>
+    <div class="container py-5">
+        <h2 class="mb-4">Submit Job View</h2>
 
-        <div class="form-container">
-            <form @submit.prevent="handleSubmit" ref="form">
+        <div class="card">
+            <div class="card-body">
+                <form @submit.prevent="handleSubmit" ref="form">
 
-                <select required multiple>
-                    <option :value="null">Auto Queue</option>
-                    <option v-for="printer in printers" :value="printer" :key="printer.id"
-                        @click="appendPrinter(printer)">
-                        {{ printer.name }}
-                    </option>
-                </select>
+                    <div class="mb-3">
+                        <label for="printer" class="form-label">Select Printer</label>
+                        <select id="printer" class="form-select" required multiple>
+                            <option :value="null">Auto Queue</option>
+                            <option v-for="printer in printers" :value="printer" :key="printer.id"
+                                @click="appendPrinter(printer)">
+                                {{ printer.name }}
+                            </option>
+                        </select>
+                    </div>
 
-                <div>
-                    Selected printer(s): <br>
-                    <p v-for="printer in selectedPrinters">
-                        <b>{{ printer.name }}</b> status: {{ printer.status }}<br>
-                    </p>
-                </div>
+                    <div class="mb-3">
+                        <label class="form-label">Selected printer(s):</label>
+                        <p v-for="printer in selectedPrinters" class="mb-1">
+                            <b>{{ printer.name }}</b> status: {{ printer.status }}
+                        </p>
+                    </div>
 
-                <br><br>
-                Upload your .gcode file
-                <!-- Decide which file types are compatible with which printer. .gcode v-if printer is compatible with .gcode, .x3g if with .x3g, etc -->
-                <input @change="handleFileUpload" type="file" id="file" name="file" accept=".gcode" required>
-                <br><br>
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Upload your .gcode file</label>
+                        <input @change="handleFileUpload" class="form-control" type="file" id="file" name="file"
+                            accept=".gcode" required>
+                    </div>
 
-                <!-- Make it so user can't insert negative quantity. Decide on upper limit. -->
-                <!-- Make load-balancing feature -->
-                <label for="name">Quantity</label>
-                <input v-model="quantity" type="number" id="quantity" name="quantity" min="0" required>
-                <br><br>
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label">Quantity</label>
+                        <input v-model="quantity" class="form-control" type="number" id="quantity" name="quantity"
+                            min="1" required @keydown="onlyNumber($event)">
+                    </div>
 
-                <label for="priority">Priority job?</label>
-                <input v-model="priority" type="checkbox" id="priority" name="priority">
-                <br><br>
+                    <div class="d-flex justify-content-between mb-3">
+                        <div class="form-check">
+                            <input v-model="priority" class="form-check-input" type="checkbox" id="priority"
+                                name="priority">
+                            <label class="form-check-label" for="priority">Priority?</label>
+                        </div>
+                        <div class="form-check">
+                            <input v-model="favorite" class="form-check-input" type="checkbox" id="favorite"
+                                name="favorite">
+                            <label class="form-check-label" for="favorite">Favorite?</label>
+                        </div>
+                    </div>
 
-                <label for="name">Name</label>
-                <input v-model="name" type="text" id="name" name="name" required>
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name</label>
+                        <input v-model="name" class="form-control" type="text" id="name" name="name" required>
+                    </div>
 
-                <br><br>
-                <input type="submit" value="Add to queue(s)">
-            </form>
+                    <div class="mb-3">
+                        <button v-if="selectedPrinters.length > 1" class="btn btn-primary" type="submit">
+                            Add to queues
+                        </button>
+                        <button v-else class="btn btn-primary" type="submit">
+                            Add to queue
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </template>
