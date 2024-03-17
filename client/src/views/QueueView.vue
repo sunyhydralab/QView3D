@@ -2,13 +2,15 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRetrievePrintersInfo, setupQueueSocket, setupStatusSocket, type Device } from '../model/ports'
 import { useRerunJob, useRemoveJob, bumpJobs, type Job } from '../model/jobs';
-import { useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { nextTick } from 'vue';
 
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
 const { bumpjob } = bumpJobs()
+
+const router = useRouter()
 
 const selectedJobs = ref<Array<Job>>([]);
 // Map to track the state of "Select All" checkbox for each printer
@@ -40,6 +42,13 @@ onUnmounted(() => {
 
 const handleRerun = async (job: Job, printer: Printer) => {
   await rerunJob(job, printer)
+};
+
+const handleRerunToSubmit = async (job: Job, printer: Printer) => {
+  await router.push({
+        name: 'SubmitJobVue', // the name of the route to SubmitJob.vue
+        params: { job: JSON.stringify(job), printer: JSON.stringify(printer) } // the job and printer to fill in the form
+    });
 };
 
 const deleteSelectedJobs = async () => {
@@ -221,7 +230,7 @@ const canBumpUp = (job: Job, printer: Printer) => {
                       </button>
                       <div class="dropdown-menu">
                         <button class="dropdown-item" v-for="otherPrinter in printers.filter(p => p.id !== printer.id)"
-                          :key="otherPrinter.id" @click="handleRerun(job, otherPrinter)">{{ otherPrinter.name
+                          :key="otherPrinter.id" @click="handleRerunToSubmit(job, otherPrinter)">{{ otherPrinter.name
                           }}</button>
                       </div>
                     </div>

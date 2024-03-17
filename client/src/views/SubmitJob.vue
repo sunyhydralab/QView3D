@@ -1,23 +1,28 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
-import { useAddJobToQueue, type Job, useAutoQueue } from '../model/jobs'
-import { ref, onMounted } from 'vue'
+import { useAddJobToQueue, useGetFile, type Job, useAutoQueue } from '../model/jobs'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute } from 'vue-router';
 import { toast } from '@/model/toast';
 
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { addJobToQueue } = useAddJobToQueue()
 const { auto } = useAutoQueue()
+const { getFile } = useGetFile();
 
+const route = useRoute();
 const printers = ref<Array<Device>>([])
+
+const job = route.params.job ? JSON.parse(route.params.job as string) : null;
+const fileName = ref<string>(job ? job.name : '')
+const printer = route.params.printer ? JSON.parse(route.params.printer as string) : null;
 
 // Form reference
 const form = ref<HTMLFormElement | null>(null);
+let isSubmitDisabled = false;
 
 // Collect form data
-// const selectedPrinter = ref<Device | null>(null)
-
 const selectedPrinters = ref<Array<Device>>([])
-
 
 const file = ref<File>()
 const quantity = ref<number>(1)
@@ -33,7 +38,8 @@ const handleFileUpload = (event: Event) => {
         toast.error('The file name should not be longer than 50 characters');
         target.value = ''
     } else {
-        file.value = uploadedFile;
+        file.value = uploadedFile
+        fileName.value = uploadedFile?.name || ''
     }
 }
 
@@ -53,6 +59,16 @@ const validateQuantity = () => {
 onMounted(async () => {
     try {
         printers.value = await retrieveInfo()
+
+        if (printer) {
+            appendPrinter(printer)
+        }
+
+        if (job) {
+            file.value = await getFile(job)
+            fileName.value = file.value?.name || ''
+            name.value = job.name
+        }
     } catch (error) {
         console.error('There has been a problem with your fetch operation:', error)
     }
@@ -182,17 +198,22 @@ function resetValues() {
     quantity.value = 1;
     priority.value = 0;
     favorite.value = false;
-    name.value = undefined;
+    name.value = "";
+    fileName.value = '';
+    file.value = undefined;
 }
 
 function appendPrinter(printer: Device) {
-    if (!selectedPrinters.value.includes(printer)) {
+    if (!selectedPrinters.value.some(p => p.id === printer.id)) {
         selectedPrinters.value.push(printer)
     } else {
-        selectedPrinters.value = selectedPrinters.value.filter(p => p !== printer)
+        selectedPrinters.value = selectedPrinters.value.filter(p => p.id !== printer.id)
     }
-    console.log(selectedPrinters.value)
 }
+
+watch([file, name, quantity, selectedPrinters], () => {
+    isSubmitDisabled = !file.value || !name.value || !quantity.value || selectedPrinters.value.length === 0;
+});
 
 </script>
 <template>
@@ -205,7 +226,7 @@ function appendPrinter(printer: Device) {
 
                     <div class="mb-3">
                         <label for="printer" class="form-label">Select Printer</label>
-                        <select id="printer" class="form-select" required multiple>
+                        <select id="printer" class="form-select" multiple>
                             <option :value="null">Auto Queue</option>
                             <option v-for="printer in printers" :value="printer" :key="printer.id"
                                 @click="appendPrinter(printer)">
@@ -216,46 +237,58 @@ function appendPrinter(printer: Device) {
 
                     <div class="mb-3">
                         <label class="form-label">Selected printer(s):</label>
-                        <p v-for="printer in selectedPrinters" class="mb-1">
-                            <b>{{ printer.name }}</b> status: {{ printer.status }}
-                        </p>
+                        <ul class="list-group">
+                            <li v-for="printer in selectedPrinters" class="list-group-item">
+                                <b>{{ printer.name }}</b> status: {{ printer.status }}
+                            </li>
+                        </ul>
                     </div>
 
                     <div class="mb-3">
                         <label for="file" class="form-label">Upload your .gcode file</label>
-                        <input @change="handleFileUpload" class="form-control" type="file" id="file" name="file"
-                            accept=".gcode" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="quantity" class="form-label">Quantity</label>
-                        <input v-model="quantity" class="form-control" type="number" id="quantity" name="quantity"
-                            min="1" required @keydown="onlyNumber($event)">
-                    </div>
-
-                    <div class="d-flex justify-content-between mb-3">
-                        <div class="form-check">
-                            <input v-model="priority" class="form-check-input" type="checkbox" id="priority"
-                                name="priority">
-                            <label class="form-check-label" for="priority">Priority?</label>
+                        <input ref="fileInput" @change="handleFileUpload" style="display: none;" type="file" id="file"
+                            name="file" accept=".gcode">
+                        <div class="input-group">
+                            <button type="button" @click="($refs.fileInput as HTMLInputElement).click()"
+                                class="btn btn-primary">Browse</button> <label class="form-control">
+                                <span v-if="fileName">{{ fileName }}</span>
+                                <span v-else>No file selected.</span>
+                            </label>
                         </div>
-                        <div class="form-check">
-                            <input v-model="favorite" class="form-check-input" type="checkbox" id="favorite"
-                                name="favorite">
-                            <label class="form-check-label" for="favorite">Favorite?</label>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label for="quantity" class="form-label">Quantity</label>
+                            <input v-model="quantity" class="form-control" type="number" id="quantity" name="quantity"
+                                min="1" @keydown="onlyNumber($event)">
+                        </div>
+
+                        <div class="col">
+                            <div class="form-check mt-4">
+                                <input v-model="priority" class="form-check-input" type="checkbox" id="priority"
+                                    name="priority">
+                                <label class="form-check-label" for="priority">Priority?</label>
+                            </div>
+                            <div class="form-check mt-2">
+                                <input v-model="favorite" class="form-check-input" type="checkbox" id="favorite"
+                                    name="favorite">
+                                <label class="form-check-label" for="favorite">Favorite?</label>
+                            </div>
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label for="name" class="form-label">Name</label>
-                        <input v-model="name" class="form-control" type="text" id="name" name="name" required>
+                        <input v-model="name" class="form-control" type="text" id="name" name="name">
                     </div>
 
                     <div class="mb-3">
-                        <button v-if="selectedPrinters.length > 1" class="btn btn-primary" type="submit">
+                        <button v-if="selectedPrinters.length > 1" :disabled="isSubmitDisabled" class="btn btn-primary"
+                            type="submit">
                             Add to queues
                         </button>
-                        <button v-else class="btn btn-primary" type="submit">
+                        <button v-else :disabled="isSubmitDisabled" class="btn btn-primary" type="submit">
                             Add to queue
                         </button>
                     </div>

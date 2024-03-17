@@ -240,6 +240,22 @@ export function useGetJobFile() {
   }
 }
 
+export function useGetFile() {
+  return {
+    async getFile(job: Job) {
+      try {
+        const jobid = job.id
+        const response = await api(`getfile?jobid=${jobid}`)
+        const file = new File([response.file], response.file_name, { type: 'text/plain' })
+        return file
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while retrieving the file')
+      }
+    }
+  }
+}
+
 export function useClearSpace() {
   return {
     async clearSpace() {

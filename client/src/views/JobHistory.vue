@@ -2,6 +2,7 @@
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
 import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob } from '../model/jobs';
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 const { jobhistory, getFavoriteJobs } = useGetJobs()
 const { retrieveInfo } = useRetrievePrintersInfo()
@@ -15,6 +16,8 @@ const printers = ref<Array<Device>>([])
 const selectedPrinters = ref<Array<Device>>([])
 const selectedJobs = ref<Array<Job>>([]);
 const deleteModalTitle = computed(() => `Deleting ${selectedJobs.value.length} job(s) from database!`);
+
+const router = useRouter();
 
 let jobs = ref<Array<Job>>([])
 let filter = ref('')
@@ -63,18 +66,10 @@ onMounted(async () => {
 })
 
 const handleRerun = async (job: Job, printer: Device) => {
-    try {
-        await rerunJob(job, printer);
-        const printerIds = selectedPrinters.value.map(p => p.id).filter(id => id !== undefined) as number[];
-        const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds)
-
-        jobs.value = joblist;
-        totalJobs.value = total;
-
-        favoriteJobs.value = await getFavoriteJobs();
-    } catch (error) {
-        console.error(error)
-    }
+    await router.push({
+        name: 'SubmitJobVue', // the name of the route to SubmitJob.vue
+        params: { job: JSON.stringify(job), printer: JSON.stringify(printer) } // the job and printer to fill in the form
+    });
 }
 
 const changePage = async (newPage: any) => {
@@ -223,7 +218,7 @@ const toggleButton = () => {
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="printerDropdown">
                             <li v-for="printer in printers" :key="printer.id">
-                                <a class="dropdown-item" @click="handleRerun(job, printer)">{{ printer.name }}</a>
+                                <a class="dropdown-item" @click="handleRerun(job, printer)" data-bs-dismiss="offcanvas">{{ printer.name }}</a>
                             </li>
                         </ul>
                     </div>
