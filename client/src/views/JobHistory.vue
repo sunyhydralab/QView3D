@@ -65,6 +65,8 @@ const handleRerun = async (job: Job, printer: Device) => {
 
         jobs.value = joblist;
         totalJobs.value = total;
+
+        favoriteJobs.value = await getFavoriteJobs();
     } catch (error) {
         console.error(error)
     }
