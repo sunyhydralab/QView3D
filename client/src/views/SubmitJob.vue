@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, type Device } from '../model/ports'
 import { useAddJobToQueue, useGetFile, type Job, useAutoQueue } from '../model/jobs'
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, watch, watchEffect } from 'vue'
 import { useRoute } from 'vue-router';
 import { toast } from '@/model/toast';
+import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue';
 
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { addJobToQueue } = useAddJobToQueue()
@@ -28,7 +29,9 @@ const file = ref<File>()
 const quantity = ref<number>(1)
 const priority = ref<number>(0)
 const favorite = ref<boolean>(false)
-const name = ref<string>()
+const name = ref<string>('')
+
+const isGcodeImageVisible = ref(false)
 
 // file upload
 const handleFileUpload = (event: Event) => {
@@ -37,6 +40,8 @@ const handleFileUpload = (event: Event) => {
     if (uploadedFile && uploadedFile.name.length > 50) {
         toast.error('The file name should not be longer than 50 characters');
         target.value = ''
+        file.value = undefined
+        fileName.value = ''
     } else {
         file.value = uploadedFile
         fileName.value = uploadedFile?.name || ''
@@ -211,12 +216,35 @@ function appendPrinter(printer: Device) {
     }
 }
 
-watch([file, name, quantity, selectedPrinters], () => {
-    isSubmitDisabled = !file.value || !name.value || !quantity.value || selectedPrinters.value.length === 0;
+watchEffect(() => {
+    isSubmitDisabled = !(file.value !== null && name.value.trim() !== '' && quantity.value > 0);
 });
+
+const openModal = () => {
+    isGcodeImageVisible.value = true
+}
 
 </script>
 <template>
+    <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true"
+        @shown.bs.modal="isGcodeImageVisible = true" @hidden.bs.modal="isGcodeImageVisible = false">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="gcodeImageModalLabel">
+                        <b>{{ fileName }}</b>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <GCode3DImageViewer v-if="isGcodeImageVisible" :file="file" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="container py-5">
         <h2 class="mb-4">Submit Job View</h2>
 
@@ -236,7 +264,9 @@ watch([file, name, quantity, selectedPrinters], () => {
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Selected printer(s):</label>
+                        <label class="form-label" v-if="selectedPrinters.length === 0">No printer selected, will auto queue</label>
+                        <label class="form-label" v-else-if="selectedPrinters.length === 1">Selected printer:</label>
+                        <label class="form-label" v-else>Selected printers:</label>
                         <ul class="list-group">
                             <li v-for="printer in selectedPrinters" class="list-group-item">
                                 <b>{{ printer.name }}</b> status: {{ printer.status }}
@@ -250,27 +280,35 @@ watch([file, name, quantity, selectedPrinters], () => {
                             name="file" accept=".gcode">
                         <div class="input-group">
                             <button type="button" @click="($refs.fileInput as HTMLInputElement).click()"
-                                class="btn btn-primary">Browse</button> <label class="form-control">
-                                <span v-if="fileName">{{ fileName }}</span>
+                                class="btn btn-primary">Browse</button>
+                            <label class="form-control" style="width: 220px;">
+                                <div v-if="fileName" class="ellipsis" style="width: 200px;">
+                                    {{ fileName }}
+                                </div>
                                 <span v-else>No file selected.</span>
                             </label>
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                                data-bs-target="#gcodeImageModal" @click="openModal()" v-bind:disabled="!fileName">
+                                <i class="fa-regular fa-image"></i>
+                            </button>
                         </div>
                     </div>
 
-                    <div class="row mb-3">
-                        <div class="col">
-                            <label for="quantity" class="form-label">Quantity</label>
-                            <input v-model="quantity" class="form-control" type="number" id="quantity" name="quantity"
-                                min="1" @keydown="onlyNumber($event)">
-                        </div>
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label">Quantity</label>
+                        <input v-model="quantity" class="form-control" type="number" id="quantity" name="quantity"
+                            min="1" @keydown="onlyNumber($event)">
 
-                        <div class="col">
-                            <div class="form-check mt-4">
+                        <div class="col-3">
+                            <div class="form-check">
                                 <input v-model="priority" class="form-check-input" type="checkbox" id="priority"
                                     name="priority">
                                 <label class="form-check-label" for="priority">Priority?</label>
                             </div>
-                            <div class="form-check mt-2">
+                        </div>
+
+                        <div class="col-3">
+                            <div class="form-check">
                                 <input v-model="favorite" class="form-check-input" type="checkbox" id="favorite"
                                     name="favorite">
                                 <label class="form-check-label" for="favorite">Favorite?</label>
@@ -311,5 +349,10 @@ watch([file, name, quantity, selectedPrinters], () => {
     padding: 20px;
     margin-top: 20px;
     width: 300px;
+}
+.ellipsis {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 </style>
