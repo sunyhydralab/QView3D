@@ -234,7 +234,7 @@ class Printer(db.Model):
     @classmethod 
     def moveHead(cls, device):
         ser = serial.Serial(device, 115200, timeout=1)
-        message = "G1 Z10 F3000"
+        message = "G91\nG1 Z10 F3000\nG90"
          # Encode and send the message to the printer.
         ser.write(f"{message}\n".encode("utf-8"))
             # Sleep the printer to give it enough time to get the instruction.
@@ -519,9 +519,10 @@ class Printer(db.Model):
             self.sendStatusToJob(job, job.id, "error")
             # self.setError("Error")
         elif verdict == "cancelled":
-            self.disconnect()
             self.endingSequence()
             self.sendStatusToJob(job, job.id, "cancelled")
+            self.disconnect()
+            
         elif verdict== "misprint": 
             self.sendStatusToJob(job, job.id, "cancelled")
             
