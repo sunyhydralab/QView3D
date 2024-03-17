@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useGetPorts, useRegisterPrinter, useRetrievePrinters, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device } from '../model/ports'
+import { useGetPorts, useRegisterPrinter, useRetrievePrinters, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, useMoveHead, type Device } from '../model/ports'
 import { ref, onMounted } from 'vue';
 
 const { ports } = useGetPorts();
@@ -14,6 +14,7 @@ const { removeThread } = useRemoveThread();
 const { editThread } = useEditThread();
 const { diagnose } = useDiagnosePrinter();
 const {repair} = useRepair()
+const {move} = useMoveHead()
 
 let devices = ref<Array<Device>>([]); // Array of all devices -- stores ports for user to select/register
 let selectedDevice = ref<Device | null>(null) // device user selects to register.
@@ -120,6 +121,10 @@ const openModal = (title: any, message: any, action: any, printer: Device) => {
     selectedPrinter.value = printer;
 };
 
+const doMove = async(printer: Device) => {
+    await move(printer.device)
+}
+
 </script>
 <template>
     <div class="container">
@@ -211,6 +216,10 @@ const openModal = (title: any, message: any, action: any, printer: Device) => {
                     <input type="submit" value="Submit">
                 </div>
             </form>
+            <div v-if="selectedDevice">
+                <br>
+                <button @click="doMove(selectedDevice)">Move Printer Head</button>
+            </div>
         </div>
         <button @click="doRepair">Repair Ports</button>
     </div>

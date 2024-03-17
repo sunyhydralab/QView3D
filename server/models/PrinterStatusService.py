@@ -149,11 +149,13 @@ class PrinterStatusService:
                     "start_time": job.start_time,
                     "elapsed_time": job.elapsed_time,
                     "pause_time": job.pause_time,
+                    "released": job.released,
                     "file_pause": job.filePause
                 }
                 printer_info['queue'].append(job_info)
             
             printer_info_list.append(printer_info)
+            
         return printer_info_list
 
     def pingForStatus(self):
