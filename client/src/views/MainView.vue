@@ -215,7 +215,7 @@ const startPrint = async (printerid: number, jobid: number) => {
 
         <tr v-for="printer in printers" :key="printer.id">
           <td
-            v-if="(printer.status && (printer.status === 'printing' || printer.status === 'complete' || printer.status == 'paused')) && (printer.queue && printer.queue.length > 0 && printer.queue?.[0].status != 'inqueue')">
+            v-if="((printer.status === 'printing' || printer.status === 'complete' || printer.status == 'paused')) && (printer.queue && printer.queue.length > 0 && printer.queue?.[0].status != 'inqueue')">
             {{ printer.queue?.[0].id }}
           </td>
           <td v-else><i>idle</i></td>
