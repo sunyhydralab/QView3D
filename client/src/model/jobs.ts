@@ -20,7 +20,7 @@ export interface Job {
   printerid: number
   file_pause: number
   priority?: string
-  // job_id: number
+  released: number 
   total_time?: number
   elapsed_time?: number
   remaining_time?: number
@@ -275,6 +275,21 @@ export function setupProgressSocket(printers: any) {
   })
 }
 
+export function setupReleaseSocket(printers: any) {
+  // Always set up the socket connection and event listener
+  socket.on('release_job', (data: any) => {
+    const job = printers
+      .flatMap((printer: { queue: any }) => printer.queue)
+      .find((job: { id: any }) => job?.id === data.job_id)
+    if (job) {
+      console.log(data.released)
+      job.released = data.released
+    }
+  })
+}
+
+
+
 export function setupJobStatusSocket(printers: any) {
   // Always set up the socket connection and event listener
   socket.on('job_status_update', (data: any) => {
@@ -422,6 +437,20 @@ export function useDeleteJob() {
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while deleting the job')
+      }
+    }
+  }
+}
+
+export function useStartJob(){
+  return {
+    async start(jobid: number, printerid: number){
+      try {
+        const response = await api(`startprint`, { jobid, printerid })
+        return response;
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while starting the job')
       }
     }
   }

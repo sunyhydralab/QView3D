@@ -65,6 +65,8 @@ def add_job_to_queue():
             findPrinterObject(printer_id).getQueue().addToFront(job, printer_id)
         else:
             findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
+            
+        print("released: ", job.released)
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     
@@ -327,6 +329,24 @@ def clearSpace():
     try: 
         res = Job.clearSpace()
         return res 
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
+@jobs_bp.route('/startprint', methods=["POST"])
+def startPrint(): 
+    try: 
+        data = request.get_json()
+        printerid = data['printerid']
+        jobid = data['jobid']
+        printerobject = findPrinterObject(printerid)
+        queue = printerobject.getQueue()
+        inmemjob = queue.getJobById(jobid)
+        print(inmemjob)
+        inmemjob.setReleased(1)
+        
+        return jsonify({"success": True, "message": "Job started successfully."}), 200
+        
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
