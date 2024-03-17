@@ -192,6 +192,8 @@ class Printer(db.Model):
     @classmethod
     def deletePrinter(cls, printerid):
         try:
+            ser = serial.Serial(cls.query.get(printerid).device, 115200, timeout=1)
+            ser.close()
             printer = cls.query.get(printerid)
             db.session.delete(printer)
             db.session.commit()
