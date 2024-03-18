@@ -215,7 +215,7 @@ const canBumpUp = (job: Job, printer: Printer) => {
                 <tr>
                   <th class="col-1">Job ID</th>
                   <th class="col-checkbox">
-                    <input type="checkbox" @change="() => SelectAllJobs(printer)" />
+                    <input type="checkbox" @change="() => SelectAllJobs(printer)" v-model="selectAllCheckbox"/>
                   </th>
                   <th class="col-2">Rerun Job</th>
                   <th class="col-1">Position</th>
