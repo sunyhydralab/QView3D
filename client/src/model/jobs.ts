@@ -20,6 +20,8 @@ export interface Job {
   printerid: number
   file_pause: number
   priority?: string
+  favorite?: boolean
+  released?: number
   // job_id: number
   total_time?: number
   elapsed_time?: number
@@ -34,6 +36,15 @@ export function useGetJobs() {
         const response = await api(
           `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}`
         )
+        return response
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while retrieving the jobs')
+      }
+    },
+    async getFavoriteJobs() {
+      try {
+        const response = await api('getfavoritejobs')
         return response
       } catch (error) {
         console.error(error)
@@ -232,6 +243,22 @@ export function useGetJobFile() {
   }
 }
 
+export function useGetFile() {
+  return {
+    async getFile(job: Job) {
+      try {
+        const jobid = job.id
+        const response = await api(`getfile?jobid=${jobid}`)
+        const file = new File([response.file], response.file_name, { type: 'text/plain' })
+        return file
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while retrieving the file')
+      }
+    }
+  }
+}
+
 export function useClearSpace() {
   return {
     async clearSpace() {
@@ -258,6 +285,24 @@ export function useClearSpace() {
   }
 }
 
+export function useFavoriteJob() {
+  return {
+    async favorite(job: Job, favorite: boolean) {
+      let jobid = job?.id;
+      try {
+        const response = await api(`favoritejob`, { jobid, favorite })
+        if (response.success) {
+          job.favorite = favorite ? true : false;
+        }
+        return response;
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while favoriting the job')
+      }
+    }
+  }
+}
+
 // function to constantly update progress of job
 export function setupProgressSocket(printers: any) {
   // Always set up the socket connection and event listener
@@ -276,6 +321,21 @@ export function setupProgressSocket(printers: any) {
     }
   })
 }
+
+export function setupReleaseSocket(printers: any) {
+  // Always set up the socket connection and event listener
+  socket.on('release_job', (data: any) => {
+    const job = printers
+      .flatMap((printer: { queue: any }) => printer.queue)
+      .find((job: { id: any }) => job?.id === data.job_id)
+    if (job) {
+      console.log(data.released)
+      job.released = data.released
+    }
+  })
+}
+
+
 
 export function setupJobStatusSocket(printers: any) {
   // Always set up the socket connection and event listener
@@ -424,6 +484,20 @@ export function useDeleteJob() {
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while deleting the job')
+      }
+    }
+  }
+}
+
+export function useStartJob(){
+  return {
+    async start(jobid: number, printerid: number){
+      try {
+        const response = await api(`startprint`, { jobid, printerid })
+        return response;
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while starting the job')
       }
     }
   }
