@@ -1,5 +1,6 @@
 import asyncio
 import base64
+from operator import or_
 import os
 import re
 from models.db import db 
@@ -57,14 +58,21 @@ class Job(db.Model):
         return self.printer_id
         
     @classmethod
-    def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False):
+    def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob=''):
         try:
             query = cls.query
             if printerIds:
                 query = query.filter(cls.printer_id.in_(printerIds))
-
+                
+            if searchJob:
+                searchJob = f"%{searchJob}%"
+                query = query.filter(or_(cls.name.ilike(searchJob), cls.file_name_original.ilike(searchJob)))
+                
+            # Count total number of jobs that satisfy the search criteria
+            total = query.count()
+                
             if oldestFirst:
-                query = query.order_by(cls.date.asc())
+                query = query.order_by(cls.date.asc())    
             else: 
                 query = query.order_by(cls.date.desc())  # Change this line
 
