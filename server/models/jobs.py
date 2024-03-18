@@ -58,7 +58,7 @@ class Job(db.Model):
         return self.printer_id
         
     @classmethod
-    def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob=''):
+    def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob='', searchCriteria=''):
         try:
             query = cls.query
             if printerIds:
@@ -67,10 +67,14 @@ class Job(db.Model):
             if searchJob:
                 searchJob = f"%{searchJob}%"
                 query = query.filter(or_(cls.name.ilike(searchJob), cls.file_name_original.ilike(searchJob)))
-                
-            # Count total number of jobs that satisfy the search criteria
-            total = query.count()
-                
+            
+            if 'searchByJobName' in searchCriteria:
+                searchByJobName = f"%{searchJob}%"
+                query = query.filter(cls.name.ilike(searchByJobName))
+            elif 'searchByFileName' in searchCriteria:
+                searchByFileName = f"%{searchJob}%"
+                query = query.filter(cls.file_name_original.ilike(searchByFileName))
+
             if oldestFirst:
                 query = query.order_by(cls.date.asc())    
             else: 

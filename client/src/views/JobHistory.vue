@@ -17,6 +17,8 @@ const selectedPrinters = ref<Array<Number>>([])
 const selectedJobs = ref<Array<Job>>([]);
 const deleteModalTitle = computed(() => `Deleting ${selectedJobs.value.length} job(s) from database!`);
 const searchJob = ref(''); // This will hold the current search query
+const searchByJobName = ref(true);
+const searchByFileName = ref(true);
 
 let jobs = ref<Array<Job>>([])
 let filter = ref('') // This will hold the current filter value
@@ -32,26 +34,16 @@ let selectAllCheckbox = ref(false);
 let modalTitle = ref('');
 let modalMessage = ref('');
 let modalAction = ref('');
+let searchCriteria = ref('');
 
 // computed property that returns the filtered list of jobs. 
-// let filteredJobs = computed(() => {
-//     if (filter.value) {
-//         return jobs.value.filter(job => job.printer.includes(filter.value))
-//     } else {
-//         return jobs.value
-//     }
-// })
-
-const filteredJobs = ref<Array<Job>>([]);
-
-// Update filteredJobs whenever filter or jobs change
-watch([filter, jobs], () => {
+let filteredJobs = computed(() => {
     if (filter.value) {
-        filteredJobs.value = jobs.value.filter(job => job.printer.includes(filter.value));
+        return jobs.value.filter(job => job.printer.includes(filter.value))
     } else {
-        filteredJobs.value = jobs.value;
+        return jobs.value
     }
-});
+})
 
 onMounted(async () => {
     try {
@@ -113,7 +105,7 @@ const changePage = async (newPage: any) => {
     // Fetch the updated list of jobs after changing the page
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
-    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value)
+    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value)
     jobs.value = joblist;
     totalJobs.value = total;
 }
@@ -141,8 +133,16 @@ async function submitFilter() {
     oldestFirst.value = order.value === 'oldest';
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
+    if (searchByJobName.value && !searchByFileName.value) {
+        searchCriteria.value = 'searchByJobName';
+    } else if (!searchByJobName.value && searchByFileName.value) {
+        searchCriteria.value = 'searchByFileName';
+    } else {
+        searchCriteria.value = searchJob.value;
+    }
+
     // Get the total number of jobs first, without considering the page number
-    const [, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value);
+    const [, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value);
     totalJobs.value = total;
 
     // Calculate the total number of pages and store it in totalPages
@@ -157,25 +157,17 @@ async function submitFilter() {
     }
 
     // Now fetch the jobs for the current page
-    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value);
+    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value);
     jobs.value = joblist;
 
     selectedJobs.value = [];
     selectAllCheckbox.value = false;
 }
 
-const performSearch = async () => {
-    // const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-    // const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value);
-    // jobs.value = joblist;
-    // totalJobs.value = total;
-    
-    filteredJobs.value = jobs.value.filter(job => 
-        job.name.toLowerCase().includes(searchJob.value.toLowerCase()) || 
-        job.file_name_original.toLowerCase().includes(searchJob.value.toLowerCase()))
-
-    // submitFilter()
-    
+const ensureOneCheckboxChecked = () => {
+    if (!searchByJobName.value && !searchByFileName.value) {
+        searchByJobName.value = true;
+    }
 }
 
 // This just displays the selectedJobs on the console for me to see while working. Would be removed before final merge
@@ -302,7 +294,19 @@ const openModal = (title: any, message: any, action: any) => {
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <input type="text" v-model="searchJob" placeholder="Search for jobs" class="rounded-input">
+                    <input type="text" v-model="searchJob" placeholder="Search for jobs" class="form-control">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="searchByJobName" v-model="searchByJobName" @change="ensureOneCheckboxChecked">
+                        <label class="form-check-label" for="searchByJobName">
+                            Search by Job Name
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="searchByFileName" v-model="searchByFileName" @change="ensureOneCheckboxChecked">
+                        <label class="form-check-label" for="searchByFileName">
+                            Search by File Name
+                        </label>
+                    </div>
                 </div>
             </div>
         </div>
@@ -460,12 +464,5 @@ label.form-check-label {
 
 .download {
     float: right;
-}
-
-.rounded-input {
-    border-radius: 15px;
-    border: 1px solid #ccc;
-    padding: 5px;
-    width: 150px;
 }
 </style>

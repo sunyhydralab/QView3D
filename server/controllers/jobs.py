@@ -22,13 +22,14 @@ def getJobs():
     pageSize = request.args.get('pageSize', default=10, type=int)
     printerIds = request.args.get('printerIds', type=json.loads)
     searchJob = request.args.get('searchJob', default='', type=str)
+    searchCriteria = request.args.get('searchCriteria', default='', type=str)
     
     # convert to boolean 
     oldestFirst = request.args.get('oldestFirst', default='false')
     oldestFirst = oldestFirst.lower() in ['true', '1']
     
     try:
-        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob)
+        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria)
         return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")
