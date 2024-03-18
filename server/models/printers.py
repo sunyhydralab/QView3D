@@ -11,11 +11,13 @@ import serial.tools.list_ports
 import time
 from datetime import datetime, timezone, timedelta 
 from tzlocal import get_localzone
-import os 
-import json 
-import requests 
+import os
+import json
+import requests
 from dotenv import load_dotenv
+
 load_dotenv()
+
 
 # model for Printer table
 class Printer(db.Model):
@@ -24,12 +26,16 @@ class Printer(db.Model):
     description = db.Column(db.String(50), nullable=False)
     hwid = db.Column(db.String(150), nullable=False)
     name = db.Column(db.String(50), nullable=False)
-    date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).astimezone(), nullable=False)
+    date = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc).astimezone(),
+        nullable=False,
+    )
     queue = None
     ser = None
     status = None  # default setting on printer start. Runs initialization and status switches to "ready" automatically.
     # stopPrint = False
-    responseCount = 0 # if count == 10 & no response, set error 
+    responseCount = 0  # if count == 10 & no response, set error
     error = ""
     prevMes = ""
 
@@ -41,7 +47,7 @@ class Printer(db.Model):
         self.status = status
         self.date = datetime.now(get_localzone())
         self.queue = Queue()
-        self.stopPrint = False 
+        self.stopPrint = False
         self.error = ""
         self.canPause = 0
         self.prevMes=""
@@ -60,15 +66,15 @@ class Printer(db.Model):
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return None
-        
+
     @classmethod
     def getPrinterByHwid(cls, hwid):
         try:
             # Query the database to find a printer by device
             printer = cls.query.filter_by(hwid=hwid).first()
-            if printer: 
+            if printer:
                 return printer
-            else: 
+            else:
                 return None
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
@@ -80,7 +86,10 @@ class Printer(db.Model):
             printerExists = cls.searchByDevice(hwid)
             if printerExists:
                 printer = cls.query.filter_by(hwid=hwid).first()
-                return {"success": False, "message": f"Port already registered under hwid: {printer.name}."}
+                return {
+                    "success": False,
+                    "message": f"Port already registered under hwid: {printer.name}.",
+                }
             else:
                 printer = cls(
                     device=device,
@@ -91,12 +100,16 @@ class Printer(db.Model):
                 )
                 db.session.add(printer)
                 db.session.commit()
-                return {"success": True, "message": "Printer successfully registered.", "printer_id": printer.id}
+                return {
+                    "success": True,
+                    "message": "Printer successfully registered.",
+                    "printer_id": printer.id,
+                }
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return (
                 jsonify({"error": "Failed to register printer. Database error"}),
-                    500,
+                500,
             )
 
     @classmethod
@@ -107,7 +120,7 @@ class Printer(db.Model):
 
             # Convert the list of printers to a list of dictionaries
             printers_data = [
-                {   
+                {
                     "id": printer.id,
                     "device": printer.device,
                     "description": printer.description,
@@ -129,55 +142,46 @@ class Printer(db.Model):
             )
 
     @classmethod
-    def getConnectedPorts(cls): 
+    def getConnectedPorts(cls):
         ports = serial.tools.list_ports.comports()
         printerList = []
         for port in ports:
             port_info = {
-                'device': port.device,
-                'description': port.description,
-                'hwid': port.hwid,
+                "device": port.device,
+                "description": port.description,
+                "hwid": port.hwid,
             }
             # supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
             # if port.description in supportedPrinters:
             printerList.append(port_info)
         return printerList
-    
-    @classmethod 
-    def diagnosePrinter(cls, deviceToDiagnose): # deviceToDiagnose = port 
-        try: 
-            diagnoseString = ''
+
+    @classmethod
+    def diagnosePrinter(cls, deviceToDiagnose):  # deviceToDiagnose = port
+        try:
+            diagnoseString = ""
             ports = serial.tools.list_ports.comports()
-            for port in ports: 
+            for port in ports:
                 if port.device == deviceToDiagnose:
                     diagnoseString += f"The system has found a matching port with the following details: <br><br> Device: {port.device}, <br> Description: {port.description}, <br> HWID: {port.hwid}<br><br>"
                     printerExists = cls.searchByDevice(port.hwid)
-                    if(printerExists):
+                    if printerExists:
                         printer = cls.query.filter_by(hwid=port.hwid).first()
                         diagnoseString += f"Device {port.device} is registered with the following details: <br><br> Name: {printer.name} <br> Device: {printer.device}, <br> Description: {printer.description}, <br> HWID: {printer.hwid}<br><br>"
-            if diagnoseString == '':
+            if diagnoseString == "":
                 diagnoseString = "The port this printer is registered under is not found. Please check the connection and try again."
             # return diagnoseString
-            return {"success": True, "message": "Printer successfully diagnosed.", "diagnoseString": diagnoseString}
+            return {
+                "success": True,
+                "message": "Printer successfully diagnosed.",
+                "diagnoseString": diagnoseString,
+            }
 
         except Exception as e:
             print(f"Unexpected error: {e}")
             return jsonify({"error": "Unexpected error occurred"}), 500
-        
-    # @classmethod 
-    # def repairPorts(cls):
-    #     try: 
-    #         ports = serial.tools.list_ports.comports()
-    #         for port in ports: 
-    #             hwid = port.hwid # get hwid associated with port 
-    #             printer = cls.findPrinter()
 
-    #     except Exception as e:
-    #         print(f"Unexpected error: {e}")
-    #         return jsonify({"error": "Unexpected error occurred"}), 500
-
-                
-    @classmethod 
+    @classmethod
     def findPrinter(cls, id):
         try:
             printer = cls.query.get(id)
@@ -188,10 +192,12 @@ class Printer(db.Model):
                 jsonify({"error": "Failed to retrieve printer. Database error"}),
                 500,
             )
-            
-    @classmethod 
+
+    @classmethod
     def deletePrinter(cls, printerid):
-        try:   
+        try:
+            ser = serial.Serial(cls.query.get(printerid).device, 115200, timeout=1)
+            ser.close()
             printer = cls.query.get(printerid)
             db.session.delete(printer)
             db.session.commit()
@@ -202,7 +208,7 @@ class Printer(db.Model):
                 jsonify({"error": "Failed to delete printer. Database error"}),
                 500,
             )
-            
+
     @classmethod
     def editName(cls, printerid, name):
         try:
@@ -216,9 +222,9 @@ class Printer(db.Model):
                 jsonify({"error": "Failed to update printer name. Database error"}),
                 500,
             )
-        
-    @classmethod 
-    def editPort(cls, printerid, printerport): 
+
+    @classmethod
+    def editPort(cls, printerid, printerport):
         try:
             printer = cls.query.get(printerid)
             printer.device = printerport
@@ -230,14 +236,28 @@ class Printer(db.Model):
                 jsonify({"error": "Failed to update printer port. Database error"}),
                 500,
             )
+            
+    @classmethod 
+    def moveHead(cls, device):
+        ser = serial.Serial(device, 115200, timeout=1)
+        message = "G91\nG1 Z10 F3000\nG90"
+         # Encode and send the message to the printer.
+        ser.write(f"{message}\n".encode("utf-8"))
+            # Sleep the printer to give it enough time to get the instruction.
+            # time.sleep(0.1)
+            # Save and print out the response from the printer. We can use this for error handling and status updates.
+        # while True:
+            # logic here about time elapsed since last response
+        response = ser.readline().decode("utf-8").strip()
+            # if "ok" in response:
+            #     break
+        ser.close()
+        return 
         
-
-
     def connect(self):
-        try: 
+        try:
             self.ser = serial.Serial(self.device, 115200, timeout=1)
-            # self.ser.write(f"M155 S5\n".encode("utf-8"))
-        except Exception as e: 
+        except Exception as e:
             self.setError(e)
             return "error"
 
@@ -249,15 +269,15 @@ class Printer(db.Model):
 
     def reset(self):
         self.sendGcode("G28")
-        self.sendGcode("G92 E0") 
+        self.sendGcode("G92 E0")
 
     # Function to send gcode commands
     def sendGcode(self, message):
-        try: 
+        try:
             # Encode and send the message to the printer.
             self.ser.write(f"{message}\n".encode("utf-8"))
             # Sleep the printer to give it enough time to get the instruction.
-            #time.sleep(0.1)
+            # time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
             while True:
                 # logic here about time elapsed since last response
@@ -285,12 +305,12 @@ class Printer(db.Model):
                 
                 if "ok" in response:
                     break
-                
+
                 print(f"Command: {message}, Received: {response}")
         except Exception as e: 
             self.setError(e)
-            return "error" 
-        
+            return "error"
+
     def gcodeEnding(self, message):
         try: 
             self.ser.write(f"{message}\n".encode("utf-8"))
@@ -298,10 +318,10 @@ class Printer(db.Model):
             while True:
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
-                
+
                 if response == "":
-                    self.responseCount+=1 
-                    if(self.responseCount>=10):
+                    self.responseCount += 1
+                    if self.responseCount >= 10:
                         self.setError("No response from printer")
                         raise Exception("No response from printer")
                 elif "error" in response.lower():
@@ -313,19 +333,19 @@ class Printer(db.Model):
                 if "ok" in response:
                     break
                 print(f"Command: {message}, Received: {response}")
-        except Exception as e: 
+        except Exception as e:
             # self.setStatus("error")
             print(e)
             self.setError(e)
-            return "error" 
-        
+            return "error"
+
     def parseGcode(self, path, job):
-        try: 
+        try:
             with open(path, "r") as g:
                 # Read the file and store the lines in a list
 
                 lines = g.readlines()
-                
+
                 #  Time handling
                 comment_lines = [line for line in lines if line.strip() and line.startswith(";")]
 
@@ -335,7 +355,9 @@ class Printer(db.Model):
 
                 # Only send the lines that are not empty and don't start with ";"
                 # so we can correctly get the progress
-                command_lines = [line for line in lines if line.strip() and not line.startswith(";")]
+                command_lines = [
+                    line for line in lines if line.strip() and not line.startswith(";")
+                ]
                 # store the total to find the percentage later on
                 total_lines = len(command_lines)
                 # set the sent lines to 0
@@ -343,12 +365,14 @@ class Printer(db.Model):
                 # Replace file with the path to the file. "r" means read mode. 
                 # now instead of reading from 'g', we are reading line by line
                 for line in lines:
-                    #remove whitespace
-                    line = line.strip() 
+                    # remove whitespace
+                    line = line.strip()
                     # Don't send empty lines and comments. ";" is a comment in gcode.
                     if ";" in line:  # Remove inline comments
-                        line = line.split(";")[0].strip()  # Remove comments starting with ";"
-                    if len(line) == 0 or line.startswith(";"): 
+                        line = line.split(";")[
+                            0
+                        ].strip()  # Remove comments starting with ";"
+                    if len(line) == 0 or line.startswith(";"):
                         continue
 
                     if("G29 A" in line) and job.getTimeStarted()==False:
@@ -401,7 +425,7 @@ class Printer(db.Model):
                                 job.setTime(job.calculateColorChangeTotal(), 0)
                                 job.setTime(datetime.min, 3)
                                 break
-                    
+
                     # software color change
                     if (self.getStatus()=="colorchange"):
                         job.setTime(datetime.now(), 3)
@@ -420,27 +444,26 @@ class Printer(db.Model):
                     sent_lines += 1
                     # Calculate the progress
                     progress = (sent_lines / total_lines) * 100
-                    
+
                     # Call the setProgress method
                     job.setProgress(progress)
                 
                     
                     if self.getStatus() == "complete":
                         return "cancelled"
-                    
+
                     if self.getStatus() == "error":
                         return "error"
-                    
-                    # self.prevMes=line
+
             return "complete"
-        except Exception as e: 
+        except Exception as e:
             # self.setStatus("error")
             self.setError(e)
-            return "error" 
-      
-    # Function to send "ending" gcode commands   
+            return "error"
+
+    # Function to send "ending" gcode commands
     def endingSequence(self):
-        try: 
+        try:
             # *** Ender 3 Pro ending sequence ***
             # self.gcodeEnding("G91") # Relative positioning
             # self.gcodeEnding("G1 E-2 F2700") # Retract a bit
@@ -473,74 +496,95 @@ class Printer(db.Model):
             self.gcodeEnding("M142 S36")# ; reset heatbreak target temp
             self.gcodeEnding("M84 X Y E")# ; disable motors   
             # ; max_layer_z = [max_layer_z]
-            
+
         except Exception as e:
             self.setError(e)
             return "error"
 
-
     def printNextInQueue(self):
         self.connect()
-        job = self.getQueue().getNext() # get next job 
+        job = self.getQueue().getNext()  # get next job
         try:
             if self.getSer():
                 self.responseCount = 0
                 job.saveToFolder()
                 path = job.generatePath()
-                
-                self.setStatus("printing") # set printer status to printing
+
+                self.setStatus("printing")  # set printer status to printing
                 self.sendStatusToJob(job, job.id, "printing")
 
-                verdict = self.parseGcode(path, job) # passes file to code. returns "complete" if successful, "error" if not.
+                begin = self.beginPrint(job)
                 
-                if verdict =="complete":
-                    self.disconnect()
-                    self.setStatus("complete")
-                    self.sendStatusToJob(job, job.id, "complete")
-                elif verdict=="error": 
-                    self.disconnect()
-                    self.getQueue().deleteJob(job.id, self.id)
-                    self.setStatus("error")
-                    self.sendStatusToJob(job, job.id, "error")
-                    # self.setError("Error")
-                elif verdict=="cancelled":
-                    self.endingSequence()
-                    self.disconnect()
-                    self.sendStatusToJob(job, job.id, "cancelled")
+                if begin==True: 
+                    verdict = self.parseGcode(path, job)  # passes file to code. returns "complete" if successful, "error" if not.
+                    self.handleVerdict(verdict, job)
                 else: 
-                    self.disconnect()
-                    
-                job.removeFileFromPath(path) # remove file from folder after job complete
-            # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready. 
+                    self.handleVerdict("misprint", job)    
+
+                job.removeFileFromPath(path)  # remove file from folder after job complete
+            # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready.
             else:
                 self.getQueue().deleteJob(job.id, self.id)
                 # self.setStatus("error")
                 self.setError("Printer not connected")
                 self.sendStatusToJob(job, job.id, "error")
-            return     
+            return
         except Exception as e:
             # print("exception in printNextInQueue except")
             self.getQueue().deleteJob(job.id, self.id)
             # self.setStatus("error")
             self.sendStatusToJob(job, job.id, "error")
             self.setError(e)
-
-    def fileExistsInPath(self, path): 
+            
+    def beginPrint(self, job): 
+        while True: 
+            time.sleep(1)
+            if job.getReleased()==1: 
+                return True 
+            if self.getStatus() == "complete": 
+                return False 
+            
+    def handleVerdict(self, verdict, job):
+        # self.disconnect()
+        
+        if verdict == "complete":
+            self.disconnect()
+            self.setStatus("complete")
+            self.sendStatusToJob(job, job.id, "complete")
+            
+        elif verdict == "error":
+            self.disconnect()
+            self.getQueue().deleteJob(job.id, self.id)
+            self.setStatus("error")
+            self.sendStatusToJob(job, job.id, "error")
+            # self.setError("Error")
+        elif verdict == "cancelled":
+            self.endingSequence()
+            self.sendStatusToJob(job, job.id, "cancelled")
+            self.disconnect()
+            
+        elif verdict== "misprint": 
+            self.sendStatusToJob(job, job.id, "cancelled")
+            
+        return 
+    
+    def fileExistsInPath(self, path):
         if os.path.exists(path):
             return True
-        
+
     # printer-specific classes
     def getDevice(self):
         return self.device
 
     def getQueue(self):
         return self.queue
-    
+
     def getHwid(self):
-        return self.hwid 
+        return self.hwid
+
     # def removeJobFromQueue(self, job_id):
     #     self.queue.removeJob(job_id)
-        
+
     #     current_app.socketio.emit('job_removed', {'printer_id': self.id, 'job_id': job_id})
 
     def getStatus(self):
@@ -551,44 +595,45 @@ class Printer(db.Model):
 
     def getSer(self):
         return self.ser
-    
+
     def getId(self):
         return self.id
-    
-    
+
     def getStopPrint(self):
         return self.stopPrint
-    
+
     def setSer(self, port):
         self.ser = port
-
 
     #  now when we set the status, we can emit the status to the frontend
     def setStatus(self, newStatus):
         try:
-            self.status = newStatus 
+            self.status = newStatus
             # print(self.status)
             # Emit a 'status_update' event with the new status
-            current_app.socketio.emit('status_update', {'printer_id': self.id, 'status': newStatus})
+            current_app.socketio.emit(
+                "status_update", {"printer_id": self.id, "status": newStatus}
+            )
         except Exception as e:
-            print('Error setting status:', e)
-        
+            print("Error setting status:", e)
+
     def setStopPrint(self, stopPrint):
         self.stopPrint = stopPrint
-        
-        
+
     def setError(self, error):
-        self.error = str(error) 
+        self.error = str(error)
         self.setStatus("error")
-        current_app.socketio.emit('error_update', {'printerid': self.id, 'error': self.error})
-        
+        current_app.socketio.emit(
+            "error_update", {"printerid": self.id, "error": self.error}
+        )
+
     def sendStatusToJob(self, job, job_id, status):
         try:
             job.setStatus(status)
             data = {
                 "printerid": self.id,
                 "jobid": job_id,
-                "status": status  # Assuming status is accessible here
+                "status": status,  # Assuming status is accessible here
             }
             base_url = os.getenv("BASE_URL", "http://localhost:8000")
 

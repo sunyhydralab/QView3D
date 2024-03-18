@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { useGetPorts, useRegisterPrinter, useRetrievePrinters, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device } from '../model/ports'
+import { useGetPorts, useRegisterPrinter, useRetrievePrinters, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, useMoveHead, type Device } from '../model/ports'
 import { ref, onMounted } from 'vue';
+
 const { ports } = useGetPorts();
 const { register } = useRegisterPrinter();
 const { retrieve } = useRetrievePrinters();
@@ -13,6 +14,7 @@ const { removeThread } = useRemoveThread();
 const { editThread } = useEditThread();
 const { diagnose } = useDiagnosePrinter();
 const {repair} = useRepair()
+const {move} = useMoveHead()
 
 let devices = ref<Array<Device>>([]); // Array of all devices -- stores ports for user to select/register
 let selectedDevice = ref<Device | null>(null) // device user selects to register.
@@ -24,6 +26,11 @@ let newName = ref('')
 let message = ref('')
 let showMessage = ref(false)
 let messageId = ref<number | undefined>(0)
+
+let modalTitle = ref('');
+let modalMessage = ref('');
+let modalAction = ref('');
+const selectedPrinter = ref<Device | null>(null);
 
 // fetch list of connected ports from backend and automatically load them into the form dropdown 
 onMounted(async () => {
@@ -107,17 +114,51 @@ const clearMessage = () => {
     message.value = ''
 }
 
+const openModal = (title: any, message: any, action: any, printer: Device) => {
+    modalTitle.value = title;
+    modalMessage.value = message;
+    modalAction.value = action;
+    selectedPrinter.value = printer;
+};
+
+const doMove = async(printer: Device) => {
+    await move(printer.device)
+}
+
 </script>
 <template>
     <div class="container">
+
+        <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">{{ modalTitle }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- <p>{{ modalMessage }}</p> -->
+                    <p v-html="modalMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button v-if="modalAction === 'doHardReset'" type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="doHardReset(selectedPrinter!)">Reset</button>
+                    <button v-if="modalAction === 'doDelete'" type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="doDelete(selectedPrinter!)">Deregister</button>
+                </div>
+                </div>
+            </div>
+        </div>
+
         <b>Registered View</b>
 
         <div v-if="registered.length != 0">
             <div class="card" style="width: 18rem;" v-for="printer in registered">
                 <div class="card-body">
-                    <button @click="doHardReset(printer)">Hard Reset</button>
+                    <button @click="openModal('Hard Reset', 'Are you sure you want to do a hard reset of this printer?', 'doHardReset', printer)" data-bs-toggle="modal"
+                    data-bs-target="#exampleModal">Hard Reset</button>
                     <button @click="doQueueRestore(printer)">Restore Queue</button>
-                    <button @click="doDelete(printer)">Deregister</button>
+                    <button @click="openModal('Deregister Printer', 'Are you sure you want to deregister this printer? This will nullify the <strong>printer_id</strong> section in job history.', 'doDelete', printer)" 
+                    data-bs-toggle="modal" data-bs-target="#exampleModal">Deregister</button>
 
                     <h6 v-if="!editMode || !(editNum == printer.id)"
                         @click="editMode = true; editNum = printer.id; newName = printer.name || ''" style="cursor: pointer;">
@@ -175,6 +216,10 @@ const clearMessage = () => {
                     <input type="submit" value="Submit">
                 </div>
             </form>
+            <div v-if="selectedDevice">
+                <br>
+                <button @click="doMove(selectedDevice)">Move Printer Head</button>
+            </div>
         </div>
         <button @click="doRepair">Repair Ports</button>
     </div>

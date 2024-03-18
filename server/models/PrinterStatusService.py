@@ -145,11 +145,13 @@ class PrinterStatusService:
                     "date": job.date.strftime('%a, %d %b %Y %H:%M:%S'),
                     "printerid": job.printer_id, 
                     "file_name_original": job.file_name_original, 
-                    "progress": job.progress
+                    "progress": job.progress,
+                    "favorite": job.favorite
                 }
                 printer_info['queue'].append(job_info)
             
             printer_info_list.append(printer_info)
+            
         return printer_info_list
 
     def pingForStatus(self):

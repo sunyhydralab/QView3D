@@ -20,6 +20,8 @@ export interface Job {
   printerid: number
   file_pause: number
   priority?: string
+  favorite?: boolean
+  released?: number
   job_server?: [number, Date, Date, Date] // this saves all of the data from the backend.Only changed if there is a pause involved.
 
   job_client?: {
@@ -112,11 +114,20 @@ export function setupTimeSocket(printers: any) {
 
 export function useGetJobs() {
   return {
-    async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean) {
+    async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '') {
       try {
         const response = await api(
-          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}`
+          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}`
         )
+        return response
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while retrieving the jobs')
+      }
+    },
+    async getFavoriteJobs() {
+      try {
+        const response = await api('getfavoritejobs')
         return response
       } catch (error) {
         console.error(error)
@@ -151,10 +162,18 @@ export function useAutoQueue() {
       try {
         const response = await api('autoqueue', job)
         if (response) {
-          return response
+          return response 
+          // if (response.success == false) {
+          //   toast.error(response.message)
+          // } else if (response.success === true) {
+          //   toast.success(response.message)
+          // } else {
+          //   console.error('Unexpected response:', response)
+          //   toast.error('Failed to queue job. Unexpected response')
+          // }
         } else {
           console.error('Response is undefined or null')
-          return { success: false, message: 'Response is undefined or null.' }
+          toast.error('Failed to queue job. Unexpected response')
         }
       } catch (error) {
         console.error(error)
@@ -202,14 +221,15 @@ export function useRemoveJob() {
       try {
         const response = await api('canceljob', { jobpk })
         if (response) {
-          if (response.success == false) {
-            toast.error(response.message)
-          } else if (response.success === true) {
-            toast.success(response.message)
-          } else {
-            console.error('Unexpected response:', response)
-            toast.error('Failed to remove job. Unexpected response.')
-          }
+          return response
+          // if (response.success == false) {
+          //   toast.error(response.message)
+          // } else if (response.success === true) {
+          //   toast.success(response.message)
+          // } else {
+          //   console.error('Unexpected response:', response)
+          //   toast.error('Failed to remove job. Unexpected response.')
+          // }
         } else {
           console.error('Response is undefined or null')
           toast.error('Failed to remove job. Unexpected response')
@@ -306,6 +326,22 @@ export function useGetJobFile() {
   }
 }
 
+export function useGetFile() {
+  return {
+    async getFile(job: Job) {
+      try {
+        const jobid = job.id
+        const response = await api(`getfile?jobid=${jobid}`)
+        const file = new File([response.file], response.file_name, { type: 'text/plain' })
+        return file
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while retrieving the file')
+      }
+    }
+  }
+}
+
 export function useClearSpace() {
   return {
     async clearSpace() {
@@ -332,6 +368,24 @@ export function useClearSpace() {
   }
 }
 
+export function useFavoriteJob() {
+  return {
+    async favorite(job: Job, favorite: boolean) {
+      let jobid = job?.id;
+      try {
+        const response = await api(`favoritejob`, { jobid, favorite })
+        if (response.success) {
+          job.favorite = favorite ? true : false;
+        }
+        return response;
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while favoriting the job')
+      }
+    }
+  }
+}
+
 // function to constantly update progress of job
 export function setupProgressSocket(printers: any) {
   // Always set up the socket connection and event listener
@@ -350,6 +404,21 @@ export function setupProgressSocket(printers: any) {
     }
   })
 }
+
+export function setupReleaseSocket(printers: any) {
+  // Always set up the socket connection and event listener
+  socket.on('release_job', (data: any) => {
+    const job = printers
+      .flatMap((printer: { queue: any }) => printer.queue)
+      .find((job: { id: any }) => job?.id === data.job_id)
+    if (job) {
+      console.log(data.released)
+      job.released = data.released
+    }
+  })
+}
+
+
 
 export function setupJobStatusSocket(printers: any) {
   // Always set up the socket connection and event listener
@@ -498,6 +567,20 @@ export function useDeleteJob() {
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while deleting the job')
+      }
+    }
+  }
+}
+
+export function useStartJob(){
+  return {
+    async start(jobid: number, printerid: number){
+      try {
+        const response = await api(`startprint`, { jobid, printerid })
+        return response;
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while starting the job')
       }
     }
   }

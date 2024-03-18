@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, useSetStatus, setupStatusSocket, setupQueueSocket, setupErrorSocket, disconnectStatusSocket, type Device } from '@/model/ports';
-import { type Job, useReleaseJob, useRemoveJob, setupProgressSocket, setupJobStatusSocket, setupTimeSocket } from '@/model/jobs';
+import { type Job, useReleaseJob, useRemoveJob, useStartJob, setupProgressSocket, setupJobStatusSocket, setupTimeSocket, setupReleaseSocket } from '@/model/jobs';
 import { useRouter, useRoute } from 'vue-router';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 
@@ -8,6 +8,7 @@ const { retrieveInfo } = useRetrievePrintersInfo();
 const { setStatus } = useSetStatus();
 const { releaseJob } = useReleaseJob()
 const { removeJob } = useRemoveJob()
+const { start } = useStartJob()
 
 const router = useRouter();
 
@@ -22,12 +23,14 @@ onMounted(async () => {
   try {
 
     printers.value = await retrieveInfo()
+
     setupStatusSocket(printers)
     setupQueueSocket(printers)
     setupProgressSocket(printers.value)
     setupJobStatusSocket(printers.value)
     setupErrorSocket(printers)
     setupTimeSocket(printers.value)
+    setupReleaseSocket(printers.value)
 
     console.log("PRINTERS: ", printers.value)
 
@@ -94,6 +97,11 @@ function formatETA(milliseconds: number): string {
   }
   
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+}
+
+const startPrint = async (printerid: number, jobid: number) => {
+  console.log("Starting print: ", printerid, jobid)
+  await start(jobid, printerid)
 }
 </script>
 
@@ -320,7 +328,14 @@ function formatETA(milliseconds: number): string {
         </div> -->
 
         <td style="width: 250px;">
-          <div v-if="printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange'">
+          <div
+            v-if="printer.status == 'printing' && printer.queue?.[0].released == 0">
+            <button type="button" class="btn btn-danger" @click="startPrint(printer.id!, printer.queue?.[0].id)">Start
+              Print</button>
+          </div>
+
+          <div
+            v-else-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange') && printer.queue && printer.queue[0].released == 1">
             <!-- <div v-for="job in printer.queue" :key="job.id"> -->
             <!-- Display the elapsed time -->
             <div class="progress" style="position: relative;">
@@ -360,6 +375,7 @@ function formatETA(milliseconds: number): string {
               </ul>
             </div>
           </div>
+
           <div
             v-else-if="printer.queue?.[0] && (printer.queue?.[0].status == 'printing' && printer.status == 'complete')">
             <button class="btn btn-primary" type="button" disabled>
@@ -368,6 +384,7 @@ function formatETA(milliseconds: number): string {
             </button>
           </div>
           <div v-else-if="printer.status == 'error'" class="alert alert-danger" role="alert">{{ printer?.error }}</div>
+
         </td>
 
         <td style="width: 1%; white-space: nowrap;">

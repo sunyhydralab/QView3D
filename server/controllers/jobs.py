@@ -21,13 +21,15 @@ def getJobs():
     page = request.args.get('page', default=1, type=int)
     pageSize = request.args.get('pageSize', default=10, type=int)
     printerIds = request.args.get('printerIds', type=json.loads)
+    searchJob = request.args.get('searchJob', default='', type=str)
+    searchCriteria = request.args.get('searchCriteria', default='', type=str)
     
     # convert to boolean 
     oldestFirst = request.args.get('oldestFirst', default='false')
     oldestFirst = oldestFirst.lower() in ['true', '1']
     
     try:
-        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst)
+        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria)
         return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -43,9 +45,11 @@ def add_job_to_queue():
         
         name = request.form['name']  # Access other form fields from request.form
         printer_id = int(request.form['printerid'])
+        _favorite = request.form['favorite']
+        favorite = 1 if _favorite == 'true' else 0
         
         status = 'inqueue' # set status 
-        res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original) # insert into DB 
+        res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite) # insert into DB 
         
         # retrieve job from DB
         id = res['id']
@@ -65,6 +69,8 @@ def add_job_to_queue():
             findPrinterObject(printer_id).getQueue().addToFront(job, printer_id)
         else:
             findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
+            
+        print("released: ", job.released)
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     
@@ -80,8 +86,10 @@ def auto_queue():
         name = request.form['name']  # Access other form fields from request.form
         status = 'inqueue' # set status 
         printer_id = getSmallestQueue()
+        _favorite = request.form['favorite']
+        favorite = 1 if _favorite == 'true' else 0
         
-        res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original) # insert into DB 
+        res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite) # insert into DB 
         
         id = res['id']
         
@@ -258,22 +266,19 @@ def delete_job():
     try:
         data = request.get_json()
         job_id = data['jobid']
-
+        
         # Retrieve job to delete & printer id 
         job = Job.findJob(job_id) 
         printer_id = job.getPrinterId() 
-
-        # Retrieve printer object & corresponding queue
-        printer_object = findPrinterObject(printer_id)
-        queue = printer_object.getQueue()
-
-        jobstatus = job.getStatus()
-
-        if jobstatus == 'printing': # only change statuses, dont remove from queue 
-            printer_object.setStatus("complete")
-        else: 
+        print("ID: ", printer_id)
+        
+        if printer_id != 0:
+            # Retrieve printer object & corresponding queue
+            printer_object = findPrinterObject(printer_id)
+            queue = printer_object.getQueue()
+            
             # Delete job from the queue
-            queue.deleteJob(job_id) 
+            queue.deleteJob(job_id, printer_id) 
 
             # Delete job from the database
             Job.delete_job(job_id)
@@ -334,6 +339,46 @@ def clearSpace():
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
     
+@jobs_bp.route('/getfavoritejobs', methods=["GET"])
+def getFavoriteJobs():
+    try:
+        res = Job.getFavoriteJobs()
+        return jsonify(res)
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
+@jobs_bp.route('/favoritejob', methods=["POST"])
+def favoriteJob():
+    try: 
+        data = request.get_json()
+        jobid = data['jobid']
+        favorite = data['favorite']
+        job = Job.findJob(jobid)
+        res = job.setFileFavorite(favorite)
+        return res
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
+@jobs_bp.route('/startprint', methods=["POST"])
+def startPrint(): 
+    try: 
+        data = request.get_json()
+        printerid = data['printerid']
+        jobid = data['jobid']
+        printerobject = findPrinterObject(printerid)
+        queue = printerobject.getQueue()
+        inmemjob = queue.getJobById(jobid)
+        print(inmemjob)
+        inmemjob.setReleased(1)
+        
+        return jsonify({"success": True, "message": "Job started successfully."}), 200
+        
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
 def findPrinterObject(printer_id): 
     threads = printer_status_service.getThreadArray()
     return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer  
@@ -348,9 +393,10 @@ def rerunjob(printerpk, jobpk, position):
     
     status = 'inqueue' # set status 
     file_name_original = job.getFileNameOriginal() # get original file name
+    favorite = job.getFileFavorite() # get favorite status
     
     # Insert new job into DB and return new PK 
-    res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original) # insert into DB 
+    res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original, favorite = favorite) # insert into DB 
     
     id = res['id']
     file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique

@@ -1,5 +1,6 @@
 import asyncio
 import base64
+from operator import or_
 import os
 import re
 from models.db import db 
@@ -26,7 +27,9 @@ class Job(db.Model):
     printer_id = db.Column(db.Integer, db.ForeignKey('printer.id'), nullable = True)
     printer = db.relationship('Printer', backref='Job')
     file_name_original = db.Column(db.String(50), nullable = False)
+    favorite = db.Column(db.Boolean, default=False)
     file_name_pk = None
+    released = 0 
     filePause = 0
     progress = 0.0
     time_started = False
@@ -35,13 +38,15 @@ class Job(db.Model):
 
 
     
-    def __init__(self, file, name, printer_id, status, file_name_original): 
+    def __init__(self, file, name, printer_id, status, file_name_original, favorite):
         self.file = file 
         self.name = name 
         self.printer_id = printer_id 
         self.status = status 
         self.file_name_original = file_name_original # original file name without PK identifier 
         self.file_name_pk = None
+        self.favorite = favorite
+        self.released = 0 
         self.filePause = 0
         self.progress = 0.0
         self.time_started = False
@@ -54,14 +59,25 @@ class Job(db.Model):
         return self.printer_id
         
     @classmethod
-    def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False):
+    def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob='', searchCriteria=''):
         try:
             query = cls.query
             if printerIds:
                 query = query.filter(cls.printer_id.in_(printerIds))
+                
+            if searchJob:
+                searchJob = f"%{searchJob}%"
+                query = query.filter(or_(cls.name.ilike(searchJob), cls.file_name_original.ilike(searchJob)))
+            
+            if 'searchByJobName' in searchCriteria:
+                searchByJobName = f"%{searchJob}%"
+                query = query.filter(cls.name.ilike(searchByJobName))
+            elif 'searchByFileName' in searchCriteria:
+                searchByFileName = f"%{searchJob}%"
+                query = query.filter(cls.file_name_original.ilike(searchByFileName))
 
             if oldestFirst:
-                query = query.order_by(cls.date.asc())
+                query = query.order_by(cls.date.asc())    
             else: 
                 query = query.order_by(cls.date.desc())  # Change this line
 
@@ -74,7 +90,8 @@ class Job(db.Model):
                 "status": job.status, 
                 "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",  
                 "printer": job.printer.name if job.printer else 'None', 
-                "file_name_original": job.file_name_original
+                "file_name_original": job.file_name_original,
+                "favorite": job.favorite
             } for job in jobs]
 
             return jobs_data, pagination.total
@@ -84,7 +101,7 @@ class Job(db.Model):
 
         
     @classmethod
-    def jobHistoryInsert(cls, name, printer_id, status, file, file_name_original): 
+    def jobHistoryInsert(cls, name, printer_id, status, file, file_name_original, favorite): 
         try:
             if isinstance(file, bytes):
                 file_data = file
@@ -102,7 +119,8 @@ class Job(db.Model):
                 name=name,
                 printer_id=printer_id,
                 status=status,
-                file_name_original = file_name_original
+                file_name_original = file_name_original,
+                favorite = favorite
             )
 
             db.session.add(job)
@@ -251,6 +269,25 @@ class Job(db.Model):
     def getPathForDelete(cls, file_name):
         return os.path.join('../uploads', file_name)
    
+    @classmethod
+    def getFavoriteJobs(cls):
+        try:
+            jobs = cls.query.filter_by(favorite=True).all()
+
+            jobs_data = [{
+                "id": job.id,
+                "name": job.name,
+                "status": job.status,
+                "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",
+                "printer": job.printer.name if job.printer else 'None',
+                "file_name_original": job.file_name_original,
+                "favorite": job.favorite
+            } for job in jobs]
+
+            return jobs_data
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return jsonify({"error": "Failed to retrieve favorite jobs. Database error"}), 500
            
     def saveToFolder(self):
         file_data = self.getFile()
@@ -279,6 +316,14 @@ class Job(db.Model):
     
     def getFileNameOriginal(self):
         return self.file_name_original
+    
+    def getFileFavorite(self):
+        return self.favorite
+    
+    def setFileFavorite(self, favorite):
+        self.favorite = favorite
+        db.session.commit()
+        return {"success": True, "message": "Favorite status updated successfully."}
     
     def getPrinterId(self): 
         return self.printer_id
