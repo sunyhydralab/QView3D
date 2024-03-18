@@ -31,7 +31,7 @@ class Printer(db.Model):
     # stopPrint = False
     responseCount = 0 # if count == 10 & no response, set error 
     error = ""
-    canPause = 0
+    prevMes = ""
 
     def __init__(self, device, description, hwid, name, status=status, id=None):
         self.device = device
@@ -44,6 +44,7 @@ class Printer(db.Model):
         self.stopPrint = False 
         self.error = ""
         self.canPause = 0
+        self.prevMes=""
         
         if id is not None:
             self.id = id
@@ -262,11 +263,15 @@ class Printer(db.Model):
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
                 
-                if response == "":
-                    self.responseCount+=1 
-                    if(self.responseCount>=10):
-                        self.setError("No response from printer")
-                        raise Exception("No response from printer")
+                if response == "": 
+                    if self.prevMes == "M602":
+                        self.responseCount = 0
+                        # break
+                    else: 
+                        self.responseCount+=1 
+                        if(self.responseCount>=10):
+                            self.setError("No response from printer")
+                            raise Exception("No response from printer")
                 elif "error" in response.lower():
                     self.setError(response)
                     break
@@ -325,6 +330,7 @@ class Printer(db.Model):
                 comment_lines = [line for line in lines if line.strip() and line.startswith(";")]
 
                 total_time = job.getTimeFromFile(comment_lines)
+                job.setTime(total_time, 0)
                 # job.setTime(total_time, 0)
 
                 # Only send the lines that are not empty and don't start with ";"
@@ -345,53 +351,66 @@ class Printer(db.Model):
                     if len(line) == 0 or line.startswith(";"): 
                         continue
 
-                    if("M190" in line or "M109" in line) and job.getTimeStarted()==False:
+                    if("G29 A" in line) and job.getTimeStarted()==False:
                         job.setTimeStarted(True)
-                        job.setTime(total_time, 0)
                         job.setTime(job.calculateEta(), 1)
                         job.setTime(datetime.now(), 2)
+                        print(job.job_time)
 
                     if("M600" in line):
-                        # self.setStatus("paused")
                         job.setTime(datetime.now(), 3)
-                        job.setTime(job.calculateTotalTime(), 0)
-                        job.setTime(job.updateEta(), 1)
+                        # job.setTime(job.calculateTotalTime(), 0)
+                        # job.setTime(job.updateEta(), 1)
+                        self.setStatus("colorchange")
                         job.setFilePause(1)
 
+                    # if self.prevMes == "M602":
+                    #     self.prevMes=""
+                                
                     res = self.sendGcode(line)
+                    
+                    if self.prevMes == "M602":
+                        self.prevMes=""
 
                     if(job.getFilePause() == 1):
+                        # self.setStatus("printing")
+                        job.setTime(job.colorEta(), 1)
+                        job.setTime(job.calculateColorChangeTotal(), 0)
                         job.setTime(datetime.min, 3)
                         job.setFilePause(0)
+                        self.setStatus("printing")
+
                         
                     #  software pausing        
                     if (self.getStatus()=="paused"):
+                        # self.prevMes = "M601"
                         self.sendGcode("M601") # pause command for prusa
-                        # self.sendGcode("M25") # pause command for ender
-                        # job.setPauseTime()
                         job.setTime(datetime.now(), 3)
                         while(True):
                             time.sleep(1)
-                            job.setTime(job.calculateTotalTime(), 0)
-                            job.setTime(job.updateEta(), 1)
                             stat = self.getStatus()
-                            # if(stat=="complete"):
-                            #     self.sendGcode("M603") # resume command for prusa
-                            #     return "cancelled"
                             if(stat=="printing"):
-                                # job.resumeTime()
+                                self.prevMes = "M602"
+
                                 self.sendGcode("M602") # resume command for prusa
+                                # self.sendGcode("M190")
+                                # self.sendGcode("M109")
+
                                 time.sleep(2)
-                                # self.sendGcode("M24") # resume command for ender
+                                job.setTime(job.colorEta(), 1)
+                                job.setTime(job.calculateColorChangeTotal(), 0)
                                 job.setTime(datetime.min, 3)
                                 break
                     
                     # software color change
                     if (self.getStatus()=="colorchange"):
                         job.setTime(datetime.now(), 3)
-                        job.setTime(job.calculateTotalTime(), 0)
-                        job.setTime(job.updateEta(), 1)
+                        # job.setTime(job.calculateTotalTime(), 0)
+                        # job.setTime(job.updateEta(), 1)
                         self.sendGcode("M600") # color change command
+                        print("color change command sent")
+                        job.setTime(job.colorEta(), 1)
+                        job.setTime(job.calculateColorChangeTotal(), 0)
                         job.setTime(datetime.min, 3)
                         self.setStatus("printing")
                         # job.setPauseTime()
@@ -412,6 +431,7 @@ class Printer(db.Model):
                     if self.getStatus() == "error":
                         return "error"
                     
+                    # self.prevMes=line
             return "complete"
         except Exception as e: 
             # self.setStatus("error")
@@ -464,6 +484,7 @@ class Printer(db.Model):
         job = self.getQueue().getNext() # get next job 
         try:
             if self.getSer():
+                self.responseCount = 0
                 job.saveToFolder()
                 path = job.generatePath()
                 
