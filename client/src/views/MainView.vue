@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRetrievePrintersInfo, useSetStatus, setupStatusSocket, setupQueueSocket, setupErrorSocket, disconnectStatusSocket, type Device } from '@/model/ports';
-import { type Job, useReleaseJob, useRemoveJob, useStartJob, setupProgressSocket, setupJobStatusSocket, setupTimeSocket, setupPauseFeedbackSocket, setupReleaseSocket } from '@/model/jobs';
+import { type Job, useReleaseJob, useRemoveJob, useStartJob, setupProgressSocket, setupJobStatusSocket, setupTimeSocket, setupReleaseSocket } from '@/model/jobs';
 import { useRouter, useRoute } from 'vue-router';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 
@@ -15,6 +15,7 @@ const router = useRouter();
 let printers = ref<Array<Device>>([]); // Array of all devices. Used to list registered printers on frontend. 
 // ref of a current job. Used to display the job details in the modal
 let currentJob = ref<Job>();
+let currentPrinter = ref<Device>();
 
 let intervalId: number | undefined;
 
@@ -24,23 +25,12 @@ onMounted(async () => {
     printers.value = await retrieveInfo()
 
     setupStatusSocket(printers)
-
     setupQueueSocket(printers)
-    // Setup the progress socket
     setupProgressSocket(printers.value)
-
     setupJobStatusSocket(printers.value)
-
     setupErrorSocket(printers)
-
     setupTimeSocket(printers.value)
-
-    setupPauseFeedbackSocket(printers.value)
-
     setupReleaseSocket(printers.value)
-
-    console.log("PRINTERS: ", printers.value)
-
   } catch (error) {
     console.error('There has been a problem with your fetch operation:', error)
   }
@@ -75,22 +65,38 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerTo
   await releaseJob(jobToFind, key, printerIdToPrintTo)
 }
 
-const setCurrentJob = (job: Job, printerName: string) => {
-  console.log("Setting current job: ", job)
+const setCurrentJob = (job: Job, printer: Device) => {
   currentJob.value = job;
-  currentJob.value.printer = printerName;
+  currentJob.value.printer = printer.name ?? '';
+
+  currentPrinter.value = printer;
 }
 
-const toTime = (seconds: number | undefined) => {
-  if (seconds) {
-    const date = new Date(seconds * 1000).toISOString().substr(11, 8);
-    return date;
+function formatTime(milliseconds: number): string {
+  const seconds = Math.floor((milliseconds / 1000) % 60)
+  const minutes = Math.floor((milliseconds / (1000 * 60)) % 60)
+  const hours = Math.floor((milliseconds / (1000 * 60 * 60)) % 24)
+
+  const hoursStr = hours < 10 ? '0' + hours : hours
+  const minutesStr = minutes < 10 ? '0' + minutes : minutes
+  const secondsStr = seconds < 10 ? '0' + seconds : seconds
+
+  if ((hoursStr + ':' + minutesStr + ':' + secondsStr === 'NaN:NaN:NaN')) return 'Printer calibrating...'
+  return hoursStr + ':' + minutesStr + ':' + secondsStr
+}
+
+function formatETA(milliseconds: number): string {
+  const date = new Date(milliseconds)
+  const timeString = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+  
+  if (isNaN(date.getTime()) || timeString === "07:00 PM") {
+    return 'Printer calibrating...'
   }
-  return "00:00:00";
+  
+  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
 }
 
 const startPrint = async (printerid: number, jobid: number) => {
-  console.log("Starting print: ", printerid, jobid)
   await start(jobid, printerid)
 }
 </script>
@@ -122,27 +128,72 @@ const startPrint = async (printerid: number, jobid: number) => {
             </div>
           </div>
           <div class="row">
-            <div class="col-sm-4">
+            <div class="col-sm-3">
               <div class="card bg-light mb-3">
                 <div class="card-body">
-                  <h5 class="card-title"><i class="fas fa-hourglass-half"></i> <b>Elapsed Time:</b> {{
-            toTime(currentJob?.elapsed_time) }} </h5>
+                  <div class="row">
+                    <div class="col-12">
+                      <h5 class="card-title"><i class="fas fa-hourglass-half"></i> <b>Elapsed Time:</b></h5>
+                    </div>
+                    <!-- <div class="col-12">{{ formatTime(currentJob?.job_client?.elapsed_time!) }}</div> -->
+                    <div class="col-12">
+                      {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' : formatTime(currentJob?.job_client?.elapsed_time!) }}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-            <div class="col-sm-4">
+            <div class="col-sm-3">
               <div class="card bg-light mb-3">
                 <div class="card-body">
-                  <h5 class="card-title"><i class="fas fa-hourglass-end"></i> <b>Remaining Time:</b> {{
-            toTime(currentJob?.remaining_time) }} </h5>
+                  <div class="row">
+                    <div class="col-12">
+                      <h5 class="card-title"><i class="fas fa-hourglass-end"></i> <b>Remaining Time:</b></h5>
+                    </div>
+                    <!-- <div class="col-12">{{ formatTime(currentJob?.job_client?.remaining_time!) }}</div> -->
+                    <div class="col-12">
+                      {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' : formatTime(currentJob?.job_client?.remaining_time!) }}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-            <div class="col-sm-4">
+            <div class="col-sm-3">
               <div class="card bg-light mb-3">
                 <div class="card-body">
-                  <h5 class="card-title"><i class="fas fa-stopwatch"></i> <b>Total Time:</b> {{
-            toTime(currentJob?.total_time) }} </h5>
+                  <div class="row">
+                    <div class="col-12">
+                      <h5 class="card-title"><i class="fas fa-stopwatch"></i> <b>Total Time:</b></h5>
+                    </div>
+                    <div class="col-12">
+                      <div v-if="currentPrinter?.status === 'colorchange'">
+                        Waiting for filament change...
+                      </div>
+                      <div v-else>
+                        <div v-if="currentJob?.job_client?.extra_time">
+                          {{ formatTime(currentJob?.job_client.total_time!) + ' + ' + formatTime(currentJob?.job_client.extra_time!) }}
+                        </div>
+                        <div v-else>
+                          {{ formatTime(currentJob?.job_client?.total_time!) }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-3">
+              <div class="card bg-light mb-3">
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-12">
+                      <h5 class="card-title"><i class="fas fa-stopwatch"></i> <b>ETA:</b></h5>
+                    </div>
+                    <!-- <div class="col-12">{{ formatETA(currentJob?.job_client?.eta!) ?? "Waiting to start heating..."  }}</div> -->
+                    <div class="col-12">
+                      {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' : formatETA(currentJob?.job_client?.eta!) }}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -225,13 +276,16 @@ const startPrint = async (printerid: number, jobid: number) => {
 
         <td>
           <div class="d-flex align-items-center">
-            <div v-if="printer.status == 'printing' && printer.queue?.[0].released == 0">
-              <i style="color:red; padding-right: 10px">Waiting for release</i>
-            </div>
-            <div v-else-if="printer.status == 'printing' && printer.queue?.[0].file_pause == 1"><i
-                style="color:red; padding-right: 10px">Waiting for color change</i></div>
-            <div v-else>
-              <p class="mb-0 me-2">{{ printer.status }}</p>
+            <div>
+              <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
+                Change filament
+              </p>
+              <p v-else-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0" style="color: red" class="mb-0 me-2">
+                Waiting for release
+              </p>
+              <p v-else class="mb-0 me-2">
+                {{ printer.status }}
+              </p>
             </div>
             <div class="dropdown">
               <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton"
@@ -248,10 +302,10 @@ const startPrint = async (printerid: number, jobid: number) => {
                 </li>
                 <li v-if="printer.status == 'printing'"><a class="dropdown-item" href="#"
                     @click="setPrinterStatus(printer, 'complete')">Stop Print</a></li>
-                <li v-if="printer.status == 'printing' && printer.queue?.[0].released == 1"><a class="dropdown-item"
-                    href="#" @click="setPrinterStatus(printer, 'paused')">Pause Print</a></li>
-                <li v-if="printer.status == 'printing' && printer.queue?.[0].released == 1"><a class="dropdown-item"
-                    href="#" @click="setPrinterStatus(printer, 'colorchange')">Change Color</a></li>
+                <li v-if="printer.status == 'printing'"><a class="dropdown-item" href="#"
+                    @click="setPrinterStatus(printer, 'paused')">Pause Print</a></li>
+                <li v-if="printer.status == 'printing'"><a class="dropdown-item" href="#"
+                    @click="setPrinterStatus(printer, 'colorchange')">Change Color</a></li>
                 <li v-if="printer.status == 'paused' || printer.status == 'colorchange'"><a class="dropdown-item" href="#"
                     @click="setPrinterStatus(printer, 'printing')">Unpause Print</a></li>
               </ul>
@@ -339,12 +393,12 @@ const startPrint = async (printerid: number, jobid: number) => {
           <div style="display: inline-flex;">
             <button type="button" class="btn btn-primary btn-circle me-2" data-bs-toggle="modal"
               data-bs-target="#infoModal" v-if="printer.queue && printer.queue.length > 0" v-bind:job="printer.queue[0]"
-              @click="printer.name && setCurrentJob(printer.queue[0], printer.name)">
+              @click="printer.name && setCurrentJob(printer.queue[0], printer)">
               <i class="fas fa-info"></i>
             </button>
             <button type="button" class="btn btn-success btn-circle" data-bs-toggle="modal" data-bs-target="#gcodeModal"
               v-if="printer.queue && printer.queue.length > 0" v-bind:job="printer.queue[0]"
-              @click="printer.name && setCurrentJob(printer.queue[0], printer.name)">
+              @click="printer.name && setCurrentJob(printer.queue[0], printer)">
               <i class="fas fa-code"></i>
             </button>
           </div>

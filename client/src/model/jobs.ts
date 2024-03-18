@@ -22,11 +22,94 @@ export interface Job {
   priority?: string
   favorite?: boolean
   released?: number
-  // job_id: number
-  total_time?: number
-  elapsed_time?: number
-  remaining_time?: number
+  job_server?: [number, Date, Date, Date] // this saves all of the data from the backend.Only changed if there is a pause involved.
+
+  job_client?: {
+    // this is frontend data CALCULATED based on the backend data
+    total_time: number
+    eta: number
+    elapsed_time: number
+    extra_time: number
+    remaining_time: number
+  }
   timer?: NodeJS.Timeout
+}
+
+export function jobTime(job: Job, printers: any) {
+  const printerid = job.printerid
+  const printer = printers.find((printer: { id: number }) => printer.id === printerid)
+
+  // job.job_client!.remaining_time = NaN
+
+  const updateJobTime = () => {
+    if (printer.status !== 'printing') {
+      clearInterval(job.timer)
+      delete job.timer
+      return
+    }
+
+    let totalTime = job.job_server![0] 
+    job.job_client!.total_time = totalTime * 1000
+
+    let eta = job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
+    job.job_client!.eta = eta + job.job_client!.extra_time
+
+    if (printer.status === 'printing' || printer.status === 'colorchange' || printer.status === 'paused') {
+      const now = Date.now();
+      const elapsedTime = now - new Date(job.job_server![2]).getTime();
+      job.job_client!.elapsed_time = Math.round(elapsedTime / 1000) * 1000;
+      if(!isNaN(job.job_client!.elapsed_time)){
+        if(job.job_client!.elapsed_time <= job.job_client!.total_time){
+          job.job_client!.remaining_time = job.job_client!.total_time - job.job_client!.elapsed_time
+        }
+      }
+    }
+
+    if (job.job_client!.elapsed_time > job.job_client!.total_time) {
+      job.job_client!.extra_time = Date.now() - eta
+    }
+
+    // Update elapsed_time after the first second
+    if (job.job_client!.elapsed_time === 0) {
+      job.job_client!.elapsed_time = 1;
+    }
+  }
+
+  // Call updateJobTime immediately when jobTime is called
+  updateJobTime();
+
+  // Continue to call updateJobTime at regular intervals
+  job.timer = setInterval(updateJobTime, 1000)
+}
+
+export function setupTimeSocket(printers: any) {
+  // Always set up the socket connection and event listener
+  socket.on('set_time', (data: any) => {
+    const job = printers
+      .flatMap((printer: { queue: any }) => printer.queue)
+      .find((job: { id: any }) => job?.id === data.job_id)
+
+    if (!job.job_client || !job.job_server) {
+      job.job_client = {
+        total_time: 0,
+        eta: 0,
+        elapsed_time: 0,
+        extra_time: 0,
+        remaining_time: NaN
+      }
+      // job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
+      job.job_server = [0, '00:00:00', '00:00:00', '00:00:00']
+
+    }
+
+    if(typeof(data.new_time) === 'number'){
+      job.job_server[data.index] = data.new_time
+    }else{
+      job.job_server[data.index] = Date.parse(data.new_time)
+    }
+
+    jobTime(job, printers)
+  })
 }
 
 export function useGetJobs() {
@@ -329,13 +412,10 @@ export function setupReleaseSocket(printers: any) {
       .flatMap((printer: { queue: any }) => printer.queue)
       .find((job: { id: any }) => job?.id === data.job_id)
     if (job) {
-      console.log(data.released)
       job.released = data.released
     }
   })
 }
-
-
 
 export function setupJobStatusSocket(printers: any) {
   // Always set up the socket connection and event listener
@@ -346,141 +426,18 @@ export function setupJobStatusSocket(printers: any) {
 
     if (job) {
       job.status = data.status
-
-      // If the job is complete, cancelled, or errored, stop the timer
-      if (['complete', 'cancelled', 'error'].includes(data.status)) {
-        if (job.timer) {
-          clearInterval(job.timer)
-          delete job.timer
-        }
-      }
     }
   })
-}
-
-export function setupPauseFeedbackSocket(printers: any) {
-  // Always set up the socket connection and event listener
-  socket.on('file_pause_update', (data: any) => {
-    const job = printers
-      .flatMap((printer: { queue: any }) => printer.queue)
-      .find((job: { id: any }) => job?.id === data.job_id)
-
-    if (job) {
-      job.file_pause = data.file_pause
-    }
-  })
-}
-
-export function setupTimeSocket(printers: any) {
-  // Listen for the 'job_time' event
-  socket.on('job_time', (data: any) => {
-    // Get the start time and total time from the server
-    const job_id = data.job_id
-    const total_time = data.total_time
-
-    // Find the job with the matching id
-    const job = printers
-      .flatMap((printer: { queue: any }) => printer.queue)
-      .find((job: { id: any }) => job?.id === data.job_id)
-
-    if (!job) {
-      console.error(`Job with id ${job_id} not found`)
-      return
-    }
-
-    // Clear any existing timer
-    if (job.timer) {
-      clearInterval(job.timer)
-      delete job.timer
-    }
-
-    // Set the total time for the job
-    job.total_time = total_time
-
-    // Set the start time to the current timestamp
-    job.start_time = Math.floor(Date.now() / 1000)
-
-    // Create a timer that updates the time every second
-    job.timer = startTimer(job, job.start_time, 0, false) // Added fourth argument
-  })
-
-  // Listen for the 'job_pause' event
-  socket.on('job_pause', (data: any) => {
-    const job = printers
-      .flatMap((printer: { queue: any }) => printer.queue)
-      .find((job: { id: any }) => job?.id === data.job_id)
-
-    if (job) {
-      // Calculate the elapsed time
-      const pauseTime = Math.floor(Date.now() / 1000)
-      job.elapsed_time = pauseTime - job.start_time
-
-      // Update job.start_time to the pause time
-      job.start_time = pauseTime
-
-      // Pause the timer but keep incrementing the elapsed_time and total_time
-      if (job.timer) {
-        clearInterval(job.timer)
-        job.timer = startTimer(job, job.start_time, job.elapsed_time, true)
-      }
-    }
-  })
-
-  // Listen for the 'job_resume' event
-  socket.on('job_resume', (data: any) => {
-    const job = printers
-      .flatMap((printer: { queue: any }) => printer.queue)
-      .find((job: { id: any }) => job?.id === data.job_id)
-
-    if (job) {
-      // Clear any existing timer
-      if (job.timer) {
-        clearInterval(job.timer)
-        delete job.timer
-      }
-
-      // Update job.start_time to the current timestamp
-      job.start_time = Math.floor(Date.now() / 1000)
-
-      // Start the timer
-      job.timer = startTimer(job, job.start_time, job.elapsed_time, false)
-    }
-  })
-}
-
-function startTimer(job: any, start_time: number, elapsed_time: number, isPaused: boolean) {
-  // Ensure start_time and elapsed_time are defined and are numbers
-  start_time = start_time || 0
-  elapsed_time = elapsed_time || 0
-
-  return setInterval(() => {
-    // Calculate the elapsed time
-    let current_elapsed_time = Math.floor(Date.now() / 1000) - start_time + elapsed_time
-
-    // Calculate the remaining time
-    const remaining_time = isPaused ? job.remaining_time : job.total_time - current_elapsed_time
-
-    // Update the job's time variables
-    job.total_time = isPaused ? job.total_time + 1 : job.total_time
-    job.elapsed_time = current_elapsed_time
-    job.remaining_time = remaining_time
-
-    // If the job is finished, stop the timer
-    if (current_elapsed_time >= job.total_time) {
-      clearInterval(job.timer)
-      delete job.timer
-    }
-  }, 1000)
 }
 
 // function to delete job from db
 export function useDeleteJob() {
   return {
     async deleteJob(job: Job) {
-      let jobid = job?.id;
+      let jobid = job?.id
       try {
         const response = await api(`deletejob`, { jobid })
-        return response;
+        return response
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while deleting the job')

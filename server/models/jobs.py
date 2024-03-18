@@ -32,10 +32,9 @@ class Job(db.Model):
     released = 0 
     filePause = 0
     progress = 0.0
-    total_time = 0
-    start_time = 0
-    elapsed_time = 0
-    pause_time = 0
+    time_started = False
+    #total, eta, timestart, pause time 
+    job_time = job_time = [0, datetime.min, datetime.min, datetime.min]
 
 
     
@@ -48,12 +47,10 @@ class Job(db.Model):
         self.file_name_pk = None
         self.favorite = favorite
         self.released = 0 
-        self.progress = 0.0
-        self.total_time = 0
-        self.start_time = 0
-        self.elapsed_time = 0
-        self.pause_time = 0
         self.filePause = 0
+        self.progress = 0.0
+        self.time_started = False
+        self.job_time = [0, datetime.min, datetime.min, datetime.min]
 
     def __repr__(self):
         return f"Job(id={self.id}, name={self.name}, printer_id={self.printer_id}, status={self.status})"
@@ -263,7 +260,15 @@ class Job(db.Model):
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to clear space. Database error"}), 500
-    
+
+    @classmethod 
+    def setDBstatus(cls, jobid, status):
+        cls.update_job_status(jobid, status)
+
+    @classmethod 
+    def getPathForDelete(cls, file_name):
+        return os.path.join('../uploads', file_name)
+   
     @classmethod
     def getFavoriteJobs(cls):
         try:
@@ -350,8 +355,8 @@ class Job(db.Model):
     # added a getProgress method to get the progress of a job
     def getProgress(self):
         return self.progress
-    
-    def getTimeSeconds(self, comment_lines):
+
+    def getTimeFromFile(self, comment_lines):
         # job_line can look two ways:
         # 1. ;TIME:seconds
         # 2. ; estimated printing time (normal mode) = minutes seconds
@@ -362,36 +367,76 @@ class Job(db.Model):
         else:
             # search for the line that contains "printing time", then the time estimate is in the format of "; estimated printing time (normal mode) = minutes seconds"
             time_line = next(line for line in comment_lines if "time" in line)
-            time_minutes, time_seconds = map(int, re.findall(r'\d+', time_line))
-            time_seconds += time_minutes * 60
+            time_values = re.findall(r'\d+', time_line)
+
+            # Initialize all time units to 0
+            time_days = time_hours = time_minutes = time_seconds = 0
+
+            # Assign values from right to left (seconds, minutes, hours, days)
+            time_values = time_values[::-1]
+            if len(time_values) > 0:
+                time_seconds = int(time_values[0])
+            if len(time_values) > 1:
+                time_minutes = int(time_values[1])
+            if len(time_values) > 2:
+                time_hours = int(time_values[2])
+            if len(time_values) > 3:
+                time_days = int(time_values[3])
+
+            # Calculate total time in seconds
+            time_seconds = time_days * 24 * 60 * 60 + time_hours * 60 * 60 + time_minutes * 60 + time_seconds
+        # date = datetime.fromtimestamp(time_seconds)
         return time_seconds
-
-    def startTime(self, time_seconds):
-        self.total_time = time_seconds
-        self.start_time = time.time()
-        current_app.socketio.emit('job_time', {'job_id': self.id, 'start_time': self.start_time, 'total_time': self.total_time})
     
-    def setPauseTime(self):
-        self.pause_time = time.time()
-        self.elapsed_time += self.pause_time - self.start_time
-        current_app.socketio.emit('job_pause', {'job_id': self.id, 'pause_time': self.pause_time, 'elapsed_time': self.elapsed_time})
+    def getTimeStarted(self):
+        return self.time_started
 
-    def resumeTime(self):
-        self.start_time = time.time()
-        current_app.socketio.emit('job_resume', {'job_id': self.id, 'start_time': self.start_time, 'elapsed_time': self.elapsed_time}) 
+    def calculateEta(self):
+        now = datetime.now()
+        eta = timedelta(seconds=self.job_time[0]) + now
+        return eta
+
+    def updateEta(self):
+        now = datetime.now()
+        pause_time = self.getJobTime()[3]
+
+        duration = now - pause_time
+
+        new_eta = self.getJobTime()[1] + timedelta(seconds=1)
+        return new_eta
     
-    @classmethod 
-    def setDBstatus(cls, jobid, status):
-        cls.update_job_status(jobid, status)
+    def colorEta(self):
+        print("before ETA: ", self.getJobTime()[1])
 
-    @classmethod 
-    def getPathForDelete(cls, file_name):
-        return os.path.join('../uploads', file_name)
+        now = datetime.now()
+        pause_time = self.getJobTime()[3]
+        duration = now - pause_time
+        eta = self.getJobTime()[1] + duration
+        return eta 
+
+    def calculateTotalTime(self):
+        total_time = self.getJobTime()[0]
+
+        # Add one second to total_time
+        total_time+=1
+        return total_time
+    
+    def calculateColorChangeTotal(self):
+        print("before Total Time: ", self.getJobTime()[0])
+
+        now = datetime.now()
+        pause_time = self.getJobTime()[3]
+        duration = now - pause_time
+        duration_in_seconds = duration.total_seconds()
+        total_time = self.getJobTime()[0] + duration_in_seconds
+        return total_time
+    
+    def getJobTime(self):
+        return self.job_time
     
     def getReleased(self): 
         return self.released
 
-        
     def setPath(self, path): 
         self.path = path 
 
@@ -400,7 +445,20 @@ class Job(db.Model):
         
     def setFile(self, file):
         self.file = file
-        
+
     def setReleased(self, released):
         self.released = released
         current_app.socketio.emit('release_job', {'job_id': self.id, 'released': released}) 
+
+    def setTimeStarted(self, time_started):
+        self.time_started = time_started
+
+    def setTime(self, timeData, index):
+        # timeData = datetime(y, m, d, h, min, s)
+        # print("TimeData: ", timeData, " Index: ", index)
+        self.job_time[index] = timeData
+        if index==0: 
+            current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData, 'index': index}) 
+        else: 
+            current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData.isoformat(), 'index': index}) 
+

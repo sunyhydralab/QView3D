@@ -19,6 +19,7 @@ export interface Device {
   date?: Date
   id?: number
   error?: string
+  canPause?: number
   queue?: Job[] //  Store job array to store queue for each printer. 
 }
 
@@ -409,7 +410,23 @@ export function setupErrorSocket(printers: any) {
   console.log('queue socket set up')
 }
 
+export function setupCanPauseSocket(printers: any) {
+  socket.on("can_pause", ((data: any) => {
+    if (printers && printers.value) {
+      const printer = printers.value.find((p: Device) => p.id === data.printerid)
+      if (printer) {
+        printer.canPause = data.canPause;
+      }
+    } else {
+      console.error('printers or printers.value is undefined');
+    }
+  }
+  ))
+  console.log('queue socket set up')
+}
+
 // function needs to disconnect the socket when the component is unmounted
 export function disconnectStatusSocket() {
   socket.disconnect()
 }
+
