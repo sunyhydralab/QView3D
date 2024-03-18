@@ -40,6 +40,7 @@ export function jobTime(job: Job, printers: any) {
   let startTime: number | null = null;
 
   const updateJobTime = () => {
+
     if (printer.status !== 'printing' && printer.status !== 'paused') {
       clearInterval(job.timer)
       delete job.timer
@@ -47,6 +48,7 @@ export function jobTime(job: Job, printers: any) {
     }
 
     let eta = job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
+
     job.job_client!.eta = eta
 
     if (printer.status === 'printing') {
@@ -60,7 +62,7 @@ export function jobTime(job: Job, printers: any) {
     // Convert totalTime to milliseconds
     job.job_client!.total_time = totalTime * 1000
     
-    if (job.job_client!.elapsed_time > job.job_client!.total_time) {
+    if (job.job_client!.elapsed_time > job.job_server![0]) {
       job.job_client!.extra_time = Date.now() - eta
     } else {
       // Only decrease remaining time if printer status is 'printing'
@@ -96,7 +98,6 @@ export function setupTimeSocket(printers: any) {
       job.job_server = [0, '00:00:00', '00:00:00', '00:00:00']
 
     }
-
 
     if(typeof(data.new_time) === 'number'){
       job.job_server[data.index] = data.new_time
