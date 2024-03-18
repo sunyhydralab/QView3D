@@ -385,8 +385,6 @@ class Job(db.Model):
 
             # Calculate total time in seconds
             time_seconds = time_days * 24 * 60 * 60 + time_hours * 60 * 60 + time_minutes * 60 + time_seconds
-
-        print(f"Time in seconds: {time_seconds}")
         # date = datetime.fromtimestamp(time_seconds)
         return time_seconds
     
@@ -395,9 +393,6 @@ class Job(db.Model):
 
     def calculateEta(self):
         now = datetime.now()
-        # duration = now - self.job_time[0]
-        print(type(self.job_time[0]))
-        print(type(now))
         eta = timedelta(seconds=self.job_time[0]) + now
         return eta
 
@@ -417,7 +412,6 @@ class Job(db.Model):
         pause_time = self.getJobTime()[3]
         duration = now - pause_time
         eta = self.getJobTime()[1] + duration
-        print("ETA: ", eta)
         return eta 
 
     def calculateTotalTime(self):
@@ -435,25 +429,13 @@ class Job(db.Model):
         duration = now - pause_time
         duration_in_seconds = duration.total_seconds()
         total_time = self.getJobTime()[0] + duration_in_seconds
-        print("Total Time: ", total_time)
         return total_time
     
     def getJobTime(self):
         return self.job_time
     
-    # def startTime(self, time_seconds):
-    #     self.total_time = time_seconds
-    #     self.start_time = time.time()
-    #     current_app.socketio.emit('job_time', {'job_id': self.id, 'start_time': self.start_time, 'total_time': self.total_time})
-    
-    # def setPauseTime(self):
-    #     self.pause_time = time.time()
-    #     self.elapsed_time += self.pause_time - self.start_time
-    #     current_app.socketio.emit('job_pause', {'job_id': self.id, 'pause_time': self.pause_time, 'elapsed_time': self.elapsed_time})
-
-    # def resumeTime(self):
-    #     self.start_time = time.time()
-    #     current_app.socketio.emit('job_resume', {'job_id': self.id, 'start_time': self.start_time, 'elapsed_time': self.elapsed_time}) 
+    def getReleased(self): 
+        return self.released
 
     def setPath(self, path): 
         self.path = path 
@@ -463,6 +445,10 @@ class Job(db.Model):
         
     def setFile(self, file):
         self.file = file
+
+    def setReleased(self, released):
+        self.released = released
+        current_app.socketio.emit('release_job', {'job_id': self.id, 'released': released}) 
 
     def setTimeStarted(self, time_started):
         self.time_started = time_started

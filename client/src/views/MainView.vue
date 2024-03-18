@@ -31,9 +31,6 @@ onMounted(async () => {
     setupErrorSocket(printers)
     setupTimeSocket(printers.value)
     setupReleaseSocket(printers.value)
-
-    console.log("PRINTERS: ", printers.value)
-
   } catch (error) {
     console.error('There has been a problem with your fetch operation:', error)
   }
@@ -100,7 +97,6 @@ function formatETA(milliseconds: number): string {
 }
 
 const startPrint = async (printerid: number, jobid: number) => {
-  console.log("Starting print: ", printerid, jobid)
   await start(jobid, printerid)
 }
 </script>
@@ -270,8 +266,8 @@ const startPrint = async (printerid: number, jobid: number) => {
 
       <tr v-for="printer in printers" :key="printer.id">
         <td
-          v-if="(printer.status && (printer.status === 'printing' || printer.status === 'complete' || printer.status == 'paused')) && (printer.queue && printer.queue.length > 0 && printer.queue?.[0].status != 'inqueue')">
-          {{ printer.queue?.[0].id }}
+          v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+          {{ printer.queue?.[0]?.id }}
         </td>
         <td v-else><i>idle</i></td>
         <td><button type="button" class="btn btn-link" @click="sendToQueueView(printer.name)">{{ printer.name
@@ -281,8 +277,14 @@ const startPrint = async (printerid: number, jobid: number) => {
         <td>
           <div class="d-flex align-items-center">
             <div>
-              <p class="mb-0 me-2" :style="printer.status === 'colorchange' ? 'color: red' : ''">
-                {{ printer.status === 'colorchange' ? 'Change filament' : printer.status }}
+              <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
+                Change filament
+              </p>
+              <p v-else-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0" style="color: red" class="mb-0 me-2">
+                Waiting for release
+              </p>
+              <p v-else class="mb-0 me-2">
+                {{ printer.status }}
               </p>
             </div>
             <div class="dropdown">

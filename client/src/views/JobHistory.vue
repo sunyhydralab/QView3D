@@ -71,19 +71,6 @@ onMounted(async () => {
 })
 
 const handleRerun = async (job: Job, printer: Device) => {
-    try {
-        await rerunJob(job, printer);
-        console.log("JOBS FILE", job.file)
-        // Fetch the updated list of jobs after rerunning the job
-        // so when a job is rerun, the job history is updated
-        const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-        const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds)
-
-        jobs.value = joblist;
-        totalJobs.value = total;
-    } catch (error) {
-        console.error(error)
-    }
     await router.push({
         name: 'SubmitJobVue', // the name of the route to SubmitJob.vue
         params: { job: JSON.stringify(job), printer: JSON.stringify(printer) } // the job and printer to fill in the form
