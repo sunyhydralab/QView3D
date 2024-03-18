@@ -2,13 +2,16 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRetrievePrintersInfo, setupQueueSocket, setupStatusSocket, type Device } from '../model/ports'
 import { useRerunJob, useRemoveJob, bumpJobs, type Job } from '../model/jobs';
-import { useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { nextTick } from 'vue';
+import { toast } from '@/model/toast';
 
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
 const { bumpjob } = bumpJobs()
+
+const router = useRouter()
 
 const selectedJobs = ref<Array<Job>>([]);
 // Map to track the state of "Select All" checkbox for each printer
@@ -23,7 +26,7 @@ let selectAllCheckbox = ref(false);
 onMounted(async () => {
   try {
     const printerInfo = await retrieveInfo()
-    printers.value = printerInfo 
+    printers.value = printerInfo
     setupQueueSocket(printers)
     setupStatusSocket(printers)
   } catch (error) {
@@ -42,7 +45,15 @@ const handleRerun = async (job: Job, printer: Printer) => {
   await rerunJob(job, printer)
 };
 
+const handleRerunToSubmit = async (job: Job, printer: Printer) => {
+  await router.push({
+        name: 'SubmitJobVue', // the name of the route to SubmitJob.vue
+        params: { job: JSON.stringify(job), printer: JSON.stringify(printer) } // the job and printer to fill in the form
+    });
+};
+
 const deleteSelectedJobs = async () => {
+  let response = null
   // Loop through the selected jobs and remove them from the printer's queue
   for (const selectedJob of selectedJobs.value) {
     const foundPrinter = printers.value.find((printer) => printer.id === selectedJob.printerid);
@@ -52,9 +63,16 @@ const deleteSelectedJobs = async () => {
         foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
       }
     }
-    await removeJob(selectedJob);
+    response = await removeJob(selectedJob);
   }
-
+  if (response.success == false) {
+    toast.error(response.message)
+  } else if (response.success === true) {
+    toast.success(response.message)
+  } else {
+    console.error('Unexpected response:', response)
+    toast.error('Failed to remove job. Unexpected response.')
+  }
   // Clear the selected jobs array
   selectedJobs.value = [];
   selectAllCheckbox.value = false;
@@ -144,7 +162,8 @@ const canBumpUp = (job: Job, printer: Printer) => {
 <template>
   <div class="container">
 
-    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
+      data-bs-backdrop="static">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header">
@@ -152,11 +171,13 @@ const canBumpUp = (job: Job, printer: Printer) => {
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <p>Are you sure you want to remove these job(s) from queue? Job will be saved to history with a final status of <i>cancelled</i>.</p>
+            <p>Are you sure you want to remove these job(s) from queue? Job will be saved to history with a final status
+              of <i>cancelled</i>.</p>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="deleteSelectedJobs">Remove</button>
+            <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
+              @click="deleteSelectedJobs">Remove</button>
 
           </div>
         </div>
@@ -164,12 +185,13 @@ const canBumpUp = (job: Job, printer: Printer) => {
     </div>
 
     <b>Queue View</b>
-    <button class="btn btn-danger w-100" data-bs-toggle="modal" 
-    data-bs-target="#exampleModal" :disabled="selectedJobs.length === 0" >
+    <button class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#exampleModal"
+      :disabled="selectedJobs.length === 0">
       Remove from queue
     </button>
 
-    <div v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">here
+    <div v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">
+        here
       </RouterLink>, or restart the server.</div>
 
     <div v-else class="accordion" id="accordionPanelsStayOpenExample">
@@ -180,7 +202,7 @@ const canBumpUp = (job: Job, printer: Printer) => {
             :aria-controls="'panelsStayOpen-collapse' + index">
             <b>{{ printer.name }}:&nbsp;
               <span class="status-text" :style="{ color: statusColor(printer.status) }">{{
-                capitalizeFirstLetter(printer.status) }}</span>
+              capitalizeFirstLetter(printer.status) }}</span>
             </b>
           </button>
         </h2>
@@ -221,7 +243,7 @@ const canBumpUp = (job: Job, printer: Printer) => {
                       </button>
                       <div class="dropdown-menu">
                         <button class="dropdown-item" v-for="otherPrinter in printers.filter(p => p.id !== printer.id)"
-                          :key="otherPrinter.id" @click="handleRerun(job, otherPrinter)">{{ otherPrinter.name
+                          :key="otherPrinter.id" @click="handleRerunToSubmit(job, otherPrinter)">{{ otherPrinter.name
                           }}</button>
                       </div>
                     </div>
@@ -240,11 +262,13 @@ const canBumpUp = (job: Job, printer: Printer) => {
                         type="button" data-bs-toggle="dropdown"
                         :disabled="printer.queue && job.status === 'printing'"></button>
                       <ul class="dropdown-menu">
-                        <li class="dropdown-item" v-if="canBumpUp(job, printer)" @click="bump(job, printer, 'up')">Bump Up
+                        <li class="dropdown-item" v-if="canBumpUp(job, printer)" @click="bump(job, printer, 'up')">Bump
+                          Up
                         </li>
                         <li class="dropdown-item" v-if="canBumpUp(job, printer)" @click="bump(job, printer, 'top')">Send
                           to Top</li>
-                        <li class="dropdown-item" v-if="!isLastJob(job, printer)" @click="bump(job, printer, 'down')">Bump
+                        <li class="dropdown-item" v-if="!isLastJob(job, printer)" @click="bump(job, printer, 'down')">
+                          Bump
                           Down</li>
                         <li class="dropdown-item" v-if="!isLastJob(job, printer)" @click="bump(job, printer, 'bottom')">
                           Send to Bottom</li>
