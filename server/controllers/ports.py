@@ -119,7 +119,7 @@ def moveHead():
         
         Printer.moveHead(port)
         
-        return {"success": True, "message": "Printer port(s) successfully updated."}
+        return {"success": True, "message": "Head move successful."}
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
