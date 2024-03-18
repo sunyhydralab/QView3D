@@ -63,10 +63,8 @@ def editName():
         data = request.get_json() 
         printerid = data['printerid']
         name = data['newname']
-        print(name)
         res = printer_status_service.editName(printerid, name)
         return res 
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
-    
