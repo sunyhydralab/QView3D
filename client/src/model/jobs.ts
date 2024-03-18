@@ -79,14 +79,15 @@ export function useAutoQueue() {
       try {
         const response = await api('autoqueue', job)
         if (response) {
-          if (response.success == false) {
-            toast.error(response.message)
-          } else if (response.success === true) {
-            toast.success(response.message)
-          } else {
-            console.error('Unexpected response:', response)
-            toast.error('Failed to queue job. Unexpected response')
-          }
+          return response 
+          // if (response.success == false) {
+          //   toast.error(response.message)
+          // } else if (response.success === true) {
+          //   toast.success(response.message)
+          // } else {
+          //   console.error('Unexpected response:', response)
+          //   toast.error('Failed to queue job. Unexpected response')
+          // }
         } else {
           console.error('Response is undefined or null')
           toast.error('Failed to queue job. Unexpected response')
@@ -137,14 +138,15 @@ export function useRemoveJob() {
       try {
         const response = await api('canceljob', { jobpk })
         if (response) {
-          if (response.success == false) {
-            toast.error(response.message)
-          } else if (response.success === true) {
-            toast.success(response.message)
-          } else {
-            console.error('Unexpected response:', response)
-            toast.error('Failed to remove job. Unexpected response.')
-          }
+          return response
+          // if (response.success == false) {
+          //   toast.error(response.message)
+          // } else if (response.success === true) {
+          //   toast.success(response.message)
+          // } else {
+          //   console.error('Unexpected response:', response)
+          //   toast.error('Failed to remove job. Unexpected response.')
+          // }
         } else {
           console.error('Response is undefined or null')
           toast.error('Failed to remove job. Unexpected response')

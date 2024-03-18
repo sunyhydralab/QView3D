@@ -90,6 +90,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
 const handleSubmit = async () => {
     let isFavoriteSet = false;
 
+    let res = null
     if (selectedPrinters.value.length == 0) {
         let numPrints = quantity.value
         for (let i = 0; i < numPrints; i++) {
@@ -107,7 +108,7 @@ const handleSubmit = async () => {
             }
 
             try {
-                await auto(formData)
+                res = await auto(formData)
                 if (form.value) {
                     form.value.reset()
                 }
@@ -118,7 +119,6 @@ const handleSubmit = async () => {
         resetValues()
     } else {
         let sub = validateQuantity()
-        let res = null
         if (sub == true) {
             if (selectedPrinters.value.length == 0) {
                 let numPrints = quantity.value
@@ -187,15 +187,14 @@ const handleSubmit = async () => {
                 resetValues()
             }
         }
-        if (res.success == true) {
-            toast.success('Job added to queue')
-        } else {
-            toast.error('Job failed to add to queue')
-        }
-
     }
-
-
+    if (res.success == true) {
+        toast.success('Job added to queue')
+    } else if(res.success == false) {
+        toast.error('Job failed to add to queue')
+    }else{
+        toast.error('Failed to add job to queue. Unexpected response.')
+    }
 }
 
 function resetValues() {
