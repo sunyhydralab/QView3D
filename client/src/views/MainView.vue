@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useSetStatus, type Device, printers } from '@/model/ports';
-import { type Job, useReleaseJob, useStartJob, useRemoveJob, useGetFile } from '@/model/jobs';
+import { useSetStatus, type Device, printers, useRetrievePrintersInfo } from '@/model/ports';
+import { type Job, useReleaseJob, useStartJob, useRemoveJob, useGetFile, jobTime } from '@/model/jobs';
 import { useRouter } from 'vue-router';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import draggable from 'vuedraggable'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 
@@ -11,13 +11,22 @@ const { releaseJob } = useReleaseJob()
 const { removeJob } = useRemoveJob()
 const { getFile } = useGetFile()
 const { start } = useStartJob()
-
 const router = useRouter();
 let currentJob = ref<Job>();
 let currentPrinter = ref<Device>();
 
 let isGcodeImageVisible = ref(false)
 let isGcodeLiveViewVisible = ref(false)
+
+// import { useRetrievePrintersInfo, printers } from '../model/ports';
+
+// const { retrieveInfo } = useRetrievePrintersInfo();
+// onMounted(async () => {
+//   printers.value = await retrieveInfo()
+  
+//   // await jobTime(printers)
+// }
+// )
 
 const sendToQueueView = (printer: Device | undefined) => {
   if (printer) {
@@ -66,6 +75,7 @@ function formatETA(milliseconds: number): string {
 }
 
 const openModal = async (job: Job, printerName: string, num: number, printer: Device) => {
+  await jobTime(job, printers)
   currentJob.value = job
   currentJob.value.printer = printerName
   currentPrinter.value = printer
@@ -323,10 +333,10 @@ const startPrint = async (printerid: number, jobid: number) => {
             <td>
               <div class="d-flex align-items-center">
                 <div>
-                  <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
+                  <!-- <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
                     Change filament
-                  </p>
-                  <p v-else-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0" style="color: red"
+                  </p> -->
+                  <p v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0" style="color: red"
                     class="mb-0 me-2">
                     Waiting for release
                   </p>

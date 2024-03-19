@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { printers, useGetPorts, useRegisterPrinter, useRetrievePrintersInfo, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useMoveHead } from '../model/ports'
 import { ref, onMounted } from 'vue';
+import { toast } from '../model/toast'
 
 const { ports } = useGetPorts();
 const { retrieveInfo } = useRetrievePrintersInfo();
@@ -80,9 +81,25 @@ const doQueueRestore = async (printer: Device) => {
 
 const doDelete = async (printer: Device) => {
     printers.value = printers.value.filter(p => p.id !== printer.id)
-    await removeThread(printer.id)
     await nullifyJobs(printer.id)
-    await deletePrinter(printer.id)
+
+    let response = await deletePrinter(printer.id)
+    if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+            await removeThread(printer.id)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to delete printer. Unexpected response.')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to delete printer. Unexpected response')
+    }
+
+    // await removeThread(printer.id)
 }
 
 const saveName = async (printer: Device) => {

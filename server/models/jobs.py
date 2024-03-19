@@ -263,9 +263,10 @@ class Job(db.Model):
             # old_jobs = Job.query.filter(Job.date < thirty_seconds_ago).all()
 
             for job in old_jobs:
-                job.file = None  # Set file to None
-                if "Removed after 6 months" not in job.file_name_original:
-                    job.file_name_original = f"{job.file_name_original}: Removed after 6 months"
+                if(job.favorite==0):
+                    job.file = None  # Set file to None
+                    if "Removed after 6 months" not in job.file_name_original:
+                        job.file_name_original = f"{job.file_name_original}: Removed after 6 months"
             db.session.commit()  # Commit the changes
             return {"success": True, "message": "Space cleared successfully."}
         except SQLAlchemyError as e:

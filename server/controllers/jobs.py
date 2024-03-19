@@ -395,7 +395,7 @@ def startPrint():
         return jsonify({"success": True, "message": "Job started successfully."}), 200
     except Exception as e:
         print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        return jsonify({"error": "Unexpected ersetupPortRepairSocketror occurred"}), 500
     
 def findPrinterObject(printer_id): 
     threads = printer_status_service.getThreadArray()

@@ -34,56 +34,78 @@ export interface Job {
 }
 
 export function jobTime(job: Job, printers: any) {
-  const printerid = job.printerid
-  const printer = printers.find((printer: { id: number }) => printer.id === printerid)
+  if(printers){
 
-  // job.job_client!.remaining_time = NaN
+    if (!job.job_client) {
+      job.job_client = {
+        total_time: 0,
+        eta: 0,
+        elapsed_time: 0,
+        extra_time: 0,
+        remaining_time: NaN
+      }
+    }
+    if(!job.job_server){
+      // job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
+      job.job_server = [0, new Date(0, 0, 0, 0), new Date(0, 0, 0, 0), new Date(0, 0, 0, 0)]
 
-  const updateJobTime = () => {
-    if (printer.status !== 'printing') {
-      clearInterval(job.timer)
-      delete job.timer
-      return
     }
 
-    let totalTime = job.job_server![0] 
-    job.job_client!.total_time = totalTime * 1000
+    const printerid = job.printerid
+    const printer = printers.value.find((printer: { id: number }) => printer.id === printerid)
 
-    let eta = job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
-    job.job_client!.eta = eta + job.job_client!.extra_time
+    // job.job_client!.remaining_time = NaN
 
-    if (printer.status === 'printing' || printer.status === 'colorchange' || printer.status === 'paused') {
-      const now = Date.now();
-      const elapsedTime = now - new Date(job.job_server![2]).getTime();
-      job.job_client!.elapsed_time = Math.round(elapsedTime / 1000) * 1000;
-      if(!isNaN(job.job_client!.elapsed_time)){
-        if(job.job_client!.elapsed_time <= job.job_client!.total_time){
-          job.job_client!.remaining_time = job.job_client!.total_time - job.job_client!.elapsed_time
+    const updateJobTime = () => {
+      if (printer.status !== 'printing') {
+        clearInterval(job.timer)
+        delete job.timer
+        return
+      }
+
+      let totalTime = job.job_server![0] 
+      job.job_client!.total_time = totalTime * 1000
+
+      let eta = job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
+      job.job_client!.eta = eta + job.job_client!.extra_time
+
+      if (printer.status === 'printing' || printer.status === 'colorchange' || printer.status === 'paused') {
+        const now = Date.now();
+        const elapsedTime = now - new Date(job.job_server![2]).getTime();
+        job.job_client!.elapsed_time = Math.round(elapsedTime / 1000) * 1000;
+        if(!isNaN(job.job_client!.elapsed_time)){
+          if(job.job_client!.elapsed_time <= job.job_client!.total_time){
+            job.job_client!.remaining_time = job.job_client!.total_time - job.job_client!.elapsed_time
+          }
         }
+      }
+
+      if (job.job_client!.elapsed_time > job.job_client!.total_time) {
+        job.job_client!.extra_time = Date.now() - eta
+      }
+
+      // Update elapsed_time after the first second
+      if (job.job_client!.elapsed_time === 0) {
+        job.job_client!.elapsed_time = 1;
       }
     }
 
-    if (job.job_client!.elapsed_time > job.job_client!.total_time) {
-      job.job_client!.extra_time = Date.now() - eta
-    }
-
-    // Update elapsed_time after the first second
-    if (job.job_client!.elapsed_time === 0) {
-      job.job_client!.elapsed_time = 1;
-    }
-  }
-
-  // Call updateJobTime immediately when jobTime is called
-  updateJobTime();
+    // Call updateJobTime immediately when jobTime is called
+    updateJobTime();
 
   // Continue to call updateJobTime at regular intervals
   job.timer = setInterval(updateJobTime, 1000)
+}else{
+  console.error('printers is undefined');
+
+}
 }
 
 export function setupTimeSocket(printers: any) {
   // Always set up the socket connection and event listener
   socket.on('set_time', (data: any) => {
-    const job = printers
+    if(printers){
+    const job = printers.value
       .flatMap((printer: { queue: any }) => printer.queue)
       .find((job: { id: any }) => job?.id === data.job_id)
 
@@ -107,6 +129,9 @@ export function setupTimeSocket(printers: any) {
     }
 
     jobTime(job, printers)
+  }else {
+    console.error('printers or printers.value is undefined');
+  }
   })
 }
 

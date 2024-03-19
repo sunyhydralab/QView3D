@@ -206,7 +206,9 @@ class Printer(db.Model):
     def deletePrinter(cls, printerid):
         try:
             ser = serial.Serial(cls.query.get(printerid).device, 115200, timeout=1)
-            ser.close()
+            if(ser and ser.isOpen()):
+                ser.close()
+
             printer = cls.query.get(printerid)
             db.session.delete(printer)
             db.session.commit()
@@ -235,9 +237,16 @@ class Printer(db.Model):
     @classmethod
     def editPort(cls, printerid, printerport):
         try:
+   
+            print("Updating port for printer id ", printerid, " to ", printerport)  # Debug print
+    # Your existing editPort code here...)
             printer = cls.query.get(printerid)
             printer.device = printerport
             db.session.commit()
+            
+            current_app.socketio.emit(
+                "port_repair", {"printer_id": printerid, "device": printerport}
+            )
             return {"success": True, "message": "Printer port successfully updated."}
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
@@ -394,21 +403,18 @@ class Printer(db.Model):
                         job.setTime(datetime.now(), 2)
                         print(job.job_time)
 
-                    if("M600" in line):
-                        job.setTime(datetime.now(), 3)
-                        # job.setTime(job.calculateTotalTime(), 0)
-                        # job.setTime(job.updateEta(), 1)
-                        self.setStatus("colorchange")
-                        job.setFilePause(1)
-
-                    # if self.prevMes == "M602":
-                    #     self.prevMes=""
+                    # if("M600" in line):
+                    #     print("HERE")
+                    #     job.setTime(datetime.now(), 3)
+                    #     # job.setTime(job.calculateTotalTime(), 0)
+                    #     # job.setTime(job.updateEta(), 1)
+                    #     print("color change command")
+                    #     self.setStatus("colorchange")
+                    #     job.setFilePause(1)
+                    
                                 
                     res = self.sendGcode(line)
                     
-                    if self.prevMes == "M602":
-                        self.prevMes=""
-
                     if(job.getFilePause() == 1):
                         # self.setStatus("printing")
                         job.setTime(job.colorEta(), 1)
@@ -416,6 +422,26 @@ class Printer(db.Model):
                         job.setTime(datetime.min, 3)
                         job.setFilePause(0)
                         self.setStatus("printing")
+                    
+                    if("M600" in line):
+                        print("HERE")
+                        job.setTime(datetime.now(), 3)
+                        # job.setTime(job.calculateTotalTime(), 0)
+                        # job.setTime(job.updateEta(), 1)
+                        print("color change command")
+                        self.setStatus("colorchange")
+                        job.setFilePause(1)
+                    
+                    if self.prevMes == "M602":
+                        self.prevMes=""
+
+                    # if(job.getFilePause() == 1):
+                    #     # self.setStatus("printing")
+                    #     job.setTime(job.colorEta(), 1)
+                    #     job.setTime(job.calculateColorChangeTotal(), 0)
+                    #     job.setTime(datetime.min, 3)
+                    #     job.setFilePause(0)
+                    #     self.setStatus("printing")
 
                         
                     #  software pausing        
@@ -440,7 +466,7 @@ class Printer(db.Model):
                                 break
 
                     # software color change
-                    if (self.getStatus()=="colorchange"):
+                    if (self.getStatus()=="colorchange" and job.getFilePause()==0):
                         job.setTime(datetime.now(), 3)
                         # job.setTime(job.calculateTotalTime(), 0)
                         # job.setTime(job.updateEta(), 1)
@@ -622,6 +648,7 @@ class Printer(db.Model):
 
     def setStatus(self, newStatus):
         try:
+            print("SETTING STATUS TO:", newStatus)
             self.status = newStatus
             # print(self.status)
             # Emit a 'status_update' event with the new status
