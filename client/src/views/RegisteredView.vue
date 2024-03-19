@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { printers, useGetPorts, useRegisterPrinter, useRetrievePrintersInfo, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device } from '../model/ports'
+import { printers, useGetPorts, useRegisterPrinter, useRetrievePrintersInfo, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useMoveHead } from '../model/ports'
 import { ref, onMounted } from 'vue';
 
 const { ports } = useGetPorts();
-const { register } = useRegisterPrinter();
 const { retrieveInfo } = useRetrievePrintersInfo();
+const { register } = useRegisterPrinter();
 const { hardReset } = useHardReset();
 const { queueRestore } = useQueueRestore();
 const { deletePrinter } = useDeletePrinter();
@@ -14,6 +14,7 @@ const { removeThread } = useRemoveThread();
 const { editThread } = useEditThread();
 const { diagnose } = useDiagnosePrinter();
 const { repair } = useRepair()
+const {move} = useMoveHead()
 
 let devices = ref<Array<Device>>([]); // Array of all devices -- stores ports for user to select/register
 let selectedDevice = ref<Device | null>(null) // device user selects to register.
@@ -35,7 +36,6 @@ const selectedPrinter = ref<Device | null>(null);
 onMounted(async () => {
     try {
         const allDevices = await ports();  // load all ports
-        printers.value = await retrieveInfo();  // loads registered printers into registered array
 
         devices.value = allDevices
 
@@ -120,8 +120,32 @@ const openModal = (title: any, message: any, action: any, printer: Device) => {
     selectedPrinter.value = printer;
 };
 
+const doMove = async(printer: Device) => {
+    await move(printer.device)
+}
+
 </script>
 <template>
+<div class="modal fade" id="moveModal" tabindex="-1" aria-labelledby="moveModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="moveModalLabel">Move Printer Head</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    Are you sure you want to move the printer head? Head will move 10mm in the z-direction! Please check printer(s) before!
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="doMove(selectedPrinter!)">Move</button>
+            </div>
+        </div>
+    </div>
+</div>
+
     <div class="container">
 
         <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
@@ -133,7 +157,6 @@ const openModal = (title: any, message: any, action: any, printer: Device) => {
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <!-- <p>{{ modalMessage }}</p> -->
                         <p v-html="modalMessage"></p>
                     </div>
                     <div class="modal-footer">
@@ -217,6 +240,9 @@ const openModal = (title: any, message: any, action: any, printer: Device) => {
                     <input type="submit" value="Submit">
                 </div>
             </form>
+            <div v-if="selectedDevice">
+                <br>
+                <button data-bs-toggle="modal" data-bs-target="#moveModal">Move Printer Head</button>            </div>
         </div>
         <button @click="doRepair">Repair Ports</button>
     </div>

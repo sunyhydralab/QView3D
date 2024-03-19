@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { useSetStatus, type Device, printers } from '@/model/ports';
-import { type Job, useReleaseJob } from '@/model/jobs';
+import { type Job, useReleaseJob, useStartJob, useRemoveJob, useGetFile } from '@/model/jobs';
 import { useRouter } from 'vue-router';
 import { ref } from 'vue';
 import draggable from 'vuedraggable'
+import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 
 const { setStatus } = useSetStatus();
 const { releaseJob } = useReleaseJob()
+const { removeJob } = useRemoveJob()
+const { getFile } = useGetFile()
+const { start } = useStartJob()
 
 const router = useRouter();
 let currentJob = ref<Job>();
@@ -37,17 +41,6 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
   await releaseJob(jobToFind, key, printerIdToPrintTo)
 }
 
-const openModal = (job: Job, printerName: string, num: number, printer: Device) => {
-  currentJob.value = job
-  currentJob.value.printer = printerName
-  currentPrinter.value = printer
-  if (num == 1) {
-    // isGcodeLiveViewVisible.value = true
-  } else if (num == 2) {
-    // isGcodeImageVisible.value = true
-  }
-}
-
 function formatTime(milliseconds: number): string {
   const seconds = Math.floor((milliseconds / 1000) % 60)
   const minutes = Math.floor((milliseconds / (1000 * 60)) % 60)
@@ -57,19 +50,40 @@ function formatTime(milliseconds: number): string {
   const minutesStr = minutes < 10 ? '0' + minutes : minutes
   const secondsStr = seconds < 10 ? '0' + seconds : seconds
 
-  if ((hoursStr + ':' + minutesStr + ':' + secondsStr === 'NaN:NaN:NaN') || (hoursStr + ':' + minutesStr + ':' + secondsStr === '00:00:00')) return 'Waiting to start heating...'
+  if ((hoursStr + ':' + minutesStr + ':' + secondsStr === 'NaN:NaN:NaN')) return 'Printer calibrating...'
   return hoursStr + ':' + minutesStr + ':' + secondsStr
 }
 
 function formatETA(milliseconds: number): string {
   const date = new Date(milliseconds)
   const timeString = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
-
+  
   if (isNaN(date.getTime()) || timeString === "07:00 PM") {
-    return 'Waiting to start heating...'
+    return 'Printer calibrating...'
   }
-
+  
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+}
+
+const openModal = async (job: Job, printerName: string, num: number, printer: Device) => {
+  currentJob.value = job
+  currentJob.value.printer = printerName
+  currentPrinter.value = printer
+  if (num == 1) {
+    isGcodeLiveViewVisible.value = true
+  } else if (num == 2) {
+    isGcodeImageVisible.value = true
+    if (currentJob.value) {
+      const file = await getFile(currentJob.value)
+      if (file) {
+        currentJob.value.file = file
+      }
+    }
+  }
+}
+
+const startPrint = async (printerid: number, jobid: number) => {
+  await start(jobid, printerid)
 }
 </script>
 
@@ -107,7 +121,10 @@ function formatETA(milliseconds: number): string {
                     <div class="col-12">
                       <h5 class="card-title"><i class="fas fa-hourglass-half"></i> <b>Elapsed Time:</b></h5>
                     </div>
-                    <div class="col-12">{{ formatTime(currentJob?.elapsed_time!) }}</div>
+                    <!-- <div class="col-12">{{ formatTime(currentJob?.job_client?.elapsed_time!) }}</div> -->
+                    <div class="col-12">
+                      {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' : formatTime(currentJob?.job_client?.elapsed_time!) }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -119,7 +136,10 @@ function formatETA(milliseconds: number): string {
                     <div class="col-12">
                       <h5 class="card-title"><i class="fas fa-hourglass-end"></i> <b>Remaining Time:</b></h5>
                     </div>
-                    <div class="col-12">{{ formatTime(currentJob?.remaining_time!) }}</div>
+                    <!-- <div class="col-12">{{ formatTime(currentJob?.job_client?.remaining_time!) }}</div> -->
+                    <div class="col-12">
+                      {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' : formatTime(currentJob?.job_client?.remaining_time!) }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -132,11 +152,16 @@ function formatETA(milliseconds: number): string {
                       <h5 class="card-title"><i class="fas fa-stopwatch"></i> <b>Total Time:</b></h5>
                     </div>
                     <div class="col-12">
-                      <div v-if="currentJob?.extra_time && currentJob.extra_time > 0">
-                        {{ formatTime(currentJob.total_time!) + ' + ' + formatTime(currentJob.extra_time!) }}
+                      <div v-if="currentPrinter?.status === 'colorchange'">
+                        Waiting for filament change...
                       </div>
                       <div v-else>
-                        {{ formatTime(currentJob?.total_time!) }}
+                        <div v-if="currentJob?.job_client?.extra_time">
+                          {{ formatTime(currentJob?.job_client.total_time!) + ' + ' + formatTime(currentJob?.job_client.extra_time!) }}
+                        </div>
+                        <div v-else>
+                          {{ formatTime(currentJob?.job_client?.total_time!) }}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -150,7 +175,10 @@ function formatETA(milliseconds: number): string {
                     <div class="col-12">
                       <h5 class="card-title"><i class="fas fa-stopwatch"></i> <b>ETA:</b></h5>
                     </div>
-                    <div class="col-12">{{ (formatETA(currentJob?.eta!) ?? "00:00 AM") }}</div>
+                    <!-- <div class="col-12">{{ formatETA(currentJob?.job_client?.eta!) ?? "Waiting to start heating..."  }}</div> -->
+                    <div class="col-12">
+                      {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' : formatETA(currentJob?.job_client?.eta!) }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -225,7 +253,7 @@ function formatETA(milliseconds: number): string {
         </div>
         <div class="modal-body">
           <div class="row">
-            <!-- <GCode3DImageViewer v-if="isGcodeImageVisible" :job="currentJob" /> -->
+            <GCode3DImageViewer v-if="isGcodeImageVisible" :job="currentJob" />
           </div>
         </div>
       </div>
@@ -278,14 +306,7 @@ function formatETA(milliseconds: number): string {
         dragClass="hidden-ghost" v-if="printers.length > 0">
         <template #item="{ element: printer }">
           <tr :id="printer.id">
-            <td v-if="printer.status &&
-            (printer.status === 'printing' ||
-              printer.status === 'complete' ||
-              printer.status == 'paused') &&
-            printer.queue &&
-            printer.queue.length > 0 &&
-            printer.queue?.[0].status != 'inqueue'
-            ">
+            <td v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0].id }}
             </td>
             <td v-else><i>idle</i></td>
@@ -295,8 +316,18 @@ function formatETA(milliseconds: number): string {
               </button>
             </td>
             <td>
-              <div class="d-flex align-items-center">
-                <p class="mb-0 me-2">{{ printer.status }}</p>
+                <div class="d-flex align-items-center">
+                  <div>
+                    <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
+                      Change filament
+                    </p>
+                    <p v-else-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0" style="color: red" class="mb-0 me-2">
+                      Waiting for release
+                    </p>
+                    <p v-else class="mb-0 me-2">
+                      {{ printer.status }}
+                    </p>
+                  </div>
                 <div class="dropdown">
                   <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton"
                     data-bs-toggle="dropdown" aria-expanded="false">
@@ -316,39 +347,22 @@ function formatETA(milliseconds: number): string {
             ">
                       <a class="dropdown-item" href="#" @click="setPrinterStatus(printer, 'ready')">Set to Ready</a>
                     </li>
-                    <li v-if="printer.status == 'printing'">
-                      <a class="dropdown-item" href="#" @click="setPrinterStatus(printer, 'complete')">Stop Print</a>
-                    </li>
-                    <li v-if="printer.status == 'printing'">
-                      <a class="dropdown-item" href="#" @click="setPrinterStatus(printer, 'paused')">Pause Print</a>
-                    </li>
-                    <li v-if="printer.status == 'paused'">
-                      <a class="dropdown-item" href="#" @click="setPrinterStatus(printer, 'printing')">Unpause Print</a>
-                    </li>
+                    <li v-if="printer.status == 'printing'"><a class="dropdown-item" href="#"
+                      @click="setPrinterStatus(printer, 'paused')">Pause Print</a></li>
+                  <li v-if="printer.status == 'printing'"><a class="dropdown-item" href="#"
+                      @click="setPrinterStatus(printer, 'colorchange')">Change Color</a></li>
+                  <li v-if="printer.status == 'paused' || printer.status == 'colorchange'"><a class="dropdown-item" href="#"
+                      @click="setPrinterStatus(printer, 'printing')">Unpause Print</a></li>
                   </ul>
                 </div>
               </div>
             </td>
 
-            <td v-if="printer.status == 'printing' ||
-            printer.status == 'complete' ||
-            printer.status == 'paused' ||
-            (printer.status == 'offline' &&
-              (printer.queue?.[0]?.status == 'complete' ||
-                printer.queue?.[0]?.status == 'cancelled'))
-            ">
+            <td v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0]?.name }}
             </td>
             <td v-else></td>
-            <td v-if="(printer.queue &&
-            printer.queue.length > 0 &&
-            (printer.status == 'printing' ||
-              printer.status == 'complete' ||
-              printer.status == 'paused')) ||
-            (printer.status == 'offline' &&
-              (printer.queue?.[0]?.status == 'complete' ||
-                printer.queue?.[0]?.status == 'cancelled'))
-            ">
+            <td v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0]?.file_name_original }}
             </td>
             <td v-else></td>
@@ -357,70 +371,68 @@ function formatETA(milliseconds: number): string {
               <span class="sr-only">Loading...</span>
             </div> -->
 
-            <td style="width: 250px">
-              <div v-if="(printer.status === 'printing' || printer.status == 'paused') &&
-            printer.queue &&
-            printer.queue.length > 0
-            ">
-                <!-- <div v-for="job in printer.queue" :key="job.id"> -->
-                <!-- Display the elapsed time -->
-                <div class="progress" style="position: relative">
-                  <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
-                    :style="{ width: (printer.queue?.[0].progress || 0) + '%' }"
-                    :aria-valuenow="printer.queue?.[0].progress" aria-valuemin="0" aria-valuemax="100"></div>
-                  <!-- job progress set to 2 decimal places -->
-                  <p style="position: absolute; width: 100%; text-align: center; color: black">
-                    {{
-            printer.queue?.[0].progress
-              ? `${printer.queue?.[0].progress.toFixed(2)}%`
-              : '0.00%'
-          }}
-                  </p>
-                </div>
-                <!-- </div> -->
-              </div>
+        <td style="width: 250px;">
+          <div
+            v-if="printer.status == 'printing' && printer.queue?.[0].released == 0">
+            <button type="button" class="btn btn-danger" @click="startPrint(printer.id!, printer.queue?.[0].id)">Start
+              Print</button>
+          </div>
 
-              <div v-else-if="printer.queue?.[0] &&
-            (printer.queue?.[0].status == 'complete' ||
-              printer.queue?.[0].status == 'cancelled')
-            ">
-                <div class="buttons">
-                  <div type="button" class="btn btn-danger" @click="releasePrinter(printer.queue?.[0], 3, printer.id)">
-                    Fail
-                  </div>
-                  <div type="button" class="btn btn-secondary"
-                    @click="releasePrinter(printer.queue?.[0], 1, printer.id)">
-                    Clear
-                  </div>
-                  <div class="btn-group">
-                    <div class="btn btn-primary no-wrap" @click="releasePrinter(printer.queue?.[0], 2, printer.id)">
-                      Clear/Rerun
-                    </div>
-                    <div class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"
-                      aria-expanded="false">
-                    </div>
-                    <div class="dropdown-menu">
-                      <div class="dropdown-item" v-for="otherPrinter in printers.filter(p => p.id !== printer.id)"
-                        :key="otherPrinter.id" @click="releasePrinter(printer.queue?.[0], 2, otherPrinter.id!)">
-                        {{ otherPrinter.name }}
-                      </div>
-                    </div>
+          <div
+            v-else-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange') && printer.queue && printer.queue[0].released == 1">
+            <!-- <div v-for="job in printer.queue" :key="job.id"> -->
+            <!-- Display the elapsed time -->
+            <div class="progress" style="position: relative;">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+                :style="{ width: (printer.queue?.[0].progress || 0) + '%' }"
+                :aria-valuenow="printer.queue?.[0].progress" aria-valuemin="0" aria-valuemax="100">
+              </div>
+              <!-- job progress set to 2 decimal places -->
+              <p style="position: absolute; width: 100%; text-align: center; color: black;">{{
+            printer.queue?.[0].progress
+              ?
+              `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
+            </div>
+            <!-- </div> -->
+          </div>
+
+          <div
+            v-else-if="printer.queue?.[0] && (printer.queue?.[0].status == 'complete' || printer.queue?.[0].status == 'cancelled')">
+            <div class="buttons">
+              <div type="button" class="btn btn-danger" @click="releasePrinter(printer.queue?.[0], 3, printer.id)">
+                Fail
+              </div>
+              <div type="button" class="btn btn-secondary"
+                @click="releasePrinter(printer.queue?.[0], 1, printer.id)">
+                Clear
+              </div>
+              <div class="btn-group">
+                <div class="btn btn-primary no-wrap" @click="releasePrinter(printer.queue?.[0], 2, printer.id)">
+                  Clear/Rerun
+                </div>
+                <div class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"
+                  aria-expanded="false">
+                </div>
+                <div class="dropdown-menu">
+                  <div class="dropdown-item" v-for="otherPrinter in printers.filter(p => p.id !== printer.id)"
+                    :key="otherPrinter.id" @click="releasePrinter(printer.queue?.[0], 2, otherPrinter.id!)">
+                    {{ otherPrinter.name }}
                   </div>
                 </div>
               </div>
-              <div v-else-if="printer.queue?.[0] &&
-            printer.queue?.[0].status == 'printing' &&
-            printer.status == 'complete'
-            ">
-                <button class="btn btn-primary" type="button" disabled>
-                  <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                  <span class="sr-only">Finishing print...</span>
-                </button>
-              </div>
-              <div v-else-if="printer.status == 'error'" class="alert alert-danger" role="alert">
-                {{ printer?.error }}
-              </div>
-            </td>
+            </div>
+          </div>
+
+          <div
+            v-else-if="printer.queue?.[0] && (printer.queue?.[0].status == 'printing' && printer.status == 'complete')">
+            <button class="btn btn-primary" type="button" disabled>
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              <span class="sr-only">Finishing print...</span>
+            </button>
+          </div>
+          <div v-else-if="printer.status == 'error'" class="alert alert-danger" role="alert">{{ printer?.error }}</div>
+
+        </td>
 
             <td style="width: 1%; white-space: nowrap">
               <!-- to display buttons when job is in queue and not printing -->

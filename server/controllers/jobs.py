@@ -21,13 +21,15 @@ def getJobs():
     page = request.args.get('page', default=1, type=int)
     pageSize = request.args.get('pageSize', default=10, type=int)
     printerIds = request.args.get('printerIds', type=json.loads)
+    searchJob = request.args.get('searchJob', default='', type=str)
+    searchCriteria = request.args.get('searchCriteria', default='', type=str)
     
     # convert to boolean 
     oldestFirst = request.args.get('oldestFirst', default='false')
     oldestFirst = oldestFirst.lower() in ['true', '1']
     
     try:
-        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst)
+        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria)
         return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -67,6 +69,8 @@ def add_job_to_queue():
             findPrinterObject(printer_id).getQueue().addToFront(job, printer_id)
         else:
             findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
+            
+        print("released: ", job.released)
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     
@@ -292,8 +296,8 @@ def delete_job():
             # Delete job from the queue
             queue.deleteJob(job_id, printer_id) 
 
-        # Delete job from the database
-        Job.delete_job(job_id)
+            # Delete job from the database
+            Job.delete_job(job_id)
 
         return jsonify({"success": True, "message": f"Job with ID {job_id} deleted successfully."}), 200
 
@@ -390,7 +394,7 @@ def rerunjob(printerpk, jobpk, position):
     favorite = job.getFileFavorite() # get favorite status
     
     # Insert new job into DB and return new PK 
-    res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original, favorite=favorite) # insert into DB 
+    res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original, favorite = favorite) # insert into DB 
     
     id = res['id']
     file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique

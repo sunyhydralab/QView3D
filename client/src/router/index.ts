@@ -22,7 +22,7 @@ const routes = [
     component: RegisteredViewVue
   },
   {
-    path: '/submit',
+    path: '/submit/:job?/:printer?',
     name: 'SubmitJobVue',
     component: SubmitJobVue
   },

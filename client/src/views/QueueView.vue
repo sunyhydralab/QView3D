@@ -1,23 +1,44 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onUnmounted, ref } from 'vue'
 import { printers, type Device } from '../model/ports'
-import { useRerunJob, useRemoveJob, type Job, useMoveJob } from '../model/jobs';
+import { useRerunJob, useRemoveJob, type Job, useMoveJob, useGetFile } from '../model/jobs';
 import draggable from 'vuedraggable'
+import { toast } from '@/model/toast';
+import { useRouter } from 'vue-router'
+import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
 const { moveJob } = useMoveJob()
+const { getFile } = useGetFile()
+const router = useRouter()
 
 const selectedJobs = ref<Array<Job>>([]);
 const selectAllCheckboxMap = ref<Record<string, boolean>>({});
 
+let currentJob = ref<Job | null>(null);
+let isGcodeImageVisible = ref(false);
 let selectAllCheckbox = ref(false);
+
+onUnmounted(() => {
+  for (const printer of printers.value) {
+    printer.isExpanded = false;
+  }
+});
 
 const handleRerun = async (job: Job, printer: Device) => {
   await rerunJob(job, printer)
 };
 
+const handleRerunToSubmit = async (job: Job, printer: Device) => {
+  await router.push({
+        name: 'SubmitJobVue', // the name of the route to SubmitJob.vue
+        params: { job: JSON.stringify(job), printer: JSON.stringify(printer) } // the job and printer to fill in the form
+    });
+};
+
 const deleteSelectedJobs = async () => {
+  let response = null
   // Loop through the selected jobs and remove them from the printer's queue
   for (const selectedJob of selectedJobs.value) {
     const foundPrinter = printers.value.find((printer) => printer.id === selectedJob.printerid);
@@ -27,7 +48,15 @@ const deleteSelectedJobs = async () => {
         foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
       }
     }
-    await removeJob(selectedJob);
+    response = await removeJob(selectedJob);
+  }
+  if (response.success == false) {
+    toast.error(response.message)
+  } else if (response.success === true) {
+    toast.success(response.message)
+  } else {
+    console.error('Unexpected response:', response)
+    toast.error('Failed to remove job. Unexpected response.')
   }
   // Clear the selected jobs array
   selectedJobs.value = [];
@@ -82,9 +111,44 @@ const handleDragEnd = async (evt: any) => {
 const isInqueue = (evt: any) => {
   return evt.relatedContext.element.status === 'inqueue';
 }
+
+const openModal = async (job: Job, printerName: string, num: number, printer: Device) => {
+  currentJob.value = job
+  currentJob.value.printer = printerName
+  if (num == 1) {
+    // isGcodeLiveViewVisible.value = true
+  } else if (num == 2) {
+    isGcodeImageVisible.value = true
+    if (currentJob.value) {
+      const file = await getFile(currentJob.value)
+      if (file) {
+        currentJob.value.file = file
+      }
+    }
+  }
+}
 </script>
 
 <template>
+  <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true"
+    @shown.bs.modal="isGcodeImageVisible = true" @hidden.bs.modal="isGcodeImageVisible = false">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="gcodeImageModalLabel">
+            <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <GCode3DImageViewer v-if="isGcodeImageVisible" :job="currentJob!" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="container">
 
     <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
@@ -133,7 +197,7 @@ const isInqueue = (evt: any) => {
         </h2>
         <div :id="'panelsStayOpen-collapse' + index" class="accordion-collapse collapse"
           :class="{ show: printer.isExpanded }" :aria-labelledby="'panelsStayOpen-heading' + index"
-          data-bs-parent="#accordionPanelsStayOpenExample" @show.bs.collapse="printer.isExpanded = !printer.isExpanded">
+          @show.bs.collapse="printer.isExpanded = !printer.isExpanded">
           <div class="accordion-body">
             <table>
               <thead>
@@ -142,7 +206,7 @@ const isInqueue = (evt: any) => {
                   <th class="col-checkbox">
                     <div class="checkbox-container">
                       <input type="checkbox" @change="() => selectAllJobs(printer)"
-                        :disabled="printer.queue!.length === 0" />
+                        :disabled="printer.queue!.length === 0" v-model="selectAllCheckbox"/>
                     </div>
                   </th>
                   <th class="col-2">Rerun Job</th>
@@ -151,6 +215,7 @@ const isInqueue = (evt: any) => {
                   <th>File</th>
                   <th>Date Added</th>
                   <th class="col-1">Job Status</th>
+                  <th>Actions</th>
                   <th style="width: 0">Move</th>
                 </tr>
               </thead>
@@ -189,6 +254,13 @@ const isInqueue = (evt: any) => {
                     <td>{{ job.file_name_original }}</td>
                     <td>{{ job.date }}</td>
                     <td>{{ job.status }}</td>
+                    <td>
+                      <button type="button" class="btn btn-info btn-circle" data-bs-toggle="modal"
+                        data-bs-target="#gcodeImageModal" v-if="printer.queue && printer.queue.length > 0"
+                        v-bind:job="printer.queue[0]" @click="printer.name && openModal(job, printer.name, 2, printer)">
+                        <i class="fa-regular fa-image"></i>
+                      </button>
+                    </td>
                     <td class="text-center handle" :class="{ 'not-draggable': job.status !== 'inqueue' }">
                       <i class="fas fa-grip-vertical" :class="{ 'icon-disabled': job.status !== 'inqueue' }"></i>
                     </td>
@@ -204,6 +276,17 @@ const isInqueue = (evt: any) => {
 </template>
 
 <style scoped>
+.btn-circle {
+  width: 30px;
+  height: 30px;
+  padding: 0.375em 0;
+  border-radius: 50%;
+  font-size: 0.75em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
 .sortable-chosen {
   opacity: 0.5;
   background-color: #f2f2f2;

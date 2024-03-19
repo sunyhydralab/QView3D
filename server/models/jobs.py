@@ -1,5 +1,6 @@
 import asyncio
 import base64
+from operator import or_
 import os
 import re
 from models.db import db
@@ -32,30 +33,28 @@ class Job(db.Model):
     file_name_original = db.Column(db.String(50), nullable=False)
     favorite = db.Column(db.Boolean, nullable=False)
     file_name_pk = None
+    released = 0 
     filePause = 0
     progress = 0.0
-    total_time = 0
-    start_time = 0
-    elapsed_time = 0
-    pause_time = 0
     time_started = False
+    #total, eta, timestart, pause time 
+    job_time = job_time = [0, datetime.min, datetime.min, datetime.min]
 
+
+    
     def __init__(self, file, name, printer_id, status, file_name_original, favorite):
-        self.file = file
-        self.name = name
-        self.printer_id = printer_id
-        self.status = status
-        # original file name without PK identifier
-        self.file_name_original = file_name_original
-        self.favorite = favorite
+        self.file = file 
+        self.name = name 
+        self.printer_id = printer_id 
+        self.status = status 
+        self.file_name_original = file_name_original # original file name without PK identifier 
         self.file_name_pk = None
-        self.progress = 0.0
-        self.total_time = 0
-        self.start_time = 0
-        self.elapsed_time = 0
-        self.pause_time = 0
+        self.favorite = favorite
+        self.released = 0 
         self.filePause = 0
+        self.progress = 0.0
         self.time_started = False
+        self.job_time = [0, datetime.min, datetime.min, datetime.min]
 
     def __repr__(self):
         return f"Job(id={self.id}, name={self.name}, printer_id={self.printer_id}, status={self.status})"
@@ -64,15 +63,26 @@ class Job(db.Model):
         return self.printer_id
 
     @classmethod
-    def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False):
+    def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob='', searchCriteria=''):
         try:
             query = cls.query
             if printerIds:
                 query = query.filter(cls.printer_id.in_(printerIds))
+                
+            if searchJob:
+                searchJob = f"%{searchJob}%"
+                query = query.filter(or_(cls.name.ilike(searchJob), cls.file_name_original.ilike(searchJob)))
+            
+            if 'searchByJobName' in searchCriteria:
+                searchByJobName = f"%{searchJob}%"
+                query = query.filter(cls.name.ilike(searchByJobName))
+            elif 'searchByFileName' in searchCriteria:
+                searchByFileName = f"%{searchJob}%"
+                query = query.filter(cls.file_name_original.ilike(searchByFileName))
 
             if oldestFirst:
-                query = query.order_by(cls.date.asc())
-            else:
+                query = query.order_by(cls.date.asc())    
+            else: 
                 query = query.order_by(cls.date.desc())  # Change this line
 
             pagination = query.paginate(
@@ -81,10 +91,10 @@ class Job(db.Model):
 
             jobs_data = [{
                 "id": job.id,
-                "name": job.name,
-                "status": job.status,
-                "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",
-                "printer": job.printer.name if job.printer else 'None',
+                "name": job.name, 
+                "status": job.status, 
+                "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",  
+                "printer": job.printer.name if job.printer else 'None', 
                 "file_name_original": job.file_name_original,
                 "favorite": job.favorite
             } for job in jobs]
@@ -95,7 +105,7 @@ class Job(db.Model):
             return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500
 
     @classmethod
-    def jobHistoryInsert(cls, name, printer_id, status, file, file_name_original, favorite):
+    def jobHistoryInsert(cls, name, printer_id, status, file, file_name_original, favorite): 
         try:
             if isinstance(file, bytes):
                 file_data = file
@@ -114,8 +124,8 @@ class Job(db.Model):
                 name=name,
                 printer_id=printer_id,
                 status=status,
-                file_name_original=file_name_original,
-                favorite=favorite
+                file_name_original = file_name_original,
+                favorite = favorite
             )
 
             db.session.add(job)
@@ -258,7 +268,15 @@ class Job(db.Model):
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to clear space. Database error"}), 500
-        
+
+    @classmethod 
+    def setDBstatus(cls, jobid, status):
+        cls.update_job_status(jobid, status)
+
+    @classmethod 
+    def getPathForDelete(cls, file_name):
+        return os.path.join('../uploads', file_name)
+   
     @classmethod
     def getFavoriteJobs(cls):
         try:
@@ -278,7 +296,7 @@ class Job(db.Model):
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve favorite jobs. Database error"}), 500
-
+           
     def saveToFolder(self):
         file_data = self.getFile()
         decompressed_data = gzip.decompress(file_data)
@@ -314,8 +332,8 @@ class Job(db.Model):
         self.favorite = favorite
         db.session.commit()
         return {"success": True, "message": "Favorite status updated successfully."}
-
-    def getPrinterId(self):
+    
+    def getPrinterId(self): 
         return self.printer_id
 
     def getJobId(self):
@@ -348,7 +366,7 @@ class Job(db.Model):
     def getProgress(self):
         return self.progress
 
-    def getTimeSeconds(self, comment_lines):
+    def getTimeFromFile(self, comment_lines):
         # job_line can look two ways:
         # 1. ;TIME:seconds
         # 2. ; estimated printing time (normal mode) = minutes seconds
@@ -359,41 +377,98 @@ class Job(db.Model):
         else:
             # search for the line that contains "printing time", then the time estimate is in the format of "; estimated printing time (normal mode) = minutes seconds"
             time_line = next(line for line in comment_lines if "time" in line)
-            time_minutes, time_seconds = map(
-                int, re.findall(r'\d+', time_line))
-            time_seconds += time_minutes * 60
+            time_values = re.findall(r'\d+', time_line)
+
+            # Initialize all time units to 0
+            time_days = time_hours = time_minutes = time_seconds = 0
+
+            # Assign values from right to left (seconds, minutes, hours, days)
+            time_values = time_values[::-1]
+            if len(time_values) > 0:
+                time_seconds = int(time_values[0])
+            if len(time_values) > 1:
+                time_minutes = int(time_values[1])
+            if len(time_values) > 2:
+                time_hours = int(time_values[2])
+            if len(time_values) > 3:
+                time_days = int(time_values[3])
+
+            # Calculate total time in seconds
+            time_seconds = time_days * 24 * 60 * 60 + time_hours * 60 * 60 + time_minutes * 60 + time_seconds
+        # date = datetime.fromtimestamp(time_seconds)
         return time_seconds
+    
+    def getTimeStarted(self):
+        return self.time_started
 
-    def startTimer(self, time_seconds):
-        self.total_time = time_seconds
-        self.start_time = time.time()
-        current_app.socketio.emit('job_time', {
-                                  'job_id': self.id, 'start_time': self.start_time, 'total_time': self.total_time})
+    def calculateEta(self):
+        now = datetime.now()
+        eta = timedelta(seconds=self.job_time[0]) + now
+        return eta
 
-    def setPauseTime(self):
-        self.pause_time = time.time()
-        self.elapsed_time += self.pause_time - self.start_time
-        current_app.socketio.emit('job_pause', {
-                                  'job_id': self.id, 'pause_time': self.pause_time, 'elapsed_time': self.elapsed_time})
+    def updateEta(self):
+        now = datetime.now()
+        pause_time = self.getJobTime()[3]
 
-    def resumeTime(self):
-        self.start_time = time.time()
-        current_app.socketio.emit('job_resume', {
-                                  'job_id': self.id, 'start_time': self.start_time, 'elapsed_time': self.elapsed_time})
+        duration = now - pause_time
 
-    @classmethod
-    def setDBstatus(cls, jobid, status):
-        cls.update_job_status(jobid, status)
+        new_eta = self.getJobTime()[1] + timedelta(seconds=1)
+        return new_eta
+    
+    def colorEta(self):
+        print("before ETA: ", self.getJobTime()[1])
 
-    @classmethod
-    def getPathForDelete(cls, file_name):
-        return os.path.join('../uploads', file_name)
+        now = datetime.now()
+        pause_time = self.getJobTime()[3]
+        duration = now - pause_time
+        eta = self.getJobTime()[1] + duration
+        return eta 
 
-    def setPath(self, path):
-        self.path = path
+    def calculateTotalTime(self):
+        total_time = self.getJobTime()[0]
+
+        # Add one second to total_time
+        total_time+=1
+        return total_time
+    
+    def calculateColorChangeTotal(self):
+        print("before Total Time: ", self.getJobTime()[0])
+
+        now = datetime.now()
+        pause_time = self.getJobTime()[3]
+        duration = now - pause_time
+        duration_in_seconds = duration.total_seconds()
+        total_time = self.getJobTime()[0] + duration_in_seconds
+        return total_time
+    
+    def getJobTime(self):
+        return self.job_time
+    
+    def getReleased(self): 
+        return self.released
+
+    def setPath(self, path): 
+        self.path = path 
 
     def setFileName(self, filename):
         self.file_name_pk = filename
 
     def setFile(self, file):
         self.file = file
+
+    def setReleased(self, released):
+        self.released = released
+        current_app.socketio.emit('release_job', {'job_id': self.id, 'released': released}) 
+
+    def setTimeStarted(self, time_started):
+        self.time_started = time_started
+
+    def setTime(self, timeData, index):
+        # timeData = datetime(y, m, d, h, min, s)
+        # print("TimeData: ", timeData, " Index: ", index)
+        self.job_time[index] = timeData
+        if index==0: 
+            current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData, 'index': index}) 
+        else: 
+            current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData.isoformat(), 'index': index}) 
+

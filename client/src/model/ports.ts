@@ -19,6 +19,7 @@ export interface Device {
   date?: Date
   id?: number
   error?: string
+  canPause?: number
   queue?: Job[] //  Store job array to store queue for each printer.
   isExpanded?: boolean
   extruder_temp?: number
@@ -338,4 +339,31 @@ export function useRepair() {
       }
     }
   }
+}
+
+export function useMoveHead(){
+  return {
+    async move(port: string){
+      try {
+        const response = await api('movehead', {port})
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to move head. Unexpected response.')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to move head. Unexpected response')
+        }
+        return response
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
+
 }
