@@ -1,5 +1,6 @@
 import { socket } from './myFetch'
 import type { Device } from './ports'
+import { jobTime } from './jobs'
 
 // *** PORTS ***
 export function setupTempSocket(printers: any) {
@@ -15,7 +16,7 @@ export function setupTempSocket(printers: any) {
 // function to set up the socket for status updates
 export function setupStatusSocket(printers: any) {
   socket.on("status_update", ((data: any) => {
-    if (printers && printers.value) {
+    if (printers.value) {
       const printer = printers.value.find((p: Device) => p.id === data.printer_id)
       if (printer) {
         printer.status = data.status;
@@ -28,7 +29,7 @@ export function setupStatusSocket(printers: any) {
 
 export function setupQueueSocket(printers: any) {
   socket.on("queue_update", ((data: any) => {
-    if (printers && printers.value) {
+    if (printers.value) {
       console.log("QUEUE SOCKET: ", printers.value)
       const printer = printers.value.find((p: Device) => p.id === data.printerid)
       console.log(printer)
@@ -45,7 +46,7 @@ export function setupQueueSocket(printers: any) {
 
 export function setupErrorSocket(printers: any) {
   socket.on("error_update", ((data: any) => {
-    if (printers && printers.value) {
+    if (printers.value) {
       const printer = printers.value.find((p: Device) => p.id === data.printerid)
       console.log(printer)
       if (printer) {
@@ -61,7 +62,7 @@ export function setupErrorSocket(printers: any) {
 
 export function setupCanPauseSocket(printers: any) {
   socket.on("can_pause", ((data: any) => {
-    if (printers && printers.value) {
+    if (printers.value) {
       const printer = printers.value.find((p: Device) => p.id === data.printerid)
       if (printer) {
         printer.canPause = data.canPause;
@@ -129,35 +130,5 @@ export function setupJobStatusSocket(printers: any) {
     if (job) {
       job.status = data.status
     }
-  })
-}
-
-export function setupTimeSocket(printers: any) {
-  // Always set up the socket connection and event listener
-  socket.on('set_time', (data: any) => {
-    const job = printers
-      .flatMap((printer: { queue: any }) => printer.queue)
-      .find((job: { id: any }) => job?.id === data.job_id)
-
-    if (!job.job_client || !job.job_server) {
-      job.job_client = {
-        total_time: 0,
-        eta: 0,
-        elapsed_time: 0,
-        extra_time: 0,
-        remaining_time: NaN
-      }
-      // job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
-      job.job_server = [0, '00:00:00', '00:00:00', '00:00:00']
-
-    }
-
-    if(typeof(data.new_time) === 'number'){
-      job.job_server[data.index] = data.new_time
-    }else{
-      job.job_server[data.index] = Date.parse(data.new_time)
-    }
-
-    job.jobTime(job, printers)
   })
 }

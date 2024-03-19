@@ -251,6 +251,7 @@ class Printer(db.Model):
         ser = serial.Serial(device, 115200, timeout=1)
         message = "G91\nG1 Z10 F3000\nG90"
          # Encode and send the message to the printer.
+        # time.sleep(1)
         ser.write(f"{message}\n".encode("utf-8"))
             # Sleep the printer to give it enough time to get the instruction.
             # time.sleep(0.1)

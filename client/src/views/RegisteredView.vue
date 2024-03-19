@@ -14,7 +14,7 @@ const { removeThread } = useRemoveThread();
 const { editThread } = useEditThread();
 const { diagnose } = useDiagnosePrinter();
 const { repair } = useRepair()
-const {move} = useMoveHead()
+const { move }  = useMoveHead()
 
 let devices = ref<Array<Device>>([]); // Array of all devices -- stores ports for user to select/register
 let selectedDevice = ref<Device | null>(null) // device user selects to register.
@@ -140,7 +140,7 @@ const doMove = async(printer: Device) => {
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="doMove(selectedPrinter!)">Move</button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="doMove(selectedDevice!)">Move</button>
             </div>
         </div>
     </div>
@@ -242,7 +242,8 @@ const doMove = async(printer: Device) => {
             </form>
             <div v-if="selectedDevice">
                 <br>
-                <button data-bs-toggle="modal" data-bs-target="#moveModal">Move Printer Head</button>            </div>
+                <button data-bs-toggle="modal" data-bs-target="#moveModal">Move Printer Head</button>
+            </div>
         </div>
         <button @click="doRepair">Repair Ports</button>
     </div>

@@ -380,6 +380,23 @@ def favoriteJob():
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
     
+@jobs_bp.route('/startprint', methods=["POST"])
+def startPrint(): 
+    try: 
+        data = request.get_json()
+        printerid = data['printerid']
+        jobid = data['jobid']
+        printerobject = findPrinterObject(printerid)
+        queue = printerobject.getQueue()
+        inmemjob = queue.getJobById(jobid)
+        print(inmemjob)
+        inmemjob.setReleased(1)
+        
+        return jsonify({"success": True, "message": "Job started successfully."}), 200
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
 def findPrinterObject(printer_id): 
     threads = printer_status_service.getThreadArray()
     return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer  

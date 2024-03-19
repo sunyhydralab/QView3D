@@ -3,8 +3,9 @@ import 'bootstrap/dist/js/bootstrap.bundle'
 import { RouterView } from 'vue-router'
 import NavBar from './components/NavBar.vue'
 import { onMounted } from 'vue';
-import { setupCanPauseSocket, setupErrorSocket, setupJobStatusSocket, setupPauseFeedbackSocket, setupProgressSocket, setupQueueSocket, setupReleaseSocket, setupStatusSocket, setupTempSocket, setupTimeSocket } from './model/sockets';
+import { setupCanPauseSocket, setupErrorSocket, setupJobStatusSocket, setupPauseFeedbackSocket, setupProgressSocket, setupQueueSocket, setupReleaseSocket, setupStatusSocket, setupTempSocket } from './model/sockets';
 import { useRetrievePrintersInfo, printers } from './model/ports';
+import { setupTimeSocket } from './model/jobs';
 
 const { retrieveInfo } = useRetrievePrintersInfo();
 
