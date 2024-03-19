@@ -80,42 +80,12 @@ export function jobTime(job: Job, printers: any) {
   job.timer = setInterval(updateJobTime, 1000)
 }
 
-export function setupTimeSocket(printers: any) {
-  // Always set up the socket connection and event listener
-  socket.on('set_time', (data: any) => {
-    const job = printers
-      .flatMap((printer: { queue: any }) => printer.queue)
-      .find((job: { id: any }) => job?.id === data.job_id)
-
-    if (!job.job_client || !job.job_server) {
-      job.job_client = {
-        total_time: 0,
-        eta: 0,
-        elapsed_time: 0,
-        extra_time: 0,
-        remaining_time: NaN
-      }
-      // job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
-      job.job_server = [0, '00:00:00', '00:00:00', '00:00:00']
-
-    }
-
-    if(typeof(data.new_time) === 'number'){
-      job.job_server[data.index] = data.new_time
-    }else{
-      job.job_server[data.index] = Date.parse(data.new_time)
-    }
-
-    jobTime(job, printers)
-  })
-}
-
 export function useGetJobs() {
   return {
-    async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '') {
+    async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean) {
       try {
         const response = await api(
-          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}`
+          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&favoriteOnly=${favoriteOnly}`
         )
         return response
       } catch (error) {

@@ -63,7 +63,7 @@ class Job(db.Model):
         return self.printer_id
 
     @classmethod
-    def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob='', searchCriteria=''):
+    def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob='', searchCriteria='', favoriteOnly=False):
         try:
             query = cls.query
             if printerIds:
@@ -79,6 +79,9 @@ class Job(db.Model):
             elif 'searchByFileName' in searchCriteria:
                 searchByFileName = f"%{searchJob}%"
                 query = query.filter(cls.file_name_original.ilike(searchByFileName))
+
+            if favoriteOnly:
+                query = query.filter(cls.favorite == True)
 
             if oldestFirst:
                 query = query.order_by(cls.date.asc())    

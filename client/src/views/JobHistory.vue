@@ -25,6 +25,7 @@ let jobs = ref<Array<Job>>([])
 let filter = ref('')
 let oldestFirst = ref<boolean>(false)
 let order = ref<string>('newest')
+let favoriteOnly = ref<boolean>(false)
 
 let page = ref(1)
 let pageSize = ref(10)
@@ -113,7 +114,7 @@ async function submitFilter() {
     }
 
     // Get the total number of jobs first, without considering the page number
-    const [, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value);
+    const [, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
     totalJobs.value = total;
 
     totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
@@ -124,7 +125,7 @@ async function submitFilter() {
     }
 
     // Now fetch the jobs for the current page
-    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value);
+    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
     jobs.value = joblist;
 
     selectedJobs.value = [];
@@ -142,7 +143,7 @@ const confirmDelete = async () => {
     await Promise.all(deletionPromises);
 
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value);
+    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
     jobs.value = joblist;
     totalJobs.value = total;
 
@@ -301,7 +302,7 @@ const toggleButton = () => {
             </div>
         </div>
 
-        <h2 class="mb-2 text-center">Job History View</h2>
+        <b>Job History View</b>
         <div class="container-fluid mb-2 p-2 border rounded">
             <div class="row justify-content-center">
                 <div class="col-md-3 d-flex align-items-start justify-content-between">
@@ -349,6 +350,12 @@ const toggleButton = () => {
                             <input class="form-check-input" type="radio" name="order" id="orderOldest" value="oldest" v-model="order">
                             <label class="form-check-label" for="orderOldest">
                                 Oldest to Newest
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="favorite" id="orderFav" value="favorite" v-model="favoriteOnly">
+                            <label class="form-check-label" for="orderFav">
+                                Favorites
                             </label>
                         </div>
                     </div>

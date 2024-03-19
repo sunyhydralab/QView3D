@@ -244,8 +244,8 @@ const openModal = () => {
         </div>
     </div>
 
-    <div class="container py-5">
-        <h2 class="mb-4">Submit Job View</h2>
+    <div class="container">
+        <b>Submit Job View</b>
 
         <div class="card">
             <div class="card-body">
