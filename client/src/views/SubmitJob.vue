@@ -216,7 +216,7 @@ function appendPrinter(printer: Device) {
 }
 
 watchEffect(() => {
-    isSubmitDisabled = !(file.value !== null && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0))
+    isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0))
 });
 
 const openModal = () => {

@@ -435,8 +435,7 @@ const startPrint = async (printerid: number, jobid: number) => {
         </td>
 
             <td style="width: 1%; white-space: nowrap">
-              <!-- to display buttons when job is in queue and not printing -->
-              <!-- <div v-if="printer.status == 'printing'"> -->
+              <div v-if="printer.status == 'printing'">
               <div style="display: inline-flex">
                 <button type="button" class="btn btn-primary btn-circle me-2" data-bs-toggle="modal"
                   data-bs-target="#infoModal" v-if="printer.queue && printer.queue.length > 0"
@@ -454,7 +453,7 @@ const startPrint = async (printerid: number, jobid: number) => {
                   <i class="fa-regular fa-image"></i>
                 </button>
               </div>
-              <!-- </div> -->
+              </div>
             </td>
             <td class="text-center handle" :class="{ 'not-draggable': printers.length <= 1 }">
               <i class="fas fa-grip-vertical" :class="{ 'icon-disabled': printers.length <= 1 }"></i>

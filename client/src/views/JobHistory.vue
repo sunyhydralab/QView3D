@@ -221,8 +221,8 @@ const toggleButton = () => {
             </div>
             <div v-if="favoriteJobs.length > 0" v-for="job in favoriteJobs" :key="job.id" class="mb-3">
                 <div class="grid-container job">
-                    <p class="my-auto">{{ job.name }}</p>
-                    <p class="my-auto">{{ job.file_name_original }}</p>
+                    <p class="my-auto truncate-name">{{ job.name }}</p>
+                    <p class="my-auto truncate-file">{{ job.file_name_original }}</p>
                     <div class="d-flex align-items-center">
                         <i class="fas fa-star text-warning" style="margin-right: 10px;" data-bs-toggle="modal" data-bs-target="#favoriteModal"
                             @click="jobToUnfavorite = job"></i>
@@ -479,6 +479,18 @@ const toggleButton = () => {
     </div>
 </template>
 <style scoped>
+.truncate-name {
+    max-width: 200px; /* Adjust this value as needed */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.truncate-file {
+    max-width: 300px; /* Adjust this value as needed */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .grid-container {
     display: grid;
     grid-template-columns: 1fr 2fr 1fr;
