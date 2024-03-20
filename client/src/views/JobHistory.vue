@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { printers, useRetrievePrintersInfo, type Device } from '../model/ports'
 import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob } from '../model/jobs';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const { jobhistory, getFavoriteJobs } = useGetJobs()
@@ -53,21 +53,17 @@ let filteredJobs = computed(() => {
     }
 })
 
-// disable esc key for sidebar 
-document.addEventListener('DOMContentLoaded', function () {
-    var offcanvasElement = document.getElementById('offcanvasRight');
-
-    offcanvasElement.addEventListener('shown.bs.offcanvas', function () {
-        offcanvasElement.removeAttribute('tabindex');
-    });
-
-    offcanvasElement.addEventListener('hidden.bs.offcanvas', function () {
-        offcanvasElement.setAttribute('tabindex', '-1');
-    });
-});
+let offcanvasElement: HTMLElement | null = null;
 
 onMounted(async () => {
     try {
+
+        offcanvasElement = document.getElementById('offcanvasRight');
+
+        if (offcanvasElement) {
+            offcanvasElement.addEventListener('shown.bs.offcanvas', onShownOffcanvas);
+            offcanvasElement.addEventListener('hidden.bs.offcanvas', onHiddenOffcanvas);
+        }
 
         const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
         const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds)
@@ -83,6 +79,22 @@ onMounted(async () => {
         console.error(error)
     }
 })
+
+const onShownOffcanvas = () => {
+    offcanvasElement?.removeAttribute('tabindex');
+};
+
+const onHiddenOffcanvas = () => {
+    offcanvasElement?.setAttribute('tabindex', '-1');
+};
+
+onBeforeUnmount(() => {
+    // Cleanup event listeners when component is about to be unmounted
+    if (offcanvasElement) {
+        offcanvasElement.removeEventListener('shown.bs.offcanvas', onShownOffcanvas);
+        offcanvasElement.removeEventListener('hidden.bs.offcanvas', onHiddenOffcanvas);
+    }
+});
 
 const handleRerun = async (job: Job, printer: Device) => {
     await router.push({
