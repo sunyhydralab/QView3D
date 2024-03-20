@@ -52,9 +52,11 @@ let filteredJobs = computed(() => {
         return jobs.value
     }
 })
+// const offcanvas = ref(null);
 
 onMounted(async () => {
     try {
+
         const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
         const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds)
         jobs.value = joblist;
@@ -64,6 +66,7 @@ onMounted(async () => {
         totalPages.value = Math.max(totalPages.value, 1);
 
         favoriteJobs.value = await getFavoriteJobs()
+
     } catch (error) {
         console.error(error)
     }
@@ -225,8 +228,8 @@ const toggleButton = () => {
                     <p class="my-auto truncate-name">{{ job.name }}</p>
                     <p class="my-auto truncate-file">{{ job.file_name_original }}</p>
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-star text-warning" style="margin-right: 10px;" data-bs-toggle="modal" data-bs-target="#favoriteModal"
-                            @click="jobToUnfavorite = job"></i>
+                        <i class="fas fa-star text-warning" style="margin-right: 10px;" data-bs-toggle="modal"
+                            data-bs-target="#favoriteModal" @click="jobToUnfavorite = job"></i>
                         <button class="btn btn-secondary download" style="margin-right: 10px;" @click="getFile(job.id)"
                             :disabled="job.file_name_original.includes('.gcode:')">
                             <i class="fas fa-download"></i>
@@ -238,7 +241,8 @@ const toggleButton = () => {
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="printerDropdown">
                             <li v-for="printer in printers" :key="printer.id">
-                                <a class="dropdown-item" @click="handleRerun(job, printer)" data-bs-dismiss="offcanvas">{{ printer.name }}</a>
+                                <a class="dropdown-item" @click="handleRerun(job, printer)"
+                                    data-bs-dismiss="offcanvas">{{ printer.name }}</a>
                             </li>
                         </ul>
                     </div>
@@ -249,8 +253,8 @@ const toggleButton = () => {
     </div>
     <div class="offcanvas-btn-box" :style="{ transform: `translateX(${buttonTransform}px)` }">
         <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight"
-                aria-controls="offcanvasRight" v-on:click="toggleButton"
-                style="border-top-right-radius: 0; border-bottom-right-radius: 0; padding: 5px 10px;">
+            aria-controls="offcanvasRight" v-on:click="toggleButton"
+            style="border-top-right-radius: 0; border-bottom-right-radius: 0; padding: 5px 10px;">
             <span v-if="isOffcanvasOpen"><i class="fas fa-star"></i></span>
             <span><i class="fas" :class="isOffcanvasOpen ? 'fa-chevron-right' : 'fa-chevron-left'"></i></span>
             <span v-if="!isOffcanvasOpen"><i class="fas fa-star"></i></span>
@@ -313,13 +317,15 @@ const toggleButton = () => {
                 <div class="col-md-3 d-flex align-items-start justify-content-between">
                     <label class="form-label mx-2">Device:</label>
                     <div class="dropdown w-100 mx-2">
-                        <button class="btn btn-secondary dropdown-toggle w-100" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="btn btn-secondary dropdown-toggle w-100" type="button" id="dropdownMenuButton"
+                            data-bs-toggle="dropdown" aria-expanded="false">
                             Select Printer
                         </button>
                         <ul class="dropdown-menu w-100" aria-labelledby="dropdownMenuButton">
                             <li v-for="printer in printers" :key="printer.id">
                                 <div class="form-check" @click.stop>
-                                    <input class="form-check-input" type="checkbox" :value="printer" @change="appendPrinter(printer)" :id="'printer-' + printer.id">
+                                    <input class="form-check-input" type="checkbox" :value="printer"
+                                        @change="appendPrinter(printer)" :id="'printer-' + printer.id">
                                     <label class="form-check-label" :for="'printer-' + printer.id">
                                         {{ printer.name }}
                                     </label>
@@ -328,7 +334,8 @@ const toggleButton = () => {
                             <li class="dropdown-divider"></li>
                             <li>
                                 <div class="form-check" @click.stop>
-                                    <input class="form-check-input" type="checkbox" id="deregistered-printers" @click="selectedPrinters.push(0)">
+                                    <input class="form-check-input" type="checkbox" id="deregistered-printers"
+                                        @click="selectedPrinters.push(0)">
                                     <label class="form-check-label" for="deregistered-printers">
                                         Deregistered printers
                                     </label>
@@ -341,19 +348,22 @@ const toggleButton = () => {
                     <label class="form-label mx-2">Order:</label>
                     <div class="mx-2">
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="order" id="orderNewest" value="newest" v-model="order">
+                            <input class="form-check-input" type="radio" name="order" id="orderNewest" value="newest"
+                                v-model="order">
                             <label class="form-check-label" for="orderNewest">
                                 Newest to Oldest
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="order" id="orderOldest" value="oldest" v-model="order">
+                            <input class="form-check-input" type="radio" name="order" id="orderOldest" value="oldest"
+                                v-model="order">
                             <label class="form-check-label" for="orderOldest">
                                 Oldest to Newest
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="favorite" id="orderFav" value="favorite" v-model="favoriteOnly">
+                            <input class="form-check-input" type="checkbox" name="favorite" id="orderFav"
+                                value="favorite" v-model="favoriteOnly">
                             <label class="form-check-label" for="orderFav">
                                 Favorites
                             </label>
@@ -369,7 +379,9 @@ const toggleButton = () => {
                     <div class="row mb-1">
                         <div class="col-12">
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="searchByJobName" v-model="searchByJobName" :disabled="isOnlyJobNameChecked" @change="ensureOneCheckboxChecked">
+                                <input class="form-check-input" type="checkbox" id="searchByJobName"
+                                    v-model="searchByJobName" :disabled="isOnlyJobNameChecked"
+                                    @change="ensureOneCheckboxChecked">
                                 <label class="form-check-label" for="searchByJobName">
                                     Search by Job Name
                                 </label>
@@ -379,7 +391,9 @@ const toggleButton = () => {
                     <div class="row mb-1">
                         <div class="col-12">
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="searchByFileName" v-model="searchByFileName" :disabled="isOnlyFileNameChecked" @change="ensureOneCheckboxChecked">
+                                <input class="form-check-input" type="checkbox" id="searchByFileName"
+                                    v-model="searchByFileName" :disabled="isOnlyFileNameChecked"
+                                    @change="ensureOneCheckboxChecked">
                                 <label class="form-check-label" for="searchByFileName">
                                     Search by File Name
                                 </label>
@@ -487,17 +501,21 @@ const toggleButton = () => {
 </template>
 <style scoped>
 .truncate-name {
-    max-width: 200px; /* Adjust this value as needed */
+    max-width: 200px;
+    /* Adjust this value as needed */
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
 .truncate-file {
-    max-width: 300px; /* Adjust this value as needed */
+    max-width: 300px;
+    /* Adjust this value as needed */
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
 .grid-container {
     display: grid;
     grid-template-columns: 1fr 2fr 1fr;
