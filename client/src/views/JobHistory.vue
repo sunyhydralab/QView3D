@@ -52,7 +52,19 @@ let filteredJobs = computed(() => {
         return jobs.value
     }
 })
-// const offcanvas = ref(null);
+
+// disable esc key for sidebar 
+document.addEventListener('DOMContentLoaded', function () {
+    var offcanvasElement = document.getElementById('offcanvasRight');
+
+    offcanvasElement.addEventListener('shown.bs.offcanvas', function () {
+        offcanvasElement.removeAttribute('tabindex');
+    });
+
+    offcanvasElement.addEventListener('hidden.bs.offcanvas', function () {
+        offcanvasElement.setAttribute('tabindex', '-1');
+    });
+});
 
 onMounted(async () => {
     try {
