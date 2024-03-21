@@ -262,7 +262,7 @@ const doMove = async(printer: Device) => {
                 <button data-bs-toggle="modal" data-bs-target="#moveModal">Move Printer Head</button>
             </div>
         </div>
-        <button @click="doRepair">Repair Ports</button>
+        <button @click="doRepair()">Repair Ports</button>
     </div>
 </template>
 
