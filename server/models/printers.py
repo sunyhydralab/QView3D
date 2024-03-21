@@ -205,9 +205,16 @@ class Printer(db.Model):
     @classmethod
     def deletePrinter(cls, printerid):
         try:
-            ser = serial.Serial(cls.query.get(printerid).device, 115200, timeout=1)
-            if(ser and ser.isOpen()):
-                ser.close()
+            # ser = serial.Serial(cls.query.get(printerid).device, 115200, timeout=1)
+            # if(ser and ser.isOpen()):
+            ports = Printer.getConnectedPorts()
+            for port in ports:
+                if port["hwid"] == cls.query.get(printerid).hwid:
+                    ser = serial.Serial(port["device"], 115200, timeout=1)
+                    ser.close()
+                    break 
+                
+            # ser.close()
 
             printer = cls.query.get(printerid)
             db.session.delete(printer)

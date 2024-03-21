@@ -451,7 +451,7 @@ const startPrint = async (printerid: number, jobid: number) => {
             </td>
 
             <td style="width: 1%; white-space: nowrap">
-              <div v-if="printer.status == 'printing'">
+              <!-- <div v-if="printer.status == 'printing'"> -->
                 <div style="display: inline-flex">
                   <button type="button" class="btn btn-primary btn-circle me-2" data-bs-toggle="modal"
                     data-bs-target="#infoModal" v-if="printer.queue && printer.queue.length > 0"
@@ -471,7 +471,7 @@ const startPrint = async (printerid: number, jobid: number) => {
                     @click="printer.name && openModal(printer.queue[0], printer.name, 2, printer)">
                     <i class="fa-regular fa-image"></i>
                   </button>
-                </div>
+                <!-- </div> -->
               </div>
             </td>
             <td class="text-center handle" :class="{ 'not-draggable': printers.length <= 1 }">
