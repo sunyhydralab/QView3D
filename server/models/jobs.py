@@ -4,6 +4,7 @@ from operator import or_
 import os
 import re
 from models.db import db
+from models.issues import Issue  # assuming the Issue model is defined in the issue.py file in the models directory
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
@@ -27,9 +28,14 @@ class Job(db.Model):
     date = db.Column(db.DateTime, default=lambda: datetime.now(
         timezone.utc).astimezone(), nullable=False)
     # foreign key relationship to match jobs to the printer printed on
-    printer_id = db.Column(
-        db.Integer, db.ForeignKey('printer.id'), nullable=True)
+    printer_id = db.Column(db.Integer, db.ForeignKey('printer.id'), nullable=True)
     printer = db.relationship('Printer', backref='Job')
+
+    #FK to issue 
+    # error_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=True)
+    # error = db.relationship('Issue', backref='Issue')
+    
+    
     file_name_original = db.Column(db.String(50), nullable=False)
     favorite = db.Column(db.Boolean, nullable=False)
     file_name_pk = None
@@ -100,6 +106,48 @@ class Job(db.Model):
                 "printer": job.printer.name if job.printer else 'None', 
                 "file_name_original": job.file_name_original,
                 "favorite": job.favorite
+            } for job in jobs]
+
+            return jobs_data, pagination.total
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500
+        
+
+    @classmethod
+    def get_job_error_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob='', searchCriteria=''):
+        try:
+            query = cls.query.filter_by(status='error')
+            if printerIds:
+                query = query.filter(cls.printer_id.in_(printerIds))
+                
+            if searchJob:
+                searchJob = f"%{searchJob}%"
+                query = query.filter(or_(cls.name.ilike(searchJob), cls.file_name_original.ilike(searchJob)))
+            
+            if 'searchByJobName' in searchCriteria:
+                searchByJobName = f"%{searchJob}%"
+                query = query.filter(cls.name.ilike(searchByJobName))
+            elif 'searchByFileName' in searchCriteria:
+                searchByFileName = f"%{searchJob}%"
+                query = query.filter(cls.file_name_original.ilike(searchByFileName))
+
+            if oldestFirst:
+                query = query.order_by(cls.date.asc())    
+            else: 
+                query = query.order_by(cls.date.desc())  # Change this line
+
+            pagination = query.paginate(
+                page=page, per_page=pageSize, error_out=False)
+            jobs = pagination.items
+
+            jobs_data = [{
+                "id": job.id,
+                "name": job.name, 
+                "status": job.status, 
+                "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",  
+                "printer": job.printer.name if job.printer else 'None', 
+                "file_name_original": job.file_name_original,
             } for job in jobs]
 
             return jobs_data, pagination.total

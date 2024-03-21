@@ -1,0 +1,407 @@
+<script setup lang="ts">
+import { printers, type Device } from '../model/ports'
+import { type Issue, useGetIssues, useCreateIssues } from '../model/issues'
+import { type Job, useGetErrorJobs } from '../model/jobs';
+import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+
+const { jobhistoryError } = useGetErrorJobs()
+const { issues } = useGetIssues()
+const { createIssue } = useCreateIssues()
+
+const selectedPrinters = ref<Array<Number>>([])
+const selectedJobs = ref<Array<Job>>([]);
+const searchJob = ref(''); // This will hold the current search query
+const searchByJobName = ref(true);
+const searchByFileName = ref(true);
+
+const router = useRouter();
+
+let jobs = ref<Array<Job>>([])
+let issuelist = ref<Array<Issue>>([])
+
+let filter = ref('')
+let oldestFirst = ref<boolean>(false)
+let order = ref<string>('newest')
+let favoriteOnly = ref<boolean>(false)
+
+let page = ref(1)
+let pageSize = ref(10)
+let totalJobs = ref(0)
+let totalPages = ref(1)
+
+let searchCriteria = ref('');
+const isOnlyJobNameChecked = computed(() => searchByJobName.value && !searchByFileName.value);
+const isOnlyFileNameChecked = computed(() => !searchByJobName.value && searchByFileName.value);
+
+// computed property that returns the filtered list of jobs. 
+let filteredJobs = computed(() => {
+    if (filter.value) {
+        return jobs.value.filter(job => job.printer.includes(filter.value))
+    } else {
+        return jobs.value
+    }
+})
+
+
+onMounted(async () => {
+    try {
+        const retrieveissues = await issues()
+        issuelist.value = retrieveissues
+        console.log(issuelist.value)
+
+        const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
+        const [joblist, total] = await jobhistoryError(page.value, pageSize.value, printerIds)
+        jobs.value = joblist;
+        totalJobs.value = total;
+
+        totalPages.value = Math.ceil(total / pageSize.value);
+        totalPages.value = Math.max(totalPages.value, 1);
+
+    } catch (error) {
+        console.error(error)
+    }
+})
+
+const changePage = async (newPage: any) => {
+    if (newPage < 1 || newPage > Math.ceil(totalJobs.value / pageSize.value)) {
+        return;
+    }
+    selectedJobs.value = [];
+
+
+    page.value = newPage
+    jobs.value = []
+    const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
+
+    const [joblist, total] = await jobhistoryError(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value)
+    jobs.value = joblist;
+    totalJobs.value = total;
+}
+
+function appendPrinter(printer: Device) {
+    if (!selectedPrinters.value.includes(printer.id!)) {
+        selectedPrinters.value.push(printer.id!)
+    } else {
+        selectedPrinters.value = selectedPrinters.value.filter(p => p !== printer.id)
+    }
+}
+
+async function submitFilter() {
+    jobs.value = []
+    oldestFirst.value = order.value === 'oldest';
+    const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
+
+    if (searchByJobName.value && !searchByFileName.value) {
+        searchCriteria.value = 'searchByJobName';
+    } else if (!searchByJobName.value && searchByFileName.value) {
+        searchCriteria.value = 'searchByFileName';
+    } else {
+        searchCriteria.value = searchJob.value;
+    }
+
+    // Get the total number of jobs first, without considering the page number
+    const [, total] = await jobhistoryError(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
+    totalJobs.value = total;
+
+    totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
+    totalPages.value = Math.max(totalPages.value, 1);
+
+    if (page.value > totalPages.value) {
+        page.value = totalPages.value;
+    }
+
+    // Now fetch the jobs for the current page
+    const [joblist] = await jobhistoryError(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
+    jobs.value = joblist;
+
+    selectedJobs.value = [];
+}
+
+const ensureOneCheckboxChecked = () => {
+    if (!searchByJobName.value && !searchByFileName.value) {
+        searchByJobName.value = true;
+    }
+}
+
+// const showText = () => {
+//     console.log('Create New Issue')
+// }
+const showText = ref(false)
+const newIssue = ref('')
+
+const doCreateIssue = async () => {
+    await createIssue(newIssue.value)
+    issuelist.value = await issues()
+    newIssue.value = ''
+    showText.value = false
+}
+
+</script>
+
+<template>
+
+    <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
+        data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="assignIssueLabel">Assign Issue</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>
+                    <form methods="POST" @submit.prevent="">
+                        <select name="issue" id="issue" required>
+                            <option disabled value="null">Select Issue</option> <!-- Default option -->
+                            <!-- <option v-for="issue in issues" :value="printer">
+                                    {{ issue }}
+                                </option> -->
+                        </select>
+                    </form>
+                    <button @click="showText=!showText">Create New Issue</button>
+                    <form v-if="showText==true">
+                        <input v-model="newIssue" type="text" placeholder="Enter Issue" required>
+                        <button type="submit" @click="doCreateIssue">Submit</button>
+                    </form>
+
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <b>Error Log</b>
+        <div class="container-fluid mb-2 p-2 border rounded">
+            <div class="row justify-content-center">
+                <div class="col-md-3 d-flex align-items-start justify-content-between">
+                    <label for="pageSize" class="form-label mx-2" style="white-space: nowrap;">Jobs per page:</label>
+                    <input id="pageSize" type="number" v-model.number="pageSize" min="1" class="form-control mx-2">
+                    <label class="form-label mx-2">/&nbsp;{{ totalJobs }}</label>
+                </div>
+                <div class="col-md-3 d-flex align-items-start justify-content-between">
+                    <label class="form-label mx-2">Device:</label>
+                    <div class="dropdown w-100 mx-2">
+                        <button class="btn btn-secondary dropdown-toggle w-100" type="button" id="dropdownMenuButton"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            Select Printer
+                        </button>
+                        <ul class="dropdown-menu w-100" aria-labelledby="dropdownMenuButton">
+                            <li v-for="printer in printers" :key="printer.id">
+                                <div class="form-check" @click.stop>
+                                    <input class="form-check-input" type="checkbox" :value="printer"
+                                        @change="appendPrinter(printer)" :id="'printer-' + printer.id">
+                                    <label class="form-check-label" :for="'printer-' + printer.id">
+                                        {{ printer.name }}
+                                    </label>
+                                </div>
+                            </li>
+                            <li class="dropdown-divider"></li>
+                            <li>
+                                <div class="form-check" @click.stop>
+                                    <input class="form-check-input" type="checkbox" id="deregistered-printers"
+                                        @click="selectedPrinters.push(0)">
+                                    <label class="form-check-label" for="deregistered-printers">
+                                        Deregistered printers
+                                    </label>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="row mb-1">
+                        <div class="col-12">
+                            <input type="text" v-model="searchJob" placeholder="Search for jobs" class="form-control">
+                        </div>
+                    </div>
+                    <div class="row mb-1">
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="searchByJobName"
+                                    v-model="searchByJobName" :disabled="isOnlyJobNameChecked"
+                                    @change="ensureOneCheckboxChecked">
+                                <label class="form-check-label" for="searchByJobName">
+                                    Search by Job Name
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-1">
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="searchByFileName"
+                                    v-model="searchByFileName" :disabled="isOnlyFileNameChecked"
+                                    @change="ensureOneCheckboxChecked">
+                                <label class="form-check-label" for="searchByFileName">
+                                    Search by File Name
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row w-100" style="margin-bottom: 0.5rem;">
+            <div class="col-10 text-center">
+                <button @click="submitFilter" class="btn btn-primary">Submit Filter</button>
+            </div>
+            <div class="col-1 text-end" style="padding-right: 0">
+            </div>
+        </div>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Job ID</th>
+                    <th>Job Title</th>
+                    <th>File</th>
+                    <th>Printer</th>
+                    <th>Issue</th>
+                    <th>Actions</th>
+
+                </tr>
+            </thead>
+            <tbody v-if="filteredJobs.length > 0">
+                <tr v-for="job in filteredJobs" :key="job.id">
+                    <td>{{ job.id }}</td>
+                    <td>
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <div>{{ job.name }}</div>
+                        </div>
+                    </td>
+                    <td>
+                        {{ job.file_name_original }}
+                    </td>
+                    <td>{{ job.printer }}</td>
+                    <td></td>
+                    <td>
+                        <button data-bs-toggle="modal" data-bs-target="#issueModal">Assign Issue</button>
+                        <button>View Details</button>
+                    </td>
+
+                </tr>
+            </tbody>
+            <tbody v-else>
+                <tr>
+                    <td colspan="8">No jobs found. Submit your first job <RouterLink to="/submit">here!</RouterLink>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                <li class="page-item" :class="{ 'disabled': page <= 1 }">
+                    <a class="page-link" href="#" @click.prevent="changePage(page - 1)">Previous</a>
+                </li>
+                <li class="page-item disabled"><a class="page-link">Page {{ page }} of {{ totalPages }}</a></li>
+                <li class="page-item" :class="{ 'disabled': page >= totalPages }">
+                    <a class="page-link" href="#" @click.prevent="changePage(page + 1)">Next</a>
+                </li>
+            </ul>
+        </nav>
+
+    </div>
+</template>
+<style scoped>
+.truncate-name {
+    max-width: 200px;
+    /* Adjust this value as needed */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.truncate-file {
+    max-width: 300px;
+    /* Adjust this value as needed */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.grid-container {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 10px;
+}
+
+.header {
+    border: 1px solid #e0e0e0;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    background-color: #f2f2f2;
+}
+
+.header h5 {
+    text-decoration: underline;
+}
+
+.job {
+    border: 1px solid #e0e0e0;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.offcanvas {
+    width: 700px;
+}
+
+.offcanvas-btn-box {
+    transition: transform .3s ease-in-out;
+    position: fixed;
+    top: 50%;
+    right: 0;
+    z-index: 1041;
+}
+
+.offcanvas-end {
+    border-left: 0;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    border: 2px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}
+
+th {
+    background-color: #f2f2f2;
+}
+
+ul.dropdown-menu.w-100.show li {
+    margin-left: 1rem;
+}
+
+.form-check-input:focus,
+.form-control:focus {
+    outline: none;
+    box-shadow: none;
+    border-color: #dee2e6;
+}
+
+label.form-check-label {
+    cursor: pointer;
+}
+
+.download {
+    float: right;
+}
+
+button {
+    margin: 5px;
+}
+</style>

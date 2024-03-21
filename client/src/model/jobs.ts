@@ -160,6 +160,22 @@ export function useGetJobs() {
   }
 }
 
+export function useGetErrorJobs() {
+  return {
+    async jobhistoryError(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean) {
+      try {
+        const response = await api(
+          `geterrorjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}`
+        )
+        return response
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while retrieving the jobs')
+      }
+    }
+  }
+}
+
 export function useAddJobToQueue() {
   return {
     async addJobToQueue(job: FormData) {
