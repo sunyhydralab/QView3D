@@ -266,15 +266,7 @@ const doMove = async(printer: Device) => {
     </div>
 </template>
 
-<style>
-.container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-
+<style scoped>
 .form-container {
     border: 2px solid #333;
     padding: 20px;
@@ -284,14 +276,6 @@ const doMove = async(printer: Device) => {
 
 .register {
     color: red;
-}
-
-.container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    margin-top: 20px; /* Add margin to the top */
 }
 
 .form-container {

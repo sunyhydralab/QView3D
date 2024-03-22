@@ -126,6 +126,13 @@ function appendPrinter(printer: Device) {
         selectedPrinters.value = selectedPrinters.value.filter(p => p !== printer.id)
     }
 }
+function appendNullPrinter() {
+    if (!selectedPrinters.value.includes(0)) {
+        selectedPrinters.value.push(0)
+    } else {
+        selectedPrinters.value = selectedPrinters.value.filter(p => p !== 0)
+    }
+}
 
 async function submitFilter() {
     jobs.value = []
@@ -306,29 +313,29 @@ const toggleButton = () => {
         </div>
     </div>
 
-    <div class="container">
-
-        <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
-            data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="exampleModalLabel">{{ modalTitle }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p v-html="modalMessage"></p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button v-if="modalAction === 'confirmDelete'" type="button" class="btn btn-danger"
-                            data-bs-dismiss="modal" @click="confirmDelete">Delete</button>
-                        <button v-if="modalAction === 'clear'" type="button" class="btn btn-danger"
-                            data-bs-dismiss="modal" @click="clear">Clear Space</button>
-                    </div>
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
+        data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">{{ modalTitle }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p v-html="modalMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button v-if="modalAction === 'confirmDelete'" type="button" class="btn btn-danger"
+                        data-bs-dismiss="modal" @click="confirmDelete">Delete</button>
+                    <button v-if="modalAction === 'clear'" type="button" class="btn btn-danger"
+                        data-bs-dismiss="modal" @click="clear">Clear Space</button>
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="container">
 
         <b>Job History View</b>
         <div class="container-fluid mb-2 p-2 border rounded">
@@ -359,7 +366,7 @@ const toggleButton = () => {
                             <li>
                                 <div class="form-check" @click.stop>
                                     <input class="form-check-input" type="checkbox" id="deregistered-printers"
-                                        @click="selectedPrinters.push(0)">
+                                        @click="appendNullPrinter">
                                     <label class="form-check-label" for="deregistered-printers">
                                         Deregistered printers
                                     </label>
@@ -526,7 +533,6 @@ const toggleButton = () => {
 <style scoped>
 .truncate-name {
     max-width: 200px;
-    /* Adjust this value as needed */
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -534,7 +540,6 @@ const toggleButton = () => {
 
 .truncate-file {
     max-width: 300px;
-    /* Adjust this value as needed */
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
