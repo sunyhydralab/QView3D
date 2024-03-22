@@ -116,11 +116,14 @@ class Job(db.Model):
         
 
     @classmethod
-    def get_job_error_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob='', searchCriteria=''):
+    def get_job_error_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob='', searchCriteria='', issueIds=None):
         try:
             query = cls.query.filter_by(status='error')
             if printerIds:
                 query = query.filter(cls.printer_id.in_(printerIds))
+            
+            if issueIds: 
+                query = query.filter(cls.error_id.in_(issueIds))
                 
             if searchJob:
                 searchJob = f"%{searchJob}%"

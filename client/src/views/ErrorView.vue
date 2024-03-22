@@ -103,7 +103,7 @@ async function submitFilter() {
     }
 
     // Get the total number of jobs first, without considering the page number
-    const [, total] = await jobhistoryError(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
+    const [, total] = await jobhistoryError(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value);
     totalJobs.value = total;
 
     totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
@@ -114,7 +114,7 @@ async function submitFilter() {
     }
 
     // Now fetch the jobs for the current page
-    const [joblist] = await jobhistoryError(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
+    const [joblist] = await jobhistoryError(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value);
     jobs.value = joblist;
 
     selectedJobs.value = [];
@@ -130,6 +130,7 @@ const showText = ref(false)
 const newIssue = ref('')
 const selectedIssue = ref<Issue>()
 const selectedJob = ref<Job>()
+const selectedIssues = ref<Array<number>>([])
 
 const doCreateIssue = async () => {
     await createIssue(newIssue.value)
@@ -146,6 +147,42 @@ const doAssignIssue = async () => {
     selectedJob.value.error = selectedIssue.value.issue
     selectedIssue.value = undefined
     selectedJob.value = undefined
+}
+
+
+function appendIssue(issue: Issue) {
+    if (!selectedIssues.value.includes(issue.id!)) {
+        selectedIssues.value.push(issue.id!)
+    } else {
+        selectedIssues.value = selectedIssues.value.filter(p => p !== issue.id)
+    }
+}
+
+
+function appendNullIssue() {
+    if (!selectedIssues.value.includes(0)) {
+        selectedIssues.value.push(0)
+    } else {
+        selectedIssues.value = selectedIssues.value.filter(p => p !== 0)
+    }
+}
+
+function appendNullPrinter() {
+    if (!selectedPrinters.value.includes(0)) {
+        selectedPrinters.value.push(0)
+    } else {
+        selectedPrinters.value = selectedPrinters.value.filter(p => p !== 0)
+    }
+}
+
+const clearFilter = async () => {
+    const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
+    const [joblist, total] = await jobhistoryError(page.value, pageSize.value, printerIds)
+    jobs.value = joblist;
+    totalJobs.value = total;
+
+    totalPages.value = Math.ceil(total / pageSize.value);
+    totalPages.value = Math.max(totalPages.value, 1);
 }
 
 </script>
@@ -174,7 +211,7 @@ const doAssignIssue = async () => {
                     <form v-if="showText == true">
                         <input v-model="newIssue" type="text" placeholder="Enter Issue" required>
                         <button type="submit" @click="doCreateIssue">Submit</button>
-                        <button @click="showText=!showText">Cancel</button>
+                        <button @click="showText = !showText">Cancel</button>
                     </form>
 
                     </p>
@@ -219,8 +256,9 @@ const doAssignIssue = async () => {
                             <li>
                                 <div class="form-check" @click.stop>
                                     <input class="form-check-input" type="checkbox" id="deregistered-printers"
-                                        @click="selectedPrinters.push(0)">
-                                    <label class="form-check-label" for="deregistered-printers">
+                                        @click="appendNullPrinter">
+                                    <label class="form-check-label" for="deregistered-printers"
+                                        @click="appendNullPrinter">
                                         Deregistered printers
                                     </label>
                                 </div>
@@ -228,6 +266,38 @@ const doAssignIssue = async () => {
                         </ul>
                     </div>
                 </div>
+
+                <div class="col-md-3 d-flex align-items-start justify-content-between">
+                    <label class="form-label mx-2">Issue:</label>
+                    <div class="dropdown w-100 mx-2">
+                        <button class="btn btn-secondary dropdown-toggle w-100" type="button" id="dropdownMenuButton"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            Select Issue
+                        </button>
+                        <ul class="dropdown-menu w-100" aria-labelledby="dropdownMenuButton">
+                            <li v-for="issue in issuelist" :key="issue.id">
+                                <div class="form-check" @click.stop>
+                                    <input class="form-check-input" type="checkbox" :value="issue"
+                                        @change="appendIssue(issue)" :id="'printer-' + issue.id">
+                                    <label class="form-check-label" :for="'printer-' + issue.id">
+                                        {{ issue.issue }}
+                                    </label>
+                                </div>
+                            </li>
+                            <li class="dropdown-divider"></li>
+                            <li>
+                                <div class="form-check" @click.stop>
+                                    <input class="form-check-input" type="checkbox" id="deregistered-printers"
+                                        @click="appendNullIssue">
+                                    <label class="form-check-label" for="deregistered-printers">
+                                        None
+                                    </label>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
                 <div class="col-md-3">
                     <div class="row mb-1">
                         <div class="col-12">
@@ -264,6 +334,8 @@ const doAssignIssue = async () => {
         <div class="row w-100" style="margin-bottom: 0.5rem;">
             <div class="col-10 text-center">
                 <button @click="submitFilter" class="btn btn-primary">Submit Filter</button>
+                <button @click="clearFilter" class="btn btn-primary">Clear filters</button>
+
             </div>
             <div class="col-1 text-end" style="padding-right: 0">
             </div>
@@ -293,7 +365,7 @@ const doAssignIssue = async () => {
                         {{ job.file_name_original }}
                     </td>
                     <td>{{ job.printer }}</td>
-                    <td v-if="job.errorid!=null">
+                    <td v-if="job.errorid != null">
                         {{ job.error }}
                     </td>
                     <td v-else>

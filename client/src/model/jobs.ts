@@ -165,10 +165,10 @@ export function useGetJobs() {
 
 export function useGetErrorJobs() {
   return {
-    async jobhistoryError(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean) {
+    async jobhistoryError(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean, issues?: number[]) {
       try {
         const response = await api(
-          `geterrorjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}`
+          `geterrorjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&issueIds=${JSON.stringify(issues)}`
         )
         return response
       } catch (error) {
@@ -205,14 +205,6 @@ export function useAutoQueue() {
         const response = await api('autoqueue', job)
         if (response) {
           return response 
-          // if (response.success == false) {
-          //   toast.error(response.message)
-          // } else if (response.success === true) {
-          //   toast.success(response.message)
-          // } else {
-          //   console.error('Unexpected response:', response)
-          //   toast.error('Failed to queue job. Unexpected response')
-          // }
         } else {
           console.error('Response is undefined or null')
           toast.error('Failed to queue job. Unexpected response')
@@ -264,14 +256,6 @@ export function useRemoveJob() {
         const response = await api('canceljob', { jobpk })
         if (response) {
           return response
-          // if (response.success == false) {
-          //   toast.error(response.message)
-          // } else if (response.success === true) {
-          //   toast.success(response.message)
-          // } else {
-          //   console.error('Unexpected response:', response)
-          //   toast.error('Failed to remove job. Unexpected response.')
-          // }
         } else {
           console.error('Response is undefined or null')
           toast.error('Failed to remove job. Unexpected response')
