@@ -87,6 +87,7 @@ class Queue:
                 "status": job.status,
                 "date": job.date.strftime("%a, %d %b %Y %H:%M:%S"),
                 "printerid": job.printer_id,
+                "errorid": job.error_id, 
                 "file_name_original": job.file_name_original,
                 "progress": job.progress,
                 "released": job.released,

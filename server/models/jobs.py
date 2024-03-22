@@ -32,8 +32,8 @@ class Job(db.Model):
     printer = db.relationship('Printer', backref='Job')
 
     #FK to issue 
-    # error_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=True)
-    # error = db.relationship('Issue', backref='Issue')
+    error_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=True)
+    error = db.relationship('Issue', backref='Issue')
     
     
     file_name_original = db.Column(db.String(50), nullable=False)
@@ -61,6 +61,7 @@ class Job(db.Model):
         self.progress = 0.0
         self.time_started = False
         self.job_time = [0, datetime.min, datetime.min, datetime.min]
+        self.error_id = 0
 
     def __repr__(self):
         return f"Job(id={self.id}, name={self.name}, printer_id={self.printer_id}, status={self.status})"
@@ -148,6 +149,8 @@ class Job(db.Model):
                 "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",  
                 "printer": job.printer.name if job.printer else 'None', 
                 "file_name_original": job.file_name_original,
+                "errorid": job.error_id, 
+                "error": job.error.issue if job.error else 'None'
             } for job in jobs]
 
             return jobs_data, pagination.total
@@ -348,6 +351,27 @@ class Job(db.Model):
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve favorite jobs. Database error"}), 500
+        
+    @classmethod
+    def setIssue(cls, job_id, issue_id):
+        job = cls.query.get(job_id)
+
+        if job is None:
+            return None
+
+        # Set the job's error_id to the given issue_id
+        job.error_id = issue_id
+
+        # Commit the changes to the database
+        try:
+            db.session.commit()
+            return {"success": True, "message": "Issue assigned successfully."}
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error setting issue: {e}")
+            return None
+        
+        
            
     def saveToFolder(self):
         file_data = self.getFile()

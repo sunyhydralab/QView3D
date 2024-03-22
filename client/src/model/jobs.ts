@@ -16,12 +16,15 @@ export interface Job {
   progress?: number //store progress of job
   printer: string //store printer name
   printerid: number
+
+  errorid?: number 
+  error?: string // store issue name 
+
   file_pause: number
   priority?: string
   favorite?: boolean
   released?: number
   job_server?: [number, Date, Date, Date] // this saves all of the data from the backend.Only changed if there is a pause involved.
-
   job_client?: {
     // this is frontend data CALCULATED based on the backend data
     total_time: number

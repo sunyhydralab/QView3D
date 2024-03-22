@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers, type Device } from '../model/ports'
-import { type Issue, useGetIssues, useCreateIssues } from '../model/issues'
+import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
 import { type Job, useGetErrorJobs } from '../model/jobs';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -8,6 +8,7 @@ import { useRouter } from 'vue-router';
 const { jobhistoryError } = useGetErrorJobs()
 const { issues } = useGetIssues()
 const { createIssue } = useCreateIssues()
+const { assign } = useAssignIssue()
 
 const selectedPrinters = ref<Array<Number>>([])
 const selectedJobs = ref<Array<Job>>([]);
@@ -48,7 +49,6 @@ onMounted(async () => {
     try {
         const retrieveissues = await issues()
         issuelist.value = retrieveissues
-        console.log(issuelist.value)
 
         const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
         const [joblist, total] = await jobhistoryError(page.value, pageSize.value, printerIds)
@@ -57,6 +57,8 @@ onMounted(async () => {
 
         totalPages.value = Math.ceil(total / pageSize.value);
         totalPages.value = Math.max(totalPages.value, 1);
+
+        console.log(jobs.value)
 
     } catch (error) {
         console.error(error)
@@ -124,17 +126,26 @@ const ensureOneCheckboxChecked = () => {
     }
 }
 
-// const showText = () => {
-//     console.log('Create New Issue')
-// }
 const showText = ref(false)
 const newIssue = ref('')
+const selectedIssue = ref<Issue>()
+const selectedJob = ref<Job>()
 
 const doCreateIssue = async () => {
     await createIssue(newIssue.value)
-    issuelist.value = await issues()
+    const newIssues = await issues()
+    console.log(newIssues)
+    issuelist.value = newIssues
     newIssue.value = ''
     showText.value = false
+}
+
+const doAssignIssue = async () => {
+    if (selectedIssue.value === undefined || selectedJob.value === undefined) return
+    await assign(selectedIssue.value.id, selectedJob.value.id)
+    selectedJob.value.error = selectedIssue.value.issue
+    selectedIssue.value = undefined
+    selectedJob.value = undefined
 }
 
 </script>
@@ -152,24 +163,27 @@ const doCreateIssue = async () => {
                 <div class="modal-body">
                     <p>
                     <form methods="POST" @submit.prevent="">
-                        <select name="issue" id="issue" required>
-                            <option disabled value="null">Select Issue</option> <!-- Default option -->
-                            <!-- <option v-for="issue in issues" :value="printer">
-                                    {{ issue }}
-                                </option> -->
+                        <select name="issue" id="issue" v-model="selectedIssue" required>
+                            <option value="null" disabled>Select Issue</option> <!-- Default option -->
+                            <option v-for="issue in issuelist" :value="issue">
+                                {{ issue.issue }}
+                            </option>
                         </select>
                     </form>
-                    <button @click="showText=!showText">Create New Issue</button>
-                    <form v-if="showText==true">
+                    <button @click="showText = !showText">Create New Issue</button>
+                    <form v-if="showText == true">
                         <input v-model="newIssue" type="text" placeholder="Enter Issue" required>
                         <button type="submit" @click="doCreateIssue">Submit</button>
+                        <button @click="showText=!showText">Cancel</button>
                     </form>
 
                     </p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Save</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal"
+                        :disabled="selectedIssue === undefined" @click="doAssignIssue">Assign Issue</button>
                 </div>
             </div>
         </div>
@@ -279,9 +293,14 @@ const doCreateIssue = async () => {
                         {{ job.file_name_original }}
                     </td>
                     <td>{{ job.printer }}</td>
-                    <td></td>
+                    <td v-if="job.errorid!=null">
+                        {{ job.error }}
+                    </td>
+                    <td v-else>
+                    </td>
                     <td>
-                        <button data-bs-toggle="modal" data-bs-target="#issueModal">Assign Issue</button>
+                        <button data-bs-toggle="modal" data-bs-target="#issueModal" @click="selectedJob = job">Assign
+                            Issue</button>
                         <button>View Details</button>
                     </td>
 

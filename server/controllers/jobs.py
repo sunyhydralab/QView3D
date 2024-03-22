@@ -399,6 +399,20 @@ def favoriteJob():
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
     
+@jobs_bp.route('/assignissue', methods=["POST"])
+def assignIssue():
+    try: 
+        data = request.get_json()
+        jobid = data['jobid']
+        issueid = data['issueid']
+        job = Job.findJob(jobid)
+        jobid = job.getJobId()
+        res = job.setIssue(jobid, issueid)
+        return res
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
 @jobs_bp.route('/startprint', methods=["POST"])
 def startPrint(): 
     try: 

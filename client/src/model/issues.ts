@@ -47,3 +47,29 @@ export function useCreateIssues() {
         }
     }
 }
+
+export function useAssignIssue() {
+    return {
+        async assign(issueid: number, jobid: number) {
+            try {
+                const response = await api('assignissue', { issueid, jobid })
+                if (response) {
+                    if (response.success == false) {
+                        toast.error(response.message)
+                    } else if (response.success === true) {
+                        toast.success(response.message)
+                    } else {
+                        console.error('Unexpected response:', response)
+                        toast.error('Failed to assign issue. Unexpected response')
+                    }
+                } else {
+                    console.error('Response is undefined or null')
+                    toast.error('Failed to assign issue. Unexpected response')
+                }
+            } catch (error) {
+                console.error(error)
+                toast.error('An error occurred while assigning the issue')
+            }
+        }
+    }
+}
