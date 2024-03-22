@@ -382,7 +382,7 @@ const setJob = async(job: Job) => {
                         {{ job.file_name_original }}
                     </td>
                     <td>{{ job.printer }}</td>
-                    <td v-if="job.errorid != null">
+                    <td v-if="job.errorid != null && job.errorid!=0">
                         {{ job.error }}
                     </td>
                     <td v-else>
