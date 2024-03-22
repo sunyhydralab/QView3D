@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { printers, useRetrievePrintersInfo, type Device } from '../model/ports'
-import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob } from '../model/jobs';
+import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile } from '../model/jobs';
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 
 const { jobhistory, getFavoriteJobs } = useGetJobs()
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { rerunJob } = useRerunJob()
-const { getFile } = useGetJobFile()
+const { getFileDownload } = useGetJobFile()
+const { getFile } = useGetFile()
 const { deleteJob } = useDeleteJob()
 const { clearSpace } = useClearSpace()
 const { favorite } = useFavoriteJob()
@@ -15,6 +17,7 @@ const { favorite } = useFavoriteJob()
 const selectedPrinters = ref<Array<Number>>([])
 const selectedJobs = ref<Array<Job>>([]);
 const deleteModalTitle = computed(() => `Deleting ${selectedJobs.value.length} job(s) from database!`);
+const clearSpaceTitle = computed(() => 'Clearing space in the database!');
 const searchJob = ref(''); // This will hold the current search query
 const searchByJobName = ref(true);
 const searchByFileName = ref(true);
@@ -26,6 +29,9 @@ let filter = ref('')
 let oldestFirst = ref<boolean>(false)
 let order = ref<string>('newest')
 let favoriteOnly = ref<boolean>(false)
+
+let currentJob = ref<Job | null>(null);
+let isGcodeImageVisible = ref(false);
 
 let page = ref(1)
 let pageSize = ref(10)
@@ -229,9 +235,40 @@ const toggleButton = () => {
     isOffcanvasOpen.value = !isOffcanvasOpen.value;
 }
 
+const openGCodeModal = async (job: Job, printerName: string) => {
+    currentJob.value = job
+    currentJob.value.printer = printerName
+    isGcodeImageVisible.value = true
+    if (currentJob.value) {
+        const file = await getFile(currentJob.value)
+        if (file) {
+            currentJob.value.file = file
+        }
+    }
+}
+
 </script>
 
 <template>
+    <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true"
+        @shown.bs.modal="isGcodeImageVisible = true" @hidden.bs.modal="isGcodeImageVisible = false">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="gcodeImageModalLabel">
+                        <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <GCode3DImageViewer v-if="isGcodeImageVisible" :job="currentJob!" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- bootstrap off canvas to the right -->
     <div class="offcanvas offcanvas-end" data-bs-backdrop="static" tabindex="-1" id="offcanvasRight"
         aria-labelledby="offcanvasRightLabel">
@@ -261,8 +298,8 @@ const toggleButton = () => {
                     <div class="d-flex align-items-center">
                         <i class="fas fa-star text-warning" style="margin-right: 10px;" data-bs-toggle="modal"
                             data-bs-target="#favoriteModal" @click="jobToUnfavorite = job"></i>
-                        <button class="btn btn-secondary download" style="margin-right: 10px;" @click="getFile(job.id)"
-                            :disabled="job.file_name_original.includes('.gcode:')">
+                        <button class="btn btn-secondary download" style="margin-right: 10px;"
+                            @click="getFileDownload(job.id)" :disabled="job.file_name_original.includes('.gcode:')">
                             <i class="fas fa-download"></i>
                         </button>
                         <button class="btn btn-secondary dropdown-toggle" type="button" id="printerDropdown"
@@ -328,8 +365,8 @@ const toggleButton = () => {
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button v-if="modalAction === 'confirmDelete'" type="button" class="btn btn-danger"
                         data-bs-dismiss="modal" @click="confirmDelete">Delete</button>
-                    <button v-if="modalAction === 'clear'" type="button" class="btn btn-danger"
-                        data-bs-dismiss="modal" @click="clear">Clear Space</button>
+                    <button v-if="modalAction === 'clear'" type="button" class="btn btn-danger" data-bs-dismiss="modal"
+                        @click="clear">Clear Space</button>
                 </div>
             </div>
         </div>
@@ -447,7 +484,8 @@ const toggleButton = () => {
                 <button @click="submitFilter" class="btn btn-primary">Submit Filter</button>
             </div>
             <div class="col-1 text-end" style="padding-right: 0">
-                <button @click="clear" class="btn btn-success">
+                <button @click="openModal(clearSpaceTitle, 'Are you sure you want to clear space? This action will remove the files from jobs that are older than 6 months and this cannot be <b>undone</b>.', 'clear')"
+                     class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exampleModal">
                     <i class="fa-solid fa-recycle"></i>
                 </button>
             </div>
@@ -465,7 +503,7 @@ const toggleButton = () => {
                     <th>Date Completed</th>
                     <th>Final Status</th>
                     <th>Printer</th>
-                    <th>Rerun Job</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody v-if="filteredJobs.length > 0">
@@ -474,38 +512,42 @@ const toggleButton = () => {
                         <input type="checkbox" v-model="selectedJobs" :value="job">
                     </td>
                     <td>{{ job.id }}</td>
-                    <td>
-                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                            <div>{{ job.name }}</div>
-                            <div class="star-icon">
-                                <i v-if="job.favorite === true" class="fas fa-star text-warning"
-                                    @click="favoriteJob(job, false)"></i>
-                                <i v-else class="far fa-star text-warning" @click="favoriteJob(job, true)"></i>
-                            </div>
-                        </div>
-                    </td>
+                    <td>{{ job.name }}</td>
                     <td>
                         {{ job.file_name_original }}
-                        <button class="btn btn-secondary download" @click="getFile(job.id)"
-                            :disabled="job.file_name_original.includes('.gcode:')">
-                            <i class="fas fa-download"></i>
-                        </button>
+
                     </td>
                     <td>{{ job.date }}</td>
                     <td>{{ job.status }}</td>
                     <td>{{ job.printer }}</td>
                     <td>
-                        <div class="dropdown">
-                            <button class="btn btn-secondary dropdown-toggle" type="button" id="printerDropdown"
-                                data-bs-toggle="dropdown" aria-expanded="false"
-                                :disabled="job.file_name_original.includes('.gcode:')">
-                                <i class="fa-solid fa-arrow-rotate-right"></i>
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="star-icon">
+                                <i v-if="job.favorite === true" class="fas fa-star text-warning"
+                                    @click="favoriteJob(job, false)"></i>
+                                <i v-else class="far fa-star text-warning" @click="favoriteJob(job, true)"></i>
+                            </div>
+                            <button type="button" class="btn btn-info btn-circle" data-bs-toggle="modal"
+                                data-bs-target="#gcodeImageModal" @click="openGCodeModal(job, job.printer)">
+                                <i class="fa-regular fa-image"></i>
                             </button>
-                            <ul class="dropdown-menu" aria-labelledby="printerDropdown">
-                                <li v-for="printer in printers" :key="printer.id">
-                                    <a class="dropdown-item" @click="handleRerun(job, printer)">{{ printer.name }}</a>
-                                </li>
-                            </ul>
+                            <button class="btn btn-secondary download" @click="getFileDownload(job.id)"
+                                :disabled="job.file_name_original.includes('.gcode:')">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <div class="dropdown">
+                                <button class="btn btn-secondary dropdown-toggle" type="button" id="printerDropdown"
+                                    data-bs-toggle="dropdown" aria-expanded="false"
+                                    :disabled="job.file_name_original.includes('.gcode:')">
+                                    <i class="fa-solid fa-arrow-rotate-right"></i>
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="printerDropdown">
+                                    <li v-for="printer in printers" :key="printer.id">
+                                        <a class="dropdown-item" @click="handleRerun(job, printer)">{{ printer.name
+                                            }}</a>
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
                     </td>
                 </tr>

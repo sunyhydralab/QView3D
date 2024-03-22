@@ -335,7 +335,7 @@ export function useGetGcode() {
 
 export function useGetJobFile() {
   return {
-    async getFile(jobid: number) {
+    async getFileDownload(jobid: number) {
       try {
         const response = await api(`getfile?jobid=${jobid}`)
         const file = new Blob([response.file], { type: 'text/plain' })
