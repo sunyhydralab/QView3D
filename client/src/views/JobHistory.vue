@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { printers, useRetrievePrintersInfo, type Device } from '../model/ports'
-import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile } from '../model/jobs';
+import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useUpdateJobStatus } from '../model/jobs';
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
+import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 
@@ -13,6 +14,11 @@ const { getFile } = useGetFile()
 const { deleteJob } = useDeleteJob()
 const { clearSpace } = useClearSpace()
 const { favorite } = useFavoriteJob()
+const { issues } = useGetIssues()
+const { createIssue } = useCreateIssues()
+const { assign } = useAssignIssue()
+const { assignComment } = useAssignComment()
+const {updateJobStatus} = useUpdateJobStatus()
 
 const selectedPrinters = ref<Array<Number>>([])
 const selectedJobs = ref<Array<Job>>([]);
@@ -21,6 +27,11 @@ const clearSpaceTitle = computed(() => 'Clearing space in the database!');
 const searchJob = ref(''); // This will hold the current search query
 const searchByJobName = ref(true);
 const searchByFileName = ref(true);
+const selectedJob = ref<Job>()
+const newIssue = ref('')
+const selectedIssue = ref<Issue>()
+let issuelist = ref<Array<Issue>>([])
+
 
 const router = useRouter();
 
@@ -50,6 +61,10 @@ let buttonTransform = ref(0);
 let favoriteJobs = ref<Array<Job>>([])
 let jobToUnfavorite: Job | null = null;
 let isOffcanvasOpen = ref(false);
+
+let jobComments = ref('')
+const showText = ref(false)
+
 // computed property that returns the filtered list of jobs. 
 let filteredJobs = computed(() => {
     if (filter.value) {
@@ -63,6 +78,8 @@ let offcanvasElement: HTMLElement | null = null;
 
 onMounted(async () => {
     try {
+        const retrieveissues = await issues()
+        issuelist.value = retrieveissues
 
         offcanvasElement = document.getElementById('offcanvasRight');
 
@@ -247,9 +264,100 @@ const openGCodeModal = async (job: Job, printerName: string) => {
     }
 }
 
+const setJob = async (job: Job) => {
+    jobComments.value = job.comment || '';
+    selectedJob.value = job;
+}
+
+const doCreateIssue = async () => {
+    await createIssue(newIssue.value)
+    const newIssues = await issues()
+    console.log(newIssues)
+    issuelist.value = newIssues
+    newIssue.value = ''
+    showText.value = false
+}
+
+const doAssignIssue = async () => {
+    if (selectedJob.value === undefined) return
+    if (selectedIssue.value !== undefined) {
+        await assign(selectedIssue.value.id, selectedJob.value.id)
+        selectedJob.value.error = selectedIssue.value!.issue
+        await updateJobStatus(selectedJob.value.id, 'error')
+        selectedJob.value.status = 'error'
+
+    }
+    await assignComment(selectedJob.value, jobComments.value)
+    selectedJob.value.comment = jobComments.value
+    selectedIssue.value = undefined
+    selectedJob.value = undefined
+}
+
 </script>
 
 <template>
+
+
+    <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
+        data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="assignIssueLabel">Job#{{ selectedJob?.id }}</h5>
+                    <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px">{{ selectedJob?.date }}</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @click="selectedIssue = undefined; selectedJob = undefined"></button>
+                </div>
+                <!-- Create new issue -->
+                <button class="btn btn-primary" @click="showText = !showText">Create New Issue</button>
+                <form v-if="showText == true" class="p-3">
+                    <div class="mb-3">
+                        <label for="newIssue" class="form-label">Enter Issue</label>
+                        <input id="newIssue" v-model="newIssue" type="text" placeholder="Enter Issue"
+                            class="form-control" required>
+                    </div>
+                    <div>
+                        <button type="submit" @click="doCreateIssue" class="btn btn-primary me-2">Submit</button>
+                        <button @click="showText = !showText" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </form>
+
+                <div class="modal-body">
+                    <p>
+                    <form class="mt-3" @submit.prevent="">
+                        <div class="mb-3">
+                            <label for="issue" class="form-label">Select Issue</label>
+                            <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
+                                <option value="null" disabled>Select Issue</option> <!-- Default option -->
+                                <option v-for="issue in issuelist" :value="issue">
+                                    {{ issue.issue }}
+                                </option>
+                            </select>
+                        </div>
+                    </form>
+                    <div v-if="selectedIssue !== undefined">
+                        <i style="color: red">Warning: Assigning an issue to a job in Job History will set the job status to Error and remove it from 
+                            any active print queues. Please ensure that the job has been completed before assigning an issue.
+                        </i>
+                    </div>
+                    <div class="form-group">
+                        <label for="exampleFormControlTextarea1">Comments</label>
+                        <textarea class="form-control" id="exampleFormControlTextarea1" rows="3"
+                            v-model="jobComments"></textarea>
+                    </div>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save
+                        Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
     <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true"
         @shown.bs.modal="isGcodeImageVisible = true" @hidden.bs.modal="isGcodeImageVisible = false">
         <div class="modal-dialog modal-dialog-centered modal-xl">
@@ -484,8 +592,9 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                 <button @click="submitFilter" class="btn btn-primary">Submit Filter</button>
             </div>
             <div class="col-1 text-end" style="padding-right: 0">
-                <button @click="openModal(clearSpaceTitle, 'Are you sure you want to clear space? This action will remove the files from jobs that are older than 6 months and this cannot be <b>undone</b>.', 'clear')"
-                     class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                <button
+                    @click="openModal(clearSpaceTitle, 'Are you sure you want to clear space? This action will remove the files from jobs that are older than 6 months and this cannot be <b>undone</b>.', 'clear')"
+                    class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exampleModal">
                     <i class="fa-solid fa-recycle"></i>
                 </button>
             </div>
@@ -547,6 +656,11 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                                             }}</a>
                                     </li>
                                 </ul>
+                            </div>
+                            <div>
+                                <button data-bs-toggle="modal" data-bs-target="#issueModal" @click="setJob(job)">
+                                    Comments
+                                </button>
                             </div>
                         </div>
                     </td>

@@ -35,6 +35,8 @@ class Job(db.Model):
     error_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=True)
     error = db.relationship('Issue', backref='Issue')
     
+    # comments 
+    comments = db.Column(db.String(500), nullable=True)
     
     file_name_original = db.Column(db.String(50), nullable=False)
     favorite = db.Column(db.Boolean, nullable=False)
@@ -106,7 +108,10 @@ class Job(db.Model):
                 "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",  
                 "printer": job.printer.name if job.printer else 'None', 
                 "file_name_original": job.file_name_original,
-                "favorite": job.favorite
+                "favorite": job.favorite, 
+                "errorid": job.error_id, 
+                "error": job.error.issue if job.error else 'None', 
+                "comment": job.comments
             } for job in jobs]
 
             return jobs_data, pagination.total
@@ -153,7 +158,8 @@ class Job(db.Model):
                 "printer": job.printer.name if job.printer else 'None', 
                 "file_name_original": job.file_name_original,
                 "errorid": job.error_id, 
-                "error": job.error.issue if job.error else 'None'
+                "error": job.error.issue if job.error else 'None', 
+                "comment": job.comments
             } for job in jobs]
 
             return jobs_data, pagination.total
@@ -372,6 +378,25 @@ class Job(db.Model):
         except Exception as e:
             db.session.rollback()
             print(f"Error setting issue: {e}")
+            return None
+        
+    @classmethod
+    def setComment(cls, job_id, comments):
+        job = cls.query.get(job_id)
+
+        if job is None:
+            return None
+
+        # Set the job's comments to the given comments
+        job.comments = comments
+
+        # Commit the changes to the database
+        try:
+            db.session.commit()
+            return {"success": True, "message": "Comments added successfully."}
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error setting comments: {e}")
             return None
         
         

@@ -149,7 +149,8 @@ class PrinterStatusService:
                     "progress": job.progress,
                     "favorite": job.favorite,
                     "released": job.released,
-                    "file_pause": job.filePause
+                    "file_pause": job.filePause, 
+                    "comments": job.comments
                 }
                 printer_info['queue'].append(job_info)
             

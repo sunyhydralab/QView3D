@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { printers, type Device } from '../model/ports'
 import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
-import { type Job, useGetErrorJobs } from '../model/jobs';
+import { type Job, useGetErrorJobs, useAssignComment } from '../model/jobs';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -9,6 +9,13 @@ const { jobhistoryError } = useGetErrorJobs()
 const { issues } = useGetIssues()
 const { createIssue } = useCreateIssues()
 const { assign } = useAssignIssue()
+const { assignComment } = useAssignComment()
+
+const showText = ref(false)
+const newIssue = ref('')
+const selectedIssue = ref<Issue>()
+const selectedJob = ref<Job>()
+const selectedIssues = ref<Array<number>>([])
 
 const selectedPrinters = ref<Array<Number>>([])
 const selectedJobs = ref<Array<Job>>([]);
@@ -25,6 +32,7 @@ let filter = ref('')
 let oldestFirst = ref<boolean>(false)
 let order = ref<string>('newest')
 let favoriteOnly = ref<boolean>(false)
+let jobComments = ref('')
 
 let page = ref(1)
 let pageSize = ref(10)
@@ -126,12 +134,6 @@ const ensureOneCheckboxChecked = () => {
     }
 }
 
-const showText = ref(false)
-const newIssue = ref('')
-const selectedIssue = ref<Issue>()
-const selectedJob = ref<Job>()
-const selectedIssues = ref<Array<number>>([])
-
 const doCreateIssue = async () => {
     await createIssue(newIssue.value)
     const newIssues = await issues()
@@ -142,9 +144,13 @@ const doCreateIssue = async () => {
 }
 
 const doAssignIssue = async () => {
-    if (selectedIssue.value === undefined || selectedJob.value === undefined) return
-    await assign(selectedIssue.value.id, selectedJob.value.id)
-    selectedJob.value.error = selectedIssue.value.issue
+    if (selectedJob.value === undefined) return
+    if(selectedIssue.value !== undefined){
+        await assign(selectedIssue.value.id, selectedJob.value.id)
+        selectedJob.value.error = selectedIssue.value!.issue
+    }
+    await assignComment(selectedJob.value, jobComments.value)
+    selectedJob.value.comment = jobComments.value
     selectedIssue.value = undefined
     selectedJob.value = undefined
 }
@@ -175,55 +181,68 @@ function appendNullPrinter() {
     }
 }
 
-const clearFilter = async () => {
-    const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-    const [joblist, total] = await jobhistoryError(page.value, pageSize.value, printerIds)
-    jobs.value = joblist;
-    totalJobs.value = total;
-
-    totalPages.value = Math.ceil(total / pageSize.value);
-    totalPages.value = Math.max(totalPages.value, 1);
+const setJob = async(job: Job) => {
+    jobComments.value = job.comment || '';
+    selectedJob.value = job; 
 }
-
 </script>
 
 <template>
 
     <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
         data-bs-backdrop="static">
+
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="assignIssueLabel">Assign Issue</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title" id="assignIssueLabel">Job#{{ selectedJob?.id }}</h5>
+                    <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px">{{ selectedJob?.date }}</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @click="selectedIssue = undefined; selectedJob = undefined"></button>
                 </div>
+
+                <!-- Create new issue -->
+                <button class="btn btn-primary" @click="showText = !showText">Create New Issue</button>
+                <form v-if="showText == true" class="p-3">
+                    <div class="mb-3">
+                        <label for="newIssue" class="form-label">Enter Issue</label>
+                        <input id="newIssue" v-model="newIssue" type="text" placeholder="Enter Issue"
+                            class="form-control" required>
+                    </div>
+                    <div>
+                        <button type="submit" @click="doCreateIssue" class="btn btn-primary me-2">Submit</button>
+                        <button @click="showText = !showText" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </form>
+
                 <div class="modal-body">
                     <p>
-                    <form methods="POST" @submit.prevent="">
-                        <select name="issue" id="issue" v-model="selectedIssue" required>
-                            <option value="null" disabled>Select Issue</option> <!-- Default option -->
-                            <option v-for="issue in issuelist" :value="issue">
-                                {{ issue.issue }}
-                            </option>
-                        </select>
+                    <form class="mt-3" @submit.prevent="">
+                        <div class="mb-3">
+                            <label for="issue" class="form-label">Select Issue</label>
+                            <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
+                                <option value="null" disabled>Select Issue</option> <!-- Default option -->
+                                <option v-for="issue in issuelist" :value="issue">
+                                    {{ issue.issue }}
+                                </option>
+                            </select>
+                        </div>
                     </form>
-                    <button @click="showText = !showText">Create New Issue</button>
-                    <form v-if="showText == true">
-                        <input v-model="newIssue" type="text" placeholder="Enter Issue" required>
-                        <button type="submit" @click="doCreateIssue">Submit</button>
-                        <button @click="showText = !showText">Cancel</button>
-                    </form>
+                    <div class="form-group">
+                        <label for="exampleFormControlTextarea1">Comments</label>
+                        <textarea class="form-control" id="exampleFormControlTextarea1" rows="3" v-model="jobComments"></textarea>
+                    </div>
+
 
                     </p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
                         @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
-                    <button type="button" class="btn btn-success" data-bs-dismiss="modal"
-                        :disabled="selectedIssue === undefined" @click="doAssignIssue">Assign Issue</button>
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save Changes</button>
                 </div>
             </div>
         </div>
+
     </div>
 
     <div class="container">
@@ -334,8 +353,6 @@ const clearFilter = async () => {
         <div class="row w-100" style="margin-bottom: 0.5rem;">
             <div class="col-10 text-center">
                 <button @click="submitFilter" class="btn btn-primary">Submit Filter</button>
-                <button @click="clearFilter" class="btn btn-primary">Clear filters</button>
-
             </div>
             <div class="col-1 text-end" style="padding-right: 0">
             </div>
@@ -371,9 +388,8 @@ const clearFilter = async () => {
                     <td v-else>
                     </td>
                     <td>
-                        <button data-bs-toggle="modal" data-bs-target="#issueModal" @click="selectedJob = job">Assign
+                        <button data-bs-toggle="modal" data-bs-target="#issueModal" @click="setJob(job)">View
                             Issue</button>
-                        <button>View Details</button>
                     </td>
 
                 </tr>
