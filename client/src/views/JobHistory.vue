@@ -172,6 +172,28 @@ async function submitFilter() {
     selectAllCheckbox.value = false;
 }
 
+function clearFilter() {
+    // page.value = 1;
+    // pageSize.value = 10;
+
+    const checkboxesToClear = document.querySelectorAll<HTMLInputElement>('.form-check-input.clearable-checkbox');
+    checkboxesToClear.forEach(checkbox => {
+        checkbox.checked = false;
+    })
+    selectedPrinters.value = [];
+
+    if (order.value === 'oldest') {
+        order.value = 'newest';
+    }
+    favoriteOnly.value = false;
+
+    searchJob.value = '';
+    searchByJobName.value = true;
+    searchByFileName.value = true;
+    
+    submitFilter();
+}
+
 const ensureOneCheckboxChecked = () => {
     if (!searchByJobName.value && !searchByFileName.value) {
         searchByJobName.value = true;
@@ -392,7 +414,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                         <ul class="dropdown-menu w-100" aria-labelledby="dropdownMenuButton">
                             <li v-for="printer in printers" :key="printer.id">
                                 <div class="form-check" @click.stop>
-                                    <input class="form-check-input" type="checkbox" :value="printer"
+                                    <input class="form-check-input clearable-checkbox" type="checkbox" :value="printer"
                                         @change="appendPrinter(printer)" :id="'printer-' + printer.id">
                                     <label class="form-check-label" :for="'printer-' + printer.id">
                                         {{ printer.name }}
@@ -402,7 +424,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                             <li class="dropdown-divider"></li>
                             <li>
                                 <div class="form-check" @click.stop>
-                                    <input class="form-check-input" type="checkbox" id="deregistered-printers"
+                                    <input class="form-check-input clearable-checkbox" type="checkbox" id="deregistered-printers"
                                         @click="appendNullPrinter">
                                     <label class="form-check-label" for="deregistered-printers">
                                         Deregistered printers
@@ -481,7 +503,8 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                 </button>
             </div>
             <div class="col-10 text-center">
-                <button @click="submitFilter" class="btn btn-primary">Submit Filter</button>
+                <button @click="submitFilter" class="btn btn-primary me-3">Submit Filter</button>
+                <button @click="clearFilter" class="btn btn-danger">Clear Filter</button>
             </div>
             <div class="col-1 text-end" style="padding-right: 0">
                 <button @click="openModal(clearSpaceTitle, 'Are you sure you want to clear space? This action will remove the files from jobs that are older than 6 months and this cannot be <b>undone</b>.', 'clear')"

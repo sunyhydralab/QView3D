@@ -332,12 +332,12 @@ class Printer(db.Model):
                 else:
                     self.responseCount = 0
 
-                if response == "echo:busy processing" and self.prevMes == "":
-                    self.responseCount+=1 
-                    if(self.responseCount>=5):
-                        self.setStatus("colorchange")
-                else: 
-                    self.responseCount = 0
+                # if response == "echo:busy processing" and self.prevMes == "":
+                #     self.responseCount+=1 
+                #     if(self.responseCount>=5):
+                #         self.setStatus("colorchange")
+                # else: 
+                #     self.responseCount = 0
 
                 if ("T:" in response) and ("B:" in response):
                     # Extract the temperature values using regex
