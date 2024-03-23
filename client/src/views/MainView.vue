@@ -1,32 +1,40 @@
 <script setup lang="ts">
-import { useSetStatus, type Device, printers, useRetrievePrintersInfo } from '@/model/ports';
-import { type Job, useReleaseJob, useStartJob, useRemoveJob, useGetFile, jobTime } from '@/model/jobs';
+import { useSetStatus, type Device, printers } from '@/model/ports';
+import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
+import { type Job, useReleaseJob, useStartJob, useRemoveJob, useGetFile, jobTime, useAssignComment } from '@/model/jobs';
 import { useRouter } from 'vue-router';
 import { onMounted, ref } from 'vue';
 import draggable from 'vuedraggable'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
+import { on } from 'events';
 
 const { setStatus } = useSetStatus();
 const { releaseJob } = useReleaseJob()
 const { removeJob } = useRemoveJob()
 const { getFile } = useGetFile()
 const { start } = useStartJob()
+const { issues } = useGetIssues()
+const { createIssue } = useCreateIssues()
+const { assign } = useAssignIssue()
+const { assignComment } = useAssignComment()
+
 const router = useRouter();
 let currentJob = ref<Job>();
 let currentPrinter = ref<Device>();
+const selectedJob = ref<Job>()
+const selectedIssue = ref<Issue>()
+const showText = ref(false)
+const newIssue = ref('')
+let issuelist = ref<Array<Issue>>([])
 
 let isGcodeImageVisible = ref(false)
 let isGcodeLiveViewVisible = ref(false)
+let jobComments = ref('')
 
-// import { useRetrievePrintersInfo, printers } from '../model/ports';
-
-// const { retrieveInfo } = useRetrievePrintersInfo();
-// onMounted(async () => {
-//   printers.value = await retrieveInfo()
-  
-//   // await jobTime(printers)
-// }
-// )
+onMounted(async () => {
+  const retrieveissues = await issues()
+  issuelist.value = retrieveissues
+})
 
 const sendToQueueView = (printer: Device | undefined) => {
   if (printer) {
@@ -95,9 +103,92 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
 const startPrint = async (printerid: number, jobid: number) => {
   await start(jobid, printerid)
 }
+
+const setJob = async (job: Job) => {
+  console.log("here")
+  jobComments.value = job.comment || '';
+  selectedJob.value = job;
+}
+
+const doCreateIssue = async () => {
+  await createIssue(newIssue.value)
+  const newIssues = await issues()
+  console.log(newIssues)
+  issuelist.value = newIssues
+  newIssue.value = ''
+  showText.value = false
+}
+
+const doAssignIssue = async () => {
+  if (selectedJob.value === undefined) return
+  await releasePrinter(selectedJob.value, 3, selectedJob.value.printerid)
+  
+  if (selectedIssue.value !== undefined) {
+    await assign(selectedIssue.value.id, selectedJob.value.id)
+  }
+  await assignComment(selectedJob.value, jobComments.value)
+  selectedJob.value.comment = jobComments.value
+  selectedIssue.value = undefined
+  selectedJob.value = undefined
+}
 </script>
 
 <template>
+
+
+  <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
+    data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="assignIssueLabel">Job#{{ selectedJob?.id }}</h5>
+          <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px">{{ selectedJob?.date }}</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+            @click="selectedIssue = undefined; selectedJob = undefined"></button>
+        </div>
+        <!-- Create new issue -->
+        <button class="btn btn-primary" @click="showText = !showText">Create New Issue</button>
+        <form v-if="showText == true" class="p-3">
+          <div class="mb-3">
+            <label for="newIssue" class="form-label">Enter Issue</label>
+            <input id="newIssue" v-model="newIssue" type="text" placeholder="Enter Issue" class="form-control" required>
+          </div>
+          <div>
+            <button type="submit" @click="doCreateIssue" class="btn btn-primary me-2">Submit</button>
+            <button @click="showText = !showText" class="btn btn-secondary">Cancel</button>
+          </div>
+        </form>
+        <div class="modal-body">
+          <p>
+          <form class="mt-3" @submit.prevent="">
+            <div class="mb-3">
+              <label for="issue" class="form-label">Select Issue</label>
+              <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
+                <option value="null" disabled>Select Issue</option> <!-- Default option -->
+                <option v-for="issue in issuelist" :value="issue">
+                  {{ issue.issue }}
+                </option>
+              </select>
+            </div>
+          </form>
+          <div class="form-group">
+            <label for="exampleFormControlTextarea1">Comments</label>
+            <textarea class="form-control" id="exampleFormControlTextarea1" rows="3" v-model="jobComments"></textarea>
+          </div>
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+            @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
+          <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save
+            Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
   <!-- bootstrap 'infoModal' -->
   <div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
@@ -414,7 +505,7 @@ const startPrint = async (printerid: number, jobid: number) => {
               <div
                 v-else-if="printer.queue?.[0] && (printer.queue?.[0].status == 'complete' || printer.queue?.[0].status == 'cancelled')">
                 <div class="buttons">
-                  <div type="button" class="btn btn-danger" @click="releasePrinter(printer.queue?.[0], 3, printer.id)">
+                  <div type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#issueModal" @click=setJob(printer.queue?.[0])>
                     Fail
                   </div>
                   <div type="button" class="btn btn-secondary"
@@ -452,25 +543,25 @@ const startPrint = async (printerid: number, jobid: number) => {
 
             <td style="width: 1%; white-space: nowrap">
               <!-- <div v-if="printer.status == 'printing'"> -->
-                <div style="display: inline-flex">
-                  <button type="button" class="btn btn-primary btn-circle me-2" data-bs-toggle="modal"
-                    data-bs-target="#infoModal" v-if="printer.queue && printer.queue.length > 0"
-                    v-bind:job="printer.queue[0]"
-                    @click="printer.name && openModal(printer.queue[0], printer.name, 0, printer)">
-                    <i class="fas fa-info"></i>
-                  </button>
-                  <!-- <button type="button" class="btn btn-success btn-circle me-2" data-bs-toggle="modal"
+              <div style="display: inline-flex">
+                <button type="button" class="btn btn-primary btn-circle me-2" data-bs-toggle="modal"
+                  data-bs-target="#infoModal" v-if="printer.queue && printer.queue.length > 0"
+                  v-bind:job="printer.queue[0]"
+                  @click="printer.name && openModal(printer.queue[0], printer.name, 0, printer)">
+                  <i class="fas fa-info"></i>
+                </button>
+                <!-- <button type="button" class="btn btn-success btn-circle me-2" data-bs-toggle="modal"
                     data-bs-target="#gcodeLiveViewModal" v-if="printer.queue && printer.queue.length > 0"
                     v-bind:job="printer.queue[0]"
                     @click="printer.name && openModal(printer.queue[0], printer.name, 1, printer)">
                     <i class="fas fa-code"></i>
                   </button> -->
-                  <button type="button" class="btn btn-info btn-circle" data-bs-toggle="modal"
-                    data-bs-target="#gcodeImageModal" v-if="printer.queue && printer.queue.length > 0"
-                    v-bind:job="printer.queue[0]"
-                    @click="printer.name && openModal(printer.queue[0], printer.name, 2, printer)">
-                    <i class="fa-regular fa-image"></i>
-                  </button>
+                <button type="button" class="btn btn-info btn-circle" data-bs-toggle="modal"
+                  data-bs-target="#gcodeImageModal" v-if="printer.queue && printer.queue.length > 0"
+                  v-bind:job="printer.queue[0]"
+                  @click="printer.name && openModal(printer.queue[0], printer.name, 2, printer)">
+                  <i class="fa-regular fa-image"></i>
+                </button>
                 <!-- </div> -->
               </div>
             </td>

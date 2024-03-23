@@ -268,19 +268,6 @@ export function useEditThread() {
     async editThread(printerid: number | undefined, newname: string) {
       try {
         const response = await api('editNameInThread', { printerid, newname })
-        // if (response) {
-        //   if (response.success == false) {
-        //     toast.error(response.message)
-        //   } else if (response.success === true) {
-        //     toast.success(response.message)
-        //   } else {
-        //     console.error('Unexpected response:', response)
-        //     toast.error('Failed to edit thread. Unexpected response.')
-        //   }
-        // } else {
-        //   console.error('Response is undefined or null')
-        //   toast.error('Failed to edit thread. Unexpected response')
-        // }
         return response
       } catch (error) {
         console.error(error)

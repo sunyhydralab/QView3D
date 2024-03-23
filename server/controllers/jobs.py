@@ -37,6 +37,26 @@ def getJobs():
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
+    
+@jobs_bp.route('/geterrorjobs', methods=["GET"])
+def getErrorJobs():
+    page = request.args.get('page', default=1, type=int)
+    pageSize = request.args.get('pageSize', default=10, type=int)
+    printerIds = request.args.get('printerIds', type=json.loads)
+    searchJob = request.args.get('searchJob', default='', type=str)
+    issueIds = request.args.get('issueIds', type=json.loads)
+    
+    oldestFirst = request.args.get('oldestFirst', default='false')
+    oldestFirst = oldestFirst.lower() in ['true', '1']
+
+    searchCriteria = request.args.get('searchCriteria', default='', type=str)
+    
+    try:
+        res = Job.get_job_error_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, issueIds)
+        return jsonify(res)
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
 
 # add job to queue
 @jobs_bp.route('/addjobtoqueue', methods=["POST"])
@@ -270,10 +290,28 @@ def updateJobStatus():
         printerobject = findPrinterObject(printerid)
         queue = printerobject.getQueue()
         
-        # if(status == 'error')
+        # queue.deleteJob(job_id, printerid)
         
-        # inmemjob = queue.getJob(job)
-        # inmemjob.setStatus(newstatus)
+        return jsonify(res), 200
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
+@jobs_bp.route('/assigntoerror', methods=["POST"])
+def assignToError():
+    try:
+        data = request.get_json()
+        job_id = data['jobid']
+        newstatus = data['status']
+        
+        res = Job.update_job_status(job_id, newstatus)
+        
+        job = Job.findJob(job_id) 
+        printerid = job.getPrinterId() 
+        printerobject = findPrinterObject(printerid)
+        queue = printerobject.getQueue()
+        
+        queue.deleteJob(job_id, printerid)
         
         return jsonify(res), 200
     except Exception as e:
@@ -380,6 +418,20 @@ def favoriteJob():
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
     
+@jobs_bp.route('/assignissue', methods=["POST"])
+def assignIssue():
+    try: 
+        data = request.get_json()
+        jobid = data['jobid']
+        issueid = data['issueid']
+        job = Job.findJob(jobid)
+        jobid = job.getJobId()
+        res = job.setIssue(jobid, issueid)
+        return res
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
 @jobs_bp.route('/startprint', methods=["POST"])
 def startPrint(): 
     try: 
@@ -396,6 +448,21 @@ def startPrint():
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected ersetupPortRepairSocketror occurred"}), 500
+    
+@jobs_bp.route('/savecomment', methods=["POST"])
+def saveComment(): 
+    try: 
+        data = request.get_json()
+        jobid = data['jobid']
+        comment = data['comment']
+        
+        # job = Job.findJob(jobid)
+        res = Job.setComment(jobid, comment)
+        return res 
+    
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
     
 def findPrinterObject(printer_id): 
     threads = printer_status_service.getThreadArray()

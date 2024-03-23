@@ -155,6 +155,7 @@ export function setupPortRepairSocket(printers: any) {
   socket.on('port_repair', (data: any) => {
     if(printers){
       const printer = printers.value.find((p: Device) => p.id === data.printer_id)
+      console.log("printer device: " + (printer.device), " data device: " + data.device)
       printer.device = data.device
   } else {
     console.error('printers or printers.value is undefined');

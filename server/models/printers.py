@@ -409,17 +409,7 @@ class Printer(db.Model):
                         job.setTime(job.calculateEta(), 1)
                         job.setTime(datetime.now(), 2)
                         print(job.job_time)
-
-                    # if("M600" in line):
-                    #     print("HERE")
-                    #     job.setTime(datetime.now(), 3)
-                    #     # job.setTime(job.calculateTotalTime(), 0)
-                    #     # job.setTime(job.updateEta(), 1)
-                    #     print("color change command")
-                    #     self.setStatus("colorchange")
-                    #     job.setFilePause(1)
-                    
-                                
+                 
                     res = self.sendGcode(line)
                     
                     if(job.getFilePause() == 1):
@@ -441,17 +431,8 @@ class Printer(db.Model):
                     
                     if self.prevMes == "M602":
                         self.prevMes=""
-
-                    # if(job.getFilePause() == 1):
-                    #     # self.setStatus("printing")
-                    #     job.setTime(job.colorEta(), 1)
-                    #     job.setTime(job.calculateColorChangeTotal(), 0)
-                    #     job.setTime(datetime.min, 3)
-                    #     job.setFilePause(0)
-                    #     self.setStatus("printing")
-
-                        
-                    #  software pausing        
+                             
+                #  software pausing        
                     if (self.getStatus()=="paused"):
                         # self.prevMes = "M601"
                         self.sendGcode("M601") # pause command for prusa
@@ -463,8 +444,6 @@ class Printer(db.Model):
                                 self.prevMes = "M602"
 
                                 self.sendGcode("M602") # resume command for prusa
-                                # self.sendGcode("M190")
-                                # self.sendGcode("M109")
 
                                 time.sleep(2)
                                 job.setTime(job.colorEta(), 1)
@@ -483,9 +462,7 @@ class Printer(db.Model):
                         job.setTime(job.calculateColorChangeTotal(), 0)
                         job.setTime(datetime.min, 3)
                         self.setStatus("printing")
-                        # job.setPauseTime()
 
-                    
                     # Increment the sent lines
                     sent_lines += 1
                     # Calculate the progress
@@ -583,6 +560,7 @@ class Printer(db.Model):
             self.setError(e)
             
     def beginPrint(self, job): 
+        print("in BEGIN PRINT")
         while True: 
             time.sleep(1)
             if job.getReleased()==1: 
