@@ -26,6 +26,9 @@
         <li class="nav-item">
           <router-link to="/history" class="nav-link" active-class="active">Job History</router-link>
         </li>
+        <li class="nav-item">
+          <router-link to="/error" class="nav-link" active-class="active">Error Log</router-link>
+        </li>
       </ul>
 
       <router-link to="/submit" class="btn btn-outline-success my-2 my-sm-0 ms-auto">Submit Job</router-link>

@@ -16,12 +16,17 @@ export interface Job {
   progress?: number //store progress of job
   printer: string //store printer name
   printerid: number
+
+  errorid?: number
+  error?: string // store issue name 
+
+  comment?: string // store comments
+
   file_pause: number
   priority?: string
   favorite?: boolean
   released?: number
   job_server?: [number, Date, Date, Date] // this saves all of the data from the backend.Only changed if there is a pause involved.
-
   job_client?: {
     // this is frontend data CALCULATED based on the backend data
     total_time: number
@@ -34,7 +39,7 @@ export interface Job {
 }
 
 export function jobTime(job: Job, printers: any) {
-  if(printers){
+  if (printers) {
 
     if (!job.job_client) {
       job.job_client = {
@@ -45,7 +50,7 @@ export function jobTime(job: Job, printers: any) {
         remaining_time: NaN
       }
     }
-    if(!job.job_server){
+    if (!job.job_server) {
       // job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
       job.job_server = [0, new Date(0, 0, 0, 0), new Date(0, 0, 0, 0), new Date(0, 0, 0, 0)]
 
@@ -63,7 +68,7 @@ export function jobTime(job: Job, printers: any) {
         return
       }
 
-      let totalTime = job.job_server![0] 
+      let totalTime = job.job_server![0]
       job.job_client!.total_time = totalTime * 1000
 
       let eta = job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
@@ -73,8 +78,8 @@ export function jobTime(job: Job, printers: any) {
         const now = Date.now();
         const elapsedTime = now - new Date(job.job_server![2]).getTime();
         job.job_client!.elapsed_time = Math.round(elapsedTime / 1000) * 1000;
-        if(!isNaN(job.job_client!.elapsed_time)){
-          if(job.job_client!.elapsed_time <= job.job_client!.total_time){
+        if (!isNaN(job.job_client!.elapsed_time)) {
+          if (job.job_client!.elapsed_time <= job.job_client!.total_time) {
             job.job_client!.remaining_time = job.job_client!.total_time - job.job_client!.elapsed_time
           }
         }
@@ -93,45 +98,45 @@ export function jobTime(job: Job, printers: any) {
     // Call updateJobTime immediately when jobTime is called
     updateJobTime();
 
-  // Continue to call updateJobTime at regular intervals
-  job.timer = setInterval(updateJobTime, 1000)
-}else{
-  console.error('printers is undefined');
+    // Continue to call updateJobTime at regular intervals
+    job.timer = setInterval(updateJobTime, 1000)
+  } else {
+    console.error('printers is undefined');
 
-}
+  }
 }
 
 export function setupTimeSocket(printers: any) {
   // Always set up the socket connection and event listener
   socket.on('set_time', (data: any) => {
-    if(printers){
-    const job = printers.value
-      .flatMap((printer: { queue: any }) => printer.queue)
-      .find((job: { id: any }) => job?.id === data.job_id)
+    if (printers) {
+      const job = printers.value
+        .flatMap((printer: { queue: any }) => printer.queue)
+        .find((job: { id: any }) => job?.id === data.job_id)
 
-    if (!job.job_client || !job.job_server) {
-      job.job_client = {
-        total_time: 0,
-        eta: 0,
-        elapsed_time: 0,
-        extra_time: 0,
-        remaining_time: NaN
+      if (!job.job_client || !job.job_server) {
+        job.job_client = {
+          total_time: 0,
+          eta: 0,
+          elapsed_time: 0,
+          extra_time: 0,
+          remaining_time: NaN
+        }
+        // job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
+        job.job_server = [0, '00:00:00', '00:00:00', '00:00:00']
+
       }
-      // job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
-      job.job_server = [0, '00:00:00', '00:00:00', '00:00:00']
 
+      if (typeof (data.new_time) === 'number') {
+        job.job_server[data.index] = data.new_time
+      } else {
+        job.job_server[data.index] = Date.parse(data.new_time)
+      }
+
+      jobTime(job, printers)
+    } else {
+      console.error('printers or printers.value is undefined');
     }
-
-    if(typeof(data.new_time) === 'number'){
-      job.job_server[data.index] = data.new_time
-    }else{
-      job.job_server[data.index] = Date.parse(data.new_time)
-    }
-
-    jobTime(job, printers)
-  }else {
-    console.error('printers or printers.value is undefined');
-  }
   })
 }
 
@@ -151,6 +156,37 @@ export function useGetJobs() {
     async getFavoriteJobs() {
       try {
         const response = await api('getfavoritejobs')
+        return response
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while retrieving the jobs')
+      }
+    }
+  }
+}
+
+export function useUpdateJobStatus () {
+  return {
+    async updateJobStatus (jobid: number, status: string) {
+      try {
+        const response = await api('assigntoerror', { jobid, status })
+        return response
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while updating the job status')
+      }
+    }
+  }
+
+}
+
+export function useGetErrorJobs() {
+  return {
+    async jobhistoryError(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean, issues?: number[]) {
+      try {
+        const response = await api(
+          `geterrorjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&issueIds=${JSON.stringify(issues)}`
+        )
         return response
       } catch (error) {
         console.error(error)
@@ -185,15 +221,7 @@ export function useAutoQueue() {
       try {
         const response = await api('autoqueue', job)
         if (response) {
-          return response 
-          // if (response.success == false) {
-          //   toast.error(response.message)
-          // } else if (response.success === true) {
-          //   toast.success(response.message)
-          // } else {
-          //   console.error('Unexpected response:', response)
-          //   toast.error('Failed to queue job. Unexpected response')
-          // }
+          return response
         } else {
           console.error('Response is undefined or null')
           toast.error('Failed to queue job. Unexpected response')
@@ -245,14 +273,6 @@ export function useRemoveJob() {
         const response = await api('canceljob', { jobpk })
         if (response) {
           return response
-          // if (response.success == false) {
-          //   toast.error(response.message)
-          // } else if (response.success === true) {
-          //   toast.success(response.message)
-          // } else {
-          //   console.error('Unexpected response:', response)
-          //   toast.error('Failed to remove job. Unexpected response.')
-          // }
         } else {
           console.error('Response is undefined or null')
           toast.error('Failed to remove job. Unexpected response')
@@ -410,11 +430,11 @@ export function useFavoriteJob() {
   }
 }
 
-export function useMoveJob(){
+export function useMoveJob() {
   return {
-    async moveJob(printerid: number | undefined, arr: number[] | undefined){
+    async moveJob(printerid: number | undefined, arr: number[] | undefined) {
       try {
-        const response = await api('movejob', {printerid, arr})
+        const response = await api('movejob', { printerid, arr })
         if (response) {
           return response
         } else {
@@ -444,15 +464,43 @@ export function useDeleteJob() {
   }
 }
 
-export function useStartJob(){
+export function useStartJob() {
   return {
-    async start(jobid: number, printerid: number){
+    async start(jobid: number, printerid: number) {
       try {
         const response = await api(`startprint`, { jobid, printerid })
         return response;
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while starting the job')
+      }
+    }
+  }
+}
+
+export function useAssignComment() {
+  return {
+    async assignComment(job: Job, comment: string) {
+      let jobid = job?.id
+      try {
+        const response = await api(`savecomment`, { jobid, comment })
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to write comment. Unexpected response.')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to write comment. Unexpected response')
+        }
+        return response
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while assigning the comment')
       }
     }
   }
