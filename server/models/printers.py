@@ -478,6 +478,7 @@ class Printer(db.Model):
 
                     # Increment the sent lines
                     sent_lines += 1
+                    job.setSentLines(sent_lines)
                     # Calculate the progress
                     progress = (sent_lines / total_lines) * 100
 

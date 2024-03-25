@@ -6,7 +6,7 @@ import { useRouter } from 'vue-router';
 import { onMounted, ref } from 'vue';
 import draggable from 'vuedraggable'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
-import { on } from 'events';
+import GCode3DLiveViewer from '@/components/GCode3DLiveViewer.vue';
 
 const { setStatus } = useSetStatus();
 const { releaseJob } = useReleaseJob()
@@ -137,55 +137,62 @@ const doAssignIssue = async () => {
 
 
   <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
-    data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="assignIssueLabel">Job#{{ selectedJob?.id }}</h5>
-          <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px">{{ selectedJob?.date }}</h6>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
-            @click="selectedIssue = undefined; selectedJob = undefined"></button>
-        </div>
-        <!-- Create new issue -->
-        <button class="btn btn-primary" @click="showText = !showText">Create New Issue</button>
-        <form v-if="showText == true" class="p-3">
-          <div class="mb-3">
-            <label for="newIssue" class="form-label">Enter Issue</label>
-            <input id="newIssue" v-model="newIssue" type="text" placeholder="Enter Issue" class="form-control" required>
-          </div>
-          <div>
-            <button type="submit" @click="doCreateIssue" class="btn btn-primary me-2">Submit</button>
-            <button @click="showText = !showText" class="btn btn-secondary">Cancel</button>
-          </div>
-        </form>
-        <div class="modal-body">
-          <p>
-          <form class="mt-3" @submit.prevent="">
-            <div class="mb-3">
-              <label for="issue" class="form-label">Select Issue</label>
-              <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
-                <option value="null" disabled>Select Issue</option> <!-- Default option -->
-                <option v-for="issue in issuelist" :value="issue">
-                  {{ issue.issue }}
-                </option>
-              </select>
+        data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header d-flex align-items-end">
+                    <h5 class="modal-title mb-0" id="assignIssueLabel" style="line-height: 1;">Job #{{ selectedJob?.id
+                        }}</h5>
+                    <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px; line-height: 1;">{{
+                        selectedJob?.date }}</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                        @click="selectedIssue = undefined; selectedJob = undefined;"></button>
+                </div>
+                <div class="modal-body">
+                    <button class="btn btn-primary mb-3" @click="showText = !showText">Create New Issue</button>
+                    <form v-if="showText" class="p-3 border rounded bg-light mb-3">
+                        <div class="mb-3">
+                            <label for="newIssue" class="form-label">Enter Issue</label>
+                            <input id="newIssue" v-model="newIssue" type="text" placeholder="Enter Issue"
+                                class="form-control" required>
+                        </div>
+                        <div>
+                            <button type="submit" @click="doCreateIssue" class="btn btn-primary me-2"
+                                v-bind:disabled="!newIssue">Submit</button>
+                            <button @click="showText = !showText" class="btn btn-secondary">Cancel</button>
+                        </div>
+                    </form>
+                    <form @submit.prevent="">
+                        <div class="mb-3">
+                            <label for="issue" class="form-label">Select Issue</label>
+                            <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
+                                <option disabled value="undefined">Select Issue</option>
+                                <option v-for="issue in issuelist" :value="issue">
+                                    {{ issue.issue }}
+                                </option>
+                            </select>
+                        </div>
+                    </form>
+                    <div v-if="selectedIssue !== undefined" class="alert alert-danger mt-3">
+                        Warning: Assigning an issue to a job in Job History will set the job status to Error and remove
+                        it from any active print queues. Please ensure that the job has been completed before assigning
+                        an issue.
+                    </div>
+                    <div class="form-group mt-3">
+                        <label for="exampleFormControlTextarea1">Comments</label>
+                        <textarea class="form-control" id="exampleFormControlTextarea1" rows="3"
+                            v-model="jobComments"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save
+                        Changes</button>
+                </div>
             </div>
-          </form>
-          <div class="form-group">
-            <label for="exampleFormControlTextarea1">Comments</label>
-            <textarea class="form-control" id="exampleFormControlTextarea1" rows="3" v-model="jobComments"></textarea>
-          </div>
-          </p>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-            @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
-          <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save
-            Changes</button>
-        </div>
-      </div>
     </div>
-  </div>
 
 
 
@@ -338,7 +345,7 @@ const doAssignIssue = async () => {
         </div>
         <div class="modal-body">
           <div class="row">
-            <!-- <GCode3DLiveViewer v-if="isGcodeLiveViewVisible" :job="currentJob" /> -->
+            <GCode3DLiveViewer v-if="isGcodeLiveViewVisible" :job="currentJob" />
           </div>
         </div>
       </div>
@@ -550,12 +557,12 @@ const doAssignIssue = async () => {
                   @click="printer.name && openModal(printer.queue[0], printer.name, 0, printer)">
                   <i class="fas fa-info"></i>
                 </button>
-                <!-- <button type="button" class="btn btn-success btn-circle me-2" data-bs-toggle="modal"
+                <button type="button" class="btn btn-success btn-circle me-2" data-bs-toggle="modal"
                     data-bs-target="#gcodeLiveViewModal" v-if="printer.queue && printer.queue.length > 0"
                     v-bind:job="printer.queue[0]"
                     @click="printer.name && openModal(printer.queue[0], printer.name, 1, printer)">
                     <i class="fas fa-code"></i>
-                  </button> -->
+                  </button>
                 <button type="button" class="btn btn-info btn-circle" data-bs-toggle="modal"
                   data-bs-target="#gcodeImageModal" v-if="printer.queue && printer.queue.length > 0"
                   v-bind:job="printer.queue[0]"

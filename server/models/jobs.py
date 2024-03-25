@@ -44,6 +44,7 @@ class Job(db.Model):
     released = 0 
     filePause = 0
     progress = 0.0
+    sent_lines = 0
     time_started = False
     #total, eta, timestart, pause time 
     job_time = job_time = [0, datetime.min, datetime.min, datetime.min]
@@ -61,6 +62,7 @@ class Job(db.Model):
         self.released = 0 
         self.filePause = 0
         self.progress = 0.0
+        self.sent_lines = 0
         self.time_started = False
         self.job_time = [0, datetime.min, datetime.min, datetime.min]
         self.error_id = 0
@@ -398,8 +400,6 @@ class Job(db.Model):
             db.session.rollback()
             print(f"Error setting comments: {e}")
             return None
-        
-        
            
     def saveToFolder(self):
         file_data = self.getFile()
@@ -448,8 +448,7 @@ class Job(db.Model):
 
     def setFilePause(self, pause):
         self.filePause = pause
-        current_app.socketio.emit('file_pause_update', {
-                                  'job_id': self.id, 'file_pause': self.filePause})
+        current_app.socketio.emit('file_pause_update', {'job_id': self.id, 'file_pause': self.filePause})
 
     # setters
 
@@ -463,12 +462,18 @@ class Job(db.Model):
         if self.status == 'printing':
             self.progress = progress
             # Emit a 'progress_update' event with the new progress
-            current_app.socketio.emit(
-                'progress_update', {'job_id': self.id, 'progress': self.progress})
+            current_app.socketio.emit('progress_update', {'job_id': self.id, 'progress': self.progress})
 
     # added a getProgress method to get the progress of a job
     def getProgress(self):
         return self.progress
+    
+    def setSentLines(self, sent_lines):
+        self.sent_lines = sent_lines
+        current_app.socketio.emit('gcode_viewer', {'job_id': self.id, 'gcode_num': self.sent_lines})
+        
+    def getSentLines(self):
+        return self.sent_lines
 
     def getTimeFromFile(self, comment_lines):
         # job_line can look two ways:

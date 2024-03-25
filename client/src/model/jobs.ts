@@ -14,14 +14,12 @@ export interface Job {
   date?: Date
   status?: string
   progress?: number //store progress of job
+  gcode_num?: number //store gcode of job
   printer: string //store printer name
   printerid: number
-
   errorid?: number
   error?: string // store issue name 
-
   comment?: string // store comments
-
   file_pause: number
   priority?: string
   favorite?: boolean
