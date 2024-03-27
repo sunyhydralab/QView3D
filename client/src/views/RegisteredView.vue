@@ -245,7 +245,7 @@ const toggleMessage = (printer: Device) => {
                         <input type="text" class="form-control" placeholder="Custom Name" maxlength="49"
                             v-model="customname" required>
                     </div>
-                    <button type="submit" class="btn btn-primary">Submit</button>
+                    <button type="submit" class="btn btn-primary" v-bind:disabled="!customname">Submit</button>
                 </div>
             </form>
             <div v-if="selectedDevice" class="mt-3">
