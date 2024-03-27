@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { printers, type Device } from '../model/ports'
 import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
-import { type Job, useGetErrorJobs, useAssignComment } from '../model/jobs';
+import { type Job, useGetErrorJobs, useAssignComment, useGetJobFile, useGetFile } from '../model/jobs';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 
 const { jobhistoryError } = useGetErrorJobs()
 const { issues } = useGetIssues()
 const { createIssue } = useCreateIssues()
 const { assign } = useAssignIssue()
 const { assignComment } = useAssignComment()
+const { getFileDownload } = useGetJobFile()
+const { getFile } = useGetFile()
 
 const showText = ref(false)
 const newIssue = ref('')
@@ -27,6 +30,9 @@ const router = useRouter();
 
 let jobs = ref<Array<Job>>([])
 let issuelist = ref<Array<Issue>>([])
+
+let currentJob = ref<Job>()
+let isGcodeImageVisible = ref(false)
 
 let filter = ref('')
 let filterDropdown = ref(false)
@@ -98,7 +104,7 @@ const changePage = async (newPage: any) => {
 
 async function submitFilter() {
     filterDropdown.value = false;
-    
+
     jobs.value = []
     oldestFirst.value = order.value === 'oldest';
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
@@ -162,7 +168,7 @@ const setJob = async (job: Job) => {
 }
 
 function clearFilter() {
-    // page.value = 1;
+    page.value = 1;
     // pageSize.value = 10;
 
     selectedPrinters.value = [];
@@ -185,9 +191,54 @@ const closeDropdown = (evt: any) => {
         filterDropdown.value = false;
     }
 }
+
+const handleRerun = async (job: Job, printer: Device) => {
+    await router.push({
+        name: 'SubmitJobVue', // the name of the route to SubmitJob.vue
+        params: { job: JSON.stringify(job), printer: JSON.stringify(printer) } // the job and printer to fill in the form
+    });
+}
+
+const handleEmptyRerun = async () => {
+    await router.push({
+        name: 'SubmitJobVue'
+    })
+}
+
+const openGCodeModal = async (job: Job, printerName: string) => {
+    currentJob.value = job
+    currentJob.value.printer = printerName
+    isGcodeImageVisible.value = true
+    if (currentJob.value) {
+        const file = await getFile(currentJob.value)
+        if (file) {
+            currentJob.value.file = file
+        }
+    }
+}
 </script>
 
 <template>
+    <!-- gcode image viewer modal -->
+    <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true"
+        @shown.bs.modal="isGcodeImageVisible = true" @hidden.bs.modal="isGcodeImageVisible = false">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="gcodeImageModalLabel">
+                        <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <GCode3DImageViewer v-if="isGcodeImageVisible" :job="currentJob!" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
         data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
@@ -271,9 +322,8 @@ const closeDropdown = (evt: any) => {
                                     style="padding-top: .5rem; padding-bottom: .5rem;">
                                     <li v-for="printer in printers" :key="printer.id">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox"
-                                                :value="printer.id" v-model="selectedPrinters"
-                                                :id="'printer-' + printer.id">
+                                            <input class="form-check-input" type="checkbox" :value="printer.id"
+                                                v-model="selectedPrinters" :id="'printer-' + printer.id">
                                             <label class="form-check-label" :for="'printer-' + printer.id">
                                                 {{ printer.name }}
                                             </label>
@@ -359,9 +409,9 @@ const closeDropdown = (evt: any) => {
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <div class="d-flex justify-content-center">
-                            <button @click="submitFilter" class="btn btn-primary me-3" @click.prevent>Submit
+                            <button @click.prevent="submitFilter" class="btn btn-primary me-3">Submit
                                 Filter</button>
-                            <button @click="clearFilter" class="btn btn-danger">Clear Filter</button>
+                            <button @click.prevent="clearFilter" class="btn btn-danger">Clear Filter</button>
                         </div>
                     </form>
                 </div>
@@ -377,7 +427,6 @@ const closeDropdown = (evt: any) => {
                     <th>Printer</th>
                     <th>Issue</th>
                     <th>Actions</th>
-
                 </tr>
             </thead>
             <tbody v-if="filteredJobs.length > 0">
@@ -392,10 +441,58 @@ const closeDropdown = (evt: any) => {
                     <td v-else>
                     </td>
                     <td>
-                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#issueModal"
-                            @click="setJob(job)">
-                            View Issue
-                        </button>
+                        <div class="dropdown">
+                            <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                                <button type="button" id="settingsDropdown" data-bs-toggle="dropdown"
+                                    aria-expanded="false" style="background: none; border: none;">
+                                    <i class="fas fa-ellipsis"></i>
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
+                                            data-bs-target="#gcodeImageModal" @click="openGCodeModal(job, job.printer)">
+                                            <i class="fa-regular fa-image"></i>
+                                            <span class="ms-2">Image Viewer</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
+                                            data-bs-target="#issueModal" @click="setJob(job); showText = false">
+                                            <i class="fas fa-comments"></i>
+                                            <span class="ms-2">Comments</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center"
+                                            @click="getFileDownload(job.id)"
+                                            :disabled="job.file_name_original.includes('.gcode:')">
+                                            <i class="fas fa-download"></i>
+                                            <span class="ms-2">Download</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li class="dropdown-submenu">
+                                        <a class="dropdown-item d-flex justify-content-between align-items-center"
+                                            @click="handleEmptyRerun">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fa-solid fa-arrow-rotate-right"></i>
+                                                <span class="ms-2">Rerun</span>
+                                            </div>
+                                            <i class="fa-solid fa-chevron-right"></i>
+                                        </a>
+                                        <ul class="dropdown-menu">
+                                            <li v-for="printer in printers" :key="printer.id">
+                                                <a class="dropdown-item" @click="handleRerun(job, printer)">
+                                                    {{ printer.name }}
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </td>
                 </tr>
             </tbody>
@@ -428,6 +525,36 @@ const closeDropdown = (evt: any) => {
     transform: translateX(-50%) !important;
     width: 400px;
     z-index: 1000;
+}
+
+.dropdown-submenu {
+    position: relative;
+    box-sizing: border-box;
+}
+
+.dropdown-submenu .dropdown-menu {
+    top: -9px;
+    left: 99.9%; /* Adjust this value as needed */
+    max-height: 200px; /* Adjust this value as needed */
+    overflow-y: auto;
+}
+
+.dropdown-submenu:hover>.dropdown-menu {
+    display: block;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    padding-left: .5rem;
+}
+
+.dropdown-item i {
+    width: 20px;
+}
+
+.dropdown-item span {
+    margin-left: 10px;
 }
 
 .truncate-name {

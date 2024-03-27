@@ -187,7 +187,7 @@ async function submitFilter() {
 }
 
 function clearFilter() {
-    // page.value = 1;
+    page.value = 1;
     // pageSize.value = 10;
 
     selectedPrinters.value = [];
@@ -601,9 +601,9 @@ const closeDropdown = (evt: any) => {
                             <div class="my-2 border-top"
                                 style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                             <div class="d-flex justify-content-center">
-                                <button @click="submitFilter" class="btn btn-primary me-3" @click.prevent>Submit
+                                <button @click.prevent="submitFilter" class="btn btn-primary me-3">Submit
                                     Filter</button>
-                                <button @click="clearFilter" class="btn btn-danger">Clear Filter</button>
+                                <button @click.prevent="clearFilter" class="btn btn-danger">Clear Filter</button>
                             </div>
                         </form>
                     </div>
