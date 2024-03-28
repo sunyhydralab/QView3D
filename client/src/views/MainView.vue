@@ -157,9 +157,9 @@ const doAssignIssue = async () => {
                                 class="form-control" required>
                         </div>
                         <div>
-                            <button type="submit" @click="doCreateIssue" class="btn btn-primary me-2"
+                            <button type="submit" @click.prevent="doCreateIssue" class="btn btn-primary me-2"
                                 v-bind:disabled="!newIssue">Submit</button>
-                            <button @click="showText = !showText" class="btn btn-secondary">Cancel</button>
+                            <button @click.prevent="showText = !showText" class="btn btn-secondary">Cancel</button>
                         </div>
                     </form>
                     <form @submit.prevent="">
