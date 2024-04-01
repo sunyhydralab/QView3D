@@ -9,6 +9,7 @@ const props = defineProps({
     job: Object as () => Job,
     file: Object as () => File
 })
+
 const file = () => {
     if (props.file) {
         return props.file
@@ -21,7 +22,6 @@ const file = () => {
 
 // Create a ref for the canvas
 const canvas = ref<HTMLCanvasElement | null>(null);
-
 let preview: GCodePreview.WebGLPreview | null = null;
 
 onMounted(async () => {

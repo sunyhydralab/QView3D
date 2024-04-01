@@ -99,6 +99,18 @@ onMounted(async () => {
 
         favoriteJobs.value = await getFavoriteJobs()
 
+        // // make 10 dummy printers
+        // for (let i = 2; i < 11; i++) {
+        //     printers.value.push({
+        //         id: i, 
+        //         name: `Printer ${i}`,
+        //         device: '',
+        //         description: '',
+        //         hwid: '',
+        //         queue: []
+        //     })
+        // }
+
         document.addEventListener('click', closeDropdown);
 
     } catch (error) {
@@ -537,9 +549,8 @@ const closeDropdown = (evt: any) => {
                                         style="padding-top: .5rem; padding-bottom: .5rem;">
                                         <li v-for="printer in printers" :key="printer.id">
                                             <div class="form-check">
-                                                <input class="form-check-input" type="checkbox"
-                                                    :value="printer.id" v-model="selectedPrinters"
-                                                    :id="'printer-' + printer.id">
+                                                <input class="form-check-input" type="checkbox" :value="printer.id"
+                                                    v-model="selectedPrinters" :id="'printer-' + printer.id">
                                                 <label class="form-check-label" :for="'printer-' + printer.id">
                                                     {{ printer.name }}
                                                 </label>
@@ -549,8 +560,8 @@ const closeDropdown = (evt: any) => {
                                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                                         <li>
                                             <div class="form-check">
-                                                <input class="form-check-input" type="checkbox"
-                                                    value="0" v-model="selectedPrinters" id="printer-0">
+                                                <input class="form-check-input" type="checkbox" value="0"
+                                                    v-model="selectedPrinters" id="printer-0">
                                                 <label class="form-check-label" for="printer-0">
                                                     Deregistered printers
                                                 </label>
@@ -581,14 +592,14 @@ const closeDropdown = (evt: any) => {
                                 style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                             <label class="form-label">Order:</label>
                             <div class="form-check mb-2">
-                                <input class="form-check-input" type="radio" name="order" id="orderNewest" value="newest"
-                                    v-model="order">
+                                <input class="form-check-input" type="radio" name="order" id="orderNewest"
+                                    value="newest" v-model="order">
                                 <label class="form-check-label" for="orderNewest">Newest to
                                     Oldest</label>
                             </div>
                             <div class="form-check mb-2">
-                                <input class="form-check-input" type="radio" name="order" id="orderOldest" value="oldest"
-                                    v-model="order">
+                                <input class="form-check-input" type="radio" name="order" id="orderOldest"
+                                    value="oldest" v-model="order">
                                 <label class="form-check-label" for="orderOldest">Oldest to Newest</label>
                             </div>
                             <div class="my-2 border-top"
@@ -747,8 +758,10 @@ const closeDropdown = (evt: any) => {
 
 .dropdown-submenu .dropdown-menu {
     top: -9px;
-    left: 99.9%; /* Adjust this value as needed */
-    max-height: 200px; /* Adjust this value as needed */
+    left: 99.9%;
+    /* Adjust this value as needed */
+    max-height: 200px;
+    /* Adjust this value as needed */
     overflow-y: auto;
 }
 

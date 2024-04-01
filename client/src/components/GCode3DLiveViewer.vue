@@ -8,11 +8,11 @@ const { getFile } = useGetFile();
 const props = defineProps({
     job: Object as () => Job
 })
+
 const job = toRef(props, 'job');
 
 // Create a ref for the canvas
 const canvas = ref<HTMLCanvasElement | null>(null);
-
 let preview: GCodePreview.WebGLPreview | null = null;
 
 onMounted(async () => {
@@ -28,63 +28,72 @@ onMounted(async () => {
         return;
     }
 
-    const fileReader = new FileReader();
-    fileReader.onload = function (event) {
-        if (event.target === null || typeof event.target.result !== 'string') {
-            console.error('Failed to load the file content');
-            return;
-        }
+    const fileString = await fileToString(gcodeFile);
+    const lines = fileString.split('\n');
+    const commandLines = lines.filter(line => line.trim() && !line.startsWith(";"));
 
-        const fileContent = event.target.result;
-        const lines = fileContent.split('\n');
-        const commandLines = lines.filter(line => line.trim() && !line.startsWith(";"));
+    modal.addEventListener('shown.bs.modal', async () => {
+        // Initialize the GCodePreview and show the GCode when the modal is shown
+        if (canvas.value) {
+            preview = GCodePreview.init({
+                canvas: canvas.value,
+                extrusionColor: 'hotpink',
+                backgroundColor: 'black',
+                buildVolume: { x: 250, y: 210, z: 220, r: 0, i: 0, j: 0 },
+            });
 
-        modal.addEventListener('shown.bs.modal', async () => {
-            // Initialize the GCodePreview and show the GCode when the modal is shown
             if (canvas.value) {
-                preview = GCodePreview.init({
-                    canvas: canvas.value,
-                    extrusionColor: 'hotpink',
-                    backgroundColor: 'black',
-                    buildVolume: { x: 250, y: 210, z: 220, r: 0, i: 0, j: 0 },
-                });
-
-                if (canvas.value) {
-                    try {
-                        if (job.value?.gcode_num) {
-                            // proccess gcode of command lines from 0 to job.value.gcode
-                            preview?.processGCode(commandLines.slice(0, job.value.gcode_num));
-                        }
-                    } catch (error) {
-                        console.error('Failed to process GCode:', error);
-                    }
-                } else {
-                    console.error('Canvas element is not available in showGCode');
-                }
-            }
-        });
-
-        watchEffect(() => {
-            if (job.value?.gcode_num && preview) {
                 try {
-                    // process gcode of command line that is job.value.gcode
-                    preview.processGCode(commandLines[job.value.gcode_num]);
+                    if (job.value?.gcode_num) {
+                        // proccess gcode of command lines from 0 to job.value.gcode
+                        preview?.processGCode(commandLines.slice(0, job.value.gcode_num));
+                    }
                 } catch (error) {
                     console.error('Failed to process GCode:', error);
                 }
+            } else {
+                console.error('Canvas element is not available in showGCode');
             }
-        });
+        }
+    });
 
-        modal.addEventListener('hidden.bs.modal', () => {
-            // Clean up when the modal is hidden
-            preview?.clear();
-            if(job.value){
-                job.value.file = new File([], "");
+    watchEffect(() => {
+        if (job.value?.gcode_num && preview) {
+            try {
+                // process gcode of command line that is job.value.gcode
+                preview.processGCode(commandLines[job.value.gcode_num]);
+            } catch (error) {
+                console.error('Failed to process GCode:', error);
             }
-        });
-    };
-    fileReader.readAsText(gcodeFile);
+        }
+    });
+
+    modal.addEventListener('hidden.bs.modal', () => {
+        // Clean up when the modal is hidden
+        preview?.clear();
+        if (job.value) {
+            job.value.file = new File([], "");
+        }
+    });
 });
+
+const fileToString = (file: File | undefined) => {
+    if (!file) {
+        console.error('File is not available');
+        return '';
+    }
+
+    const reader = new FileReader();
+    reader.readAsText(file);
+    return new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+            resolve(reader.result as string);
+        };
+        reader.onerror = (error) => {
+            reject(error);
+        };
+    });
+};
 </script>
 
 <template>
