@@ -16,7 +16,7 @@ export function useGetIssues() {
                 }
             } catch (error) {
                 console.error(error)
-                toast.error('An error occurred while rerunning the job')
+                toast.error('An error occurred while fetching issues')
             }
         }
     }

@@ -459,6 +459,13 @@ const doAssignIssue = async () => {
                   Set to Ready
                 </button>
 
+                <div style="display: flex; align-items: center; justify-content: center;"
+                  v-if="printer.status == 'printing' && printer.queue?.[0].released == 0">
+                  <HoldButton :color="'success'" @button-held="startPrint(printer.id!, printer.queue?.[0].id)">
+                    Start Print
+                  </HoldButton>
+                </div>
+
                 <HoldButton :color="'danger'" @button-held="setPrinterStatus(printer, 'complete')"
                   v-if="printer.status == 'printing'">
                   Stop
@@ -498,15 +505,10 @@ const doAssignIssue = async () => {
             </div> -->
 
             <td style="width: 250px;">
-              <div style="display: flex; align-items: center; justify-content: center;"
-                v-if="printer.status == 'printing' && printer.queue?.[0].released == 0">
-                <HoldButton :color="'success'" @button-held="startPrint(printer.id!, printer.queue?.[0].id)">
-                  Start Print
-                </HoldButton>
-              </div>
+
 
               <div
-                v-else-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange') && printer.queue && printer.queue[0].released == 1">
+                v-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange') && printer.queue && printer.queue[0].released == 1">
                 <!-- <div v-for="job in printer.queue" :key="job.id"> -->
                 <!-- Display the elapsed time -->
                 <div class="progress" style="position: relative;">
