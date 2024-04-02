@@ -465,12 +465,12 @@ const doAssignIssue = async () => {
                 </HoldButton>
 
                 <HoldButton :color="'warning'" @button-held="setPrinterStatus(printer, 'paused')"
-                  v-if="printer.status == 'printing'">
+                  v-if="printer.status === 'printing' && printer.queue?.[0]?.released !== 0">
                   Pause
                 </HoldButton>
 
                 <HoldButton :color="'warning'" @button-held="setPrinterStatus(printer, 'colorchange')"
-                  v-if="printer.status == 'printing'">
+                  v-if="printer.status === 'printing' && printer.queue?.[0]?.released !== 0">
                   Color&nbsp;Change
                 </HoldButton>
 
@@ -525,7 +525,7 @@ const doAssignIssue = async () => {
 
               <div
                 v-else-if="printer.queue?.[0] && (printer.queue?.[0].status == 'complete' || printer.queue?.[0].status == 'cancelled')">
-                <div class="buttons">
+                <div class="buttons-progress">
                   <div type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#issueModal"
                     @click=setJob(printer.queue?.[0])>
                     Fail
@@ -653,7 +653,13 @@ const doAssignIssue = async () => {
   align-items: center;
 }
 
-.buttons>* {
+.buttons-progress {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.buttons-progress>* {
   margin: 0 0.375rem;
 }
 
