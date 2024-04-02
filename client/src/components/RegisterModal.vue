@@ -71,6 +71,10 @@ const clearSelectedDevice = () => {
         customname.value = '';
     }, 500)
 }
+
+const doMove = async (printer: Device) => {
+    await move(printer.device)
+}
 </script>
 
 <template>
@@ -122,7 +126,7 @@ const clearSelectedDevice = () => {
                         @click="doRegister">Submit</button>
                     <div v-if="selectedDevice">
                         <div class="tooltip">
-                            <HoldButton :speed="10" :num="1" :selectedDevice="selectedDevice">Move Printer Head</HoldButton>
+                            <HoldButton :color="'secondary'" @button-held="doMove(selectedDevice)">Move Printer Head</HoldButton>
                             <span class="tooltiptext">Moves printer 10mm upwards! Please check printers before.</span>
                         </div>
                     </div>
