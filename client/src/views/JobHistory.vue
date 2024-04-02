@@ -142,9 +142,10 @@ const handleRerun = async (job: Job, printer: Device) => {
     });
 }
 
-const handleEmptyRerun = async () => {
+const handleEmptyRerun = async (job: Job) => {
     await router.push({
-        name: 'SubmitJobVue'
+        name: 'SubmitJobVue',
+        params: { job: JSON.stringify(job) }
     })
 }
 
@@ -699,7 +700,7 @@ const closeDropdown = (evt: any) => {
                                     </li>
                                     <li class="dropdown-submenu">
                                         <a class="dropdown-item d-flex justify-content-between align-items-center"
-                                            @click="handleEmptyRerun">
+                                            @click="handleEmptyRerun(job)">
                                             <div class="d-flex align-items-center">
                                                 <i class="fa-solid fa-arrow-rotate-right"></i>
                                                 <span class="ms-2">Rerun</span>
