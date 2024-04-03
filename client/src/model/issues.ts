@@ -11,12 +11,13 @@ export function useGetIssues() {
         async issues() {
             try {
                 const response = await api('getissues') // pass rerun job the Job object and desired printer
+                console.log('response:', response)
                 if (response.success === true) {
                     return response.issues
                 }
             } catch (error) {
                 console.error(error)
-                toast.error('An error occurred while rerunning the job')
+                toast.error('An error occurred while fetching issues')
             }
         }
     }
