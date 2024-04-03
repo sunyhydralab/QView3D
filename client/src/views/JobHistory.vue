@@ -758,16 +758,33 @@ const closeDropdown = (evt: any) => {
 }
 
 .dropdown-submenu .dropdown-menu {
-    top: -9px;
-    left: 99.9%;
+    top: 0;
+    left: 100%;
+    margin-top: -6px;
+    margin-left: -1px;
     /* Adjust this value as needed */
     max-height: 200px;
     /* Adjust this value as needed */
     overflow-y: auto;
+    border-radius: 0 6px 6px;
 }
 
 .dropdown-submenu:hover>.dropdown-menu {
     display: block;
+}
+
+.dropdown-submenu:hover > a:after {
+    border-left-color: #fff;
+}
+
+.dropdown-submenu.pull-left {
+    float: none;
+}
+
+.dropdown-submenu.pull-left > .dropdown-menu {
+    left: -100%;
+    margin-left: 10px;
+    border-radius: 6px 0 6px 6px;
 }
 
 .dropdown-item {
