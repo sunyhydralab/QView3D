@@ -1,4 +1,4 @@
-import asyncio
+import re
 from models.db import db
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
@@ -20,6 +20,8 @@ load_dotenv()
 
 
 # model for Printer table
+
+
 class Printer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     device = db.Column(db.String(50), nullable=False)
@@ -33,10 +35,14 @@ class Printer(db.Model):
     )
     queue = None
     ser = None
-    status = None  # default setting on printer start. Runs initialization and status switches to "ready" automatically.
+    # default setting on printer start. Runs initialization and status switches to "ready" automatically.
+    status = None
     # stopPrint = False
     responseCount = 0  # if count == 10 & no response, set error
     error = ""
+    extruder_temp = 0
+    bed_temp = 0
+    canPause = 0
     prevMes = ""
 
     def __init__(self, device, description, hwid, name, status=status, id=None):
@@ -49,9 +55,11 @@ class Printer(db.Model):
         self.queue = Queue()
         self.stopPrint = False
         self.error = ""
+        self.extruder_temp = 0
+        self.bed_temp = 0
         self.canPause = 0
         self.prevMes=""
-        
+
         if id is not None:
             self.id = id
         self.responseCount = 0
@@ -127,7 +135,8 @@ class Printer(db.Model):
                     "hwid": printer.hwid,
                     "name": printer.name,
                     "status": printer.status,
-                    "date": f"{printer.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(printer.date)}",  # Include timezone abbreviation
+                    # Include timezone abbreviation
+                    "date": f"{printer.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(printer.date)}",
                 }
                 for printer in printers
             ]
@@ -196,8 +205,17 @@ class Printer(db.Model):
     @classmethod
     def deletePrinter(cls, printerid):
         try:
-            ser = serial.Serial(cls.query.get(printerid).device, 115200, timeout=1)
-            ser.close()
+            # ser = serial.Serial(cls.query.get(printerid).device, 115200, timeout=1)
+            # if(ser and ser.isOpen()):
+            ports = Printer.getConnectedPorts()
+            for port in ports:
+                if port["hwid"] == cls.query.get(printerid).hwid:
+                    ser = serial.Serial(port["device"], 115200, timeout=1)
+                    ser.close()
+                    break 
+                
+            # ser.close()
+
             printer = cls.query.get(printerid)
             db.session.delete(printer)
             db.session.commit()
@@ -226,9 +244,16 @@ class Printer(db.Model):
     @classmethod
     def editPort(cls, printerid, printerport):
         try:
+   
+            print("Updating port for printer id ", printerid, " to ", printerport)  # Debug print
+    # Your existing editPort code here...)
             printer = cls.query.get(printerid)
             printer.device = printerport
             db.session.commit()
+            
+            current_app.socketio.emit(
+                "port_repair", {"printer_id": printerid, "device": printerport}
+            )
             return {"success": True, "message": "Printer port successfully updated."}
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
@@ -242,6 +267,7 @@ class Printer(db.Model):
         ser = serial.Serial(device, 115200, timeout=1)
         message = "G91\nG1 Z10 F3000\nG90"
          # Encode and send the message to the printer.
+        # time.sleep(1)
         ser.write(f"{message}\n".encode("utf-8"))
             # Sleep the printer to give it enough time to get the instruction.
             # time.sleep(0.1)
@@ -257,13 +283,14 @@ class Printer(db.Model):
     def connect(self):
         try:
             self.ser = serial.Serial(self.device, 115200, timeout=1)
+            self.ser.write(f"M155 S5\n".encode("utf-8"))
         except Exception as e:
             self.setError(e)
             return "error"
 
     def disconnect(self):
         if self.ser:
-            # self.ser.write(f"M155 S0\n".encode("utf-8"))
+            self.ser.write(f"M155 S0\n".encode("utf-8"))
             self.ser.close()
             self.setSer(None)
 
@@ -297,12 +324,14 @@ class Printer(db.Model):
                     break
                 else:
                     self.responseCount = 0
-                    
-                # stat = self.getStatus()
-                # if stat == "complete":
-                #     # self.sendGcode("M603") # resume command for prusa
-                #     break 
-                
+
+                if ("T:" in response) and ("B:" in response):
+                    # Extract the temperature values using regex
+                    temp_t = re.search(r'T:(\d+.\d+)', response)
+                    temp_b = re.search(r'B:(\d+.\d+)', response)
+                    if temp_t and temp_b:
+                        self.setTemps(temp_t.group(1), temp_b.group(1))
+
                 if "ok" in response:
                     break
 
@@ -380,22 +409,9 @@ class Printer(db.Model):
                         job.setTime(job.calculateEta(), 1)
                         job.setTime(datetime.now(), 2)
                         print(job.job_time)
-
-                    if("M600" in line):
-                        job.setTime(datetime.now(), 3)
-                        # job.setTime(job.calculateTotalTime(), 0)
-                        # job.setTime(job.updateEta(), 1)
-                        self.setStatus("colorchange")
-                        job.setFilePause(1)
-
-                    # if self.prevMes == "M602":
-                    #     self.prevMes=""
-                                
+                 
                     res = self.sendGcode(line)
                     
-                    if self.prevMes == "M602":
-                        self.prevMes=""
-
                     if(job.getFilePause() == 1):
                         # self.setStatus("printing")
                         job.setTime(job.colorEta(), 1)
@@ -403,9 +419,20 @@ class Printer(db.Model):
                         job.setTime(datetime.min, 3)
                         job.setFilePause(0)
                         self.setStatus("printing")
-
-                        
-                    #  software pausing        
+                    
+                    if("M600" in line):
+                        print("HERE")
+                        job.setTime(datetime.now(), 3)
+                        # job.setTime(job.calculateTotalTime(), 0)
+                        # job.setTime(job.updateEta(), 1)
+                        print("color change command")
+                        self.setStatus("colorchange")
+                        job.setFilePause(1)
+                    
+                    if self.prevMes == "M602":
+                        self.prevMes=""
+                             
+                #  software pausing        
                     if (self.getStatus()=="paused"):
                         # self.prevMes = "M601"
                         self.sendGcode("M601") # pause command for prusa
@@ -417,8 +444,6 @@ class Printer(db.Model):
                                 self.prevMes = "M602"
 
                                 self.sendGcode("M602") # resume command for prusa
-                                # self.sendGcode("M190")
-                                # self.sendGcode("M109")
 
                                 time.sleep(2)
                                 job.setTime(job.colorEta(), 1)
@@ -427,7 +452,7 @@ class Printer(db.Model):
                                 break
 
                     # software color change
-                    if (self.getStatus()=="colorchange"):
+                    if (self.getStatus()=="colorchange" and job.getFilePause()==0):
                         job.setTime(datetime.now(), 3)
                         # job.setTime(job.calculateTotalTime(), 0)
                         # job.setTime(job.updateEta(), 1)
@@ -437,9 +462,7 @@ class Printer(db.Model):
                         job.setTime(job.calculateColorChangeTotal(), 0)
                         job.setTime(datetime.min, 3)
                         self.setStatus("printing")
-                        # job.setPauseTime()
 
-                    
                     # Increment the sent lines
                     sent_lines += 1
                     # Calculate the progress
@@ -537,6 +560,7 @@ class Printer(db.Model):
             self.setError(e)
             
     def beginPrint(self, job): 
+        print("in BEGIN PRINT")
         while True: 
             time.sleep(1)
             if job.getReleased()==1: 
@@ -606,8 +630,10 @@ class Printer(db.Model):
         self.ser = port
 
     #  now when we set the status, we can emit the status to the frontend
+
     def setStatus(self, newStatus):
         try:
+            print("SETTING STATUS TO:", newStatus)
             self.status = newStatus
             # print(self.status)
             # Emit a 'status_update' event with the new status
@@ -644,6 +670,13 @@ class Printer(db.Model):
                 print("Failed to send status:", response.text)
         except requests.exceptions.RequestException as e:
             print(f"Failed to send status to job: {e}")
+
+    def setTemps(self, extruder_temp, bed_temp):
+        self.extruder_temp = extruder_temp
+        self.bed_temp = bed_temp
+        current_app.socketio.emit(
+            'temp_update', {'printerid': self.id, 'extruder_temp': self.extruder_temp, 'bed_temp': self.bed_temp})
+
 
     def setCanPause(self, canPause):
         try:

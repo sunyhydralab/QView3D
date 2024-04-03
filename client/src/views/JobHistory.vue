@@ -1,24 +1,37 @@
 <script setup lang="ts">
-import { useRetrievePrintersInfo, type Device } from '../model/ports'
-import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob } from '../model/jobs';
-import { computed, onMounted, ref } from 'vue';
+import { printers, useRetrievePrintersInfo, type Device } from '../model/ports'
+import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useUpdateJobStatus } from '../model/jobs';
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
+import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
 import { useRouter } from 'vue-router';
+import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 
 const { jobhistory, getFavoriteJobs } = useGetJobs()
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { rerunJob } = useRerunJob()
-const { getFile } = useGetJobFile()
+const { getFileDownload } = useGetJobFile()
+const { getFile } = useGetFile()
 const { deleteJob } = useDeleteJob()
 const { clearSpace } = useClearSpace()
 const { favorite } = useFavoriteJob()
+const { issues } = useGetIssues()
+const { createIssue } = useCreateIssues()
+const { assign } = useAssignIssue()
+const { assignComment } = useAssignComment()
+const {updateJobStatus} = useUpdateJobStatus()
 
-const printers = ref<Array<Device>>([]) // Get list of open printer threads 
 const selectedPrinters = ref<Array<Number>>([])
 const selectedJobs = ref<Array<Job>>([]);
 const deleteModalTitle = computed(() => `Deleting ${selectedJobs.value.length} job(s) from database!`);
+const clearSpaceTitle = computed(() => 'Clearing space in the database!');
 const searchJob = ref(''); // This will hold the current search query
 const searchByJobName = ref(true);
 const searchByFileName = ref(true);
+const selectedJob = ref<Job>()
+const newIssue = ref('')
+const selectedIssue = ref<Issue>()
+let issuelist = ref<Array<Issue>>([])
+
 
 const router = useRouter();
 
@@ -26,6 +39,10 @@ let jobs = ref<Array<Job>>([])
 let filter = ref('')
 let oldestFirst = ref<boolean>(false)
 let order = ref<string>('newest')
+let favoriteOnly = ref<boolean>(false)
+
+let currentJob = ref<Job | null>(null);
+let isGcodeImageVisible = ref(false);
 
 let page = ref(1)
 let pageSize = ref(10)
@@ -37,11 +54,18 @@ let modalTitle = ref('');
 let modalMessage = ref('');
 let modalAction = ref('');
 let searchCriteria = ref('');
+const isOnlyJobNameChecked = computed(() => searchByJobName.value && !searchByFileName.value);
+const isOnlyFileNameChecked = computed(() => !searchByJobName.value && searchByFileName.value);
 
 let buttonTransform = ref(0);
 let favoriteJobs = ref<Array<Job>>([])
 let jobToUnfavorite: Job | null = null;
+let isOffcanvasOpen = ref(false);
 
+let jobComments = ref('')
+const showText = ref(false)
+
+// computed property that returns the filtered list of jobs. 
 let filteredJobs = computed(() => {
     if (filter.value) {
         return jobs.value.filter(job => job.printer.includes(filter.value))
@@ -50,9 +74,20 @@ let filteredJobs = computed(() => {
     }
 })
 
+let offcanvasElement: HTMLElement | null = null;
+
 onMounted(async () => {
     try {
-        // job history now returns a tuple of joblist and total jobs, not just all the jobs in the database
+        const retrieveissues = await issues()
+        issuelist.value = retrieveissues
+
+        offcanvasElement = document.getElementById('offcanvasRight');
+
+        if (offcanvasElement) {
+            offcanvasElement.addEventListener('shown.bs.offcanvas', onShownOffcanvas);
+            offcanvasElement.addEventListener('hidden.bs.offcanvas', onHiddenOffcanvas);
+        }
+
         const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
         const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds)
         jobs.value = joblist;
@@ -61,14 +96,28 @@ onMounted(async () => {
         totalPages.value = Math.ceil(total / pageSize.value);
         totalPages.value = Math.max(totalPages.value, 1);
 
-        const printerInfo = await retrieveInfo()
-        printers.value = printerInfo
-
         favoriteJobs.value = await getFavoriteJobs()
+
     } catch (error) {
         console.error(error)
     }
 })
+
+const onShownOffcanvas = () => {
+    offcanvasElement?.removeAttribute('tabindex');
+};
+
+const onHiddenOffcanvas = () => {
+    offcanvasElement?.setAttribute('tabindex', '-1');
+};
+
+onBeforeUnmount(() => {
+    // Cleanup event listeners when component is about to be unmounted
+    if (offcanvasElement) {
+        offcanvasElement.removeEventListener('shown.bs.offcanvas', onShownOffcanvas);
+        offcanvasElement.removeEventListener('hidden.bs.offcanvas', onHiddenOffcanvas);
+    }
+});
 
 const handleRerun = async (job: Job, printer: Device) => {
     await router.push({
@@ -85,8 +134,7 @@ const changePage = async (newPage: any) => {
     selectAllCheckbox.value = false;
 
     page.value = newPage
-    jobs.value = []; // Clear the jobs array
-    // Fetch the updated list of jobs after changing the page
+    jobs.value = []
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
     const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value)
@@ -99,6 +147,13 @@ function appendPrinter(printer: Device) {
         selectedPrinters.value.push(printer.id!)
     } else {
         selectedPrinters.value = selectedPrinters.value.filter(p => p !== printer.id)
+    }
+}
+function appendNullPrinter() {
+    if (!selectedPrinters.value.includes(0)) {
+        selectedPrinters.value.push(0)
+    } else {
+        selectedPrinters.value = selectedPrinters.value.filter(p => p !== 0)
     }
 }
 
@@ -116,7 +171,7 @@ async function submitFilter() {
     }
 
     // Get the total number of jobs first, without considering the page number
-    const [, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value);
+    const [, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
     totalJobs.value = total;
 
     totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
@@ -127,7 +182,7 @@ async function submitFilter() {
     }
 
     // Now fetch the jobs for the current page
-    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value);
+    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
     jobs.value = joblist;
 
     selectedJobs.value = [];
@@ -140,23 +195,15 @@ const ensureOneCheckboxChecked = () => {
     }
 }
 
-// This just displays the selectedJobs on the console for me to see while working. Would be removed before final merge
-const handleJobSelection = () => {
-    console.log('Selected Jobs:', selectedJobs.value);
-};
-
 const confirmDelete = async () => {
     const deletionPromises = selectedJobs.value.map(job => deleteJob(job));
     await Promise.all(deletionPromises);
 
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value);
+    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
     jobs.value = joblist;
     totalJobs.value = total;
 
-    submitFilter();
-
-    // Clear the selected jobs array
     selectedJobs.value = [];
     selectAllCheckbox.value = false;
 
@@ -202,11 +249,134 @@ const favoriteJob = async (job: Job, fav: boolean) => {
 
 const toggleButton = () => {
     buttonTransform.value = buttonTransform.value === 0 ? -700 : 0;
+    isOffcanvasOpen.value = !isOffcanvasOpen.value;
+}
+
+const openGCodeModal = async (job: Job, printerName: string) => {
+    currentJob.value = job
+    currentJob.value.printer = printerName
+    isGcodeImageVisible.value = true
+    if (currentJob.value) {
+        const file = await getFile(currentJob.value)
+        if (file) {
+            currentJob.value.file = file
+        }
+    }
+}
+
+const setJob = async (job: Job) => {
+    jobComments.value = job.comment || '';
+    selectedJob.value = job;
+}
+
+const doCreateIssue = async () => {
+    await createIssue(newIssue.value)
+    const newIssues = await issues()
+    console.log(newIssues)
+    issuelist.value = newIssues
+    newIssue.value = ''
+    showText.value = false
+}
+
+const doAssignIssue = async () => {
+    if (selectedJob.value === undefined) return
+    if (selectedIssue.value !== undefined) {
+        await assign(selectedIssue.value.id, selectedJob.value.id)
+        selectedJob.value.error = selectedIssue.value!.issue
+        await updateJobStatus(selectedJob.value.id, 'error')
+        selectedJob.value.status = 'error'
+
+    }
+    await assignComment(selectedJob.value, jobComments.value)
+    selectedJob.value.comment = jobComments.value
+    selectedIssue.value = undefined
+    selectedJob.value = undefined
 }
 
 </script>
 
 <template>
+
+
+    <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
+        data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="assignIssueLabel">Job#{{ selectedJob?.id }}</h5>
+                    <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px">{{ selectedJob?.date }}</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @click="selectedIssue = undefined; selectedJob = undefined"></button>
+                </div>
+                <!-- Create new issue -->
+                <button class="btn btn-primary" @click="showText = !showText">Create New Issue</button>
+                <form v-if="showText == true" class="p-3">
+                    <div class="mb-3">
+                        <label for="newIssue" class="form-label">Enter Issue</label>
+                        <input id="newIssue" v-model="newIssue" type="text" placeholder="Enter Issue"
+                            class="form-control" required>
+                    </div>
+                    <div>
+                        <button type="submit" @click="doCreateIssue" class="btn btn-primary me-2">Submit</button>
+                        <button @click="showText = !showText" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </form>
+
+                <div class="modal-body">
+                    <p>
+                    <form class="mt-3" @submit.prevent="">
+                        <div class="mb-3">
+                            <label for="issue" class="form-label">Select Issue</label>
+                            <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
+                                <option value="null" disabled>Select Issue</option> <!-- Default option -->
+                                <option v-for="issue in issuelist" :value="issue">
+                                    {{ issue.issue }}
+                                </option>
+                            </select>
+                        </div>
+                    </form>
+                    <div v-if="selectedIssue !== undefined">
+                        <i style="color: red">Warning: Assigning an issue to a job in Job History will set the job status to Error and remove it from 
+                            any active print queues. Please ensure that the job has been completed before assigning an issue.
+                        </i>
+                    </div>
+                    <div class="form-group">
+                        <label for="exampleFormControlTextarea1">Comments</label>
+                        <textarea class="form-control" id="exampleFormControlTextarea1" rows="3"
+                            v-model="jobComments"></textarea>
+                    </div>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save
+                        Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true"
+        @shown.bs.modal="isGcodeImageVisible = true" @hidden.bs.modal="isGcodeImageVisible = false">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="gcodeImageModalLabel">
+                        <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <GCode3DImageViewer v-if="isGcodeImageVisible" :job="currentJob!" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- bootstrap off canvas to the right -->
     <div class="offcanvas offcanvas-end" data-bs-backdrop="static" tabindex="-1" id="offcanvasRight"
         aria-labelledby="offcanvasRightLabel">
@@ -231,13 +401,13 @@ const toggleButton = () => {
             </div>
             <div v-if="favoriteJobs.length > 0" v-for="job in favoriteJobs" :key="job.id" class="mb-3">
                 <div class="grid-container job">
-                    <p class="my-auto">{{ job.name }}</p>
-                    <p class="my-auto">{{ job.file_name_original }}</p>
+                    <p class="my-auto truncate-name">{{ job.name }}</p>
+                    <p class="my-auto truncate-file">{{ job.file_name_original }}</p>
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-star text-warning" style="margin-right: 10px;" data-bs-toggle="modal" data-bs-target="#favoriteModal"
-                            @click="jobToUnfavorite = job"></i>
-                        <button class="btn btn-secondary download" style="margin-right: 10px;" @click="getFile(job.id)"
-                            :disabled="job.file_name_original.includes('.gcode:')">
+                        <i class="fas fa-star text-warning" style="margin-right: 10px;" data-bs-toggle="modal"
+                            data-bs-target="#favoriteModal" @click="jobToUnfavorite = job"></i>
+                        <button class="btn btn-secondary download" style="margin-right: 10px;"
+                            @click="getFileDownload(job.id)" :disabled="job.file_name_original.includes('.gcode:')">
                             <i class="fas fa-download"></i>
                         </button>
                         <button class="btn btn-secondary dropdown-toggle" type="button" id="printerDropdown"
@@ -247,7 +417,8 @@ const toggleButton = () => {
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="printerDropdown">
                             <li v-for="printer in printers" :key="printer.id">
-                                <a class="dropdown-item" @click="handleRerun(job, printer)" data-bs-dismiss="offcanvas">{{ printer.name }}</a>
+                                <a class="dropdown-item" @click="handleRerun(job, printer)"
+                                    data-bs-dismiss="offcanvas">{{ printer.name }}</a>
                             </li>
                         </ul>
                     </div>
@@ -260,8 +431,9 @@ const toggleButton = () => {
         <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight"
             aria-controls="offcanvasRight" v-on:click="toggleButton"
             style="border-top-right-radius: 0; border-bottom-right-radius: 0; padding: 5px 10px;">
-            <span><i class="fas fa-chevron-left"></i></span>
-            <span><i class="fas fa-star"></i></span>
+            <span v-if="isOffcanvasOpen"><i class="fas fa-star"></i></span>
+            <span><i class="fas" :class="isOffcanvasOpen ? 'fa-chevron-right' : 'fa-chevron-left'"></i></span>
+            <span v-if="!isOffcanvasOpen"><i class="fas fa-star"></i></span>
         </button>
     </div>
 
@@ -286,47 +458,41 @@ const toggleButton = () => {
         </div>
     </div>
 
-    <div class="container">
-
-        <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
-            data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="exampleModalLabel">{{ modalTitle }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p v-html="modalMessage"></p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button v-if="modalAction === 'confirmDelete'" type="button" class="btn btn-danger"
-                            data-bs-dismiss="modal" @click="confirmDelete">Delete</button>
-                        <button v-if="modalAction === 'clear'" type="button" class="btn btn-danger"
-                            data-bs-dismiss="modal" @click="clear">Clear Space</button>
-                    </div>
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
+        data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">{{ modalTitle }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p v-html="modalMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button v-if="modalAction === 'confirmDelete'" type="button" class="btn btn-danger"
+                        data-bs-dismiss="modal" @click="confirmDelete">Delete</button>
+                    <button v-if="modalAction === 'clear'" type="button" class="btn btn-danger" data-bs-dismiss="modal"
+                        @click="clear">Clear Space</button>
                 </div>
             </div>
         </div>
+    </div>
 
-        <h2 class="mb-2 text-center">Job History View</h2>
+    <div class="container">
+
+        <b>Job History View</b>
         <div class="container-fluid mb-2 p-2 border rounded">
             <div class="row justify-content-center">
-
-                <div class="col d-flex align-items-center justify-content-between">
-                    <label for="pageSize" class="form-label my-auto" style="white-space: nowrap;">Jobs per page:</label>
-                    <input id="pageSize" type="number" v-model.number="pageSize" min="1"
-                        class="form-control mx-2 my-auto">
-                    <label class="my-auto">/&nbsp;{{ totalJobs }}</label>
+                <div class="col-md-3 d-flex align-items-start justify-content-between">
+                    <label for="pageSize" class="form-label mx-2" style="white-space: nowrap;">Jobs per page:</label>
+                    <input id="pageSize" type="number" v-model.number="pageSize" min="1" class="form-control mx-2">
+                    <label class="form-label mx-2">/&nbsp;{{ totalJobs }}</label>
                 </div>
-
-                <div class="col d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center">
-                        <label class="form-label">Device:</label>
-                        <div style="width: 10px;"></div> <!-- This div will create a white space -->
-                    </div>
-                    <div class="dropdown w-100">
+                <div class="col-md-3 d-flex align-items-start justify-content-between">
+                    <label class="form-label mx-2">Device:</label>
+                    <div class="dropdown w-100 mx-2">
                         <button class="btn btn-secondary dropdown-toggle w-100" type="button" id="dropdownMenuButton"
                             data-bs-toggle="dropdown" aria-expanded="false">
                             Select Printer
@@ -344,21 +510,19 @@ const toggleButton = () => {
                             <li class="dropdown-divider"></li>
                             <li>
                                 <div class="form-check" @click.stop>
-                                <input class="form-check-input" type="checkbox" id="deregistered-printers"
-                                    @click="selectedPrinters.push(0)">
-                                <label class="form-check-label" for="deregistered-printers">
-                                    Deregistered printers
-                                </label>
+                                    <input class="form-check-input" type="checkbox" id="deregistered-printers"
+                                        @click="appendNullPrinter">
+                                    <label class="form-check-label" for="deregistered-printers">
+                                        Deregistered printers
+                                    </label>
                                 </div>
                             </li>
-
                         </ul>
                     </div>
                 </div>
-
-                <div class="col d-flex align-items-center">
-                    <label class="form-label d-flex align-items-center">Order:</label>
-                    <div style="padding-left: 1rem;">
+                <div class="col-md-3 d-flex align-items-start">
+                    <label class="form-label mx-2">Order:</label>
+                    <div class="mx-2">
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="order" id="orderNewest" value="newest"
                                 v-model="order">
@@ -373,28 +537,46 @@ const toggleButton = () => {
                                 Oldest to Newest
                             </label>
                         </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="favorite" id="orderFav"
+                                value="favorite" v-model="favoriteOnly">
+                            <label class="form-check-label" for="orderFav">
+                                Favorites
+                            </label>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <input type="text" v-model="searchJob" placeholder="Search for jobs" class="form-control">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="searchByJobName" v-model="searchByJobName" @change="ensureOneCheckboxChecked">
-                        <label class="form-check-label" for="searchByJobName">
-                            Search by Job Name
-                        </label>
+                <div class="col-md-3">
+                    <div class="row mb-1">
+                        <div class="col-12">
+                            <input type="text" v-model="searchJob" placeholder="Search for jobs" class="form-control">
+                        </div>
                     </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="searchByFileName" v-model="searchByFileName" @change="ensureOneCheckboxChecked">
-                        <label class="form-check-label" for="searchByFileName">
-                            Search by File Name
-                        </label>
+                    <div class="row mb-1">
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="searchByJobName"
+                                    v-model="searchByJobName" :disabled="isOnlyJobNameChecked"
+                                    @change="ensureOneCheckboxChecked">
+                                <label class="form-check-label" for="searchByJobName">
+                                    Search by Job Name
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-1">
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="searchByFileName"
+                                    v-model="searchByFileName" :disabled="isOnlyFileNameChecked"
+                                    @change="ensureOneCheckboxChecked">
+                                <label class="form-check-label" for="searchByFileName">
+                                    Search by File Name
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                <div class="col d-flex align-items-center justify-content-between">
-                    <button @click="clear" class="btn btn-danger w-100">Clear Space</button>
-                </div>
-
             </div>
         </div>
         <div class="row w-100" style="margin-bottom: 0.5rem;">
@@ -405,14 +587,16 @@ const toggleButton = () => {
                     :disabled="selectedJobs.length === 0">
                     <i class="fas fa-trash-alt"></i>
                 </button>
-
             </div>
             <div class="col-10 text-center">
                 <button @click="submitFilter" class="btn btn-primary">Submit Filter</button>
             </div>
-            <div class="col-1">
-                <!-- Empty column to push the other columns to the left -->
-                <!-- maybe put clear space here?? would be above the rerun job column -->
+            <div class="col-1 text-end" style="padding-right: 0">
+                <button
+                    @click="openModal(clearSpaceTitle, 'Are you sure you want to clear space? This action will remove the files from jobs that are older than 6 months and this cannot be <b>undone</b>.', 'clear')"
+                    class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                    <i class="fa-solid fa-recycle"></i>
+                </button>
             </div>
         </div>
 
@@ -428,7 +612,7 @@ const toggleButton = () => {
                     <th>Date Completed</th>
                     <th>Final Status</th>
                     <th>Printer</th>
-                    <th>Rerun Job</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody v-if="filteredJobs.length > 0">
@@ -437,38 +621,47 @@ const toggleButton = () => {
                         <input type="checkbox" v-model="selectedJobs" :value="job">
                     </td>
                     <td>{{ job.id }}</td>
-                    <td>
-                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                            <div>{{ job.name }}</div>
-                            <div class="star-icon">
-                                <i v-if="job.favorite === true" class="fas fa-star text-warning"
-                                    @click="favoriteJob(job, false)"></i>
-                                <i v-else class="far fa-star text-warning" @click="favoriteJob(job, true)"></i>
-                            </div>
-                        </div>
-                    </td>
+                    <td>{{ job.name }}</td>
                     <td>
                         {{ job.file_name_original }}
-                        <button class="btn btn-secondary download" @click="getFile(job.id)"
-                            :disabled="job.file_name_original.includes('.gcode:')">
-                            <i class="fas fa-download"></i>
-                        </button>
+
                     </td>
                     <td>{{ job.date }}</td>
                     <td>{{ job.status }}</td>
                     <td>{{ job.printer }}</td>
                     <td>
-                        <div class="dropdown">
-                            <button class="btn btn-secondary dropdown-toggle" type="button" id="printerDropdown"
-                                data-bs-toggle="dropdown" aria-expanded="false"
-                                :disabled="job.file_name_original.includes('.gcode:')">
-                                <i class="fa-solid fa-arrow-rotate-right"></i>
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="star-icon">
+                                <i v-if="job.favorite === true" class="fas fa-star text-warning"
+                                    @click="favoriteJob(job, false)"></i>
+                                <i v-else class="far fa-star text-warning" @click="favoriteJob(job, true)"></i>
+                            </div>
+                            <button type="button" class="btn btn-info btn-circle" data-bs-toggle="modal"
+                                data-bs-target="#gcodeImageModal" @click="openGCodeModal(job, job.printer)">
+                                <i class="fa-regular fa-image"></i>
                             </button>
-                            <ul class="dropdown-menu" aria-labelledby="printerDropdown">
-                                <li v-for="printer in printers" :key="printer.id">
-                                    <a class="dropdown-item" @click="handleRerun(job, printer)">{{ printer.name }}</a>
-                                </li>
-                            </ul>
+                            <button class="btn btn-secondary download" @click="getFileDownload(job.id)"
+                                :disabled="job.file_name_original.includes('.gcode:')">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <div class="dropdown">
+                                <button class="btn btn-secondary dropdown-toggle" type="button" id="printerDropdown"
+                                    data-bs-toggle="dropdown" aria-expanded="false"
+                                    :disabled="job.file_name_original.includes('.gcode:')">
+                                    <i class="fa-solid fa-arrow-rotate-right"></i>
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="printerDropdown">
+                                    <li v-for="printer in printers" :key="printer.id">
+                                        <a class="dropdown-item" @click="handleRerun(job, printer)">{{ printer.name
+                                            }}</a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div>
+                                <button data-bs-toggle="modal" data-bs-target="#issueModal" @click="setJob(job)">
+                                    Comments
+                                </button>
+                            </div>
                         </div>
                     </td>
                 </tr>
@@ -494,6 +687,20 @@ const toggleButton = () => {
     </div>
 </template>
 <style scoped>
+.truncate-name {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.truncate-file {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .grid-container {
     display: grid;
     grid-template-columns: 1fr 2fr 1fr;

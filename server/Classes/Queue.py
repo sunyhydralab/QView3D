@@ -54,7 +54,17 @@ class Queue:
             self.__queue.insert(index - 1, job_to_move)
         elif not up and index < len(self.__queue):
             self.__queue.insert(index + 1, job_to_move)
-
+        
+    def reorder(self, arr): 
+        # arr is an array of job ids in the order they should be in the queue
+        new_queue = deque()
+        for jobid in arr: 
+            for job in self.__queue: 
+                if job.getJobId() == jobid: 
+                    new_queue.append(job)
+                    break
+        self.__queue = new_queue
+    
     def deleteJob(self, jobid, printerid):
         deletedjob = None
         for job in self.__queue:
@@ -66,6 +76,7 @@ class Queue:
                     {"queue": self.convertQueueToJson(), "printerid": printerid},
                 )
                 return deletedjob
+        return "Job not found in queue."
 
     def convertQueueToJson(self):
         queue = []
@@ -77,10 +88,12 @@ class Queue:
                 "status": job.status,
                 "date": job.date.strftime("%a, %d %b %Y %H:%M:%S"),
                 "printerid": job.printer_id,
+                "errorid": job.error_id, 
                 "file_name_original": job.file_name_original,
                 "progress": job.progress,
                 "released": job.released,
                 "file_pause": job.filePause,
+                "comment": job.comments,
             }
             queue.append(job_info)
         return queue

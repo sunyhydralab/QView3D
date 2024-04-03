@@ -81,7 +81,7 @@ onMounted(async () => {
 
 const onlyNumber = ($event: KeyboardEvent) => {
     let keyCode = $event.keyCode;
-    if ((keyCode < 48 || keyCode > 57) && keyCode !== 8) { // 48-57 are the keycodes for 0-9, 8 is for backspace
+    if ((keyCode < 48 || keyCode > 57) && (keyCode < 96 || keyCode > 105) && keyCode !== 8) { // 48-57 are the keycodes for 0-9, 96-105 are for the numpad 0-9, 8 is for backspace
         $event.preventDefault();
     }
 }
@@ -216,7 +216,7 @@ function appendPrinter(printer: Device) {
 }
 
 watchEffect(() => {
-    isSubmitDisabled = !(file.value !== null && name.value.trim() !== '' && quantity.value > 0);
+    isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0))
 });
 
 const openModal = () => {
@@ -244,8 +244,8 @@ const openModal = () => {
         </div>
     </div>
 
-    <div class="container py-5">
-        <h2 class="mb-4">Submit Job View</h2>
+    <div class="container">
+        <b>Submit Job View</b>
 
         <div class="card">
             <div class="card-body">

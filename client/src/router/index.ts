@@ -4,6 +4,7 @@ import QueueViewVue from '@/views/QueueView.vue'
 import RegisteredViewVue from '@/views/RegisteredView.vue'
 import SubmitJobVue from '@/views/SubmitJob.vue'
 import JobHistoryVue from '@/views/JobHistory.vue'
+import ErrorView from '@/views/ErrorView.vue'
 
 const routes = [
   {
@@ -12,7 +13,7 @@ const routes = [
     component: MainView
   },
   {
-    path: '/queue/:printerName?',
+    path: '/queue',
     name: 'QueueViewVue',
     component: QueueViewVue
   },
@@ -30,6 +31,11 @@ const routes = [
     path: '/history',
     name: 'JobHistoryVue',
     component: JobHistoryVue
+  }, 
+  {
+    path: '/error',
+    name: 'ErrorView',
+    component: ErrorView
   }, 
 ]
 

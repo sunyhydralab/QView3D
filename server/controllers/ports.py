@@ -96,14 +96,18 @@ def diagnose_printer():
 @ports_bp.route("/repairports", methods=["POST", "GET"])
 def repair_ports(): 
     try:
-        ports = serial.tools.list_ports.comports()
+        ports = serial.tools.list_ports.comports()    
         for port in ports: 
             hwid = port.hwid # get hwid 
-            printer = Printer.getPrinterByHwid(hwid)
+            hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
+            hwid_without_location = '-'.join(hwid_parts[:-1])
+            printer = Printer.getPrinterByHwid(hwid_without_location)
             if printer is not None: 
+                # print(printer)
+                print("PRINTER NOT NONE: printer device ", printer.getDevice(), "port device", port.device)
                 if(printer.getDevice()!=port.device): 
-                    print("printer device ", printer.getDevice(), "port device", port.device)
-                    print(printer.getId())
+                    # print("printer device ", printer.getDevice(), "port device", port.device)
+                    # print(printer.getId())
                     printer.editPort(printer.getId(), port.device)
         return {"success": True, "message": "Printer port(s) successfully updated."}
 

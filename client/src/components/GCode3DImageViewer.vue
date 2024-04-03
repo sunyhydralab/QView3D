@@ -6,10 +6,18 @@ import * as GCodePreview from 'gcode-preview';
 const { getFile } = useGetFile();
 
 const props = defineProps({
+    job: Object as () => Job,
     file: Object as () => File
 })
-const file = toRef(props, 'file')
-
+const file = () => {
+    if (props.file) {
+        return props.file
+    } else if (props.job) {
+        return getFile(props.job)
+    } else {
+        return null
+    }
+}
 
 // Create a ref for the canvas
 const canvas = ref<HTMLCanvasElement | null>(null);
@@ -23,6 +31,8 @@ onMounted(async () => {
         return;
     }
 
+    // console.log("FILE NAME: ", file.value.name)
+
     modal.addEventListener('shown.bs.modal', async () => {
         // Initialize the GCodePreview and show the GCode when the modal is shown
         if (canvas.value) {
@@ -35,12 +45,17 @@ onMounted(async () => {
 
             if (canvas.value) {
                 // job.file to string
-                const gcode = await fileToString(file.value);
+                const fileValue = await file();
+                if (fileValue) {
+                    const gcode = await fileToString(fileValue);
 
-                try {
-                    preview?.processGCode(gcode); // MAIN LINE
-                } catch (error) {
-                    console.error('Failed to process GCode:', error);
+                    try {
+                        preview?.processGCode(gcode); // MAIN LINE
+                    } catch (error) {
+                        console.error('Failed to process GCode:', error);
+                    }
+                } else {
+                    console.error('File is not available');
                 }
             } else {
                 console.error('Canvas element is not available in showGCode');

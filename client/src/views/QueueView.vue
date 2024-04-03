@@ -1,51 +1,36 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRetrievePrintersInfo, setupQueueSocket, setupStatusSocket, type Device } from '../model/ports'
-import { useRerunJob, useRemoveJob, bumpJobs, type Job } from '../model/jobs';
-import { useRouter } from 'vue-router'
-import { nextTick } from 'vue';
+import { onUnmounted, ref } from 'vue'
+import { printers, type Device } from '../model/ports'
+import { useRerunJob, useRemoveJob, type Job, useMoveJob, useGetFile } from '../model/jobs';
+import draggable from 'vuedraggable'
 import { toast } from '@/model/toast';
+import { useRouter } from 'vue-router'
+import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 
-const { retrieveInfo } = useRetrievePrintersInfo()
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
-const { bumpjob } = bumpJobs()
-
+const { moveJob } = useMoveJob()
+const { getFile } = useGetFile()
 const router = useRouter()
 
 const selectedJobs = ref<Array<Job>>([]);
-// Map to track the state of "Select All" checkbox for each printer
 const selectAllCheckboxMap = ref<Record<string, boolean>>({});
 
-type Printer = Device & { isExpanded?: boolean }
-const printers = ref<Array<Printer>>([]) // Get list of open printer threads 
-
-let intervalId: number | undefined;
+let currentJob = ref<Job | null>(null);
+let isGcodeImageVisible = ref(false);
 let selectAllCheckbox = ref(false);
 
-onMounted(async () => {
-  try {
-    const printerInfo = await retrieveInfo()
-    printers.value = printerInfo
-    setupQueueSocket(printers)
-    setupStatusSocket(printers)
-  } catch (error) {
-    console.error('There has been a problem with your fetch operation:', error)
-  }
-})
-
 onUnmounted(() => {
-  // Clear the interval when the component is unmounted to prevent memory leaks
-  if (intervalId) {
-    clearInterval(intervalId)
+  for (const printer of printers.value) {
+    printer.isExpanded = false;
   }
-})
+});
 
-const handleRerun = async (job: Job, printer: Printer) => {
+const handleRerun = async (job: Job, printer: Device) => {
   await rerunJob(job, printer)
 };
 
-const handleRerunToSubmit = async (job: Job, printer: Printer) => {
+const handleRerunToSubmit = async (job: Job, printer: Device) => {
   await router.push({
         name: 'SubmitJobVue', // the name of the route to SubmitJob.vue
         params: { job: JSON.stringify(job), printer: JSON.stringify(printer) } // the job and printer to fill in the form
@@ -78,7 +63,7 @@ const deleteSelectedJobs = async () => {
   selectAllCheckbox.value = false;
 };
 
-const SelectAllJobs = (printer: Printer | undefined) => {
+const selectAllJobs = (printer: Device) => {
   if (printer !== undefined && printer.queue !== undefined) {
     // Toggle the "Select All" checkbox state for the current printer
     selectAllCheckboxMap.value[printer.id!] = !selectAllCheckboxMap.value[printer.id!];
@@ -92,9 +77,7 @@ const SelectAllJobs = (printer: Printer | undefined) => {
       selectedJobs.value = selectedJobs.value.filter(job => job.printerid !== printer.id);
     }
   }
-};
-
-
+}
 
 function capitalizeFirstLetter(string: string | undefined) {
   return string ? string.charAt(0).toUpperCase() + string.slice(1) : '';
@@ -117,49 +100,55 @@ function statusColor(status: string | undefined) {
   }
 }
 
-const bump = async (job: Job, printer: Printer, direction: string) => {
-  switch (direction) {
-    case 'up':
-      await bumpjob(job, printer, 1)
-      break;
-    case 'down':
-      await bumpjob(job, printer, 2)
-      break;
-    case 'top':
-      await bumpjob(job, printer, 3)
-      break;
-    case 'bottom':
-      await bumpjob(job, printer, 4)
-      break;
+const handleDragEnd = async (evt: any) => {
+  if (evt.newIndex != 1) {
+    const printerId = Number(evt.item.dataset.printerId);
+    const arr = Array.from(evt.to.children).map((child: any) => Number(child.dataset.jobId));
+    await moveJob(printerId, arr)
   }
+};
 
+const isInqueue = (evt: any) => {
+  return evt.relatedContext.element.status === 'inqueue';
+}
 
-  // Re-fetch the printer's queue from the backend
-  const printerInfo = await retrieveInfo()
-  const foundPrinter = printerInfo.find((p: any) => p.id === printer.id)
-  if (foundPrinter) {
-    const printerIndex = printers.value.findIndex(p => p.id === printer.id)
-    if (printerIndex !== -1) {
-      printers.value[printerIndex].queue = foundPrinter.queue
+const openModal = async (job: Job, printerName: string, num: number, printer: Device) => {
+  currentJob.value = job
+  currentJob.value.printer = printerName
+  if (num == 1) {
+    // isGcodeLiveViewVisible.value = true
+  } else if (num == 2) {
+    isGcodeImageVisible.value = true
+    if (currentJob.value) {
+      const file = await getFile(currentJob.value)
+      if (file) {
+        currentJob.value.file = file
+      }
     }
   }
-}
-
-const isLastJob = (job: Job, printer: Printer) => {
-  return printer.queue ? printer.queue.indexOf(job) === printer.queue.length - 1 : false;
-}
-const isFirstJobPrinting = (job: Job, printer: Printer) => {
-  if (!printer.queue) return false;
-  return printer.queue[0] && printer.queue[0].status === 'printing';
-}
-const canBumpUp = (job: Job, printer: Printer) => {
-  if (!printer.queue) return false;
-  const index = printer.queue.indexOf(job);
-  return index !== 0 && (index !== 1 || !isFirstJobPrinting(job, printer));
 }
 </script>
 
 <template>
+  <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true"
+    @shown.bs.modal="isGcodeImageVisible = true" @hidden.bs.modal="isGcodeImageVisible = false">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="gcodeImageModalLabel">
+            <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <GCode3DImageViewer v-if="isGcodeImageVisible" :job="currentJob!" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="container">
 
     <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
@@ -199,7 +188,7 @@ const canBumpUp = (job: Job, printer: Printer) => {
         <h2 class="accordion-header" :id="'panelsStayOpen-heading' + index">
           <button class="accordion-button" type="button" data-bs-toggle="collapse"
             :data-bs-target="'#panelsStayOpen-collapse' + index" :aria-expanded="printer.isExpanded"
-            :aria-controls="'panelsStayOpen-collapse' + index">
+            :aria-controls="'panelsStayOpen-collapse' + index" :class="{ 'collapsed': !printer.isExpanded }">
             <b>{{ printer.name }}:&nbsp;
               <span class="status-text" :style="{ color: statusColor(printer.status) }">{{
               capitalizeFirstLetter(printer.status) }}</span>
@@ -208,79 +197,76 @@ const canBumpUp = (job: Job, printer: Printer) => {
         </h2>
         <div :id="'panelsStayOpen-collapse' + index" class="accordion-collapse collapse"
           :class="{ show: printer.isExpanded }" :aria-labelledby="'panelsStayOpen-heading' + index"
-          data-bs-parent="#accordionPanelsStayOpenExample">
+          @show.bs.collapse="printer.isExpanded = !printer.isExpanded">
           <div class="accordion-body">
             <table>
               <thead>
                 <tr>
                   <th class="col-1">Job ID</th>
                   <th class="col-checkbox">
-                    <input type="checkbox" @change="() => SelectAllJobs(printer)" v-model="selectAllCheckbox"/>
+                    <div class="checkbox-container">
+                      <input type="checkbox" @change="() => selectAllJobs(printer)"
+                        :disabled="printer.queue!.length === 0" v-model="selectAllCheckbox"/>
+                    </div>
                   </th>
                   <th class="col-2">Rerun Job</th>
                   <th class="col-1">Position</th>
-                  <th class="col-1">Bump</th>
                   <th>Job Title</th>
                   <th>File</th>
                   <th>Date Added</th>
                   <th class="col-1">Job Status</th>
+                  <th>Actions</th>
+                  <th style="width: 0">Move</th>
                 </tr>
               </thead>
-              <transition-group name="list" tag="tbody">
-                <tr v-for="job in printer.queue" :key="job.id">
-                  <td>{{ job.id }}</td>
-                  <td class="text-center">
-                    <input type="checkbox" v-model="selectedJobs" :value="job" />
-                  </td>
+              <draggable v-model="printer.queue" tag="tbody" :animation="300" itemKey="job.id" handle=".handle"
+                dragClass="hidden-ghost" :onEnd="handleDragEnd" v-if="printer.queue && printer.queue.length"
+                :move="isInqueue">
+                <template #item="{ element: job }">
+                  <tr :id="job.id.toString()" :data-printer-id="printer.id" :data-job-id="job.id"
+                    :data-job-status="job.status" :key="job.id" :class="{ 'printing': job.status === 'printing' }">
+                    <td>{{ job.id }}</td>
+                    <td class="text-center">
+                      <input type="checkbox" v-model="selectedJobs" :value="job" />
+                    </td>
 
-                  <td class="text-center">
-                    <div class="btn-group w-100">
-                      <button type="button" class="btn btn-primary" @click="handleRerun(job, printer)">Rerun
-                        Job</button>
-                      <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"
-                        data-bs-toggle="dropdown" aria-expanded="false">
-                        <span class="visually-hidden">Toggle Dropdown</span>
-                      </button>
-                      <div class="dropdown-menu">
-                        <button class="dropdown-item" v-for="otherPrinter in printers.filter(p => p.id !== printer.id)"
-                          :key="otherPrinter.id" @click="handleRerunToSubmit(job, otherPrinter)">{{ otherPrinter.name
-                          }}</button>
+                    <td class="text-center">
+                      <div class="btn-group w-100">
+                        <div class="btn btn-primary" @click="handleRerun(job, printer)">Rerun
+                          Job</div>
+                        <div class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"
+                          aria-expanded="false">
+                        </div>
+                        <div class="dropdown-menu">
+                          <div class="dropdown-item" v-for="otherPrinter in printers.filter(p => p.id !== printer.id)"
+                            :key="otherPrinter.id" @click="handleRerun(job, otherPrinter)">{{ otherPrinter.name
+                            }}</div>
+                        </div>
                       </div>
-                    </div>
-                  </td>
+                    </td>
 
-                  <td class="text-center">
-                    <b>
-                      {{ printer.queue ? printer.queue.findIndex(j => j === job) + 1 : '' }}
-                    </b>
-                  </td>
-
-                  <td class="text-center">
-                    <div class="dropdown w-100">
-                      <button class="btn dropdown-toggle w-100"
-                        :class="{ 'btn-danger': printer.queue && job.status === 'printing', 'btn-secondary': !printer.queue || (printer.queue && job.status !== 'printing') }"
-                        type="button" data-bs-toggle="dropdown"
-                        :disabled="printer.queue && job.status === 'printing'"></button>
-                      <ul class="dropdown-menu">
-                        <li class="dropdown-item" v-if="canBumpUp(job, printer)" @click="bump(job, printer, 'up')">Bump
-                          Up
-                        </li>
-                        <li class="dropdown-item" v-if="canBumpUp(job, printer)" @click="bump(job, printer, 'top')">Send
-                          to Top</li>
-                        <li class="dropdown-item" v-if="!isLastJob(job, printer)" @click="bump(job, printer, 'down')">
-                          Bump
-                          Down</li>
-                        <li class="dropdown-item" v-if="!isLastJob(job, printer)" @click="bump(job, printer, 'bottom')">
-                          Send to Bottom</li>
-                      </ul>
-                    </div>
-                  </td>
-                  <td><b>{{ job.name }}</b></td>
-                  <td>{{ job.file_name_original }}</td>
-                  <td>{{ job.date }}</td>
-                  <td>{{ job.status }}</td>
-                </tr>
-              </transition-group>
+                    <td class="text-center">
+                      <b>
+                        {{ printer.queue ? printer.queue.findIndex(j => j === job) + 1 : '' }}
+                      </b>
+                    </td>
+                    <td><b>{{ job.name }}</b></td>
+                    <td>{{ job.file_name_original }}</td>
+                    <td>{{ job.date }}</td>
+                    <td>{{ job.status }}</td>
+                    <td>
+                      <button type="button" class="btn btn-info btn-circle" data-bs-toggle="modal"
+                        data-bs-target="#gcodeImageModal" v-if="printer.queue && printer.queue.length > 0"
+                        v-bind:job="printer.queue[0]" @click="printer.name && openModal(job, printer.name, 2, printer)">
+                        <i class="fa-regular fa-image"></i>
+                      </button>
+                    </td>
+                    <td class="text-center handle" :class="{ 'not-draggable': job.status !== 'inqueue' }">
+                      <i class="fas fa-grip-vertical" :class="{ 'icon-disabled': job.status !== 'inqueue' }"></i>
+                    </td>
+                  </tr>
+                </template>
+              </draggable>
             </table>
           </div>
         </div>
@@ -290,8 +276,47 @@ const canBumpUp = (job: Job, printer: Printer) => {
 </template>
 
 <style scoped>
-.list-move {
-  transition: transform 1s;
+.btn-circle {
+  width: 30px;
+  height: 30px;
+  padding: 0.375em 0;
+  border-radius: 50%;
+  font-size: 0.75em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.sortable-chosen {
+  opacity: 0.5;
+  background-color: #f2f2f2;
+}
+
+.hidden-ghost {
+  opacity: 0;
+}
+
+.handle {
+  cursor: grab;
+}
+
+.handle:active {
+  cursor: grabbing;
+}
+
+.checkbox-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.icon-disabled {
+  color: #6e7073;
+}
+
+.not-draggable {
+  pointer-events: none;
 }
 
 table {
