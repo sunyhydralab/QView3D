@@ -17,9 +17,12 @@ export interface Job {
   gcode_num?: number //store gcode of job
   printer: string //store printer name
   printerid: number
+
   errorid?: number
   error?: string // store issue name 
+
   comment?: string // store comments
+
   file_pause: number
   priority?: string
   favorite?: boolean

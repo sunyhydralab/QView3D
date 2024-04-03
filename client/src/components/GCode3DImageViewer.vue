@@ -31,8 +31,6 @@ onMounted(async () => {
         return;
     }
 
-    // console.log("FILE NAME: ", file.value.name)
-
     modal.addEventListener('shown.bs.modal', async () => {
         // Initialize the GCodePreview and show the GCode when the modal is shown
         if (canvas.value) {

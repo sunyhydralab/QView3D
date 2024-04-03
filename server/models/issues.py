@@ -27,10 +27,13 @@ class Issue(db.Model):
     def get_issues(cls):
         try:
             issues = cls.query.all()
-            issues = [
-                {"id": issue.id, "issue": issue.issue} for issue in issues
-            ]
-            return {"success": True, "issues": issues}
+            if(issues):
+                issues = [
+                    {"id": issue.id, "issue": issue.issue} for issue in issues
+                ]
+                return {"success": True, "issues": issues}
+            else: 
+                return {"success": True, "issues": []}
             # return issues
         except SQLAlchemyError as e:
             print(f"Database error: {e}")

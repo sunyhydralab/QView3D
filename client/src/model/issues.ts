@@ -11,6 +11,7 @@ export function useGetIssues() {
         async issues() {
             try {
                 const response = await api('getissues') // pass rerun job the Job object and desired printer
+                console.log('response:', response)
                 if (response.success === true) {
                     return response.issues
                 }
