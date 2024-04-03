@@ -56,9 +56,35 @@ export function jobTime(job: Job, printers: any) {
 
     const printerid = job.printerid
     const printer = printers.value.find((printer: { id: number }) => printer.id === printerid)
+  if (printers) {
+
+    if (!job.job_client) {
+      job.job_client = {
+        total_time: 0,
+        eta: 0,
+        elapsed_time: 0,
+        extra_time: 0,
+        remaining_time: NaN
+      }
+    }
+    if (!job.job_server) {
+      // job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
+      job.job_server = [0, new Date(0, 0, 0, 0), new Date(0, 0, 0, 0), new Date(0, 0, 0, 0)]
+
+    }
+
+    const printerid = job.printerid
+    const printer = printers.value.find((printer: { id: number }) => printer.id === printerid)
 
     // job.job_client!.remaining_time = NaN
+    // job.job_client!.remaining_time = NaN
 
+    const updateJobTime = () => {
+      if (printer.status !== 'printing') {
+        clearInterval(job.timer)
+        delete job.timer
+        return
+      }
     const updateJobTime = () => {
       if (printer.status !== 'printing') {
         clearInterval(job.timer)
@@ -68,10 +94,24 @@ export function jobTime(job: Job, printers: any) {
 
       let totalTime = job.job_server![0]
       job.job_client!.total_time = totalTime * 1000
+      let totalTime = job.job_server![0]
+      job.job_client!.total_time = totalTime * 1000
 
       let eta = job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
       job.job_client!.eta = eta + job.job_client!.extra_time
+      let eta = job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
+      job.job_client!.eta = eta + job.job_client!.extra_time
 
+      if (printer.status === 'printing' || printer.status === 'colorchange' || printer.status === 'paused') {
+        const now = Date.now();
+        const elapsedTime = now - new Date(job.job_server![2]).getTime();
+        job.job_client!.elapsed_time = Math.round(elapsedTime / 1000) * 1000;
+        if (!isNaN(job.job_client!.elapsed_time)) {
+          if (job.job_client!.elapsed_time <= job.job_client!.total_time) {
+            job.job_client!.remaining_time = job.job_client!.total_time - job.job_client!.elapsed_time
+          }
+        }
+      }
       if (printer.status === 'printing' || printer.status === 'colorchange' || printer.status === 'paused') {
         const now = Date.now();
         const elapsedTime = now - new Date(job.job_server![2]).getTime();
@@ -86,7 +126,15 @@ export function jobTime(job: Job, printers: any) {
       if (job.job_client!.elapsed_time > job.job_client!.total_time) {
         job.job_client!.extra_time = Date.now() - eta
       }
+      if (job.job_client!.elapsed_time > job.job_client!.total_time) {
+        job.job_client!.extra_time = Date.now() - eta
+      }
 
+      // Update elapsed_time after the first second
+      if (job.job_client!.elapsed_time === 0) {
+        job.job_client!.elapsed_time = 1;
+      }
+    }
       // Update elapsed_time after the first second
       if (job.job_client!.elapsed_time === 0) {
         job.job_client!.elapsed_time = 1;
@@ -95,7 +143,15 @@ export function jobTime(job: Job, printers: any) {
 
     // Call updateJobTime immediately when jobTime is called
     updateJobTime();
+    // Call updateJobTime immediately when jobTime is called
+    updateJobTime();
 
+    // Continue to call updateJobTime at regular intervals
+    job.timer = setInterval(updateJobTime, 1000)
+  } else {
+    console.error('printers is undefined');
+
+  }
     // Continue to call updateJobTime at regular intervals
     job.timer = setInterval(updateJobTime, 1000)
   } else {
@@ -111,7 +167,21 @@ export function setupTimeSocket(printers: any) {
       const job = printers.value
         .flatMap((printer: { queue: any }) => printer.queue)
         .find((job: { id: any }) => job?.id === data.job_id)
+    if (printers) {
+      const job = printers.value
+        .flatMap((printer: { queue: any }) => printer.queue)
+        .find((job: { id: any }) => job?.id === data.job_id)
 
+      if (!job.job_client || !job.job_server) {
+        job.job_client = {
+          total_time: 0,
+          eta: 0,
+          elapsed_time: 0,
+          extra_time: 0,
+          remaining_time: NaN
+        }
+        // job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
+        job.job_server = [0, '00:00:00', '00:00:00', '00:00:00']
       if (!job.job_client || !job.job_server) {
         job.job_client = {
           total_time: 0,
@@ -124,7 +194,13 @@ export function setupTimeSocket(printers: any) {
         job.job_server = [0, '00:00:00', '00:00:00', '00:00:00']
 
       }
+      }
 
+      if (typeof (data.new_time) === 'number') {
+        job.job_server[data.index] = data.new_time
+      } else {
+        job.job_server[data.index] = Date.parse(data.new_time)
+      }
       if (typeof (data.new_time) === 'number') {
         job.job_server[data.index] = data.new_time
       } else {
@@ -135,14 +211,20 @@ export function setupTimeSocket(printers: any) {
     } else {
       console.error('printers or printers.value is undefined');
     }
+      jobTime(job, printers)
+    } else {
+      console.error('printers or printers.value is undefined');
+    }
   })
 }
 
 export function useGetJobs() {
   return {
     async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean) {
+    async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean) {
       try {
         const response = await api(
+          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&favoriteOnly=${favoriteOnly}`
           `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&favoriteOnly=${favoriteOnly}`
         )
         return response
@@ -154,6 +236,37 @@ export function useGetJobs() {
     async getFavoriteJobs() {
       try {
         const response = await api('getfavoritejobs')
+        return response
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while retrieving the jobs')
+      }
+    }
+  }
+}
+
+export function useUpdateJobStatus () {
+  return {
+    async updateJobStatus (jobid: number, status: string) {
+      try {
+        const response = await api('assigntoerror', { jobid, status })
+        return response
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while updating the job status')
+      }
+    }
+  }
+
+}
+
+export function useGetErrorJobs() {
+  return {
+    async jobhistoryError(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean, issues?: number[]) {
+      try {
+        const response = await api(
+          `geterrorjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&issueIds=${JSON.stringify(issues)}`
+        )
         return response
       } catch (error) {
         console.error(error)
@@ -219,6 +332,7 @@ export function useAutoQueue() {
       try {
         const response = await api('autoqueue', job)
         if (response) {
+          return response
           return response
         } else {
           console.error('Response is undefined or null')
@@ -354,6 +468,7 @@ export function useGetGcode() {
 export function useGetJobFile() {
   return {
     async getFileDownload(jobid: number) {
+    async getFileDownload(jobid: number) {
       try {
         const response = await api(`getfile?jobid=${jobid}`)
         const file = new Blob([response.file], { type: 'text/plain' })
@@ -370,6 +485,7 @@ export function useGetJobFile() {
 export function useGetFile() {
   return {
     async getFile(job: Job): Promise<File | undefined> {
+    async getFile(job: Job): Promise<File | undefined> {
       try {
         const jobid = job.id
         const response = await api(`getfile?jobid=${jobid}`)
@@ -378,6 +494,7 @@ export function useGetFile() {
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while retrieving the file')
+        return undefined
         return undefined
       }
     }
@@ -443,7 +560,23 @@ export function useMoveJob() {
         console.error(error)
         toast.error('An error occurred while adding the job to the queue')
       }
+export function useMoveJob() {
+  return {
+    async moveJob(printerid: number | undefined, arr: number[] | undefined) {
+      try {
+        const response = await api('movejob', { printerid, arr })
+        if (response) {
+          return response
+        } else {
+          console.error('Response is undefined or null')
+          return { success: false, message: 'Response is undefined or null.' }
+        }
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while adding the job to the queue')
+      }
     }
+  }
   }
 }
 
@@ -463,7 +596,9 @@ export function useDeleteJob() {
 }
 
 export function useStartJob() {
+export function useStartJob() {
   return {
+    async start(jobid: number, printerid: number) {
     async start(jobid: number, printerid: number) {
       try {
         const response = await api(`startprint`, { jobid, printerid })
@@ -471,6 +606,34 @@ export function useStartJob() {
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while starting the job')
+      }
+    }
+  }
+}
+
+export function useAssignComment() {
+  return {
+    async assignComment(job: Job, comment: string) {
+      let jobid = job?.id
+      try {
+        const response = await api(`savecomment`, { jobid, comment })
+        if (response) {
+          if (response.success == false) {
+            toast.error(response.message)
+          } else if (response.success === true) {
+            toast.success(response.message)
+          } else {
+            console.error('Unexpected response:', response)
+            toast.error('Failed to write comment. Unexpected response.')
+          }
+        } else {
+          console.error('Response is undefined or null')
+          toast.error('Failed to write comment. Unexpected response')
+        }
+        return response
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while assigning the comment')
       }
     }
   }

@@ -266,8 +266,24 @@ const doCloseRegisterModal = async () => {
 
 .register {
     color: red;
+}
+
+.form-container {
+    border: 2px solid #333;
+    padding: 20px;
+    width: 300px;
+    margin-top: 20px;
+}
+
+.register {
+    color: red;
     margin-bottom: 10px;
     /* Add margin to the bottom */
+}
+
+.card {
+    margin-bottom: 20px;
+    /* Add margin to create space between cards */
 }
 
 .modal-dialog {

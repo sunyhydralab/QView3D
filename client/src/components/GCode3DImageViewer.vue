@@ -7,6 +7,7 @@ const { getFile } = useGetFile();
 
 const props = defineProps({
     job: Object as () => Job,
+    job: Object as () => Job,
     file: Object as () => File
 })
 
@@ -48,7 +49,17 @@ onMounted(async () => {
                 const fileValue = await file();
                 if (fileValue) {
                     const gcode = await fileToString(fileValue);
+                const fileValue = await file();
+                if (fileValue) {
+                    const gcode = await fileToString(fileValue);
 
+                    try {
+                        preview?.processGCode(gcode); // MAIN LINE
+                    } catch (error) {
+                        console.error('Failed to process GCode:', error);
+                    }
+                } else {
+                    console.error('File is not available');
                     try {
                         preview?.processGCode(gcode); // MAIN LINE
                     } catch (error) {

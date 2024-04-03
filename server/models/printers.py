@@ -1,4 +1,5 @@
 import re
+import re
 from models.db import db
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
@@ -22,6 +23,8 @@ load_dotenv()
 # model for Printer table
 
 
+
+
 class Printer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     device = db.Column(db.String(50), nullable=False)
@@ -35,6 +38,8 @@ class Printer(db.Model):
     )
     queue = None
     ser = None
+    # default setting on printer start. Runs initialization and status switches to "ready" automatically.
+    status = None
     # default setting on printer start. Runs initialization and status switches to "ready" automatically.
     status = None
     # stopPrint = False
@@ -57,8 +62,11 @@ class Printer(db.Model):
         self.error = ""
         self.extruder_temp = 0
         self.bed_temp = 0
+        self.extruder_temp = 0
+        self.bed_temp = 0
         self.canPause = 0
         self.prevMes=""
+
 
         if id is not None:
             self.id = id
@@ -119,8 +127,8 @@ class Printer(db.Model):
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return (
-                jsonify({"error": "Failed to register printer. Database error"}),
-                500,
+                jsonify({"success": False, "error": "Failed to register printer. Database error"}),
+                500
             )
 
     @classmethod
@@ -138,6 +146,8 @@ class Printer(db.Model):
                     "hwid": printer.hwid,
                     "name": printer.name,
                     "status": printer.status,
+                    # Include timezone abbreviation
+                    "date": f"{printer.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(printer.date)}",
                     # Include timezone abbreviation
                     "date": f"{printer.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(printer.date)}",
                 }
@@ -219,6 +229,17 @@ class Printer(db.Model):
                 
             # ser.close()
 
+            # ser = serial.Serial(cls.query.get(printerid).device, 115200, timeout=1)
+            # if(ser and ser.isOpen()):
+            ports = Printer.getConnectedPorts()
+            for port in ports:
+                if port["hwid"] == cls.query.get(printerid).hwid:
+                    ser = serial.Serial(port["device"], 115200, timeout=1)
+                    ser.close()
+                    break 
+                
+            # ser.close()
+
             printer = cls.query.get(printerid)
             db.session.delete(printer)
             db.session.commit()
@@ -261,6 +282,10 @@ class Printer(db.Model):
             current_app.socketio.emit(
                 "port_repair", {"printer_id": printerid, "device": printerport}
             )
+            
+            current_app.socketio.emit(
+                "port_repair", {"printer_id": printerid, "device": printerport}
+            )
             return {"success": True, "message": "Printer port successfully updated."}
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
@@ -274,6 +299,7 @@ class Printer(db.Model):
         ser = serial.Serial(device, 115200, timeout=1)
         message = "G91\nG1 Z10 F3000\nG90"
          # Encode and send the message to the printer.
+        # time.sleep(1)
         # time.sleep(1)
         ser.write(f"{message}\n".encode("utf-8"))
             # Sleep the printer to give it enough time to get the instruction.
@@ -291,12 +317,14 @@ class Printer(db.Model):
         try:
             self.ser = serial.Serial(self.device, 115200, timeout=1)
             self.ser.write(f"M155 S5\n".encode("utf-8"))
+            self.ser.write(f"M155 S5\n".encode("utf-8"))
         except Exception as e:
             self.setError(e)
             return "error"
 
     def disconnect(self):
         if self.ser:
+            self.ser.write(f"M155 S0\n".encode("utf-8"))
             self.ser.write(f"M155 S0\n".encode("utf-8"))
             self.ser.close()
             self.setSer(None)
@@ -424,7 +452,9 @@ class Printer(db.Model):
                         job.setTime(datetime.now(), 2)
                         print(job.job_time)
                  
+                 
                     res = self.sendGcode(line)
+                    
                     
                     if(job.getFilePause() == 1):
                         # self.setStatus("printing")
@@ -466,6 +496,7 @@ class Printer(db.Model):
 
                     # software color change
                     if (self.getStatus()=="colorchange" and job.getFilePause()==0):
+                    if (self.getStatus()=="colorchange" and job.getFilePause()==0):
                         job.setTime(datetime.now(), 3)
                         # job.setTime(job.calculateTotalTime(), 0)
                         # job.setTime(job.updateEta(), 1)
@@ -475,6 +506,7 @@ class Printer(db.Model):
                         job.setTime(job.calculateColorChangeTotal(), 0)
                         job.setTime(datetime.min, 3)
                         self.setStatus("printing")
+
 
                     # Increment the sent lines
                     sent_lines += 1
@@ -575,6 +607,7 @@ class Printer(db.Model):
             
     def beginPrint(self, job): 
         print("in BEGIN PRINT")
+        print("in BEGIN PRINT")
         while True: 
             time.sleep(1)
             if job.getReleased()==1: 
@@ -645,8 +678,10 @@ class Printer(db.Model):
 
     #  now when we set the status, we can emit the status to the frontend
 
+
     def setStatus(self, newStatus):
         try:
+            print("SETTING STATUS TO:", newStatus)
             print("SETTING STATUS TO:", newStatus)
             self.status = newStatus
             # print(self.status)
@@ -684,6 +719,13 @@ class Printer(db.Model):
                 print("Failed to send status:", response.text)
         except requests.exceptions.RequestException as e:
             print(f"Failed to send status to job: {e}")
+
+    def setTemps(self, extruder_temp, bed_temp):
+        self.extruder_temp = extruder_temp
+        self.bed_temp = bed_temp
+        current_app.socketio.emit(
+            'temp_update', {'printerid': self.id, 'extruder_temp': self.extruder_temp, 'bed_temp': self.bed_temp})
+
 
     def setTemps(self, extruder_temp, bed_temp):
         self.extruder_temp = extruder_temp

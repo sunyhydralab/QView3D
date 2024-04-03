@@ -4,11 +4,19 @@ import { printers, type Device } from '../model/ports'
 import { useRerunJob, useRemoveJob, type Job, useMoveJob, useGetFile } from '../model/jobs';
 import draggable from 'vuedraggable'
 import { toast } from '@/model/toast';
+import { onUnmounted, ref } from 'vue'
+import { printers, type Device } from '../model/ports'
+import { useRerunJob, useRemoveJob, type Job, useMoveJob, useGetFile } from '../model/jobs';
+import draggable from 'vuedraggable'
+import { toast } from '@/model/toast';
 import { useRouter } from 'vue-router'
+import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
+const { moveJob } = useMoveJob()
+const { getFile } = useGetFile()
 const { moveJob } = useMoveJob()
 const { getFile } = useGetFile()
 const router = useRouter()
@@ -18,18 +26,25 @@ const selectAllCheckboxMap = ref<Record<string, boolean>>({});
 
 let currentJob = ref<Job | null>(null);
 let isGcodeImageVisible = ref(false);
+let currentJob = ref<Job | null>(null);
+let isGcodeImageVisible = ref(false);
 let selectAllCheckbox = ref(false);
 
 onUnmounted(() => {
   for (const printer of printers.value) {
     printer.isExpanded = false;
+  for (const printer of printers.value) {
+    printer.isExpanded = false;
   }
 });
+});
 
+const handleRerun = async (job: Job, printer: Device) => {
 const handleRerun = async (job: Job, printer: Device) => {
   await rerunJob(job, printer)
 };
 
+const handleRerunToSubmit = async (job: Job, printer: Device) => {
 const handleRerunToSubmit = async (job: Job, printer: Device) => {
   await router.push({
         name: 'SubmitJobVue', // the name of the route to SubmitJob.vue
@@ -64,6 +79,7 @@ const deleteSelectedJobs = async () => {
 };
 
 const selectAllJobs = (printer: Device) => {
+const selectAllJobs = (printer: Device) => {
   if (printer !== undefined && printer.queue !== undefined) {
     // Toggle the "Select All" checkbox state for the current printer
     selectAllCheckboxMap.value[printer.id!] = !selectAllCheckboxMap.value[printer.id!];
@@ -77,6 +93,7 @@ const selectAllJobs = (printer: Device) => {
       selectedJobs.value = selectedJobs.value.filter(job => job.printerid !== printer.id);
     }
   }
+}
 }
 
 function capitalizeFirstLetter(string: string | undefined) {
@@ -110,8 +127,32 @@ const handleDragEnd = async (evt: any) => {
 
 const isInqueue = (evt: any) => {
   return evt.relatedContext.element.status === 'inqueue';
+const handleDragEnd = async (evt: any) => {
+  if (evt.newIndex != 1) {
+    const printerId = Number(evt.item.dataset.printerId);
+    const arr = Array.from(evt.to.children).map((child: any) => Number(child.dataset.jobId));
+    await moveJob(printerId, arr)
+  }
+};
+
+const isInqueue = (evt: any) => {
+  return evt.relatedContext.element.status === 'inqueue';
 }
 
+const openModal = async (job: Job, printerName: string, num: number, printer: Device) => {
+  currentJob.value = job
+  currentJob.value.printer = printerName
+  if (num == 1) {
+    // isGcodeLiveViewVisible.value = true
+  } else if (num == 2) {
+    isGcodeImageVisible.value = true
+    if (currentJob.value) {
+      const file = await getFile(currentJob.value)
+      if (file) {
+        currentJob.value.file = file
+      }
+    }
+  }
 const openModal = async (job: Job, printerName: string, num: number, printer: Device) => {
   currentJob.value = job
   currentJob.value.printer = printerName
@@ -130,6 +171,25 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
 </script>
 
 <template>
+  <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true"
+    @shown.bs.modal="isGcodeImageVisible = true" @hidden.bs.modal="isGcodeImageVisible = false">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="gcodeImageModalLabel">
+            <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <GCode3DImageViewer v-if="isGcodeImageVisible" :job="currentJob!" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true"
     @shown.bs.modal="isGcodeImageVisible = true" @hidden.bs.modal="isGcodeImageVisible = false">
     <div class="modal-dialog modal-dialog-centered modal-xl">
@@ -189,6 +249,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
           <button class="accordion-button" type="button" data-bs-toggle="collapse"
             :data-bs-target="'#panelsStayOpen-collapse' + index" :aria-expanded="printer.isExpanded"
             :aria-controls="'panelsStayOpen-collapse' + index" :class="{ 'collapsed': !printer.isExpanded }">
+            :aria-controls="'panelsStayOpen-collapse' + index" :class="{ 'collapsed': !printer.isExpanded }">
             <b>{{ printer.name }}:&nbsp;
               <span class="status-text" :style="{ color: statusColor(printer.status) }">{{
               capitalizeFirstLetter(printer.status) }}</span>
@@ -197,6 +258,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
         </h2>
         <div :id="'panelsStayOpen-collapse' + index" class="accordion-collapse collapse"
           :class="{ show: printer.isExpanded }" :aria-labelledby="'panelsStayOpen-heading' + index"
+          @show.bs.collapse="printer.isExpanded = !printer.isExpanded">
           @show.bs.collapse="printer.isExpanded = !printer.isExpanded">
           <div class="accordion-body">
             <table>
@@ -208,6 +270,10 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                       <input type="checkbox" @change="() => selectAllJobs(printer)"
                         :disabled="printer.queue!.length === 0" v-model="selectAllCheckbox"/>
                     </div>
+                    <div class="checkbox-container">
+                      <input type="checkbox" @change="() => selectAllJobs(printer)"
+                        :disabled="printer.queue!.length === 0" v-model="selectAllCheckbox"/>
+                    </div>
                   </th>
                   <th class="col-2">Rerun Job</th>
                   <th class="col-1">Position</th>
@@ -215,6 +281,8 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                   <th>File</th>
                   <th>Date Added</th>
                   <th class="col-1">Job Status</th>
+                  <th>Actions</th>
+                  <th style="width: 0">Move</th>
                   <th>Actions</th>
                   <th style="width: 0">Move</th>
                 </tr>
@@ -229,7 +297,31 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                     <td class="text-center">
                       <input type="checkbox" v-model="selectedJobs" :value="job" />
                     </td>
+              <draggable v-model="printer.queue" tag="tbody" :animation="300" itemKey="job.id" handle=".handle"
+                dragClass="hidden-ghost" :onEnd="handleDragEnd" v-if="printer.queue && printer.queue.length"
+                :move="isInqueue">
+                <template #item="{ element: job }">
+                  <tr :id="job.id.toString()" :data-printer-id="printer.id" :data-job-id="job.id"
+                    :data-job-status="job.status" :key="job.id" :class="{ 'printing': job.status === 'printing' }">
+                    <td>{{ job.id }}</td>
+                    <td class="text-center">
+                      <input type="checkbox" v-model="selectedJobs" :value="job" />
+                    </td>
 
+                    <td class="text-center">
+                      <div class="btn-group w-100">
+                        <div class="btn btn-primary" @click="handleRerun(job, printer)">Rerun
+                          Job</div>
+                        <div class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"
+                          aria-expanded="false">
+                        </div>
+                        <div class="dropdown-menu">
+                          <div class="dropdown-item" v-for="otherPrinter in printers.filter(p => p.id !== printer.id)"
+                            :key="otherPrinter.id" @click="handleRerun(job, otherPrinter)">{{ otherPrinter.name
+                            }}</div>
+                        </div>
+                      </div>
+                    </td>
                     <td class="text-center">
                       <div class="btn-group w-100">
                         <div class="btn btn-primary" @click="handleRerun(job, printer)">Rerun

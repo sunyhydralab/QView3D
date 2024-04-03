@@ -6,6 +6,9 @@ import re
 from models.db import db
 from models.issues import Issue  # assuming the Issue model is defined in the issue.py file in the models directory
 from datetime import datetime, timezone, timedelta
+from models.db import db
+from models.issues import Issue  # assuming the Issue model is defined in the issue.py file in the models directory
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from flask import jsonify, current_app
@@ -20,16 +23,34 @@ from app import printer_status_service
 # model for job history table
 
 
+# model for job history table
+
+
 class Job(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     file = db.Column(db.LargeBinary(16777215), nullable=True)
+    name = db.Column(db.String(50), nullable=False)
     name = db.Column(db.String(50), nullable=False)
     status = db.Column(db.String(50), nullable=False)
     date = db.Column(db.DateTime, default=lambda: datetime.now(
         timezone.utc).astimezone(), nullable=False)
     # foreign key relationship to match jobs to the printer printed on
     printer_id = db.Column(db.Integer, db.ForeignKey('printer.id'), nullable=True)
+    date = db.Column(db.DateTime, default=lambda: datetime.now(
+        timezone.utc).astimezone(), nullable=False)
+    # foreign key relationship to match jobs to the printer printed on
+    printer_id = db.Column(db.Integer, db.ForeignKey('printer.id'), nullable=True)
     printer = db.relationship('Printer', backref='Job')
+
+    #FK to issue 
+    error_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=True)
+    error = db.relationship('Issue', backref='Issue')
+    
+    # comments 
+    comments = db.Column(db.String(500), nullable=True)
+    
+    file_name_original = db.Column(db.String(50), nullable=False)
+    favorite = db.Column(db.Boolean, nullable=False)
 
     #FK to issue 
     error_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=True)
@@ -66,14 +87,19 @@ class Job(db.Model):
         self.time_started = False
         self.job_time = [0, datetime.min, datetime.min, datetime.min]
         self.error_id = 0
+        self.error_id = 0
 
     def __repr__(self):
         return f"Job(id={self.id}, name={self.name}, printer_id={self.printer_id}, status={self.status})"
 
     def getPrinterId(self):
+
+    def getPrinterId(self):
         return self.printer_id
 
+
     @classmethod
+    def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob='', searchCriteria='', favoriteOnly=False):
     def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob='', searchCriteria='', favoriteOnly=False):
         try:
             query = cls.query
@@ -94,11 +120,16 @@ class Job(db.Model):
             if favoriteOnly:
                 query = query.filter(cls.favorite == True)
 
+            if favoriteOnly:
+                query = query.filter(cls.favorite == True)
+
             if oldestFirst:
                 query = query.order_by(cls.date.asc())    
             else: 
                 query = query.order_by(cls.date.desc())  # Change this line
 
+            pagination = query.paginate(
+                page=page, per_page=pageSize, error_out=False)
             pagination = query.paginate(
                 page=page, per_page=pageSize, error_out=False)
             jobs = pagination.items
@@ -110,6 +141,10 @@ class Job(db.Model):
                 "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",  
                 "printer": job.printer.name if job.printer else 'None', 
                 "file_name_original": job.file_name_original,
+                "favorite": job.favorite, 
+                "errorid": job.error_id, 
+                "error": job.error.issue if job.error else 'None', 
+                "comment": job.comments
                 "favorite": job.favorite, 
                 "errorid": job.error_id, 
                 "error": job.error.issue if job.error else 'None', 
@@ -169,6 +204,55 @@ class Job(db.Model):
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500
 
+        
+
+    @classmethod
+    def get_job_error_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob='', searchCriteria='', issueIds=None):
+        try:
+            query = cls.query.filter_by(status='error')
+            if printerIds:
+                query = query.filter(cls.printer_id.in_(printerIds))
+            
+            if issueIds: 
+                query = query.filter(cls.error_id.in_(issueIds))
+                
+            if searchJob:
+                searchJob = f"%{searchJob}%"
+                query = query.filter(or_(cls.name.ilike(searchJob), cls.file_name_original.ilike(searchJob)))
+            
+            if 'searchByJobName' in searchCriteria:
+                searchByJobName = f"%{searchJob}%"
+                query = query.filter(cls.name.ilike(searchByJobName))
+            elif 'searchByFileName' in searchCriteria:
+                searchByFileName = f"%{searchJob}%"
+                query = query.filter(cls.file_name_original.ilike(searchByFileName))
+
+            if oldestFirst:
+                query = query.order_by(cls.date.asc())    
+            else: 
+                query = query.order_by(cls.date.desc())  # Change this line
+
+            pagination = query.paginate(
+                page=page, per_page=pageSize, error_out=False)
+            jobs = pagination.items
+
+            jobs_data = [{
+                "id": job.id,
+                "name": job.name, 
+                "status": job.status, 
+                "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",  
+                "printer": job.printer.name if job.printer else 'None', 
+                "file_name_original": job.file_name_original,
+                "errorid": job.error_id, 
+                "error": job.error.issue if job.error else 'None', 
+                "comment": job.comments
+            } for job in jobs]
+
+            return jobs_data, pagination.total
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500
+
     @classmethod
     def jobHistoryInsert(cls, name, printer_id, status, file, file_name_original, favorite): 
         try:
@@ -177,14 +261,20 @@ class Job(db.Model):
             else:
                 file_data = file.read()
 
+
             try:
                 gzip.decompress(file_data)
+                # If it decompresses successfully, it's already compressed
+                compressed_data = file_data
                 # If it decompresses successfully, it's already compressed
                 compressed_data = file_data
             except OSError:
                 compressed_data = gzip.compress(file_data)
 
+                compressed_data = gzip.compress(file_data)
+
             job = cls(
+                file=compressed_data,
                 file=compressed_data,
                 name=name,
                 printer_id=printer_id,
@@ -196,12 +286,15 @@ class Job(db.Model):
             db.session.add(job)
             db.session.commit()
 
+
             return {"success": True, "message": "Job added to collection.", "id": job.id}
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return (
                 jsonify({"error": "Failed to add job. Database error"}),
                 500,
+            )
+
             )
 
     @classmethod
@@ -218,6 +311,10 @@ class Job(db.Model):
                 current_app.socketio.emit('job_status_update', {
                                           'job_id': job_id, 'status': new_status})
 
+
+                current_app.socketio.emit('job_status_update', {
+                                          'job_id': job_id, 'status': new_status})
+
                 return {"success": True, "message": f"Job {job_id} status updated successfully."}
             else:
                 return {"success": False, "message": f"Job {job_id} not found."}, 404
@@ -227,6 +324,7 @@ class Job(db.Model):
                 jsonify({"error": "Failed to update job status. Database error"}),
                 500,
             )
+
 
     @classmethod
     def delete_job(cls, job_id):
@@ -242,9 +340,13 @@ class Job(db.Model):
             print(f"Unexpected error: {e}")
             # When an error occurs or an exception is raised during a database operation (such as adding,
             # updating, or deleting records), it may leave the database in an inconsistent state. To handle such
+            # When an error occurs or an exception is raised during a database operation (such as adding,
+            # updating, or deleting records), it may leave the database in an inconsistent state. To handle such
             # situations, a rollback is performed to revert any changes made within the current session to maintain the integrity of the database.
             db.session.rollback()
             return {"error": "Unexpected error occurred during job deletion."}
+
+    @classmethod
 
     @classmethod
     def findJob(cls, job_id):
@@ -257,7 +359,14 @@ class Job(db.Model):
 
     @classmethod
     def findPrinterObject(self, printer_id):
+            return jsonify({"error": "Failed to retrieve job. Database error"}), 500
+
+    @classmethod
+    def findPrinterObject(self, printer_id):
         threads = printer_status_service.getThreadArray()
+        return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer
+
+    @classmethod
         return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer
 
     @classmethod
@@ -268,15 +377,27 @@ class Job(db.Model):
             printingJob = cls.query.filter_by(
                 printer_id=printer_id, status='printing').all()
             for job in printingJob:
+            jobs = cls.query.filter_by(
+                printer_id=printer_id, status='inqueue').all()
+            printingJob = cls.query.filter_by(
+                printer_id=printer_id, status='printing').all()
+            for job in printingJob:
                 cls.update_job_status(job.id, 'inqueue')
                 jobs.append(job)
+
 
             for job in jobs:
                 if (job.file != None):
                     base_name, extension = os.path.splitext(
                         job.file_name_original)
+                if (job.file != None):
+                    base_name, extension = os.path.splitext(
+                        job.file_name_original)
                     # Append the ID to the base name
                     file_name_pk = f"{base_name}_{job.id}{extension}"
+                    job.setFileName(file_name_pk)  # set unique file name
+
+                    print(file_name_pk)
                     job.setFileName(file_name_pk)  # set unique file name
 
                     print(file_name_pk)
@@ -296,12 +417,18 @@ class Job(db.Model):
             os.remove(file_path)         # Remove the file
 
     @classmethod
+            os.remove(file_path)         # Remove the file
+
+    @classmethod
     def setDBstatus(cls, jobid, status):
         cls.update_job_status(jobid, status)
 
     @classmethod
+    @classmethod
     def getPathForDelete(cls, file_name):
         return os.path.join('../uploads', file_name)
+
+    @classmethod
 
     @classmethod
     def nullifyPrinterId(cls, printer_id):
@@ -315,16 +442,24 @@ class Job(db.Model):
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to nullify printer ID. Database error"}), 500
 
+
     @classmethod
+    def clearSpace(cls):
     def clearSpace(cls):
         try:
             six_months_ago = datetime.now() - timedelta(days=182)  # 6 months ago
             old_jobs = Job.query.filter(Job.date < six_months_ago).all()
 
+
             # thirty_seconds_ago = datetime.now() - timedelta(seconds=30)  # 30 seconds ago
             # old_jobs = Job.query.filter(Job.date < thirty_seconds_ago).all()
 
+
             for job in old_jobs:
+                if(job.favorite==0):
+                    job.file = None  # Set file to None
+                    if "Removed after 6 months" not in job.file_name_original:
+                        job.file_name_original = f"{job.file_name_original}: Removed after 6 months"
                 if(job.favorite==0):
                     job.file = None  # Set file to None
                     if "Removed after 6 months" not in job.file_name_original:
@@ -404,17 +539,25 @@ class Job(db.Model):
     def saveToFolder(self):
         file_data = self.getFile()
         decompressed_data = gzip.decompress(file_data)
+        decompressed_data = gzip.decompress(file_data)
         with open(self.generatePath(), 'wb') as f:
             f.write(decompressed_data)
+
 
     def generatePath(self):
         return os.path.join('../uploads', self.getFileNamePk())
 
     # getters
+
+    # getters
     def getName(self):
         return self.name
 
+
     def getFilePath(self):
+        return self.path
+
+    def getFile(self):
         return self.path
 
     def getFile(self):
@@ -423,8 +566,13 @@ class Job(db.Model):
     def getStatus(self):
         return self.status
 
+
+    def getStatus(self):
+        return self.status
+
     def getFileNamePk(self):
         return self.file_name_pk
+
 
     def getFileNameOriginal(self):
         return self.file_name_original
@@ -440,21 +588,28 @@ class Job(db.Model):
     def getPrinterId(self): 
         return self.printer_id
 
+
     def getJobId(self):
         return self.id
+
 
     def getFilePause(self):
         return self.filePause
 
     def setFilePause(self, pause):
         self.filePause = pause
-        current_app.socketio.emit('file_pause_update', {'job_id': self.id, 'file_pause': self.filePause})
+        current_app.socketio.emit('file_pause_update', {
+                                  'job_id': self.id, 'file_pause': self.filePause})
 
+    # setters
+
+    def setStatus(self, status):
     # setters
 
     def setStatus(self, status):
         self.status = status
         # self.setDBstatus(self.id, status)
+
 
     # added a setProgress method to update the progress of a job
     # which sends it to the frontend using socketio
@@ -462,7 +617,8 @@ class Job(db.Model):
         if self.status == 'printing':
             self.progress = progress
             # Emit a 'progress_update' event with the new progress
-            current_app.socketio.emit('progress_update', {'job_id': self.id, 'progress': self.progress})
+            current_app.socketio.emit(
+                'progress_update', {'job_id': self.id, 'progress': self.progress})
 
     # added a getProgress method to get the progress of a job
     def getProgress(self):
@@ -561,6 +717,7 @@ class Job(db.Model):
 
     def setFileName(self, filename):
         self.file_name_pk = filename
+
 
     def setFile(self, file):
         self.file = file

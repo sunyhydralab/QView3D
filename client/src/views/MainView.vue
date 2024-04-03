@@ -13,7 +13,12 @@ const { setStatus } = useSetStatus();
 const { releaseJob } = useReleaseJob()
 const { removeJob } = useRemoveJob()
 const { getFile } = useGetFile()
+const { getFile } = useGetFile()
 const { start } = useStartJob()
+const { issues } = useGetIssues()
+const { createIssue } = useCreateIssues()
+const { assign } = useAssignIssue()
+const { assignComment } = useAssignComment()
 const { issues } = useGetIssues()
 const { createIssue } = useCreateIssues()
 const { assign } = useAssignIssue()
@@ -27,12 +32,28 @@ const selectedIssue = ref<Issue>()
 const showText = ref(false)
 const newIssue = ref('')
 let issuelist = ref<Array<Issue>>([])
+const selectedJob = ref<Job>()
+const selectedIssue = ref<Issue>()
+const showText = ref(false)
+const newIssue = ref('')
+let issuelist = ref<Array<Issue>>([])
 
+let isGcodeImageVisible = ref(false)
+let isGcodeLiveViewVisible = ref(false)
+let jobComments = ref('')
 let isGcodeImageVisible = ref(false)
 let isGcodeLiveViewVisible = ref(false)
 let jobComments = ref('')
 
 onMounted(async () => {
+  const retrieveissues = await issues()
+  issuelist.value = retrieveissues
+})
+
+const sendToQueueView = (printer: Device | undefined) => {
+  if (printer) {
+    printer.isExpanded = true;
+    router.push({ name: 'QueueViewVue' });
   const retrieveissues = await issues()
   issuelist.value = retrieveissues
 })
@@ -56,6 +77,7 @@ const setPrinterStatus = async (printer: Device, status: string) => {
 }
 
 const releasePrinter = async (jobToFind: Job | undefined, key: number, printerIdToPrintTo: number) => {
+const releasePrinter = async (jobToFind: Job | undefined, key: number, printerIdToPrintTo: number) => {
   await releaseJob(jobToFind, key, printerIdToPrintTo)
 }
 
@@ -76,11 +98,31 @@ function formatETA(milliseconds: number): string {
   const date = new Date(milliseconds)
   const timeString = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
 
+
   if (isNaN(date.getTime()) || timeString === "07:00 PM") {
     return 'Printer calibrating...'
   }
 
+
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+}
+
+const openModal = async (job: Job, printerName: string, num: number, printer: Device) => {
+  await jobTime(job, printers)
+  currentJob.value = job
+  currentJob.value.printer = printerName
+  currentPrinter.value = printer
+  if (num == 1) {
+    isGcodeLiveViewVisible.value = true
+  } else if (num == 2) {
+    isGcodeImageVisible.value = true
+    if (currentJob.value) {
+      const file = await getFile(currentJob.value)
+      if (file) {
+        currentJob.value.file = file
+      }
+    }
+  }
 }
 
 const openModal = async (job: Job, printerName: string, num: number, printer: Device) => {
@@ -233,6 +275,8 @@ const doAssignIssue = async () => {
                     <div class="col-12">
                       {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
             formatTime(currentJob?.job_client?.elapsed_time!) }}
+                      {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
+            formatTime(currentJob?.job_client?.elapsed_time!) }}
                     </div>
                   </div>
                 </div>
@@ -247,6 +291,8 @@ const doAssignIssue = async () => {
                     </div>
                     <!-- <div class="col-12">{{ formatTime(currentJob?.job_client?.remaining_time!) }}</div> -->
                     <div class="col-12">
+                      {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
+            formatTime(currentJob?.job_client?.remaining_time!) }}
                       {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
             formatTime(currentJob?.job_client?.remaining_time!) }}
                     </div>
@@ -267,6 +313,8 @@ const doAssignIssue = async () => {
                       </div>
                       <div v-else>
                         <div v-if="currentJob?.job_client?.extra_time">
+                          {{ formatTime(currentJob?.job_client.total_time!) + ' + ' +
+            formatTime(currentJob?.job_client.extra_time!) }}
                           {{ formatTime(currentJob?.job_client.total_time!) + ' + ' +
             formatTime(currentJob?.job_client.extra_time!) }}
                         </div>
@@ -290,12 +338,15 @@ const doAssignIssue = async () => {
                     <div class="col-12">
                       {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
             formatETA(currentJob?.job_client?.eta!) }}
+                      {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
+            formatETA(currentJob?.job_client?.eta!) }}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+
 
           <div class="row">
             <div class="col-sm-12 col-md-6">
@@ -311,6 +362,17 @@ const doAssignIssue = async () => {
             <div class="col-sm-12 col-md-6">
               <div class="card bg-light mb-3 h-100">
                 <div class="card-body">
+                  <h5 class="card-title">
+                    <i class="fas fa-thermometer-full"></i>
+                    <b>Nozzle Temp: </b>
+                    <span
+                      v-html="currentPrinter?.extruder_temp ? currentPrinter.extruder_temp + '&deg;C' : '<i>idle</i>'"></span>
+                  </h5>
+                  <h5 class="card-title">
+                    <i class="fas fa-thermometer-half"></i>
+                    <b>Bed Temp: </b>
+                    <span v-html="currentPrinter?.bed_temp ? currentPrinter.bed_temp + '&deg;C' : '<i>idle</i>'"></span>
+                  </h5>
                   <h5 class="card-title">
                     <i class="fas fa-thermometer-full"></i>
                     <b>Nozzle Temp: </b>
@@ -411,6 +473,7 @@ const doAssignIssue = async () => {
         <th>Progress</th>
         <th>Actions</th>
         <th style="width: 0px">Move</th>
+        <th style="width: 0px">Move</th>
       </tr>
       <tr v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">
           here</RouterLink>, or restart the server.</tr>
@@ -499,7 +562,20 @@ const doAssignIssue = async () => {
               {{ printer.queue?.[0]?.file_name_original }}
             </td>
             <td v-else></td>
+            <td
+              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+              {{ printer.queue?.[0]?.name }}
+            </td>
+            <td v-else></td>
+            <td
+              v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+              {{ printer.queue?.[0]?.file_name_original }}
+            </td>
+            <td v-else></td>
 
+            <!-- <div class="spinner-border" role="status">
+              <span class="sr-only">Loading...</span>
+            </div> -->
             <!-- <div class="spinner-border" role="status">
               <span class="sr-only">Loading...</span>
             </div> -->
@@ -521,6 +597,9 @@ const doAssignIssue = async () => {
             printer.queue?.[0].progress
               ?
               `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
+                </div>
+                <!-- </div> -->
+              </div>
                 </div>
                 <!-- </div> -->
               </div>
@@ -565,6 +644,7 @@ const doAssignIssue = async () => {
               <div v-else-if="printer.status == 'error'" class="alert alert-danger" role="alert">{{ printer?.error }}
               </div>
 
+            </td>
             </td>
 
             <td style="width: 1%; white-space: nowrap">
