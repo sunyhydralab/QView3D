@@ -672,12 +672,13 @@ const closeDropdown = (evt: any) => {
                                     aria-expanded="false" style="background: none; border: none;">
                                     <i class="fas fa-ellipsis"></i>
                                 </button>
-                                <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
+                                <ul class="dropdown-menu" aria-labelledby="settingsDropdown" style="z-index: 2000;">
                                     <li>
                                         <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
                                             data-bs-target="#gcodeImageModal" @click="openGCodeModal(job, job.printer)">
                                             <i class="fa-regular fa-image"></i>
-                                            <span class="ms-2">Image Viewer</span>
+                                            <span class="ms-2">Image
+                                                Viewer</span>
                                         </a>
                                     </li>
                                     <li>
@@ -698,16 +699,16 @@ const closeDropdown = (evt: any) => {
                                     <li>
                                         <hr class="dropdown-divider">
                                     </li>
-                                    <li class="dropdown-submenu">
+                                    <li class="dropdown-submenu position-relative">
                                         <a class="dropdown-item d-flex justify-content-between align-items-center"
                                             @click="handleEmptyRerun(job)">
                                             <div class="d-flex align-items-center">
-                                                <i class="fa-solid fa-arrow-rotate-right"></i>
+                                                <i class="fa-solid fa-chevron-left"></i>
                                                 <span class="ms-2">Rerun</span>
                                             </div>
-                                            <i class="fa-solid fa-chevron-right"></i>
+                                            <i class="fa-solid fa-arrow-rotate-right"></i>
                                         </a>
-                                        <ul class="dropdown-menu">
+                                        <ul class="dropdown-menu dropdown-menu-end">
                                             <li v-for="printer in printers" :key="printer.id">
                                                 <a class="dropdown-item" @click="handleRerun(job, printer)">
                                                     {{ printer.name }}
@@ -759,8 +760,8 @@ const closeDropdown = (evt: any) => {
 
 .dropdown-submenu .dropdown-menu {
     top: -9px;
-    left: 99.9%;
-    /* Adjust this value as needed */
+    right: 100%;
+    /* Position the submenu to the left */
     max-height: 200px;
     /* Adjust this value as needed */
     overflow-y: auto;
