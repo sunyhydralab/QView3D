@@ -116,8 +116,8 @@ class Printer(db.Model):
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return (
-                jsonify({"error": "Failed to register printer. Database error"}),
-                500,
+                jsonify({"success": False, "error": "Failed to register printer. Database error"}),
+                500
             )
 
     @classmethod
