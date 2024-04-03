@@ -144,7 +144,6 @@ const ensureOneCheckboxChecked = () => {
 const doCreateIssue = async () => {
     await createIssue(newIssue.value)
     const newIssues = await issues()
-    console.log(newIssues)
     issuelist.value = newIssues
     newIssue.value = ''
     showText.value = false
@@ -154,6 +153,7 @@ const doAssignIssue = async () => {
     if (selectedJob.value === undefined) return
     if (selectedIssue.value !== undefined) {
         await assign(selectedIssue.value.id, selectedJob.value.id)
+        console.log(selectedIssue.value.issue)
         selectedJob.value.error = selectedIssue.value!.issue
     }
     await assignComment(selectedJob.value, jobComments.value)
@@ -276,11 +276,6 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                             </select>
                         </div>
                     </form>
-                    <div v-if="selectedIssue !== undefined" class="alert alert-danger mt-3">
-                        Warning: Assigning an issue to a job in Job History will set the job status to Error and remove
-                        it from any active print queues. Please ensure that the job has been completed before assigning
-                        an issue.
-                    </div>
                     <div class="form-group mt-3">
                         <label for="exampleFormControlTextarea1">Comments</label>
                         <textarea class="form-control" id="exampleFormControlTextarea1" rows="3"

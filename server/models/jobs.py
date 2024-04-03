@@ -73,6 +73,7 @@ class Job(db.Model):
     def getPrinterId(self):
         return self.printer_id
 
+
     @classmethod
     def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob='', searchCriteria='', favoriteOnly=False):
         try:
@@ -448,7 +449,8 @@ class Job(db.Model):
 
     def setFilePause(self, pause):
         self.filePause = pause
-        current_app.socketio.emit('file_pause_update', {'job_id': self.id, 'file_pause': self.filePause})
+        current_app.socketio.emit('file_pause_update', {
+                                  'job_id': self.id, 'file_pause': self.filePause})
 
     # setters
 
@@ -462,7 +464,8 @@ class Job(db.Model):
         if self.status == 'printing':
             self.progress = progress
             # Emit a 'progress_update' event with the new progress
-            current_app.socketio.emit('progress_update', {'job_id': self.id, 'progress': self.progress})
+            current_app.socketio.emit(
+                'progress_update', {'job_id': self.id, 'progress': self.progress})
 
     # added a getProgress method to get the progress of a job
     def getProgress(self):

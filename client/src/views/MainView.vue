@@ -76,6 +76,7 @@ function formatETA(milliseconds: number): string {
   const date = new Date(milliseconds)
   const timeString = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
 
+
   if (isNaN(date.getTime()) || timeString === "07:00 PM") {
     return 'Printer calibrating...'
   }
@@ -467,7 +468,7 @@ const doAssignIssue = async () => {
                 </div>
 
                 <HoldButton :color="'danger'" @button-held="setPrinterStatus(printer, 'complete')"
-                  v-if="printer.status == 'printing'">
+                  v-if="printer.status == 'printing' || printer.status=='colorchange'">
                   Stop
                 </HoldButton>
 
@@ -482,9 +483,12 @@ const doAssignIssue = async () => {
                 </HoldButton>
 
                 <HoldButton :color="'secondary'" @button-held="setPrinterStatus(printer, 'printing')"
-                  v-if="printer.status == 'paused' || printer.status == 'colorchange'">
+                  v-if="printer.status == 'paused'">
                   Unpause
                 </HoldButton>
+                <div v-if="printer.status=='colorchange'">
+                  Change color, see LCD screen for instructions
+                </div>
 
               </div>
             </td>

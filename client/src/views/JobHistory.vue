@@ -158,6 +158,7 @@ const changePage = async (newPage: any) => {
 
     page.value = newPage
     jobs.value = []
+    jobs.value = []
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
     const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value)
@@ -434,6 +435,8 @@ const closeDropdown = (evt: any) => {
                 <div class="grid-container job">
                     <p class="my-auto truncate-name">{{ job.name }}</p>
                     <p class="my-auto truncate-file">{{ job.file_name_original }}</p>
+                    <p class="my-auto truncate-name">{{ job.name }}</p>
+                    <p class="my-auto truncate-file">{{ job.file_name_original }}</p>
                     <div class="d-flex align-items-center">
                         <i class="fas fa-star text-warning" style="margin-right: 10px;" data-bs-toggle="modal"
                             data-bs-target="#favoriteModal" @click="jobToUnfavorite = job"></i>
@@ -448,6 +451,8 @@ const closeDropdown = (evt: any) => {
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="printerDropdown">
                             <li v-for="printer in printers" :key="printer.id">
+                                <a class="dropdown-item" @click="handleRerun(job, printer)"
+                                    data-bs-dismiss="offcanvas">{{ printer.name }}</a>
                                 <a class="dropdown-item" @click="handleRerun(job, printer)"
                                     data-bs-dismiss="offcanvas">{{ printer.name }}</a>
                             </li>
@@ -465,6 +470,9 @@ const closeDropdown = (evt: any) => {
             <span v-if="isOffcanvasOpen"><i class="fas fa-star"></i></span>
             <span><i class="fas" :class="isOffcanvasOpen ? 'fa-chevron-right' : 'fa-chevron-left'"></i></span>
             <span v-if="!isOffcanvasOpen"><i class="fas fa-star"></i></span>
+            <!-- <span v-if="isOffcanvasOpen"><i class="fas fa-star"></i></span>
+            <span><i class="fas" :class="isOffcanvasOpen ? 'fa-chevron-right' : 'fa-chevron-left'"></i></span>
+            <span v-if="!isOffcanvasOpen"><i class="fas fa-star"></i></span> -->
         </button>
     </div>
 

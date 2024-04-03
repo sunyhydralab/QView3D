@@ -119,8 +119,8 @@ class Printer(db.Model):
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return (
-                jsonify({"error": "Failed to register printer. Database error"}),
-                500,
+                jsonify({"success": False, "error": "Failed to register printer. Database error"}),
+                500
             )
 
     @classmethod
@@ -474,7 +474,8 @@ class Printer(db.Model):
                         job.setTime(job.colorEta(), 1)
                         job.setTime(job.calculateColorChangeTotal(), 0)
                         job.setTime(datetime.min, 3)
-                        self.setStatus("printing")
+                        job.setFilePause(1)
+                        # self.setStatus("printing")
 
                     # Increment the sent lines
                     sent_lines += 1
