@@ -14,6 +14,7 @@ export interface Job {
   date?: Date
   status?: string
   progress?: number //store progress of job
+  gcode_num?: number //store gcode of job
   printer: string //store printer name
   printerid: number
 

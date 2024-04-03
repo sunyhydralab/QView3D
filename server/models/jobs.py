@@ -44,6 +44,7 @@ class Job(db.Model):
     released = 0 
     filePause = 0
     progress = 0.0
+    sent_lines = 0
     time_started = False
     #total, eta, timestart, pause time 
     job_time = job_time = [0, datetime.min, datetime.min, datetime.min]
@@ -61,6 +62,7 @@ class Job(db.Model):
         self.released = 0 
         self.filePause = 0
         self.progress = 0.0
+        self.sent_lines = 0
         self.time_started = False
         self.job_time = [0, datetime.min, datetime.min, datetime.min]
         self.error_id = 0
@@ -70,6 +72,7 @@ class Job(db.Model):
 
     def getPrinterId(self):
         return self.printer_id
+
 
     @classmethod
     def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob='', searchCriteria='', favoriteOnly=False):
@@ -398,8 +401,6 @@ class Job(db.Model):
             db.session.rollback()
             print(f"Error setting comments: {e}")
             return None
-        
-        
            
     def saveToFolder(self):
         file_data = self.getFile()
@@ -469,6 +470,13 @@ class Job(db.Model):
     # added a getProgress method to get the progress of a job
     def getProgress(self):
         return self.progress
+    
+    def setSentLines(self, sent_lines):
+        self.sent_lines = sent_lines
+        current_app.socketio.emit('gcode_viewer', {'job_id': self.id, 'gcode_num': self.sent_lines})
+        
+    def getSentLines(self):
+        return self.sent_lines
 
     def getTimeFromFile(self, comment_lines):
         # job_line can look two ways:

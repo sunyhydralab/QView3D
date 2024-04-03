@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useRetrievePrintersInfo, type Device } from '../model/ports'
+import { printers, useRetrievePrintersInfo, type Device } from '../model/ports'
 import { useAddJobToQueue, useGetFile, type Job, useAutoQueue } from '../model/jobs'
-import { ref, onMounted, watch, watchEffect } from 'vue'
+import { ref, onMounted, watch, watchEffect, computed } from 'vue'
 import { useRoute } from 'vue-router';
 import { toast } from '@/model/toast';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue';
@@ -12,7 +12,6 @@ const { auto } = useAutoQueue()
 const { getFile } = useGetFile();
 
 const route = useRoute();
-const printers = ref<Array<Device>>([])
 
 const job = route.params.job ? JSON.parse(route.params.job as string) : null;
 const fileName = ref<string>(job ? job.name : '')
@@ -63,10 +62,8 @@ const validateQuantity = () => {
 // fills printers array with printers that have threads from the database
 onMounted(async () => {
     try {
-        printers.value = await retrieveInfo()
-
         if (printer) {
-            appendPrinter(printer)
+            selectedPrinters.value.push(printer)
         }
 
         if (job) {
@@ -190,9 +187,9 @@ const handleSubmit = async () => {
     }
     if (res.success == true) {
         toast.success('Job added to queue')
-    } else if(res.success == false) {
+    } else if (res.success == false) {
         toast.error('Job failed to add to queue')
-    }else{
+    } else {
         toast.error('Failed to add job to queue. Unexpected response.')
     }
 }
@@ -207,14 +204,6 @@ function resetValues() {
     file.value = undefined;
 }
 
-function appendPrinter(printer: Device) {
-    if (!selectedPrinters.value.some(p => p.id === printer.id)) {
-        selectedPrinters.value.push(printer)
-    } else {
-        selectedPrinters.value = selectedPrinters.value.filter(p => p.id !== printer.id)
-    }
-}
-
 watchEffect(() => {
     isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0))
 });
@@ -222,6 +211,17 @@ watchEffect(() => {
 const openModal = () => {
     isGcodeImageVisible.value = true
 }
+
+const allSelected = computed({
+    get: () => selectedPrinters.value.length > 0 && selectedPrinters.value.length === printers.value.length,
+    set: (value) => {
+        if (value) {
+            selectedPrinters.value = printers.value.slice();
+        } else {
+            selectedPrinters.value = [];
+        }
+    }
+});
 
 </script>
 <template>
@@ -247,26 +247,44 @@ const openModal = () => {
     <div class="container">
         <b>Submit Job View</b>
 
-        <div class="card">
+        <div class="card bg-light" style="border: 2px solid #333;">
             <div class="card-body">
                 <form @submit.prevent="handleSubmit" ref="form">
 
                     <div class="mb-3">
                         <label for="printer" class="form-label">Select Printer</label>
-                        <select id="printer" class="form-select" multiple>
-                            <option :value="null">Auto Queue</option>
-                            <option v-for="printer in printers" :value="printer" :key="printer.id"
-                                @click="appendPrinter(printer)">
-                                {{ printer.name }}
-                            </option>
-                        </select>
+                        <div class="card" style="max-height: 120px; overflow-y: auto;">
+                            <ul class="list-unstyled card-body m-0" style="padding-top: .5rem; padding-bottom: .5rem;">
+                                <li>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="select-all"
+                                            v-model="allSelected">
+                                        <label class="form-check-label" for="select-all">
+                                            Select All
+                                        </label>
+                                    </div>
+                                    <div class="border-top"
+                                        style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                                </li>
+                                <li v-for="printer in printers" :key="printer.id">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" :value="printer"
+                                            v-model="selectedPrinters" :id="'printer-' + printer.id">
+                                        <label class="form-check-label" :for="'printer-' + printer.id">
+                                            {{ printer.name }}
+                                        </label>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label" v-if="selectedPrinters.length === 0">No printer selected, will auto queue</label>
+                        <label class="form-label" v-if="selectedPrinters.length === 0">No printer selected, will <b>auto
+                                queue</b></label>
                         <label class="form-label" v-else-if="selectedPrinters.length === 1">Selected printer:</label>
                         <label class="form-label" v-else>Selected printers:</label>
-                        <ul class="list-group">
+                        <ul class="list-group" style="max-height: 200px; overflow-y: auto;">
                             <li v-for="printer in selectedPrinters" class="list-group-item">
                                 <b>{{ printer.name }}</b> status: {{ printer.status }}
                             </li>
@@ -349,6 +367,7 @@ const openModal = () => {
     margin-top: 20px;
     width: 300px;
 }
+
 .ellipsis {
     white-space: nowrap;
     overflow: hidden;

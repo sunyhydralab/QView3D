@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { printers, useGetPorts, useRegisterPrinter, useRetrievePrintersInfo, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useMoveHead, useRetrievePrinters } from '../model/ports'
+import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, useRegisterPrinter, type Device, useMoveHead, useRetrievePrinters } from '../model/ports'
 import { ref, onMounted } from 'vue';
 import { toast } from '../model/toast'
+import RegisterModal from '../components/RegisterModal.vue'
 
 const { ports } = useGetPorts();
 const { retrieve } = useRetrievePrinters();
 const { retrieveInfo } = useRetrievePrintersInfo();
-const { register } = useRegisterPrinter();
 const { hardReset } = useHardReset();
 const { queueRestore } = useQueueRestore();
 const { deletePrinter } = useDeletePrinter();
@@ -17,10 +17,11 @@ const { editThread } = useEditThread();
 const { diagnose } = useDiagnosePrinter();
 const { repair } = useRepair()
 const { move } = useMoveHead()
+const { register } = useRegisterPrinter()
 
-let devices = ref<Array<Device>>([]); // Array of all devices -- stores ports for user to select/register
+let customname = ref('') // Stores the user input name of printer
 let selectedDevice = ref<Device | null>(null) // device user selects to register.
-let customname = ref('') // Stores the user input name of printer 
+let devices = ref<Array<Device>>([]) // Stores the list of devices
 let registered = ref<Array<Device>>([]) // Stores array of printers already registered in the system
 let editMode = ref(false)
 let editNum = ref<number | undefined>(0)
@@ -36,48 +37,9 @@ const selectedPrinter = ref<Device | null>(null);
 
 // fetch list of connected ports from backend and automatically load them into the form dropdown 
 onMounted(async () => {
-    try {
-        const allDevices = await ports();  // load all ports
-        devices.value = allDevices
-
-        const allPrinters = await retrieve(); // load all registered printers
-        registered.value = allPrinters
-    } catch (error) {
-        console.error(error);
-    }
+    const allPrinters = await retrieve(); // load all registered printers
+    registered.value = allPrinters
 });
-
-const doGetPorts = async () => {
-    const allDevices = await ports();
-    devices.value = allDevices
-}
-
-const doRegister = async () => {
-    if (selectedDevice.value && customname.value) {
-        selectedDevice.value = {
-            device: selectedDevice.value.device,
-            description: selectedDevice.value.description,
-            hwid: selectedDevice.value.hwid,
-            name: customname.value.trim(), // Trim to remove leading and trailing spaces
-        };
-
-        await register(selectedDevice.value);
-
-        // Fetch the updated list after registration
-        printers.value = await retrieveInfo();
-        registered.value = await retrieve();
-
-        // Refresh the devices list
-        const allDevices = await ports();
-        devices.value = allDevices.filter((device: Device) =>
-            !registered.value.some(registeredDevice => registeredDevice.device === device.device)
-        );
-    }
-
-    // reset values 
-    selectedDevice.value = null;
-    customname.value = ''
-}
 
 const doHardReset = async (printer: Device) => {
     await hardReset(printer.id)
@@ -121,19 +83,15 @@ const saveName = async (printer: Device) => {
 
     editMode.value = false
     newName.value = ''
-    editNum.value = undefined // reset editNum
+    editNum.value = undefined
 }
 
 const doDiagnose = async (printer: Device) => {
-    message.value = `Diagnosing ${printer.name}:<br/><br/>This printer is registered under port ${printer.device}.`
+    message.value = `Diagnosing <b>${printer.name}</b>:<br/><br/>This printer is registered under port <b>${printer.device}</b>.`
     showMessage.value = true
     let str = await diagnose(printer.device)
     let resstr = str.diagnoseString
     message.value += "<br><br>" + resstr
-}
-
-const doRepair = async () => {
-    await repair()
 }
 
 const clearMessage = () => {
@@ -149,35 +107,21 @@ const openModal = (title: any, message: any, action: any, printer: Device) => {
     selectedPrinter.value = printer;
 };
 
-const doMove = async (printer: Device) => {
-    await move(printer.device)
+const toggleMessage = (printer: Device) => {
+    if (messageId.value == printer.id && showMessage.value) {
+        clearMessage()
+    } else {
+        messageId.value = printer.id
+        doDiagnose(printer)
+    }
+}
+
+const doCloseRegisterModal = async () => {
+    registered.value = await retrieve();
 }
 
 </script>
 <template>
-    <div class="modal fade" id="moveModal" tabindex="-1" aria-labelledby="moveModalLabel" aria-hidden="true"
-        data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="moveModalLabel">Move Printer Head</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>
-                        Are you sure you want to move the printer head? Head will move 10mm in the z-direction! Please
-                        check printer(s) before!
-                    </p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
-                        @click="doMove(selectedDevice!)">Move</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
         data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
@@ -202,19 +146,69 @@ const doMove = async (printer: Device) => {
 
     <div class="container">
         <b>Registered View</b>
-        <div v-if="registered.length != 0" class="row row-cols-1 row-cols-md-3 g-4">
+        <!-- register modal opens with a button-->
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#registerModal">
+            Register Printer
+        </button>
+        <RegisterModal id="registerModal" @close="doCloseRegisterModal" />
+
+        <div v-if="registered.length != 0" class="row row-cols-1 row-cols-md-3">
             <div class="col" v-for="printer in registered" :key="printer.id">
-                <div class="card" style="width: 385px">
+                <div class="card bg-light rounded" style="width: 385px">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title" v-if="!editMode || !(editNum == printer.id)">{{ printer.name }}</h5>
-                            <div v-if="!editMode || !(editNum == printer.id)">
-                                <button class="btn btn-link"
-                                    @click="editMode = true; editNum = printer.id; newName = printer.name || ''">
-                                    Edit Name
-                                </button>
+                            <h5 class="card-title mb-4" v-if="!editMode || !(editNum == printer.id)">{{ printer.name }}
+                            </h5>
+                            <div class="dropdown" v-if="!editMode || !(editNum == printer.id)">
+                                <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                                    <button type="button" id="settingsDropdown" data-bs-toggle="dropdown"
+                                        aria-expanded="false" style="background: none; border: none;">
+                                        <i class="fas fa-ellipsis"></i>
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center"
+                                                @click="editMode = true; editNum = printer.id; newName = printer.name || ''">
+                                                <i class="fas fa-edit"></i>
+                                                <span class="ms-2">Edit Name</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
+                                                data-bs-target="#exampleModal"
+                                                @click="openModal('Hard Reset', 'Are you sure you want to do a hard reset of this printer?', 'doHardReset', printer)">
+                                                <i class="fas fa-sync"></i>
+                                                <span class="ms-2">Hard Reset</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center"
+                                                @click="doQueueRestore(printer)">
+                                                <i class="fas fa-undo"></i>
+                                                <span class="ms-2">Restore Queue</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
+                                                data-bs-target="#exampleModal"
+                                                @click="openModal('Deregister Printer', 'Are you sure you want to deregister this printer? This will nullify the <strong>printer_id</strong> section in job history.', 'doDelete', printer)">
+                                                <i class="fas fa-trash"></i>
+                                                <span class="ms-2">Deregister</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center"
+                                                @click="toggleMessage(printer)">
+                                                <i class="fas fa-stethoscope"></i>
+                                                <span class="ms-2">{{ messageId == printer.id && showMessage ?
+                        'Clear Message' : 'Diagnose Printer' }}</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
-                            <div v-else class="d-flex align-items-center">
+                            <div v-if="editMode && (editNum == printer.id)" class="d-flex align-items-center"
+                                style="margin-bottom: 5px;">
                                 <input id="editName" type="text" class="form-control me-2" v-model="newName">
                                 <button class="btn btn-success me-2" @click="saveName(printer)">Save</button>
                                 <button class="btn btn-secondary"
@@ -222,81 +216,51 @@ const doMove = async (printer: Device) => {
                             </div>
                         </div>
                         <h6 class="card-text mb-0 text-muted"> <b>Printer device:</b> {{ printer.device }}</h6>
-                        <p class="card-text mb-0"> <b>Printer description:</b> {{ printer.description }}</p>
-                        <p class="card-text mt-0"> <b>Date registered:</b> {{ printer.date }}</p>
-                        <div class="d-flex justify-content-between">
-                            <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#exampleModal"
-                                @click="openModal('Hard Reset', 'Are you sure you want to do a hard reset of this printer?', 'doHardReset', printer)">Hard
-                                Reset</button>
-                            <button class="btn btn-warning" @click="doQueueRestore(printer)">Restore Queue</button>
-                            <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#exampleModal"
-                                @click="openModal('Deregister Printer', 'Are you sure you want to deregister this printer? This will nullify the <strong>printer_id</strong> section in job history.', 'doDelete', printer)">Deregister</button>
-                        </div>
-                        <button class="btn btn-primary" @click="messageId = printer.id; doDiagnose(printer)">
-                            Diagnose Printer
-                        </button>
-                        <div v-if="messageId == printer.id && showMessage == true" class="alert alert-danger">
-                            <b v-html="message"></b>
-                            <div class="text-center">
-                                <button class="btn btn-secondary" @click="clearMessage">Clear message</button>
-                            </div>
+                        <h6 class="card-text mb-0"> <b>Printer description:</b> {{ printer.description }}</h6>
+                        <h6 class="card-text mt-0"> <b>Date registered:</b> {{ printer.date }}</h6>
+                        <div v-if="messageId == printer.id && showMessage"
+                            class="alert alert-danger d-flex flex-column align-items-center justify-content-center">
+                            <h6 v-html="message"></h6>
+                            <button class="btn btn-secondary mt-auto" @click="clearMessage()">Clear</button>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="form-container p-4 bg-light rounded mt-4">
-            <h2 class="text-center mb-4">Register Printers</h2>
-            <form @submit.prevent="doRegister">
-                <div class="mb-3">
-                    <label for="ports" class="form-label">Select Device</label>
-                    <select class="form-select" id="ports" v-model="selectedDevice" required>
-                        <option disabled value="null">Select Device</option>
-                        <option v-for="printer in devices" :value="printer" :key="printer.device">
-                            {{ printer.device }}
-                        </option>
-                    </select>
-                </div>
-                <div v-if="selectedDevice">
-                    <div class="mb-3">
-                        <label class="form-label">Device</label>
-                        <p class="form-text">{{ selectedDevice.device }}</p>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <p class="form-text">{{ selectedDevice.description }}</p>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">HWID</label>
-                        <p class="form-text">{{ selectedDevice.hwid }}</p>
-                    </div>
-                    <div class="mb-3">
-                        <label for="name" class="form-label">Custom Name</label>
-                        <input type="text" class="form-control" placeholder="Custom Name" maxlength="49"
-                            v-model="customname" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Submit</button>
-                </div>
-            </form>
-            <div v-if="selectedDevice" class="mt-3">
-                <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#moveModal">
-                    Move Printer Head
-                </button>
-            </div>
-            <div class="d-flex mt-3">
-                <button class="btn btn-primary me-3" @click="doRepair()">Repair Ports</button>
-                <button class="btn btn-primary" @click="doGetPorts()">Refresh Ports</button>
             </div>
         </div>
     </div>
 </template>
 
 <style scoped>
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    padding-left: .5rem;
+}
+
+.dropdown-item i {
+    width: 20px;
+}
+
+.dropdown-item span {
+    margin-left: 10px;
+}
+
+.form-container,
+.card {
+    border: 2px solid #333;
+}
+
+.card {
+    margin-top: 20px;
+}
+
+.register {
+    color: red;
+}
+
 .form-container {
     border: 2px solid #333;
     padding: 20px;
-    margin-top: 20px;
     width: 300px;
 }
 

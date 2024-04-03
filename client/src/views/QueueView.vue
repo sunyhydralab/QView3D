@@ -254,12 +254,26 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                     <td>{{ job.file_name_original }}</td>
                     <td>{{ job.date }}</td>
                     <td>{{ job.status }}</td>
-                    <td>
-                      <button type="button" class="btn btn-info btn-circle" data-bs-toggle="modal"
-                        data-bs-target="#gcodeImageModal" v-if="printer.queue && printer.queue.length > 0"
-                        v-bind:job="printer.queue[0]" @click="printer.name && openModal(job, printer.name, 2, printer)">
-                        <i class="fa-regular fa-image"></i>
-                      </button>
+                    <td style="width: ">
+                      <div class="dropdown">
+                        <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                          <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+                            style="background: none; border: none;">
+                            <i class="fas fa-ellipsis"></i>
+                          </button>
+                          <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
+                            <li>
+                              <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
+                                data-bs-target="#gcodeImageModal" v-if="printer.queue && printer.queue.length > 0"
+                                v-bind:job="printer.queue[0]"
+                                @click="printer.name && openModal(printer.queue[0], printer.name, 2, printer)">
+                                <i class="fa-solid fa-image"></i>
+                                <span class="ms-2">GCode Image</span>
+                              </a>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
                     </td>
                     <td class="text-center handle" :class="{ 'not-draggable': job.status !== 'inqueue' }">
                       <i class="fas fa-grip-vertical" :class="{ 'icon-disabled': job.status !== 'inqueue' }"></i>
@@ -276,6 +290,19 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
 </template>
 
 <style scoped>
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  padding-left: .5rem;
+}
+
+.dropdown-item i {
+  width: 20px;
+}
+
+.dropdown-item span {
+  margin-left: 10px;
+}
 .btn-circle {
   width: 30px;
   height: 30px;
@@ -360,54 +387,6 @@ th {
 
 .accordion-button:not(.collapsed)::after {
   background-image: var(--bs-accordion-btn-icon);
-}
-
-.dropbtn {
-  background-color: #4CAF50;
-  color: white;
-  padding: 16px;
-  font-size: 16px;
-  border: none;
-  cursor: pointer;
-}
-
-/* The container <div> - needed to position the dropdown content */
-.dropdown {
-  position: relative;
-  display: inline-block;
-}
-
-/* Dropdown Content (Hidden by Default) */
-.dropdown-content {
-  display: none;
-  position: absolute;
-  background-color: #f9f9f9;
-  min-width: 160px;
-  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
-  z-index: 1;
-}
-
-/* Links inside the dropdown */
-.dropdown-content a {
-  color: black;
-  padding: 12px 16px;
-  text-decoration: none;
-  display: block;
-}
-
-/* Change color of dropdown links on hover */
-.dropdown-content a:hover {
-  background-color: #f1f1f1
-}
-
-/* Show the dropdown menu on hover */
-.dropdown:hover .dropdown-content {
-  display: block;
-}
-
-/* Change the background color of the dropdown button when the dropdown content is shown */
-.dropdown:hover .dropbtn {
-  background-color: #3e8e41;
 }
 
 .printerrerun {

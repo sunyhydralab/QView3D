@@ -1,13 +1,78 @@
-@import url('bootstrap/dist/css/bootstrap.min.css'); 
+@import url('bootstrap/dist/css/bootstrap.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 
-.dropdown{
-    cursor: pointer;
+:root {
+  --danger-dark: #ff7a87;
+  --danger-light: #f7b5bb;
+  --warning-dark: #ffdd78;
+  --warning-light: #ffedb8;
+  --secondary-dark: #87929c;
+  --secondary-light: #b2b9bf;
+  --primary-dark: #5ea6f2;
+  --primary-light: #b8d4ff;
+  --success-dark: #5cb85c;
+  --success-light: #b8f2b8;
+}
+
+* {
+  font-family: 'Public Sans', sans-serif;
+}
+
+input {
+  font-family: 'Public Sans', sans-serif;
+}
+
+.dropdown {
+  cursor: pointer;
 }
 
 .container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 20px;
+}
+.form-check-label {
+  user-select: none;
+}
+
+.tooltip {
+  position: relative;
+  display: inline-block;
+  opacity: 1;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  opacity: 0; /* Add this */
+  transition: opacity 0.2s linear, visibility 0.2s linear 0.2s; /* Add delay to visibility transition */
+  width: 200px;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 2000;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -100px;
+}
+
+.tooltip .tooltiptext::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: black transparent transparent transparent;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.2s linear; /* Add this */
 }

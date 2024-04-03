@@ -1,37 +1,36 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onActivated, onDeactivated, ref, toRef } from 'vue';
+import { nextTick, onMounted, onActivated, onDeactivated, ref, toRef, watchEffect } from 'vue';
 import { useGetFile, type Job } from '@/model/jobs';
 import * as GCodePreview from 'gcode-preview';
 
 const { getFile } = useGetFile();
 
 const props = defineProps({
-    job: Object as () => Job,
-    file: Object as () => File
+    job: Object as () => Job
 })
 
-const file = () => {
-    if (props.file) {
-        return props.file
-    } else if (props.job) {
-        return getFile(props.job)
-    } else {
-        return null
-    }
-}
+const job = toRef(props, 'job');
 
 // Create a ref for the canvas
 const canvas = ref<HTMLCanvasElement | null>(null);
 let preview: GCodePreview.WebGLPreview | null = null;
 
 onMounted(async () => {
-    const modal = document.getElementById('gcodeImageModal');
+    const modal = document.getElementById('gcodeLiveViewModal');
     if (!modal) {
         console.error('Modal element is not available');
         return;
     }
 
-    // console.log("FILE NAME: ", file.value.name)
+    const gcodeFile = await getFile(props.job!);
+    if (!gcodeFile) {
+        console.error('Failed to get the file');
+        return;
+    }
+
+    const fileString = await fileToString(gcodeFile);
+    const lines = fileString.split('\n');
+    const commandLines = lines.filter(line => line.trim() && !line.startsWith(";"));
 
     modal.addEventListener('shown.bs.modal', async () => {
         // Initialize the GCodePreview and show the GCode when the modal is shown
@@ -44,18 +43,13 @@ onMounted(async () => {
             });
 
             if (canvas.value) {
-                // job.file to string
-                const fileValue = await file();
-                if (fileValue) {
-                    const gcode = await fileToString(fileValue);
-
-                    try {
-                        preview?.processGCode(gcode); // MAIN LINE
-                    } catch (error) {
-                        console.error('Failed to process GCode:', error);
+                try {
+                    if (job.value?.gcode_num) {
+                        // proccess gcode of command lines from 0 to job.value.gcode
+                        preview?.processGCode(commandLines.slice(0, job.value.gcode_num));
                     }
-                } else {
-                    console.error('File is not available');
+                } catch (error) {
+                    console.error('Failed to process GCode:', error);
                 }
             } else {
                 console.error('Canvas element is not available in showGCode');
@@ -63,9 +57,23 @@ onMounted(async () => {
         }
     });
 
+    watchEffect(() => {
+        if (job.value?.gcode_num && preview) {
+            try {
+                // process gcode of command line that is job.value.gcode
+                preview.processGCode(commandLines[job.value.gcode_num]);
+            } catch (error) {
+                console.error('Failed to process GCode:', error);
+            }
+        }
+    });
+
     modal.addEventListener('hidden.bs.modal', () => {
         // Clean up when the modal is hidden
         preview?.clear();
+        if (job.value) {
+            job.value.file = new File([], "");
+        }
     });
 });
 

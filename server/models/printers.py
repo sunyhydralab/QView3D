@@ -99,12 +99,15 @@ class Printer(db.Model):
                     "message": f"Port already registered under hwid: {printer.name}.",
                 }
             else:
+                hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
+                hwid_without_location = '-'.join(hwid_parts[:-1])
                 printer = cls(
                     device=device,
                     description=description,
-                    hwid=hwid,
+                    hwid=hwid_without_location,
                     name=name,
                     status=status,
+                    # date = datetime.now(get_localzone())
                 )
                 db.session.add(printer)
                 db.session.commit()
@@ -172,13 +175,13 @@ class Printer(db.Model):
             ports = serial.tools.list_ports.comports()
             for port in ports:
                 if port.device == deviceToDiagnose:
-                    diagnoseString += f"The system has found a matching port with the following details: <br><br> Device: {port.device}, <br> Description: {port.description}, <br> HWID: {port.hwid}<br><br>"
+                    diagnoseString += f"The system has found a <b>matching port</b> with the following details: <br><br> <b>Device:</b> {port.device}, <br> <b>Description:</b> {port.description}, <br> <b>HWID:</b> {port.hwid}"
                     printerExists = cls.searchByDevice(port.hwid)
                     if printerExists:
                         printer = cls.query.filter_by(hwid=port.hwid).first()
-                        diagnoseString += f"Device {port.device} is registered with the following details: <br><br> Name: {printer.name} <br> Device: {printer.device}, <br> Description: {printer.description}, <br> HWID: {printer.hwid}<br><br>"
+                        diagnoseString += f"<b>Device</b> {port.device} is registered with the following details: <br><br> <b>Name:</b> {printer.name} <br> <b>Device:</b> {printer.device}, <br> <b>Description:</b> {printer.description}, <br> <b>HWID:</b> {printer.hwid}"
             if diagnoseString == "":
-                diagnoseString = "The port this printer is registered under is not found. Please check the connection and try again."
+                diagnoseString = "The port this printer is registered under is <b>not found</b>. Please check the connection and try again."
             # return diagnoseString
             return {
                 "success": True,
@@ -244,8 +247,12 @@ class Printer(db.Model):
     @classmethod
     def editPort(cls, printerid, printerport):
         try:
-   
-            print("Updating port for printer id ", printerid, " to ", printerport)  # Debug print
+            ports = Printer.getConnectedPorts()
+            for port in ports:
+                if port["hwid"] == cls.query.get(printerid).hwid:
+                    ser = serial.Serial(port["device"], 115200, timeout=1)
+                    ser.close()
+                    break 
     # Your existing editPort code here...)
             printer = cls.query.get(printerid)
             printer.device = printerport
@@ -324,6 +331,13 @@ class Printer(db.Model):
                     break
                 else:
                     self.responseCount = 0
+
+                # if response == "echo:busy processing" and self.prevMes == "":
+                #     self.responseCount+=1 
+                #     if(self.responseCount>=5):
+                #         self.setStatus("colorchange")
+                # else: 
+                #     self.responseCount = 0
 
                 if ("T:" in response) and ("B:" in response):
                     # Extract the temperature values using regex
@@ -421,7 +435,6 @@ class Printer(db.Model):
                         self.setStatus("printing")
                     
                     if("M600" in line):
-                        print("HERE")
                         job.setTime(datetime.now(), 3)
                         # job.setTime(job.calculateTotalTime(), 0)
                         # job.setTime(job.updateEta(), 1)
@@ -461,10 +474,12 @@ class Printer(db.Model):
                         job.setTime(job.colorEta(), 1)
                         job.setTime(job.calculateColorChangeTotal(), 0)
                         job.setTime(datetime.min, 3)
-                        self.setStatus("printing")
+                        job.setFilePause(1)
+                        # self.setStatus("printing")
 
                     # Increment the sent lines
                     sent_lines += 1
+                    job.setSentLines(sent_lines)
                     # Calculate the progress
                     progress = (sent_lines / total_lines) * 100
 
