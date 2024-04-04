@@ -116,7 +116,7 @@ async function submitFilter() {
     } else {
         searchCriteria.value = searchJob.value;
     }
-
+    console.log("ISSUES, " + selectedIssues.value)
     // Get the total number of jobs first, without considering the page number
     const [, total] = await jobhistoryError(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value);
     totalJobs.value = total;
@@ -347,7 +347,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                                     style="padding-top: .5rem; padding-bottom: .5rem;">
                                     <li v-for="issue in issuelist" :key="issue.id">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" :value="issue"
+                                            <input class="form-check-input" type="checkbox" :value="issue.id"
                                                 v-model="selectedIssues" :id="'issue-' + issue.id">
                                             <label class="form-check-label" :for="'issue-' + issue.id">
                                                 {{ issue.issue }}
