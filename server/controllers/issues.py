@@ -7,7 +7,6 @@ issue_bp = Blueprint("issues", __name__)
 def getIssues():
     try:
         res = Issue.get_issues()
-        print(res)
         return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")

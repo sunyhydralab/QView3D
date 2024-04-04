@@ -4,6 +4,9 @@ import { toast } from './toast'
 import { type Device } from '@/model/ports'
 import { socket } from './myFetch'
 import { saveAs } from 'file-saver'
+import { ref } from 'vue'
+
+export let pageSize = ref(10)
 
 export interface Job {
   id: number

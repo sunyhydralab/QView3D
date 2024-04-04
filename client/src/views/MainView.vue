@@ -404,18 +404,15 @@ const doAssignIssue = async () => {
     <table>
       <tr>
         <th style="width: 64px">Job ID</th>
-        <th>Printer name</th>
-        <th>Printer Status</th>
-        <th>Printer Options</th>
-        <th>Job Name</th>
-        <th>File</th>
-        <th>Progress</th>
-        <th>Actions</th>
-        <th style="width: 0px">Move</th>
+        <th style="width: 130px">Printer name</th>
+        <th style="width: 142px">Printer Status</th>
+        <th style="width: 313px">Printer Options</th>
+        <th style="width: 101px">Job Name</th>
+        <th style="width: 120px">File</th>
+        <th style="width: 315px">Progress</th>
+        <th style="width: 75px;">Actions</th>
+        <th style="width: 58px">Move</th>
       </tr>
-      <tr v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">
-          here</RouterLink>, or restart the server.</tr>
-
       <draggable v-model="printers" tag="tbody" :animation="300" item-key="printer.id" handle=".handle"
         dragClass="hidden-ghost" v-if="printers.length > 0">
         <template #item="{ element: printer }">
@@ -425,9 +422,11 @@ const doAssignIssue = async () => {
               {{ printer.queue?.[0].id }}
             </td>
             <td v-else><i>idle</i></td>
-            <td>
-              <button type="button" class="btn btn-link" @click="sendToQueueView(printer)">
-                {{ printer.name }}
+            <td class="truncate" :title="printer.name">
+              <button type="button" class="btn btn-link" @click="sendToQueueView(printer)" style="padding: 0; border: none; display: inline-block; width: 100%; text-align: left;">
+                <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                  {{ printer.name }}
+                </div>
               </button>
             </td>
             <td>
@@ -460,15 +459,13 @@ const doAssignIssue = async () => {
                   Set to Ready
                 </button>
 
-                <div style="display: flex; align-items: center; justify-content: center;"
+                <HoldButton :color="'success'" @button-held="startPrint(printer.id!, printer.queue?.[0].id)"
                   v-if="printer.status == 'printing' && printer.queue?.[0].released == 0">
-                  <HoldButton :color="'success'" @button-held="startPrint(printer.id!, printer.queue?.[0].id)">
-                    Start Print
-                  </HoldButton>
-                </div>
+                  Start Print
+                </HoldButton>
 
                 <HoldButton :color="'danger'" @button-held="setPrinterStatus(printer, 'complete')"
-                  v-if="printer.status == 'printing' || printer.status=='colorchange'">
+                  v-if="printer.status == 'printing' || printer.status == 'colorchange'">
                   Stop
                 </HoldButton>
 
@@ -486,31 +483,27 @@ const doAssignIssue = async () => {
                   v-if="printer.status == 'paused'">
                   Unpause
                 </HoldButton>
-                <div v-if="printer.status=='colorchange'">
+
+                <div v-if="printer.status == 'colorchange'">
                   Change color, see LCD screen for instructions
                 </div>
 
               </div>
             </td>
 
-            <td
-              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+            <td class="truncate"
+              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))"
+              :title="printer.queue?.[0]?.name">
               {{ printer.queue?.[0]?.name }}
             </td>
             <td v-else></td>
-            <td
-              v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+            <td class="truncate"
+              v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))"
+              :title="printer.queue?.[0]?.file_name_original">
               {{ printer.queue?.[0]?.file_name_original }}
             </td>
-            <td v-else></td>
-
-            <!-- <div class="spinner-border" role="status">
-              <span class="sr-only">Loading...</span>
-            </div> -->
 
             <td style="width: 250px;">
-
-
               <div
                 v-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange') && printer.queue && printer.queue[0].released == 1">
                 <!-- <div v-for="job in printer.queue" :key="job.id"> -->
@@ -618,10 +611,30 @@ const doAssignIssue = async () => {
         </template>
       </draggable>
     </table>
+    <div v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">
+      here</RouterLink>, or restart the server.
+      </div>
   </div>
 </template>
 
 <style scoped>
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.buttons {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.buttons > * {
+  flex: 1 0 auto;
+  margin: 0 0.375rem;
+  flex-shrink: 0;
+}
+
 .dropdown-item {
   display: flex;
   align-items: center;
@@ -653,12 +666,6 @@ const doAssignIssue = async () => {
   opacity: 0;
 }
 
-.buttons {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .buttons-progress {
   display: flex;
   justify-content: space-between;
@@ -674,6 +681,7 @@ const doAssignIssue = async () => {
 }
 
 table {
+  table-layout: fixed;
   width: 100%;
   border-collapse: collapse;
 }
