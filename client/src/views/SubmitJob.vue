@@ -223,6 +223,11 @@ const allSelected = computed({
     }
 });
 
+const triggerFileInput = () => {
+    const fileInput = document.getElementById('file') as HTMLInputElement;
+    fileInput.click();
+}
+
 </script>
 <template>
     <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true"
@@ -296,7 +301,7 @@ const allSelected = computed({
                         <input ref="fileInput" @change="handleFileUpload" style="display: none;" type="file" id="file"
                             name="file" accept=".gcode">
                         <div class="input-group">
-                            <button type="button" @click="($refs.fileInput as HTMLInputElement).click()"
+                            <button type="button" @click="triggerFileInput"
                                 class="btn btn-primary">Browse</button>
                             <label class="form-control" style="width: 220px;">
                                 <div v-if="fileName" class="ellipsis" style="width: 200px;">

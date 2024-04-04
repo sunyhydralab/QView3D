@@ -36,7 +36,7 @@ const stopProgress = () => {
 
 <template>
     <div class="cont">
-        <button :class="['btn', 'btn-' + props.color]" @mousedown="startProgress" @mouseup="stopProgress"
+        <button :class="['btn hold-btn', 'btn-' + props.color]" @mousedown="startProgress" @mouseup="stopProgress"
             @mouseleave="stopProgress" style="box-sizing: border-box;">
             <slot></slot>
             <div class="progress-bar-container" :style="{ backgroundColor: `var(--${props.color}-light)` }">
@@ -66,7 +66,15 @@ const stopProgress = () => {
     overflow: hidden;
 }
 
+.hold-btn {
+    /* Your styles here */
+    width: 100%; /* Add this line */
+    box-sizing: border-box; /* Add this line */
+}
+
 .progress-bar {
+    width: 100%; /* Add this line */
+    box-sizing: border-box; /* Add this line */
     height: 100%;
     background-color: var(--primary-dark);
     border-radius: 0 0 5px 5px;

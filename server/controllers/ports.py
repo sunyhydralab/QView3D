@@ -122,9 +122,8 @@ def moveHead():
         port = data['port']
         
         res = Printer.moveHead(port)
-        
         if res == "none": 
-            return {"success": False, "message": "Head move failed."}
+            return {"success": False, "message": "Head move unsuccessful."}
         
         return {"success": True, "message": "Head move successful."}
     except Exception as e:

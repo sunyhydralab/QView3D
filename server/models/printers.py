@@ -281,8 +281,9 @@ class Printer(db.Model):
             # Save and print out the response from the printer. We can use this for error handling and status updates.
         # while True:
             # logic here about time elapsed since last response
+
         response = ser.readline().decode("utf-8").strip()
-        if "ok" not in response:
+        if("ok" not in response):
             return "none"
             # if "ok" in response:
             #     break
