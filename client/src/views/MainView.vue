@@ -459,7 +459,7 @@ const doAssignIssue = async () => {
             <td>
               <div class="buttons">
 
-                <button class="btn btn-primary"
+                <button class="btn btn-primary" 
                   v-if="printer.status == 'configuring' || printer.status == 'ready' || printer.status == 'error' || printer.status == 'complete'"
                   @click="setPrinterStatus(printer, 'offline')">
                   Turn Offline
@@ -477,17 +477,17 @@ const doAssignIssue = async () => {
                 </HoldButton>
 
                 <HoldButton :color="'danger'" @button-held="setPrinterStatus(printer, 'complete')"
-                  v-if="printer.status == 'printing' || printer.status == 'colorchange'">
+                  v-if="(printer.status == 'printing' || printer.status == 'colorchange')">
                   Stop
                 </HoldButton>
 
-                <HoldButton :color="'warning'" @button-held="setPrinterStatus(printer, 'paused')"
-                  v-if="printer.status === 'printing' && printer.queue?.[0]?.released !== 0">
+                <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'warning'" @button-held="setPrinterStatus(printer, 'paused')"
+                  v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0) && printer.queue?.[0]?.extruded === 1">
                   Pause
                 </HoldButton>
 
-                <HoldButton :color="'warning'" @button-held="setPrinterStatus(printer, 'colorchange')"
-                  v-if="printer.status === 'printing' && printer.queue?.[0]?.released !== 0">
+                <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'warning'" @button-held="setPrinterStatus(printer, 'colorchange')"
+                v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0) && printer.queue?.[0]?.extruded === 1">
                   Color&nbsp;Change
                 </HoldButton>
 
@@ -581,7 +581,7 @@ const doAssignIssue = async () => {
                         <span class="ms-2">Info</span>
                       </a>
                     </li>
-                    <li>
+                    <!-- <li>
                       <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
                         data-bs-target="#gcodeLiveViewModal" v-if="printer.queue && printer.queue.length > 0"
                         v-bind:job="printer.queue[0]"
@@ -589,7 +589,7 @@ const doAssignIssue = async () => {
                         <i class="fa-solid fa-magnifying-glass"></i>
                         <span class="ms-2">GCode Live View</span>
                       </a>
-                    </li>
+                    </li> -->
                     <li>
                       <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
                         data-bs-target="#gcodeImageModal" v-if="printer.queue && printer.queue.length > 0"

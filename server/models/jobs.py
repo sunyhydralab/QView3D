@@ -46,6 +46,7 @@ class Job(db.Model):
     progress = 0.0
     sent_lines = 0
     time_started = False
+    extruded = 0
     #total, eta, timestart, pause time 
     job_time = job_time = [0, datetime.min, datetime.min, datetime.min]
 
@@ -64,6 +65,7 @@ class Job(db.Model):
         self.progress = 0.0
         self.sent_lines = 0
         self.time_started = False
+        self.extruded = 0
         self.job_time = [0, datetime.min, datetime.min, datetime.min]
         self.error_id = 0
 
@@ -453,6 +455,14 @@ class Job(db.Model):
         self.filePause = pause
         current_app.socketio.emit('file_pause_update', {
                                   'job_id': self.id, 'file_pause': self.filePause})
+    
+    def getExtruded(self):
+        return self.extruded
+    
+    def setExtruded(self, extruded):
+        self.extruded = extruded
+        current_app.socketio.emit('extruded_update', {
+                                    'job_id': self.id, 'extruded': self.extruded}) 
 
     # setters
 

@@ -444,6 +444,9 @@ class Printer(db.Model):
                         print("color change command")
                         self.setStatus("colorchange")
                         job.setFilePause(1)
+
+                    if("M569" in line) and (job.getExtruded()==0):
+                        job.setExtruded(1)
                     
                     if self.prevMes == "M602":
                         self.prevMes=""
@@ -466,7 +469,8 @@ class Printer(db.Model):
                                 job.setTime(job.calculateColorChangeTotal(), 0)
                                 job.setTime(datetime.min, 3)
                                 break
-
+                    
+                    print("file pause: ", job.getFilePause())
                     # software color change
                     if (self.getStatus()=="colorchange" and job.getFilePause()==0):
                         job.setTime(datetime.now(), 3)
@@ -490,7 +494,7 @@ class Printer(db.Model):
                     job.setProgress(progress)
                 
                     
-                    if self.getStatus() == "complete":
+                    if self.getStatus() == "complete" and job.extruded != 0:
                         return "cancelled"
 
                     if self.getStatus() == "error":

@@ -3,7 +3,7 @@ import 'bootstrap/dist/js/bootstrap.bundle'
 import { RouterView, useRoute } from 'vue-router'
 import NavBar from './components/NavBar.vue'
 import { onMounted, watchEffect } from 'vue';
-import { setupPortRepairSocket, setupCanPauseSocket, setupErrorSocket, setupJobStatusSocket, setupPauseFeedbackSocket, setupProgressSocket, setupQueueSocket, setupReleaseSocket, setupStatusSocket, setupTempSocket, setupGCodeViewerSocket } from './model/sockets';
+import { setupPortRepairSocket, setupCanPauseSocket, setupErrorSocket, setupJobStatusSocket, setupPauseFeedbackSocket, setupProgressSocket, setupQueueSocket, setupReleaseSocket, setupStatusSocket, setupTempSocket, setupGCodeViewerSocket, setupExtrusionSocket } from './model/sockets';
 import { useRetrievePrintersInfo, printers } from './model/ports';
 import { setupTimeSocket } from './model/jobs';
 
@@ -26,6 +26,7 @@ onMounted(async () => {
   setupPauseFeedbackSocket(printers) //not sure if needed
   setupReleaseSocket(printers)
   setupPortRepairSocket(printers)
+  setupExtrusionSocket(printers)
 })
 
 // watchEffect(async () => {

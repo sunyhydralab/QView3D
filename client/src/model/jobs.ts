@@ -26,6 +26,8 @@ export interface Job {
 
   comment?: string // store comments
 
+  extruded?: number 
+
   file_pause: number
   priority?: string
   favorite?: boolean

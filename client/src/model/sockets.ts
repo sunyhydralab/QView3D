@@ -170,3 +170,19 @@ export function setupGCodeViewerSocket(printers: any) {
     }
   })
 }
+
+export function setupExtrusionSocket(printers: any) {
+  socket.on('extruded_update', (data: any) => {
+    if (printers) {
+      const job = printers.value
+        .flatMap((printer: { queue: any }) => printer.queue)
+        .find((job: { id: any }) => job?.id === data.job_id)
+
+      if (job) {
+        job.extruded = data.extruded
+      }
+    } else {
+      console.error('printers or printers.value is undefined')
+    }
+  })
+}

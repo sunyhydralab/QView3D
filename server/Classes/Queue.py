@@ -86,14 +86,16 @@ class Queue:
                 "id": job.id,
                 "name": job.name,
                 "status": job.status,
-                "date": job.date.strftime("%a, %d %b %Y %H:%M:%S"),
-                "printerid": job.printer_id,
-                "errorid": job.error_id, 
-                "file_name_original": job.file_name_original,
+                "date": job.date.strftime('%a, %d %b %Y %H:%M:%S'),
+                "printerid": job.printer_id, 
+                "errorid": job.error_id,
+                "file_name_original": job.file_name_original, 
                 "progress": job.progress,
+                "sent_lines": job.sent_lines,
+                "favorite": job.favorite,
                 "released": job.released,
-                "file_pause": job.filePause,
-                "comment": job.comments,
+                "file_pause": job.filePause, 
+                "comments": job.comments
             }
             queue.append(job_info)
         return queue
