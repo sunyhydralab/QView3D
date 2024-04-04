@@ -153,7 +153,7 @@ const doAssignIssue = async () => {
     if (selectedJob.value === undefined) return
     if (selectedIssue.value !== undefined) {
         await assign(selectedIssue.value.id, selectedJob.value.id)
-        console.log(selectedIssue.value.issue)
+        selectedJob.value.errorid = selectedIssue.value.id
         selectedJob.value.error = selectedIssue.value!.issue
     }
     await assignComment(selectedJob.value, jobComments.value)
