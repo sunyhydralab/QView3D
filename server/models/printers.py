@@ -282,6 +282,8 @@ class Printer(db.Model):
         # while True:
             # logic here about time elapsed since last response
         response = ser.readline().decode("utf-8").strip()
+        if "ok" not in response:
+            return "none"
             # if "ok" in response:
             #     break
         ser.close()

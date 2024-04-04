@@ -51,7 +51,7 @@ class PrinterStatusService:
                 status = printer.getStatus()  # get printer status
 
                 queueSize = printer.getQueue().getSize() # get size of queue 
-                
+                printer.responseCount = 0 
                 if (status == "ready" and queueSize > 0):
                     time.sleep(2) # wait for 2 seconds to allow the printer to process the queue
                     if status != "offline": 
@@ -75,6 +75,7 @@ class PrinterStatusService:
                         "description": printer.description,
                         "hwid": printer.hwid,
                         "name": printer.name
+                        
                     }
                     self.printer_threads.remove(thread)
                     self.create_printer_threads([thread_data])
