@@ -405,10 +405,10 @@ const doAssignIssue = async () => {
       <tr>
         <th style="width: 64px">Job ID</th>
         <th style="width: 130px">Printer name</th>
-        <th style="width: 142px">Printer Status</th>
-        <th style="width: 313px">Printer Options</th>
-        <th style="width: 101px">Job Name</th>
+        <th style="width: 100px">Job Name</th>
         <th style="width: 120px">File</th>
+        <th style="width: 142px">Printer Status</th>
+        <th style="width: 314px">Printer Options</th>
         <th style="width: 315px">Progress</th>
         <th style="width: 75px;">Actions</th>
         <th style="width: 58px">Move</th>
@@ -429,6 +429,18 @@ const doAssignIssue = async () => {
                 </div>
               </button>
             </td>
+            <td class="truncate"
+              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))"
+              :title="printer.queue?.[0]?.name">
+              {{ printer.queue?.[0]?.name }}
+            </td>
+            <td v-else></td>
+            <td class="truncate"
+              v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))"
+              :title="printer.queue?.[0]?.file_name_original">
+              {{ printer.queue?.[0]?.file_name_original }}
+            </td>
+            <td v-else></td>
             <td>
               <div class="d-flex align-items-center">
                 <!-- <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
@@ -484,23 +496,11 @@ const doAssignIssue = async () => {
                   Unpause
                 </HoldButton>
 
-                <div v-if="printer.status == 'colorchange'">
-                  Change color, see LCD screen for instructions
+                <div v-if="printer.status == 'colorchange'" class="mt-2">
+                  See LCD screen
                 </div>
 
               </div>
-            </td>
-
-            <td class="truncate"
-              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))"
-              :title="printer.queue?.[0]?.name">
-              {{ printer.queue?.[0]?.name }}
-            </td>
-            <td v-else></td>
-            <td class="truncate"
-              v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))"
-              :title="printer.queue?.[0]?.file_name_original">
-              {{ printer.queue?.[0]?.file_name_original }}
             </td>
 
             <td style="width: 250px;">
