@@ -281,6 +281,11 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                   </tr>
                 </template>
               </draggable>
+
+              <div v-if="printer.queue && printer.queue.length === 0">
+                  <td colspan="100" class="text-center">No jobs in queue</td>
+              </div>
+
             </table>
           </div>
         </div>
