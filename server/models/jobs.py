@@ -126,21 +126,16 @@ class Job(db.Model):
     @classmethod
     def get_job_error_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob='', searchCriteria='', issueIds=None):
         try:
-            print("1")
             query = cls.query.filter_by(status='error')
             if printerIds:
                 query = query.filter(cls.printer_id.in_(printerIds))
-            print("2")
 
             if issueIds: 
                 query = query.filter(cls.error_id.in_(issueIds))
-            print("ISSUES", issueIds)
 
             if searchJob:
                 searchJob = f"%{searchJob}%"
                 query = query.filter(or_(cls.name.ilike(searchJob), cls.file_name_original.ilike(searchJob)))
-            
-            print("4")
 
             if 'searchByJobName' in searchCriteria:
                 searchByJobName = f"%{searchJob}%"
@@ -153,13 +148,11 @@ class Job(db.Model):
                 query = query.order_by(cls.date.asc())    
             else: 
                 query = query.order_by(cls.date.desc())  # Change this line
-            print("5")
 
             pagination = query.paginate(
                 page=page, per_page=pageSize, error_out=False)
             jobs = pagination.items
             
-            print("5")
 
             jobs_data = [{
                 "id": job.id,
@@ -173,7 +166,6 @@ class Job(db.Model):
                 "comment": job.comments
             } for job in jobs]
             
-            print("6")
 
             return jobs_data, pagination.total
         except SQLAlchemyError as e:
