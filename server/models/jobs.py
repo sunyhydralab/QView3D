@@ -129,14 +129,14 @@ class Job(db.Model):
             query = cls.query.filter_by(status='error')
             if printerIds:
                 query = query.filter(cls.printer_id.in_(printerIds))
-            
+
             if issueIds: 
                 query = query.filter(cls.error_id.in_(issueIds))
-                
+
             if searchJob:
                 searchJob = f"%{searchJob}%"
                 query = query.filter(or_(cls.name.ilike(searchJob), cls.file_name_original.ilike(searchJob)))
-            
+
             if 'searchByJobName' in searchCriteria:
                 searchByJobName = f"%{searchJob}%"
                 query = query.filter(cls.name.ilike(searchByJobName))
@@ -152,6 +152,7 @@ class Job(db.Model):
             pagination = query.paginate(
                 page=page, per_page=pageSize, error_out=False)
             jobs = pagination.items
+            
 
             jobs_data = [{
                 "id": job.id,
@@ -164,6 +165,7 @@ class Job(db.Model):
                 "error": job.error.issue if job.error else 'None', 
                 "comment": job.comments
             } for job in jobs]
+            
 
             return jobs_data, pagination.total
         except SQLAlchemyError as e:
