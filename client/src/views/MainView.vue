@@ -212,7 +212,7 @@ const doAssignIssue = async () => {
               <div class="card bg-light mb-3">
                 <div class="card-body">
                   <h5 class="card-title"><i class="fas fa-chart-line"></i> <b>Progress:</b> {{ currentJob?.progress ?
-            `${currentJob?.progress.toFixed(2)}%` : '0.00%' }}</h5>
+                    `${currentJob?.progress.toFixed(2)}%` : '0.00%' }}</h5>
                   <div class="progress">
                     <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
                       :style="{ width: `${currentJob?.progress ? currentJob?.progress.toFixed(2) : '0'}%` }"
@@ -233,7 +233,7 @@ const doAssignIssue = async () => {
                     <!-- <div class="col-12">{{ formatTime(currentJob?.job_client?.elapsed_time!) }}</div> -->
                     <div class="col-12">
                       {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
-            formatTime(currentJob?.job_client?.elapsed_time!) }}
+                        formatTime(currentJob?.job_client?.elapsed_time!) }}
                     </div>
                   </div>
                 </div>
@@ -249,7 +249,7 @@ const doAssignIssue = async () => {
                     <!-- <div class="col-12">{{ formatTime(currentJob?.job_client?.remaining_time!) }}</div> -->
                     <div class="col-12">
                       {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
-            formatTime(currentJob?.job_client?.remaining_time!) }}
+                        formatTime(currentJob?.job_client?.remaining_time!) }}
                     </div>
                   </div>
                 </div>
@@ -269,7 +269,7 @@ const doAssignIssue = async () => {
                       <div v-else>
                         <div v-if="currentJob?.job_client?.extra_time">
                           {{ formatTime(currentJob?.job_client.total_time!) + ' + ' +
-            formatTime(currentJob?.job_client.extra_time!) }}
+                            formatTime(currentJob?.job_client.extra_time!) }}
                         </div>
                         <div v-else>
                           {{ formatTime(currentJob?.job_client?.total_time!) }}
@@ -290,7 +290,7 @@ const doAssignIssue = async () => {
                     <!-- <div class="col-12">{{ formatETA(currentJob?.job_client?.eta!) ?? "Waiting to start heating..."  }}</div> -->
                     <div class="col-12">
                       {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
-            formatETA(currentJob?.job_client?.eta!) }}
+                        formatETA(currentJob?.job_client?.eta!) }}
                     </div>
                   </div>
                 </div>
@@ -405,8 +405,8 @@ const doAssignIssue = async () => {
       <tr>
         <th style="width: 64px">Job ID</th>
         <th style="width: 130px">Printer name</th>
-        <th style="width: 100px">Job Name</th>
-        <th style="width: 120px">File</th>
+        <th style="width: 110px">Job Name</th>
+        <th style="width: 110px">File</th>
         <th style="width: 142px">Printer Status</th>
         <th style="width: 314px">Printer Options</th>
         <th style="width: 315px">Progress</th>
@@ -422,22 +422,21 @@ const doAssignIssue = async () => {
               {{ printer.queue?.[0].id }}
             </td>
             <td v-else><i>idle</i></td>
-            <td class="truncate" :title="printer.name">
-              <button type="button" class="btn btn-link" @click="sendToQueueView(printer)" style="padding: 0; border: none; display: inline-block; width: 100%; text-align: left;">
+            <td class="truncate" v-b-tooltip.hover title="printer.name">
+              <button type="button" class="btn btn-link" @click="sendToQueueView(printer)"
+                style="padding: 0; border: none; display: inline-block; width: 100%; text-align: left;">
                 <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                   {{ printer.name }}
                 </div>
               </button>
             </td>
-            <td class="truncate"
-              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))"
-              :title="printer.queue?.[0]?.name">
+            <td class="truncate" :title="printer.queue?.[0]?.name" data-bs-toggle="tooltip"
+              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0]?.name }}
             </td>
             <td v-else></td>
-            <td class="truncate"
-              v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))"
-              :title="printer.queue?.[0]?.file_name_original">
+            <td class="truncate" :title="printer.queue?.[0]?.file_name_original" data-bs-toggle="tooltip"
+              v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0]?.file_name_original }}
             </td>
             <td v-else></td>
@@ -459,7 +458,7 @@ const doAssignIssue = async () => {
             <td>
               <div class="buttons">
 
-                <button class="btn btn-primary" 
+                <button class="btn btn-primary"
                   v-if="printer.status == 'configuring' || printer.status == 'ready' || printer.status == 'error' || printer.status == 'complete'"
                   @click="setPrinterStatus(printer, 'offline')">
                   Turn Offline
@@ -481,13 +480,15 @@ const doAssignIssue = async () => {
                   Stop
                 </HoldButton>
 
-                <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'warning'" @button-held="setPrinterStatus(printer, 'paused')"
+                <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'warning'"
+                  @button-held="setPrinterStatus(printer, 'paused')"
                   v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0) && printer.queue?.[0]?.extruded === 1">
                   Pause
                 </HoldButton>
 
-                <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'warning'" @button-held="setPrinterStatus(printer, 'colorchange')"
-                v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0) && printer.queue?.[0]?.extruded === 1">
+                <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'warning'"
+                  @button-held="setPrinterStatus(printer, 'colorchange')"
+                  v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0) && printer.queue?.[0]?.extruded === 1">
                   Color&nbsp;Change
                 </HoldButton>
 
@@ -515,9 +516,9 @@ const doAssignIssue = async () => {
                   </div>
                   <!-- job progress set to 2 decimal places -->
                   <p style="position: absolute; width: 100%; text-align: center; color: black;">{{
-            printer.queue?.[0].progress
-              ?
-              `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
+                    printer.queue?.[0].progress
+                      ?
+                      `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
                 </div>
                 <!-- </div> -->
               </div>
@@ -612,8 +613,8 @@ const doAssignIssue = async () => {
       </draggable>
     </table>
     <div v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">
-      here</RouterLink>, or restart the server.
-      </div>
+        here</RouterLink>, or restart the server.
+    </div>
   </div>
 </template>
 
@@ -629,7 +630,8 @@ const doAssignIssue = async () => {
   justify-content: space-between;
   flex-wrap: wrap;
 }
-.buttons > * {
+
+.buttons>* {
   flex: 1 0 auto;
   margin: 0 0.375rem;
   flex-shrink: 0;

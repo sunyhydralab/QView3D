@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch, nextTick } from 'vue';
 import { printers, useRegisterPrinter, useGetPorts, useRetrievePrinters, useRetrievePrintersInfo, useRepair, useMoveHead, type Device } from '../model/ports';
 import HoldButton from './HoldButton.vue';
 
@@ -13,9 +13,6 @@ const { move } = useMoveHead();
 let customname = ref('') // Stores the user input name of printer
 let selectedDevice = ref<Device | null>(null)
 let devices = ref<Array<Device>>([]) // Stores the list of devices
-
-let progress = ref(0)
-let interval: NodeJS.Timeout | null = null
 
 const emit = defineEmits(['close', 'submit-form'])
 
@@ -75,6 +72,7 @@ const clearSelectedDevice = () => {
 const doMove = async (printer: Device) => {
     await move(printer.device)
 }
+
 </script>
 
 <template>
@@ -124,11 +122,8 @@ const doMove = async (printer: Device) => {
                 <div class="modal-footer d-flex justify-content-between">
                     <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" v-bind:disabled="!customname"
                         @click="doRegister">Submit</button>
-                    <div v-if="selectedDevice">
-                        <div class="tooltip">
-                            <HoldButton :color="'secondary'" @button-held="doMove(selectedDevice)">Move Printer Head</HoldButton>
-                            <span class="tooltiptext">Moves printer 10mm upwards! Please check printers before.</span>
-                        </div>
+                    <div v-if="selectedDevice" :title="'Moves printer 10mm upwards! Please check printers before.'" data-bs-toggle="tooltip">
+                        <HoldButton :color="'secondary'" @button-held="doMove(selectedDevice as Device)">Move Printer Head</HoldButton>
                     </div>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
                         @click="clearSelectedDevice">Close</button>

@@ -4,7 +4,6 @@ import { ref, onMounted } from 'vue';
 import { toast } from '../model/toast'
 import RegisterModal from '../components/RegisterModal.vue'
 
-const { ports } = useGetPorts();
 const { retrieve } = useRetrievePrinters();
 const { retrieveInfo } = useRetrievePrintersInfo();
 const { hardReset } = useHardReset();
@@ -15,13 +14,7 @@ const { editName } = useEditName();
 const { removeThread } = useRemoveThread();
 const { editThread } = useEditThread();
 const { diagnose } = useDiagnosePrinter();
-const { repair } = useRepair()
-const { move } = useMoveHead()
-const { register } = useRegisterPrinter()
 
-let customname = ref('') // Stores the user input name of printer
-let selectedDevice = ref<Device | null>(null) // device user selects to register.
-let devices = ref<Array<Device>>([]) // Stores the list of devices
 let registered = ref<Array<Device>>([]) // Stores array of printers already registered in the system
 let editMode = ref(false)
 let editNum = ref<number | undefined>(0)
