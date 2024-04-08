@@ -468,16 +468,16 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                                     <li>
                                         <hr class="dropdown-divider">
                                     </li>
-                                    <li class="dropdown-submenu">
+                                    <li class="dropdown-submenu position-relative">
                                         <a class="dropdown-item d-flex justify-content-between align-items-center"
                                             @click="handleEmptyRerun">
                                             <div class="d-flex align-items-center">
-                                                <i class="fa-solid fa-arrow-rotate-right"></i>
+                                                <i class="fa-solid fa-chevron-left"></i>
                                                 <span class="ms-2">Rerun</span>
                                             </div>
-                                            <i class="fa-solid fa-chevron-right"></i>
+                                            <i class="fa-solid fa-arrow-rotate-right"></i>
                                         </a>
-                                        <ul class="dropdown-menu">
+                                        <ul class="dropdown-menu dropdown-menu-end">
                                             <li v-for="printer in printers" :key="printer.id">
                                                 <a class="dropdown-item" @click="handleRerun(job, printer)">
                                                     {{ printer.name }}
@@ -529,8 +529,10 @@ const openGCodeModal = async (job: Job, printerName: string) => {
 
 .dropdown-submenu .dropdown-menu {
     top: -9px;
-    left: 99.9%; /* Adjust this value as needed */
-    max-height: 200px; /* Adjust this value as needed */
+    right: 100%;
+    /* Position the submenu to the left */
+    max-height: 200px;
+    /* Adjust this value as needed */
     overflow-y: auto;
 }
 

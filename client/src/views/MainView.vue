@@ -422,7 +422,7 @@ const doAssignIssue = async () => {
               {{ printer.queue?.[0].id }}
             </td>
             <td v-else><i>idle</i></td>
-            <td class="truncate" v-b-tooltip.hover title="printer.name">
+            <td class="truncate" :title="printer.name">
               <button type="button" class="btn btn-link" @click="sendToQueueView(printer)"
                 style="padding: 0; border: none; display: inline-block; width: 100%; text-align: left;">
                 <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -430,12 +430,12 @@ const doAssignIssue = async () => {
                 </div>
               </button>
             </td>
-            <td class="truncate" :title="printer.queue?.[0]?.name" data-bs-toggle="tooltip"
+            <td class="truncate" :title="printer.queue?.[0]?.name"
               v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0]?.name }}
             </td>
             <td v-else></td>
-            <td class="truncate" :title="printer.queue?.[0]?.file_name_original" data-bs-toggle="tooltip"
+            <td class="truncate" :title="printer.queue?.[0]?.file_name_original"
               v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0]?.file_name_original }}
             </td>
