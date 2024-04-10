@@ -403,6 +403,7 @@ const doAssignIssue = async () => {
     <b>Home</b>
     <table>
       <tr>
+        <!-- NEED TO FIX THIS FOR EVERY DISPLAYS -->
         <th style="width: 64px">Job ID</th>
         <th style="width: 130px">Printer name</th>
         <th style="width: 110px">Job Name</th>
