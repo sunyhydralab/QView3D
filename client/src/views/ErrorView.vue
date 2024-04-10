@@ -239,6 +239,36 @@ const openGCodeModal = async (job: Job, printerName: string) => {
         </div>
     </div>
 
+
+    <div class="modal fade" id="assignissueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
+        data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header d-flex align-items-end">
+                    <h5 class="modal-title" id="assignIssueLabel">
+                        <b>Create New Issue</b>
+                    </h5>
+
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form class="p-3 border rounded bg-light mb-3">
+                        <div class="mb-3">
+                            <label for="newIssue" class="form-label">Enter Issue</label>
+                            <input id="newIssue" type="text" placeholder="Enter Issue" v-model="newIssue"
+                                class="form-control" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" @click.prevent="doCreateIssue" class="btn btn-primary me-2"
+                        v-bind:disabled="!newIssue">Create Issue</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
         data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
@@ -411,6 +441,10 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                     </form>
                 </div>
             </div>
+            <button type="button" class="btn btn-primary ml-auto" data-bs-toggle="modal" data-bs-target="#assignissueModal">
+                <i class="fas fa-plus"></i> &nbsp
+                Add New Issue
+            </button>
         </div>
 
         <table class="table">
