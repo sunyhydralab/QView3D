@@ -146,7 +146,7 @@ const doCloseRegisterModal = async () => {
         <RegisterModal id="registerModal" @close="doCloseRegisterModal" />
 
         <div v-if="registered.length != 0" class="d-flex flex-wrap justify-content-end">
-            <div class="m-2" v-for="printer in printers" :key="printer.id">
+            <div class="m-2" v-for="printer in registered" :key="printer.id">
               <div class="card bg-light rounded" style="width: 340px">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">

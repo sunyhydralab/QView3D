@@ -98,17 +98,17 @@ onMounted(async () => {
 
         favoriteJobs.value = await getFavoriteJobs()
 
-        // make 10 dummy printers
-        for (let i = 2; i < 11; i++) {
-            printers.value.push({
-                id: i, 
-                name: `Printer ${i}`,
-                device: '',
-                description: '',
-                hwid: '',
-                queue: []
-            })
-        }
+        // // make 10 dummy printers
+        // for (let i = 2; i < 11; i++) {
+        //     printers.value.push({
+        //         id: i, 
+        //         name: `Printer ${i}`,
+        //         device: '',
+        //         description: '',
+        //         hwid: '',
+        //         queue: []
+        //     })
+        // }
 
         document.addEventListener('click', closeDropdown);
 
@@ -644,11 +644,11 @@ const closeDropdown = (evt: any) => {
                         <input type="checkbox" @change="selectAllJobs" v-model="selectAllCheckbox">
                     </th>
                     <th>Job ID</th>
+                    <th>Printer</th>
                     <th>Job Title</th>
                     <th>File</th>
-                    <th>Date Completed</th>
                     <th>Final Status</th>
-                    <th>Printer</th>
+                    <th>Date Completed</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -658,6 +658,7 @@ const closeDropdown = (evt: any) => {
                         <input type="checkbox" v-model="selectedJobs" :value="job">
                     </td>
                     <td>{{ job.id }}</td>
+                    <td>{{ job.printer }}</td>
                     <td>
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             {{ job.name }}
@@ -667,9 +668,8 @@ const closeDropdown = (evt: any) => {
                         </div>
                     </td>
                     <td>{{ job.file_name_original }}</td>
-                    <td>{{ job.date }}</td>
                     <td>{{ job.status }}</td>
-                    <td>{{ job.printer }}</td>
+                    <td>{{ job.date }}</td>
                     <td>
                         <div class="dropdown">
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
