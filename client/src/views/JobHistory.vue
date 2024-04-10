@@ -98,17 +98,17 @@ onMounted(async () => {
 
         favoriteJobs.value = await getFavoriteJobs()
 
-        // // make 10 dummy printers
-        // for (let i = 2; i < 11; i++) {
-        //     printers.value.push({
-        //         id: i, 
-        //         name: `Printer ${i}`,
-        //         device: '',
-        //         description: '',
-        //         hwid: '',
-        //         queue: []
-        //     })
-        // }
+        // make 10 dummy printers
+        for (let i = 2; i < 11; i++) {
+            printers.value.push({
+                id: i, 
+                name: `Printer ${i}`,
+                device: '',
+                description: '',
+                hwid: '',
+                queue: []
+            })
+        }
 
         document.addEventListener('click', closeDropdown);
 
@@ -432,8 +432,6 @@ const closeDropdown = (evt: any) => {
             </div>
             <div v-if="favoriteJobs.length > 0" v-for="job in favoriteJobs" :key="job.id" class="mb-3">
                 <div class="grid-container job">
-                    <p class="my-auto truncate-name">{{ job.name }}</p>
-                    <p class="my-auto truncate-file">{{ job.file_name_original }}</p>
                     <p class="my-auto truncate-name">{{ job.name }}</p>
                     <p class="my-auto truncate-file">{{ job.file_name_original }}</p>
                     <div class="d-flex align-items-center">
