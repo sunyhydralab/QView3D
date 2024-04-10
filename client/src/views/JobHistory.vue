@@ -629,7 +629,7 @@ const closeDropdown = (evt: any) => {
                 </div>
             </div>
 
-            <div class="col-1 text-end" style="padding-right: 0">
+            <div class="col-1 text-end" style="padding-right: 0;">
                 <button
                     @click="openModal(clearSpaceTitle, 'Are you sure you want to clear space? This action will remove the files from jobs that are older than 6 months, except for those marked as favorite jobs, and this cannot be <b>undone</b>.', 'clear')"
                     class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exampleModal">

@@ -32,9 +32,9 @@ const handleRerun = async (job: Job, printer: Device) => {
 
 const handleRerunToSubmit = async (job: Job, printer: Device) => {
   await router.push({
-        name: 'SubmitJobVue', // the name of the route to SubmitJob.vue
-        params: { job: JSON.stringify(job), printer: JSON.stringify(printer) } // the job and printer to fill in the form
-    });
+    name: 'SubmitJobVue', // the name of the route to SubmitJob.vue
+    params: { job: JSON.stringify(job), printer: JSON.stringify(printer) } // the job and printer to fill in the form
+  });
 };
 
 const deleteSelectedJobs = async () => {
@@ -147,35 +147,41 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
     </div>
   </div>
 
-  <div class="container">
+  <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
+    data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLabel">Removing {{ selectedJobs.length }} job(s) from queue!</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Are you sure you want to remove these job(s) from queue? Job will be saved to history with a final status
+            of <i>cancelled</i>.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
+            @click="deleteSelectedJobs">Remove</button>
 
-    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
-      data-bs-backdrop="static">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="exampleModalLabel">Removing {{ selectedJobs.length }} job(s) from queue!</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <p>Are you sure you want to remove these job(s) from queue? Job will be saved to history with a final status
-              of <i>cancelled</i>.</p>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
-              @click="deleteSelectedJobs">Remove</button>
-
-          </div>
         </div>
       </div>
     </div>
+  </div>
 
+  <div class="container">
     <b>Queue View</b>
-    <button class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#exampleModal"
-      :disabled="selectedJobs.length === 0">
-      Remove from queue
-    </button>
+
+    <div class="row w-100" style="margin-bottom: 0.5rem;">
+      <div class="col-2 text-start" style="padding-left: 0;">
+        <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#exampleModal"
+          :disabled="selectedJobs.length === 0">
+          Remove
+        </button>
+      </div>
+      <div class="col-8"></div>
+      <div class="col-2 text-start"></div>
+    </div>
 
     <div v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">
         here
@@ -189,7 +195,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
             :aria-controls="'panelsStayOpen-collapse' + index" :class="{ 'collapsed': !printer.isExpanded }">
             <b>{{ printer.name }}:&nbsp;
               <span class="status-text" :style="{ color: statusColor(printer.status) }">{{
-              capitalizeFirstLetter(printer.status) }}</span>
+                capitalizeFirstLetter(printer.status) }}</span>
             </b>
           </button>
         </h2>
@@ -204,7 +210,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                   <th class="col-checkbox">
                     <div class="checkbox-container">
                       <input type="checkbox" @change="() => selectAllJobs(printer)"
-                        :disabled="printer.queue!.length === 0" v-model="selectAllCheckbox"/>
+                        :disabled="printer.queue!.length === 0" v-model="selectAllCheckbox" />
                     </div>
                   </th>
                   <th class="col-2">Rerun Job</th>
@@ -305,6 +311,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
 .dropdown-item span {
   margin-left: 10px;
 }
+
 .btn-circle {
   width: 30px;
   height: 30px;
@@ -316,6 +323,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
   justify-content: center;
   text-align: center;
 }
+
 .sortable-chosen {
   opacity: 0.5;
   background-color: #f2f2f2;
