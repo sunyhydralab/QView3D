@@ -64,7 +64,11 @@ const selectAllJobs = (printer: Device) => {
     if (selectAllCheckboxMap.value[printer.id!]) {
       // If the "Select All" checkbox for the current printer is checked,
       // add all jobs from the current printer to the selectedJobs array
-      selectedJobs.value = [...selectedJobs.value, ...printer.queue];
+      // but only if the job's status is 'inqueue'
+      selectedJobs.value = [
+        ...selectedJobs.value,
+        ...printer.queue.filter(job => job.status === 'inqueue')
+      ];
     } else {
       // Otherwise, remove all jobs from the current printer from the selectedJobs array
       selectedJobs.value = selectedJobs.value.filter(job => job.printerid !== printer.id);
@@ -197,7 +201,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                   <th class="col-checkbox">
                     <div class="checkbox-container">
                       <input type="checkbox" @change="() => selectAllJobs(printer)"
-                        :disabled="printer.queue!.length === 0" v-model="selectAllCheckbox"/>
+                        :disabled="printer.queue!.length === 0" />
                     </div>
                   </th>
                   <th class="col-2">Rerun Job</th>
@@ -218,7 +222,8 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                     :data-job-status="job.status" :key="job.id" :class="{ 'printing': job.status === 'printing' }">
                     <td>{{ job.id }}</td>
                     <td class="text-center">
-                      <input type="checkbox" v-model="selectedJobs" :value="job" />
+                      <input type="checkbox" v-model="selectedJobs" :value="job" 
+                        :disabled="job.status !== 'inqueue'"/>
                     </td>
 
                     <td class="text-center">

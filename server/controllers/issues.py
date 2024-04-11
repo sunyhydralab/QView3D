@@ -22,3 +22,26 @@ def createIssue():
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
+    
+@issue_bp.route('/deleteissue', methods=["POST"])
+def deleteIssue():
+    try:
+        data = request.get_json()
+        issue_id = data['issueid']
+        # print(issueid)
+        res = Issue.delete_issue(issue_id)
+        return res
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
+# @issue_bp.route('/deleteissue', methods=["POST"])
+# def deleteIssue():
+#     try:
+#         data = request.get_json()
+#         issue_id = data['issue_id']
+#         res = Issue.delete_issue(1)
+#         return res
+#     except Exception as e:
+#         print(f"Unexpected error: {e}")
+#         return jsonify({"error": "Unexpected error occurred"}), 500
