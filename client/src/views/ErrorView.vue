@@ -155,6 +155,7 @@ const doDeleteIssue = async () => {
     await deleteIssue(selectedIssue.value)
     const newIssues = await issues()
     issuelist.value = newIssues
+    submitFilter()
 }
 
 const doAssignIssue = async () => {
