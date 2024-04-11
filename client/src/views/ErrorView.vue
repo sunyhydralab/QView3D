@@ -416,9 +416,13 @@ const openGCodeModal = async (job: Job, printerName: string) => {
 
     <div class="container">
         <b>Error Log</b>
-        <div class="d-flex justify-content-center align-items-center" style="margin-bottom: 0.5rem;">
-            <div class="d-flex justify-content-center">
-                <div style="position: relative;">
+        <div class="row w-100" style="margin-bottom: 0.5rem;">
+            
+            <div class="col-4 text-start" style="padding-left: 0"></div>
+
+            <div class="col-4 d-flex justify-content-center align-items-center">
+                <div class="d-flex justify-content-center">
+                    <div style="position: relative;">
                     <button type="button" class="btn btn-primary dropdown-toggle"
                         @click.stop="filterDropdown = !filterDropdown">
                         Filter
@@ -531,20 +535,22 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                             <button @click.prevent="clearFilter" class="btn btn-danger">Clear Filter</button>
                         </div>
                     </form>
-                </div>
-            </div>
-            
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#assignissueModal">
-                <i class="fas fa-plus"></i> &nbsp
-                Add New Issue
-            </button>
+                    </div>
+                    </div>
+                    </div>  
+                    <div class="col-4 text-end" style="padding-right: 0">
+                        <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#assignissueModal">
+                            <i class="fas fa-plus"></i>
+                            New
+                        </button>
 
-            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteissueModal">
-                <i class="fas fa-trash-alt"></i> &nbsp
-                Delete Issue
-            </button>
-
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteissueModal">
+                            <i class="fas fa-trash-alt"></i>
+                            Delete
+                        </button>
+                    </div>
         </div>
+
 
         <table class="table">
             <thead>
