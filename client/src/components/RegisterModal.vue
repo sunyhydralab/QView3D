@@ -2,12 +2,12 @@
 import { ref, onMounted, watch, nextTick } from 'vue';
 import { printers, useRegisterPrinter, useGetPorts, useRetrievePrinters, useRetrievePrintersInfo, useRepair, useMoveHead, type Device } from '../model/ports';
 import HoldButton from './HoldButton.vue';
+import { toast } from '@/model/toast';
 
 const { ports } = useGetPorts();
 const { retrieve } = useRetrievePrinters();
 const { retrieveInfo } = useRetrievePrintersInfo();
 const { register } = useRegisterPrinter();
-const { repair } = useRepair();
 const { move } = useMoveHead();
 
 let customname = ref('') // Stores the user input name of printer
@@ -29,8 +29,16 @@ onMounted(async () => {
 })
 
 const doGetPorts = async () => {
+  try {
     const allDevices = await ports();
-    devices.value = allDevices
+    devices.value = allDevices;
+
+    // toast message
+    toast.success('Ports refreshed successfully!');
+  } catch (error) {
+    // handle error
+    toast.error('Failed to refresh ports!');
+  }
 }
 
 const doRegister = async () => {
@@ -58,10 +66,6 @@ const doRegister = async () => {
     clearSelectedDevice()
 }
 
-const doRepair = async () => {
-    await repair()
-}
-
 const clearSelectedDevice = () => {
     setTimeout(() => {
         selectedDevice.value = null;
@@ -86,10 +90,7 @@ const doMove = async (printer: Device) => {
                         @click="clearSelectedDevice"></button>
                 </div>
                 <div class="modal-body">
-                    <div v-if="!selectedDevice" class="d-flex mb-3 justify-content-between">
-                        <button class="btn btn-primary w-100 me-3" @click="doRepair()">Repair Ports</button>
-                        <button class="btn btn-primary w-100" @click="doGetPorts()">Refresh Ports</button>
-                    </div>
+                    <button class="btn btn-primary mb-4 w-100" @click="doGetPorts()">Refresh Ports</button>
                     <form @submit.prevent="$emit('submit-form')">
                         <div class="mb-3">
                             <label for="ports" class="form-label">Select Device</label>
@@ -122,8 +123,10 @@ const doMove = async (printer: Device) => {
                 <div class="modal-footer d-flex justify-content-between">
                     <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" v-bind:disabled="!customname"
                         @click="doRegister">Submit</button>
-                    <div v-if="selectedDevice" :title="'Moves printer 10mm upwards! Please check printers before.'" data-bs-toggle="tooltip">
-                        <HoldButton :color="'secondary'" @button-held="doMove(selectedDevice as Device)">Move Printer Head</HoldButton>
+                    <div v-if="selectedDevice" :title="'Moves printer 10mm upwards! Please check printers before.'"
+                        data-bs-toggle="tooltip">
+                        <HoldButton :color="'secondary'" @button-held="doMove(selectedDevice as Device)">Move Printer
+                            Head</HoldButton>
                     </div>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
                         @click="clearSelectedDevice">Close</button>

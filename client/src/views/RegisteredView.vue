@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, useRegisterPrinter, type Device, useMoveHead, useRetrievePrinters } from '../model/ports'
+import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters } from '../model/ports'
 import { ref, onMounted } from 'vue';
 import { toast } from '../model/toast'
 import RegisterModal from '../components/RegisterModal.vue'
@@ -14,6 +14,7 @@ const { editName } = useEditName();
 const { removeThread } = useRemoveThread();
 const { editThread } = useEditThread();
 const { diagnose } = useDiagnosePrinter();
+const { repair } = useRepair();
 
 let registered = ref<Array<Device>>([]) // Stores array of printers already registered in the system
 let editMode = ref(false)
@@ -77,6 +78,10 @@ const saveName = async (printer: Device) => {
     editMode.value = false
     newName.value = ''
     editNum.value = undefined
+}
+
+const doRepair = async () => {
+    await repair()
 }
 
 const doDiagnose = async (printer: Device) => {
@@ -146,8 +151,8 @@ const doCloseRegisterModal = async () => {
         <RegisterModal id="registerModal" @close="doCloseRegisterModal" />
 
         <div v-if="registered.length != 0" class="d-flex flex-wrap justify-content-end">
-            <div class="m-2" v-for="printer in registered" :key="printer.id">
-              <div class="card bg-light rounded" style="width: 340px">
+            <div v-for="printer in registered" :key="printer.id">
+                <div class="card bg-light rounded" style="width: 340px">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-4" v-if="!editMode || !(editNum == printer.id)">{{ printer.name }}
@@ -194,7 +199,7 @@ const doCloseRegisterModal = async () => {
                                                 @click="toggleMessage(printer)">
                                                 <i class="fas fa-stethoscope"></i>
                                                 <span class="ms-2">{{ messageId == printer.id && showMessage ?
-                        'Clear Message' : 'Diagnose Printer' }}</span>
+                                                    'Clear Message' : 'Diagnose Printer' }}</span>
                                             </a>
                                         </li>
                                     </ul>
@@ -214,7 +219,10 @@ const doCloseRegisterModal = async () => {
                         <div v-if="messageId == printer.id && showMessage"
                             class="alert alert-danger d-flex flex-column align-items-center justify-content-center">
                             <h6 v-html="message"></h6>
-                            <button class="btn btn-secondary mt-auto" @click="clearMessage()">Clear</button>
+                            <div class="d-flex justify-content-between">
+                                <button class="btn btn-secondary me-3" @click="clearMessage()">Clear</button>
+                                <button class="btn btn-primary w-100" @click="doRepair()">Repair Ports</button>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -401,7 +401,7 @@ const doAssignIssue = async () => {
 
   <div class="container">
     <!-- <b>Home</b> -->
-    <table>
+    <table class="table-striped">
       <tr>
         <!-- NEED TO FIX THIS FOR EVERY DISPLAYS -->
         <th style="width: 64px">Job ID</th>
@@ -418,11 +418,11 @@ const doAssignIssue = async () => {
         dragClass="hidden-ghost" v-if="printers.length > 0">
         <template #item="{ element: printer }">
           <tr :id="printer.id">
-            <td
+            <td style="padding-left: 15px;"
               v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0].id }}
             </td>
-            <td v-else><i>idle</i></td>
+            <td style="padding-left: 15px;" v-else><i>idle</i></td>
             <td class="truncate" :title="printer.name">
               <button type="button" class="btn btn-link" @click="sendToQueueView(printer)"
                 style="padding: 0; border: none; display: inline-block; width: 100%; text-align: left;">
