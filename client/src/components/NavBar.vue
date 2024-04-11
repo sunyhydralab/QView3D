@@ -59,7 +59,7 @@ const currentPage = computed(() => pageNames[route.path]);
 
 <style scoped>
 .logo {
-  height: 30px;
+  height:45px;
   position: relative;
   right: 20px;
 }
@@ -73,7 +73,7 @@ const currentPage = computed(() => pageNames[route.path]);
   font-size: 1.2em; /* Adjust the value as needed */
   font-weight: bold;
   padding-right: 1.5rem !important; /* Adjust the value as needed */
-  color: #1b1b1b;
+  color: #a8a8a8;
 }
 
 .form-check {
@@ -96,11 +96,11 @@ const currentPage = computed(() => pageNames[route.path]);
 }
 
 .active-tab {
-  color: #000000;
+  color: #1a1a1a;
   font-weight: bold;
 }
 
-.nav-link:hover {
+.nav-link:not(.active-tab):hover {
   color: #7561A9;
 }
 

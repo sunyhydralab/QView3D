@@ -98,17 +98,17 @@ onMounted(async () => {
 
         favoriteJobs.value = await getFavoriteJobs()
 
-        // // make 10 dummy printers
-        // for (let i = 2; i < 3; i++) {
-        //     printers.value.push({
-        //         id: i, 
-        //         name: `Printer ${i}`,
-        //         device: '',
-        //         description: '',
-        //         hwid: '',
-        //         queue: []
-        //     })
-        // }
+        // make 10 dummy printers
+        for (let i = 2; i < 12; i++) {
+            printers.value.push({
+                id: i, 
+                name: `Printer ${i}`,
+                device: '',
+                description: '',
+                hwid: '',
+                queue: []
+            })
+        }
 
         document.addEventListener('click', closeDropdown);
 
@@ -637,10 +637,10 @@ const closeDropdown = (evt: any) => {
 
         </div>
 
-        <table class="table">
+        <table>
             <thead>
                 <tr>
-                    <th class="col-checkbox">
+                    <th class="col-checkbox" style="padding-left: 15px;">
                         <input type="checkbox" @change="selectAllJobs" v-model="selectAllCheckbox">
                     </th>
                     <th>Job ID</th>
@@ -654,7 +654,7 @@ const closeDropdown = (evt: any) => {
             </thead>
             <tbody v-if="filteredJobs.length > 0">
                 <tr v-for="job in filteredJobs" :key="job.id">
-                    <td>
+                    <td style="padding-left: 15px;">
                         <input type="checkbox" v-model="selectedJobs" :value="job">
                     </td>
                     <td>{{ job.id }}</td>
@@ -735,7 +735,7 @@ const closeDropdown = (evt: any) => {
             </tbody>
         </table>
         <nav aria-label="Page navigation">
-            <ul class="pagination">
+            <ul class="pagination mt-2">
                 <li class="page-item" :class="{ 'disabled': page <= 1 }">
                     <a class="page-link" href="#" @click.prevent="changePage(page - 1)">Previous</a>
                 </li>
@@ -855,10 +855,6 @@ td {
     border: 2px solid #dddddd;
     text-align: left;
     padding: 8px;
-}
-
-th {
-    background-color: #f2f2f2;
 }
 
 ul.dropdown-menu.w-100.show li {

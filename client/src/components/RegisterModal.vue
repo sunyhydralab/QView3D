@@ -123,11 +123,12 @@ const doMove = async (printer: Device) => {
                 <div class="modal-footer d-flex justify-content-between">
                     <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" v-bind:disabled="!customname"
                         @click="doRegister">Submit</button>
-                    <div v-if="selectedDevice" :title="'Moves printer 10mm upwards! Please check printers before.'"
-                        data-bs-toggle="tooltip">
-                        <HoldButton :color="'secondary'" @button-held="doMove(selectedDevice as Device)">Move Printer
-                            Head</HoldButton>
-                    </div>
+                        <div v-if="selectedDevice">
+                            <div class="tooltip">
+                                <HoldButton :color="'secondary'" @button-held="doMove(selectedDevice)">Move Printer Head</HoldButton>
+                                <span class="tooltiptext">Moves printer 10mm upwards! Please check printers before.</span>
+                            </div>
+                        </div>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
                         @click="clearSelectedDevice">Close</button>
                 </div>
@@ -136,4 +137,44 @@ const doMove = async (printer: Device) => {
     </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.tooltip {
+    position: relative;
+    display: inline-block;
+    opacity: 1;
+  }
+  
+  .tooltip .tooltiptext {
+    visibility: hidden;
+    opacity: 0; /* Add this */
+    transition: opacity 0.2s linear, visibility 0.2s linear 0.2s; /* Add delay to visibility transition */
+    width: 200px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 0;
+    position: absolute;
+    z-index: 2000;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+  }
+  
+  .tooltip .tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: black transparent transparent transparent;
+  }
+  
+  .tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 0.2s linear; /* Add this */
+  }
+</style>

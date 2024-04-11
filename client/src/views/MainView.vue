@@ -418,11 +418,11 @@ const doAssignIssue = async () => {
         dragClass="hidden-ghost" v-if="printers.length > 0">
         <template #item="{ element: printer }">
           <tr :id="printer.id">
-            <td style="padding-left: 15px;"
+            <td
               v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0].id }}
             </td>
-            <td style="padding-left: 15px;" v-else><i>idle</i></td>
+            <td v-else><i>idle</i></td>
             <td class="truncate" :title="printer.name">
               <button type="button" class="btn btn-link" @click="sendToQueueView(printer)"
                 style="padding: 0; border: none; display: inline-block; width: 100%; text-align: left;">
@@ -442,7 +442,7 @@ const doAssignIssue = async () => {
             </td>
             <td v-else></td>
             <td>
-              <div class="d-flex align-items-center">
+              <div class="d-flex align-items-center justify-content-center">
                 <!-- <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
                     Change filament
                   </p> -->
@@ -687,21 +687,6 @@ table {
   table-layout: fixed;
   width: 100%;
   border-collapse: collapse;
-}
-
-th,
-td {
-  border: 2px solid #dddddd;
-  text-align: left;
-  padding: 8px;
-}
-
-th {
-  background-color: #f2f2f2;
-}
-
-p {
-  margin: 0;
 }
 
 .btn-circle {

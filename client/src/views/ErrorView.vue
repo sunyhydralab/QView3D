@@ -413,7 +413,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
             </div>
         </div>
 
-        <table class="table">
+        <table>
             <thead>
                 <tr>
                     <th>Job ID</th>
@@ -426,7 +426,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
             </thead>
             <tbody v-if="filteredJobs.length > 0">
                 <tr v-for="job in filteredJobs" :key="job.id">
-                    <td>{{ job.id }}</td>
+                    <td style="padding-left: 15px;">{{ job.id }}</td>
                     <td>{{ job.name }}</td>
                     <td>{{ job.file_name_original }}</td>
                     <td>{{ job.printer }}</td>
@@ -498,7 +498,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
             </tbody>
         </table>
         <nav aria-label="Page navigation">
-            <ul class="pagination">
+            <ul class="pagination mt-2">
                 <li class="page-item" :class="{ 'disabled': page <= 1 }">
                     <a class="page-link" href="#" @click.prevent="changePage(page - 1)">Previous</a>
                 </li>
