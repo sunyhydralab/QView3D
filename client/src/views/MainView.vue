@@ -481,7 +481,7 @@ const doAssignIssue = async () => {
                   Stop
                 </HoldButton>
 
-                <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'warning'"
+                <!-- <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'warning'"
                   @button-held="setPrinterStatus(printer, 'paused')"
                   v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0) && printer.queue?.[0]?.extruded === 1">
                   Pause
@@ -490,6 +490,18 @@ const doAssignIssue = async () => {
                 <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'warning'"
                   @button-held="setPrinterStatus(printer, 'colorchange')"
                   v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0) && printer.queue?.[0]?.extruded === 1">
+                  Color&nbsp;Change
+                </HoldButton> -->
+
+                <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'warning'"
+                  @button-held="setPrinterStatus(printer, 'paused')"
+                  v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
+                  Pause
+                </HoldButton>
+
+                <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'warning'"
+                  @button-held="setPrinterStatus(printer, 'colorchange')"
+                  v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
                   Color&nbsp;Change
                 </HoldButton>
 

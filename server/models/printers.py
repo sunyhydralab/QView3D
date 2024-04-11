@@ -404,7 +404,6 @@ class Printer(db.Model):
                 # Replace file with the path to the file. "r" means read mode. 
                 # now instead of reading from 'g', we are reading line by line
                 for line in lines:
-                    print("LINE: ",line)
                     # remove whitespace
                     line = line.strip()
                     # Don't send empty lines and comments. ";" is a comment in gcode.
@@ -488,7 +487,8 @@ class Printer(db.Model):
                     job.setProgress(progress)
                 
                     
-                    if self.getStatus() == "complete" and job.extruded != 0:
+                    # if self.getStatus() == "complete" and job.extruded != 0:
+                    if self.getStatus() == "complete":
                         return "cancelled"
 
                     if self.getStatus() == "error":
@@ -501,7 +501,7 @@ class Printer(db.Model):
             return "error"
 
     # Function to send "ending" gcode commands
-    def endingSequence(self):
+    def endingSequence(self, job=None):
         try:
             # *** Ender 3 Pro ending sequence ***
             # self.gcodeEnding("G91") # Relative positioning
@@ -528,9 +528,12 @@ class Printer(db.Model):
             self.gcodeEnding("M104 S0")# ; turn off temperature
             self.gcodeEnding("M140 S0")# ; turn off heatbed
             self.gcodeEnding("M107")# ; turn off fan
-            self.gcodeEnding("G1 X241 Y170 F3600")# ; park
+
+            if(job and job.getExtruded()==1):
+                self.gcodeEnding("G1 X241 Y170 F3600")# ; park
             # self.gcodeEnding("{if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+23, max_print_height)} F300")# ; Move print head up{endif}
-            self.gcodeEnding("G4")# ; wait
+                self.gcodeEnding("G4")# ; wait
+
             self.gcodeEnding("M900 K0")# ; reset LA
             self.gcodeEnding("M142 S36")# ; reset heatbreak target temp
             self.gcodeEnding("M84 X Y E")# ; disable motors   
@@ -599,7 +602,7 @@ class Printer(db.Model):
             self.sendStatusToJob(job, job.id, "error")
             # self.setError("Error")
         elif verdict == "cancelled":
-            self.endingSequence()
+            self.endingSequence(job)
             self.sendStatusToJob(job, job.id, "cancelled")
             self.disconnect()
             
