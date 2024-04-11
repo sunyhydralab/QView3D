@@ -28,8 +28,8 @@ def createIssue():
 def deleteIssue():
     try:
         data = request.get_json()
-        issue_id = data['issue_id']
-        print(issue_id)
+        issue_id = data['issueid']
+        # print(issueid)
         res = Issue.delete_issue(issue_id)
         return res
     except Exception as e:

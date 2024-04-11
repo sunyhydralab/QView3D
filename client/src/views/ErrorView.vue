@@ -154,11 +154,11 @@ const doCreateIssue = async () => {
 
 ////
 const doDeleteIssue = async () => {
-    if (selectedIssue.value === undefined) return
-    await deleteIssue(selectedIssue.value)
-    console.log("selected issue:" + selectedIssue.value)
+    console.log(selectedIssue.value)
 
-    console.log("selected issue:" + selectedIssue.value)
+    if (selectedIssue.value === undefined) return
+    console.log(selectedIssue.value)
+    await deleteIssue(selectedIssue.value)
 }
 
 const doAssignIssue = async () => {
@@ -311,15 +311,15 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                             <label for="issue" class="form-label">Select Issue</label>
                             <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
                                 <option disabled value="undefined">Select Issue</option>
-                                <option v-for="issue in issuelist"  :key="issue.id">
+                                <option v-for="issue in issuelist"  :key="issue.id" :value="issue">
                                     {{ issue.issue }}
                                 </option>
-                                <tr  v-for="issue in issuelist"  :key="issue.id">
+                                <!-- <tr  v-for="issue in issuelist"  :key="issue.id">
                                     <td>
                                         <input type="checkbox" v-model="selectedIssue" :value="issue">
                                     </td>
                                     <td>{{ issue.issue }}</td>
-                                </tr>
+                                </tr> -->
                             </select>
                         </div>
 

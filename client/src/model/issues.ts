@@ -78,12 +78,12 @@ export function useAssignIssue() {
 export function useDeleteIssue() {
     return {
         async deleteIssue(issue: Issue) {
+            // let issue_id = issue.id
+            console.log('issue in ts: ', issue)
             let issueid = issue.id
-            console.log('issue.id:', issue.id)
+            console.log('issueid in ts: ', issueid)
             try {
                 const response = await api(`deleteissue`, { issueid })
-                console.log('issueid:', issueid)
-                console.log('response:', response)
                 if (response) {
                     console.log('response:', response)
                     if (response.success == false) {
