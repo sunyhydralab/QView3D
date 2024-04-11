@@ -155,7 +155,6 @@ const doCreateIssue = async () => {
 ////
 const doDeleteIssue = async () => {
     console.log(selectedIssue.value)
-
     if (selectedIssue.value === undefined) return
     console.log(selectedIssue.value)
     await deleteIssue(selectedIssue.value)
