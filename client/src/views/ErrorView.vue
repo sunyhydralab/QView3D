@@ -225,17 +225,6 @@ const openGCodeModal = async (job: Job, printerName: string) => {
     }
 }
 
-// const allSelected = computed({
-//     get: () => selectedIssues.value.length > 0 && selectedIssues.value.length === issues.length,
-//     set: (value) => {
-//         if (value) {
-//             selectedIssues.value = issues.slice();
-//         } else {
-//             selectedIssues.value = [];
-//         }
-//     }
-// });
-
 </script>
 
 <template>
