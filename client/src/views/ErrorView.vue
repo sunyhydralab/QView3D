@@ -150,14 +150,11 @@ const doCreateIssue = async () => {
     showText.value = false
 }
 
-/** */
-
-////
 const doDeleteIssue = async () => {
-    console.log(selectedIssue.value)
     if (selectedIssue.value === undefined) return
-    console.log(selectedIssue.value)
     await deleteIssue(selectedIssue.value)
+    const newIssues = await issues()
+    issuelist.value = newIssues
 }
 
 const doAssignIssue = async () => {
@@ -355,7 +352,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="submit" @click.prevent="doDeleteIssue" class="btn btn-danger me-2"
-                        data-bs-dismiss="modal">Delete</button>
+                        data-bs-dismiss="modal" :disabled="selectedIssue == undefined">Delete</button>
                 </div>
             </div>
         </div>
@@ -374,19 +371,6 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                         @click="selectedIssue = undefined; selectedJob = undefined;"></button>
                 </div>
                 <div class="modal-body">
-                    <button class="btn btn-primary mb-3" @click="showText = !showText">Create New Issue</button>
-                    <form v-if="showText" class="p-3 border rounded bg-light mb-3">
-                        <div class="mb-3">
-                            <label for="newIssue" class="form-label">Enter Issue</label>
-                            <input id="newIssue" v-model="newIssue" type="text" placeholder="Enter Issue"
-                                class="form-control" required>
-                        </div>
-                        <div>
-                            <button type="submit" @click.prevent="doCreateIssue" class="btn btn-primary me-2"
-                                v-bind:disabled="!newIssue">Submit</button>
-                            <button @click.prevent="showText = !showText" class="btn btn-secondary">Cancel</button>
-                        </div>
-                    </form>
                     <form @submit.prevent="">
                         <div class="mb-3">
                             <label for="issue" class="form-label">Select Issue</label>
