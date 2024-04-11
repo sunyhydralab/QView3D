@@ -100,9 +100,7 @@ def add_job_to_queue():
                 findPrinterObject(printer_id).getQueue().addToFront(job, printer_id)
             else:
                 findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
-                
-            print("released: ", job.released)
-        
+                        
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     
     except Exception as e:
@@ -217,6 +215,41 @@ def remove_job():
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
+    
+
+ # cancel queued job   
+@jobs_bp.route('/cancelfromqueue', methods=["POST"]) 
+def remove_job_from_queue():
+    try:
+        # job has: printer id. job info.
+        # 0 = cancel job, 1 = clear job, 2 = fail job, 3 = clear job (but also rerun)
+        data = request.get_json()
+        jobarr = data['jobarr']
+        
+        for jobpk in jobarr:
+            # Retrieve job to delete & printer id 
+            job = Job.findJob(jobpk) 
+            printerid = job.getPrinterId() 
+
+            jobstatus = job.getStatus()
+            # retrieve printer object & corresponding queue
+            printerobject = findPrinterObject(printerid)
+            # printerobject.setStatus("complete")
+            queue = printerobject.getQueue()
+            inmemjob = queue.getJob(job)
+            if jobstatus == 'printing': # only change statuses, dont remove from queue 
+                printerobject.setStatus("complete")
+            else: 
+                queue.deleteJob(jobpk, printerid) 
+                
+            inmemjob.setStatus("cancelled")
+            Job.update_job_status(jobpk, "cancelled")
+
+        return jsonify({"success": True, "message": "Job removed from printer queue."}), 200
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
     
 @jobs_bp.route('/releasejob', methods=["POST"])
 def releasejob(): 
