@@ -74,3 +74,62 @@ export function useAssignIssue() {
         }
     }
 }
+
+export function useDeleteIssue() {
+    return {
+        async deleteIssue(issue: Issue) {
+            let issueid = issue.id
+            console.log('issue.id:', issue.id)
+            try {
+                const response = await api(`deleteissue`, { issueid })
+                console.log('issueid:', issueid)
+                console.log('response:', response)
+                if (response) {
+                    console.log('response:', response)
+                    if (response.success == false) {
+                        toast.error(response.message)
+                    } else if (response.success === true) {
+                        toast.success(response.message)
+                    } else {
+                        console.error('Unexpected response:', response)
+                        toast.error('Failed to delete issue. Unexpected response')
+                    }
+                } else {
+                    console.error('Response is undefined or null')
+                    toast.error('Failed to delete issue. Unexpected response')
+                }
+            } catch (error) {
+                console.error(error)
+                toast.error('An error occurred while deleting the issue')
+            }
+        }
+    }
+}
+
+// export function useDeleteIssue() {
+//     return {
+//         async deleteIssue() {
+//             // let issueid = issue.id
+//             try {
+//                 const response = await api('deleteissue')
+//                 if (response) {
+//                     console.log('response:', response)
+//                     if (response.success == false) {
+//                         toast.error(response.message)
+//                     } else if (response.success === true) {
+//                         toast.success(response.message)
+//                     } else {
+//                         console.error('Unexpected response:', response)
+//                         toast.error('Failed to delete issue. Unexpected response')
+//                     }
+//                 } else {
+//                     console.error('Response is undefined or null')
+//                     toast.error('Failed to delete issue. Unexpected response')
+//                 }
+//             } catch (error) {
+//                 console.error(error)
+//                 toast.error('An error occurred while deleting the issue')
+//             }
+//         }
+//     }
+// }
