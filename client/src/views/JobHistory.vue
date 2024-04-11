@@ -412,8 +412,8 @@ const closeDropdown = (evt: any) => {
 
     <!-- bootstrap off canvas to the right -->
     <div class="offcanvas offcanvas-end" data-bs-backdrop="static" tabindex="-1" id="offcanvasRight"
-        aria-labelledby="offcanvasRightLabel">
-        <div class="offcanvas-header bg-primary text-white">
+        aria-labelledby="offcanvasRightLabel" style="background-color: #b9b9b9;">
+      <div class="offcanvas-header" style="background-color: #484848; color: #dbdbdb;">
             <div class="container-fluid">
                 <div class="row align-items-center">
                     <div class="col">
@@ -437,7 +437,7 @@ const closeDropdown = (evt: any) => {
                     <p class="my-auto truncate-name">{{ job.name }}</p>
                     <p class="my-auto truncate-file">{{ job.file_name_original }}</p>
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-star text-warning" style="margin-right: 10px;" data-bs-toggle="modal"
+                        <i class="fas fa-star" style="color: #60AEAE; margin-right: 10px;" data-bs-toggle="modal"
                             data-bs-target="#favoriteModal" @click="jobToUnfavorite = job"></i>
                         <button class="btn btn-secondary download" style="margin-right: 10px;"
                             @click="getFileDownload(job.id)" :disabled="job.file_name_original.includes('.gcode:')">
@@ -637,7 +637,7 @@ const closeDropdown = (evt: any) => {
 
         </div>
 
-        <table>
+        <table class="table-striped">
             <thead>
                 <tr>
                     <th>Job ID</th>
@@ -647,8 +647,8 @@ const closeDropdown = (evt: any) => {
                     <th>Final Status</th>
                     <th>Date Completed</th>
                     <th>Actions</th>
-                    <th class="col-checkbox" style="padding-left: 15px;">
-                        <input type="checkbox" @change="selectAllJobs" v-model="selectAllCheckbox">
+                    <th class="col-checkbox">
+                        <input class="form-check-input" type="checkbox" @change="selectAllJobs" v-model="selectAllCheckbox">
                     </th>
                 </tr>
             </thead>
@@ -657,10 +657,12 @@ const closeDropdown = (evt: any) => {
                     <td>{{ job.id }}</td>
                     <td>{{ job.printer }}</td>
                     <td>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            {{ job.name }}
+                        <div style="display: flex; justify-content: start; align-items: center;">
                             <div class="d-flex align-items-center" @click="favoriteJob(job, !job.favorite)">
                                 <i :class="job.favorite ? 'fas fa-star' : 'far fa-star'"></i>
+                            </div>
+                            <div style="margin-left: 10px;">
+                                {{ job.name }}
                             </div>
                         </div>
                     </td>
@@ -722,8 +724,8 @@ const closeDropdown = (evt: any) => {
                             </div>
                         </div>
                     </td>
-                    <td style="padding-left: 15px;">
-                        <input type="checkbox" v-model="selectedJobs" :value="job">
+                    <td>
+                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job">
                     </td>
                 </tr>
             </tbody>
@@ -811,22 +813,19 @@ const closeDropdown = (evt: any) => {
 }
 
 .header {
-    border: 1px solid #e0e0e0;
     padding-left: 10px;
     padding-right: 10px;
+    padding-top: 10px;
     border-radius: 5px;
     margin-bottom: 10px;
-    background-color: #f2f2f2;
-}
-
-.header h5 {
-    text-decoration: underline;
+    background-color: #7561a9;
+    color: #dbdbdb;
 }
 
 .job {
-    border: 1px solid #e0e0e0;
     padding: 10px;
     border-radius: 5px;
+    background-color: #d8d8d8;
 }
 
 .offcanvas {

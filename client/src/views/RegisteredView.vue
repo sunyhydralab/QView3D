@@ -152,7 +152,7 @@ const doCloseRegisterModal = async () => {
 
         <div v-if="registered.length != 0" class="d-flex flex-wrap justify-content-start">
             <div v-for="printer in registered" :key="printer.id">
-                <div class="card m-2 bg-light rounded" style="width: 416px;">
+                <div class="card m-2 rounded" style="width: 416px; background: #d8d8d8;">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-4" v-if="!editMode || !(editNum == printer.id)">{{ printer.name }}
@@ -248,7 +248,7 @@ const doCloseRegisterModal = async () => {
 
 .form-container,
 .card {
-    border: 2px solid #333;
+    border: 1px solid #484848;
 }
 
 .register {
