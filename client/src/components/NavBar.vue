@@ -62,6 +62,8 @@ const currentPage = computed(() => pageNames[route.path]);
   height:45px;
   position: relative;
   right: 20px;
+  padding-top: 5px;
+  padding-bottom: 5px;
 }
 
 .navbar {
@@ -96,8 +98,8 @@ const currentPage = computed(() => pageNames[route.path]);
 }
 
 .active-tab {
-  color: #1a1a1a;
-  font-weight: bold;
+  color: #dbdbdb;
+  font-weight: bolder;
 }
 
 .nav-link:not(.active-tab):hover {

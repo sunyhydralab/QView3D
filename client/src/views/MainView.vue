@@ -446,7 +446,7 @@ const doAssignIssue = async () => {
                 <!-- <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
                     Change filament
                   </p> -->
-                <p v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0" style="color: red"
+                <p v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0" style="color: #ad6060"
                   class="mb-0 me-2">
                   Waiting release
                 </p>
@@ -460,15 +460,15 @@ const doAssignIssue = async () => {
               <div class="buttons">
 
                 <button class="btn btn-primary"
-                  v-if="printer.status == 'configuring' || printer.status == 'ready' || printer.status == 'error' || printer.status == 'complete'"
-                  @click="setPrinterStatus(printer, 'offline')">
-                  Turn Offline
-                </button>
-
-                <button class="btn btn-primary"
                   v-if="printer.status == 'configuring' || printer.status == 'offline' || printer.status == 'error'"
                   @click="setPrinterStatus(printer, 'ready')">
                   Set to Ready
+                </button>
+
+                <button class="btn btn-danger"
+                  v-if="printer.status == 'configuring' || printer.status == 'ready' || printer.status == 'error' || printer.status == 'complete'"
+                  @click="setPrinterStatus(printer, 'offline')">
+                  Turn Offline
                 </button>
 
                 <HoldButton :color="'success'" @button-held="startPrint(printer.id!, printer.queue?.[0].id)"
@@ -697,8 +697,6 @@ const doAssignIssue = async () => {
 
 table {
   table-layout: fixed;
-  width: 100%;
-  border-collapse: collapse;
 }
 
 .btn-circle {
