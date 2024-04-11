@@ -121,7 +121,9 @@ def moveHead():
         data = request.get_json()
         port = data['port']
         
-        Printer.moveHead(port)
+        res = Printer.moveHead(port)
+        if res == "none": 
+            return {"success": False, "message": "Head move unsuccessful."}
         
         return {"success": True, "message": "Head move successful."}
     except Exception as e:

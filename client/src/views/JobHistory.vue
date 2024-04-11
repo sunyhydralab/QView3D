@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers, useRetrievePrintersInfo, type Device } from '../model/ports'
-import { useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useUpdateJobStatus } from '../model/jobs';
+import { pageSize, useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useUpdateJobStatus } from '../model/jobs';
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
 import { useRouter } from 'vue-router';
@@ -44,7 +44,6 @@ let currentJob = ref<Job | null>(null);
 let isGcodeImageVisible = ref(false);
 
 let page = ref(1)
-let pageSize = ref(10)
 let totalJobs = ref(0)
 let totalPages = ref(1)
 let selectAllCheckbox = ref(false);

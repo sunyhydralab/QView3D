@@ -86,103 +86,71 @@ const onlyNumber = ($event: KeyboardEvent) => {
 // sends job to printer queue
 const handleSubmit = async () => {
     let isFavoriteSet = false;
-
     let res = null
     if (selectedPrinters.value.length == 0) {
-        let numPrints = quantity.value
-        for (let i = 0; i < numPrints; i++) {
-            const formData = new FormData() // create FormData object
-            formData.append('file', file.value as File) // append form data
-            formData.append('name', name.value as string)
-            formData.append('priority', priority.value.toString())
-
-            // If favorite is true and it's not set yet, set it for the first job only
-            if (favorite.value && !isFavoriteSet) {
-                formData.append('favorite', 'true')
-                isFavoriteSet = true;
-            } else {
-                formData.append('favorite', 'false')
-            }
-
-            try {
-                res = await auto(formData)
-                if (form.value) {
-                    form.value.reset()
-                }
-            } catch (error) {
-                console.error('There has been a problem with your fetch operation:', error)
-            }
+        // let numPrints = quantity.value
+        // for (let i = 0; i < numPrints; i++) {
+        const formData = new FormData() // create FormData object
+        formData.append('file', file.value as File) // append form data
+        formData.append('name', name.value as string)
+        formData.append('priority', priority.value.toString())
+        // If favorite is true and it's not set yet, set it for the first job only
+        if (favorite.value && !isFavoriteSet) {
+            formData.append('favorite', 'true')
+            isFavoriteSet = true;
+        } else {
+            formData.append('favorite', 'false')
         }
+        try {
+            formData.append("quantity", quantity.value.toString())
+            res = await auto(formData)
+            if (form.value) {
+                form.value.reset()
+            }
+        } catch (error) {
+            console.error('There has been a problem with your fetch operation:', error)
+        }
+        // }
         resetValues()
     } else {
         let sub = validateQuantity()
         if (sub == true) {
-            if (selectedPrinters.value.length == 0) {
-                let numPrints = quantity.value
-                for (let i = 0; i < numPrints; i++) {
-                    const formData = new FormData() // create FormData object
-                    formData.append('file', file.value as File) // append form data
-                    formData.append('name', name.value as string)
-                    formData.append('priority', priority.value.toString())
-
-                    // If favorite is true and it's not set yet, set it for the first job only
-                    if (favorite.value && !isFavoriteSet) {
-                        formData.append('favorite', 'true')
-                        isFavoriteSet = true;
-                    } else {
-                        formData.append('favorite', 'false')
-                    }
-
-                    try {
-                        res = await auto(formData)
-                        if (form.value) {
-                            form.value.reset()
-                        }
-                    } catch (error) {
-                        console.error('There has been a problem with your fetch operation:', error)
-                    }
+            let printsPerPrinter = Math.floor(quantity.value / selectedPrinters.value.length) // number of even prints per printer
+            let remainder = quantity.value % selectedPrinters.value.length; //remainder to be evenly distributed 
+            for (const printer of selectedPrinters.value) {
+                let numPrints = printsPerPrinter
+                if (remainder > 0) {
+                    numPrints += 1
+                    remainder -= 1
                 }
-                resetValues()
-            }
-            else {
-                console.log(selectedPrinters.value)
-                let printsPerPrinter = Math.floor(quantity.value / selectedPrinters.value.length) // number of even prints per printer
-                let remainder = quantity.value % selectedPrinters.value.length; //remainder to be evenly distributed 
-                for (const printer of selectedPrinters.value) {
-                    let numPrints = printsPerPrinter
-                    if (remainder > 0) {
-                        numPrints += 1
-                        remainder -= 1
-                    }
-                    for (let i = 0; i < numPrints; i++) {
-                        const formData = new FormData() // create FormData object
-                        formData.append('file', file.value as File) // append form data
-                        formData.append('name', name.value as string)
-                        formData.append('printerid', printer?.id?.toString() || '');
-                        formData.append('priority', priority.value.toString())
-
-                        // If favorite is true and it's not set yet, set it for the first job only
-                        if (favorite.value && !isFavoriteSet) {
-                            formData.append('favorite', 'true')
-                            isFavoriteSet = true;
-                        } else {
-                            formData.append('favorite', 'false')
-                        }
-
-                        try {
-                            res = await addJobToQueue(formData)
-                            // reset form
-                            if (form.value) {
-                                form.value.reset()
-                            }
-                            // reset Vue refs
-                        } catch (error) {
-                            console.error('There has been a problem with your fetch operation:', error)
-                        }
-                    }
+                // for (let i = 0; i < numPrints; i++) {
+                const formData = new FormData() // create FormData object
+                formData.append('file', file.value as File) // append form data
+                formData.append('name', name.value as string)
+                formData.append('printerid', printer?.id?.toString() || '');
+                formData.append('priority', priority.value.toString())
+                formData.append('quantity', numPrints.toString())
+                // If favorite is true and it's not set yet, set it for the first job only
+                if (favorite.value && !isFavoriteSet) {
+                    formData.append('favorite', 'true')
+                    isFavoriteSet = true;
+                } else {
+                    formData.append('favorite', 'false')
                 }
-                resetValues()
+
+                try {
+                    res = await addJobToQueue(formData)
+                    // reset form
+                    if (form.value) {
+                        form.value.reset()
+                    }
+                    // reset Vue refs
+                } catch (error) {
+                    console.error('There has been a problem with your fetch operation:', error)
+                }
+                // }
             }
+            resetValues()
         }
     }
     if (res.success == true) {
@@ -222,6 +190,11 @@ const allSelected = computed({
         }
     }
 });
+
+const triggerFileInput = () => {
+    const fileInput = document.getElementById('file') as HTMLInputElement;
+    fileInput.click();
+}
 
 </script>
 <template>
@@ -296,8 +269,7 @@ const allSelected = computed({
                         <input ref="fileInput" @change="handleFileUpload" style="display: none;" type="file" id="file"
                             name="file" accept=".gcode">
                         <div class="input-group">
-                            <button type="button" @click="($refs.fileInput as HTMLInputElement).click()"
-                                class="btn btn-primary">Browse</button>
+                            <button type="button" @click="triggerFileInput" class="btn btn-primary">Browse</button>
                             <label class="form-control" style="width: 220px;">
                                 <div v-if="fileName" class="ellipsis" style="width: 200px;">
                                     {{ fileName }}

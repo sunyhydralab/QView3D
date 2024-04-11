@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onUnmounted, ref } from 'vue'
+import { onUnmounted, ref, computed } from 'vue'
 import { printers, type Device } from '../model/ports'
 import { useRerunJob, useRemoveJob, type Job, useMoveJob, useGetFile } from '../model/jobs';
 import draggable from 'vuedraggable'
@@ -40,16 +40,9 @@ const handleRerunToSubmit = async (job: Job, printer: Device) => {
 const deleteSelectedJobs = async () => {
   let response = null
   // Loop through the selected jobs and remove them from the printer's queue
-  for (const selectedJob of selectedJobs.value) {
-    const foundPrinter = printers.value.find((printer) => printer.id === selectedJob.printerid);
-    if (foundPrinter) {
-      const jobIndex = foundPrinter.queue?.findIndex((job) => job.id === selectedJob.id);
-      if (jobIndex !== undefined && jobIndex !== -1) {
-        foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
-      }
-    }
-    response = await removeJob(selectedJob);
-  }
+  const selectedJobIds = computed(() => selectedJobs.value.map(job => job.id));
+
+  response = await removeJob(selectedJobIds.value);
   if (response.success == false) {
     toast.error(response.message)
   } else if (response.success === true) {
@@ -105,11 +98,9 @@ function statusColor(status: string | undefined) {
 }
 
 const handleDragEnd = async (evt: any) => {
-  if (evt.newIndex != 1) {
-    const printerId = Number(evt.item.dataset.printerId);
-    const arr = Array.from(evt.to.children).map((child: any) => Number(child.dataset.jobId));
-    await moveJob(printerId, arr)
-  }
+  const printerId = Number(evt.item.dataset.printerId);
+  const arr = Array.from(evt.to.children).map((child: any) => Number(child.dataset.jobId));
+  await moveJob(printerId, arr)
 };
 
 const isInqueue = (evt: any) => {
@@ -270,8 +261,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                             <li>
                               <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
                                 data-bs-target="#gcodeImageModal" v-if="printer.queue && printer.queue.length > 0"
-                                v-bind:job="printer.queue[0]"
-                                @click="printer.name && openModal(printer.queue[0], printer.name, 2, printer)">
+                                @click="printer.name && openModal(job, printer.name, 2, printer)">
                                 <i class="fa-solid fa-image"></i>
                                 <span class="ms-2">GCode Image</span>
                               </a>
@@ -286,6 +276,11 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                   </tr>
                 </template>
               </draggable>
+
+              <tr v-if="printer.queue && printer.queue.length === 0">
+                <td colspan="10" class="text-center">No jobs in queue</td>
+              </tr>
+
             </table>
           </div>
         </div>

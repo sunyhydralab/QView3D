@@ -65,36 +65,42 @@ def add_job_to_queue():
         # retrieve job data 
         file = request.files['file']  # Access file directly from request.files
         file_name_original = file.filename
-        
         name = request.form['name']  # Access other form fields from request.form
         printer_id = int(request.form['printerid'])
-        _favorite = request.form['favorite']
-        favorite = 1 if _favorite == 'true' else 0
-        
-        status = 'inqueue' # set status 
-        res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite) # insert into DB 
-        
-        # retrieve job from DB
-        id = res['id']
-        
-        job = Job.query.get(id)
-        
-        base_name, extension = os.path.splitext(file_name_original)
+        favorite = request.form['favorite']
+        # favorite = 1 if _favorite == 'true' else 0
+        quantity = request.form['quantity']
+        favoriteOne = False 
 
-        # Append the ID to the base name
-        file_name_pk = f"{base_name}_{id}{extension}"
-        
-        job.setFileName(file_name_pk) # set unique in-memory file name 
-
-        priority = request.form['priority']
-        # if priotiry is '1' then add to front of queue, else add to back
-        if priority == 'true':
-            findPrinterObject(printer_id).getQueue().addToFront(job, printer_id)
-        else:
-            findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
+        for i in range(int(quantity)):
+            if(favorite == 'true' and not favoriteOne):
+                favorite = 1
+                favoriteOne = True
+            else: 
+                favorite = 0
+                
+            status = 'inqueue' # set status 
+            res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite) # insert into DB 
             
-        print("released: ", job.released)
-        
+            # retrieve job from DB
+            id = res['id']
+            
+            job = Job.query.get(id)
+            
+            base_name, extension = os.path.splitext(file_name_original)
+
+            # Append the ID to the base name
+            file_name_pk = f"{base_name}_{id}{extension}"
+            
+            job.setFileName(file_name_pk) # set unique in-memory file name 
+
+            priority = request.form['priority']
+            # if priotiry is '1' then add to front of queue, else add to back
+            if priority == 'true':
+                findPrinterObject(printer_id).getQueue().addToFront(job, printer_id)
+            else:
+                findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
+                        
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     
     except Exception as e:
@@ -107,25 +113,35 @@ def auto_queue():
         file = request.files['file']  # Access file directly from request.files
         file_name_original = file.filename
         name = request.form['name']  # Access other form fields from request.form
-        status = 'inqueue' # set status 
-        printer_id = getSmallestQueue()
-        _favorite = request.form['favorite']
-        favorite = 1 if _favorite == 'true' else 0
-        
-        res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite) # insert into DB 
-        
-        id = res['id']
-        
-        job = Job.query.get(id)
-        
-        base_name, extension = os.path.splitext(file_name_original)
+        quantity = request.form['quantity']
 
-        # Append the ID to the base name
-        file_name_pk = f"{base_name}_{id}{extension}"
-        
-        job.setFileName(file_name_pk) # set unique in-memory file name 
+        favorite = request.form['favorite']
+        favoriteOne = False 
+        for i in range(int(quantity)):
+            status = 'inqueue' # set status 
+            printer_id = getSmallestQueue()
+            
+            if(favorite == 'true' and not favoriteOne):
+                favorite = 1
+                favoriteOne = True
+            else: 
+                favorite = 0
+            # favorite = 1 if _favorite == 'true' else 0
+            
+            res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite) # insert into DB 
+            
+            id = res['id']
+            
+            job = Job.query.get(id)
+            
+            base_name, extension = os.path.splitext(file_name_original)
 
-        findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)  
+            # Append the ID to the base name
+            file_name_pk = f"{base_name}_{id}{extension}"
+            
+            job.setFileName(file_name_pk) # set unique in-memory file name 
+
+            findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)  
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     
@@ -199,6 +215,41 @@ def remove_job():
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
+    
+
+ # cancel queued job   
+@jobs_bp.route('/cancelfromqueue', methods=["POST"]) 
+def remove_job_from_queue():
+    try:
+        # job has: printer id. job info.
+        # 0 = cancel job, 1 = clear job, 2 = fail job, 3 = clear job (but also rerun)
+        data = request.get_json()
+        jobarr = data['jobarr']
+        
+        for jobpk in jobarr:
+            # Retrieve job to delete & printer id 
+            job = Job.findJob(jobpk) 
+            printerid = job.getPrinterId() 
+
+            jobstatus = job.getStatus()
+            # retrieve printer object & corresponding queue
+            printerobject = findPrinterObject(printerid)
+            # printerobject.setStatus("complete")
+            queue = printerobject.getQueue()
+            inmemjob = queue.getJob(job)
+            if jobstatus == 'printing': # only change statuses, dont remove from queue 
+                printerobject.setStatus("complete")
+            else: 
+                queue.deleteJob(jobpk, printerid) 
+                
+            inmemjob.setStatus("cancelled")
+            Job.update_job_status(jobpk, "cancelled")
+
+        return jsonify({"success": True, "message": "Job removed from printer queue."}), 200
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
     
 @jobs_bp.route('/releasejob', methods=["POST"])
 def releasejob(): 
