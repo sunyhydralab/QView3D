@@ -278,7 +278,6 @@ const openGCodeModal = async (job: Job, printerName: string) => {
         </div>
     </div>
 
-    <!-- Delete modal issue -->
     <div class="modal fade" id="deleteissueModal" tabindex="-1" aria-labelledby="deleteIssueLabel" aria-hidden="true"
         data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
@@ -299,43 +298,8 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                                 <option v-for="issue in issuelist"  :key="issue.id" :value="issue">
                                     {{ issue.issue }}
                                 </option>
-                                <!-- <tr  v-for="issue in issuelist"  :key="issue.id">
-                                    <td>
-                                        <input type="checkbox" v-model="selectedIssue" :value="issue">
-                                    </td>
-                                    <td>{{ issue.issue }}</td>
-                                </tr> -->
                             </select>
                         </div>
-
-                        <!-- <div class="mb-3">
-                        <label for="printer" class="form-label">Select Printer</label>
-                        <div class="card" style="max-height: 120px; overflow-y: auto;">
-                            <ul class="list-unstyled card-body m-0" style="padding-top: .5rem; padding-bottom: .5rem;">
-                                <li>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="select-all"
-                                            >
-                                        <label class="form-check-label" for="select-all">
-                                            Select All
-                                        </label>
-                                    </div>
-                                    <div class="border-top"
-                                        style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
-                                </li>
-                                <li v-for="issue in issuelist"  :key="issue.id">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" :value="issue"
-                                            v-model="selectedIssue" :id="'issue-' + issue.id">
-                                        <label class="form-check-label" :for="'issue-' + issue.id">
-                                            {{ issue.issue }}
-                                        </label>
-                                    </div>
-                                </li>
-                            </ul>
-                        </div>
-                    </div> -->
-
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -524,7 +488,6 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                     </div>
         </div>
 
-
         <table class="table">
             <thead>
                 <tr>
@@ -620,7 +583,6 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                 </li>
             </ul>
         </nav>
-
     </div>
 </template>
 <style scoped>
