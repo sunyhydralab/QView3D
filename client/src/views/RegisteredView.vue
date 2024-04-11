@@ -150,9 +150,9 @@ const doCloseRegisterModal = async () => {
         </button>
         <RegisterModal id="registerModal" @close="doCloseRegisterModal" />
 
-        <div v-if="registered.length != 0" class="d-flex flex-wrap justify-content-end">
+        <div v-if="registered.length != 0" class="d-flex flex-wrap justify-content-start">
             <div v-for="printer in registered" :key="printer.id">
-                <div class="card bg-light rounded" style="width: 340px">
+                <div class="card m-2 bg-light rounded" style="width: 416px;">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-4" v-if="!editMode || !(editNum == printer.id)">{{ printer.name }}
@@ -251,10 +251,6 @@ const doCloseRegisterModal = async () => {
     border: 2px solid #333;
 }
 
-.card {
-    margin-top: 20px;
-}
-
 .register {
     color: red;
 }
@@ -280,11 +276,6 @@ const doCloseRegisterModal = async () => {
     color: red;
     margin-bottom: 10px;
     /* Add margin to the bottom */
-}
-
-.card {
-    margin-bottom: 20px;
-    /* Add margin to create space between cards */
 }
 
 .modal-dialog {
