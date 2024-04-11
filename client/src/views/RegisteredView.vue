@@ -138,7 +138,7 @@ const doCloseRegisterModal = async () => {
     </div>
 
     <div class="container">
-        <b>Registered View</b>
+        <!-- <b>Registered View</b> -->
         <!-- register modal opens with a button-->
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#registerModal">
             Register Printer

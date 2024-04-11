@@ -518,7 +518,7 @@ const closeDropdown = (evt: any) => {
     </div>
 
     <div class="container">
-        <b>Job History View</b>
+        <!-- <b>Job History View</b> -->
         <!-- delete jobs, filter dropdown, clear space -->
         <div class="row w-100" style="margin-bottom: 0.5rem;">
 

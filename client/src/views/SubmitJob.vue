@@ -250,7 +250,7 @@ const triggerFileInput = () => {
     </div>
 
     <div class="container">
-        <b>Submit Job View</b>
+        <!-- <b>Submit Job View</b> -->
 
         <div class="card bg-light" style="border: 2px solid #333;">
             <div class="card-body">
@@ -369,7 +369,6 @@ const triggerFileInput = () => {
 .form-container {
     border: 2px solid #333;
     padding: 20px;
-    margin-top: 20px;
     width: 300px;
 }
 

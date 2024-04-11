@@ -293,7 +293,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
     </div>
 
     <div class="container">
-        <b>Error Log</b>
+        <!-- <b>Error Log</b> -->
         <div class="d-flex justify-content-center align-items-center" style="margin-bottom: 0.5rem;">
             <div class="d-flex justify-content-center">
                 <div style="position: relative;">

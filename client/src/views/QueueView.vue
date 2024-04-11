@@ -170,7 +170,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
   </div>
 
   <div class="container">
-    <b>Queue View</b>
+    <!-- <b>Queue View</b> -->
 
     <div class="row w-100" style="margin-bottom: 0.5rem;">
       <div class="col-2 text-start" style="padding-left: 0;">
