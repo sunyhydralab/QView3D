@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onUnmounted, ref } from 'vue'
+import { onUnmounted, ref, computed } from 'vue'
 import { printers, type Device } from '../model/ports'
 import { useRerunJob, useRemoveJob, type Job, useMoveJob, useGetFile } from '../model/jobs';
 import draggable from 'vuedraggable'
@@ -40,16 +40,9 @@ const handleRerunToSubmit = async (job: Job, printer: Device) => {
 const deleteSelectedJobs = async () => {
   let response = null
   // Loop through the selected jobs and remove them from the printer's queue
-  for (const selectedJob of selectedJobs.value) {
-    const foundPrinter = printers.value.find((printer) => printer.id === selectedJob.printerid);
-    if (foundPrinter) {
-      const jobIndex = foundPrinter.queue?.findIndex((job) => job.id === selectedJob.id);
-      if (jobIndex !== undefined && jobIndex !== -1) {
-        foundPrinter.queue?.splice(jobIndex, 1); // Remove the job from the printer's queue
-      }
-    }
-    response = await removeJob(selectedJob);
-  }
+  const selectedJobIds = computed(() => selectedJobs.value.map(job => job.id));
+
+  response = await removeJob(selectedJobIds.value);
   if (response.success == false) {
     toast.error(response.message)
   } else if (response.success === true) {
