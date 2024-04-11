@@ -95,7 +95,8 @@ class Queue:
                 "favorite": job.favorite,
                 "released": job.released,
                 "file_pause": job.filePause, 
-                "comments": job.comments
+                "comments": job.comments, 
+                "extruded": job.extruded,
             }
             queue.append(job_info)
         return queue

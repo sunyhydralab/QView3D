@@ -335,13 +335,6 @@ class Printer(db.Model):
                 else:
                     self.responseCount = 0
 
-                # if response == "echo:busy processing" and self.prevMes == "":
-                #     self.responseCount+=1 
-                #     if(self.responseCount>=5):
-                #         self.setStatus("colorchange")
-                # else: 
-                #     self.responseCount = 0
-
                 if ("T:" in response) and ("B:" in response):
                     # Extract the temperature values using regex
                     temp_t = re.search(r'T:(\d+.\d+)', response)
@@ -411,6 +404,7 @@ class Printer(db.Model):
                 # Replace file with the path to the file. "r" means read mode. 
                 # now instead of reading from 'g', we are reading line by line
                 for line in lines:
+                    print("LINE: ",line)
                     # remove whitespace
                     line = line.strip()
                     # Don't send empty lines and comments. ";" is a comment in gcode.
@@ -441,11 +435,12 @@ class Printer(db.Model):
                         job.setTime(datetime.now(), 3)
                         # job.setTime(job.calculateTotalTime(), 0)
                         # job.setTime(job.updateEta(), 1)
-                        print("color change command")
+                        print("color change in LINE")
                         self.setStatus("colorchange")
                         job.setFilePause(1)
 
                     if("M569" in line) and (job.getExtruded()==0):
+                        print("extruded")
                         job.setExtruded(1)
                     
                     if self.prevMes == "M602":
@@ -470,14 +465,13 @@ class Printer(db.Model):
                                 job.setTime(datetime.min, 3)
                                 break
                     
-                    print("file pause: ", job.getFilePause())
                     # software color change
                     if (self.getStatus()=="colorchange" and job.getFilePause()==0):
                         job.setTime(datetime.now(), 3)
                         # job.setTime(job.calculateTotalTime(), 0)
                         # job.setTime(job.updateEta(), 1)
                         self.sendGcode("M600") # color change command
-                        print("color change command sent")
+                        print("color change COMMAND sent")
                         job.setTime(job.colorEta(), 1)
                         job.setTime(job.calculateColorChangeTotal(), 0)
                         job.setTime(datetime.min, 3)
