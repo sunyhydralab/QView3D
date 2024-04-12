@@ -90,13 +90,16 @@ class Printer(db.Model):
 
     @classmethod
     def create_printer(cls, device, description, hwid, name, status):
-        try:
-            printerExists = cls.searchByDevice(hwid)
+        try:                
+            hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
+            hwid_without_location = '-'.join(hwid_parts[:-1])
+            
+            printerExists = cls.searchByDevice(hwid_without_location)
             if printerExists:
                 printer = cls.query.filter_by(hwid=hwid).first()
                 return {
                     "success": False,
-                    "message": f"Port already registered under hwid: {printer.name}.",
+                    "message": "Printer already registered.",
                 }
             else:
                 hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
