@@ -271,12 +271,32 @@ export function useRerunJob() {
   }
 }
 
+// export function useRemoveJob() {
+//   return {
+//     async removeJob(job: Job | undefined) {
+//       let jobpk = job?.id
+//       try {
+//         const response = await api('canceljob', { jobpk })
+//         if (response) {
+//           return response
+//         } else {
+//           console.error('Response is undefined or null')
+//           toast.error('Failed to remove job. Unexpected response')
+//         }
+//       } catch (error) {
+//         console.error(error)
+//         toast.error('An error occurred while removing the job')
+//       }
+//     }
+//   }
+// }
+
 export function useRemoveJob() {
   return {
-    async removeJob(job: Job | undefined) {
-      let jobpk = job?.id
+    async removeJob(jobarr: number[]) {
+      // let jobpk = job?.id
       try {
-        const response = await api('canceljob', { jobpk })
+        const response = await api('cancelfromqueue', { jobarr })
         if (response) {
           return response
         } else {

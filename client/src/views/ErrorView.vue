@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers, type Device } from '../model/ports'
-import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
+import { type Issue, useGetIssues, useCreateIssues, useAssignIssue, useDeleteIssue } from '../model/issues'
 import { type Job, useGetErrorJobs, useAssignComment, useGetJobFile, useGetFile } from '../model/jobs';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -13,6 +13,7 @@ const { assign } = useAssignIssue()
 const { assignComment } = useAssignComment()
 const { getFileDownload } = useGetJobFile()
 const { getFile } = useGetFile()
+const { deleteIssue } = useDeleteIssue()
 
 const showText = ref(false)
 const newIssue = ref('')
@@ -149,6 +150,14 @@ const doCreateIssue = async () => {
     showText.value = false
 }
 
+const doDeleteIssue = async () => {
+    if (selectedIssue.value === undefined) return
+    await deleteIssue(selectedIssue.value)
+    const newIssues = await issues()
+    issuelist.value = newIssues
+    submitFilter()
+}
+
 const doAssignIssue = async () => {
     if (selectedJob.value === undefined) return
     if (selectedIssue.value !== undefined) {
@@ -216,6 +225,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
         }
     }
 }
+
 </script>
 
 <template>
@@ -239,6 +249,69 @@ const openGCodeModal = async (job: Job, printerName: string) => {
         </div>
     </div>
 
+
+    <div class="modal fade" id="assignissueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
+        data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header d-flex align-items-end">
+                    <h5 class="modal-title" id="assignIssueLabel">
+                        <b>Create New Issue</b>
+                    </h5>
+
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form class="p-3 border rounded bg-light mb-3">
+                        <div class="mb-3">
+                            <label for="newIssue" class="form-label">Enter Issue</label>
+                            <input id="newIssue" type="text" placeholder="Enter Issue" v-model="newIssue"
+                                class="form-control" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" @click.prevent="doCreateIssue" class="btn btn-primary me-2"
+                        v-bind:disabled="!newIssue" data-bs-dismiss="modal">Create Issue</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deleteissueModal" tabindex="-1" aria-labelledby="deleteIssueLabel" aria-hidden="true"
+        data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header d-flex align-items-end">
+                    <h5 class="modal-title" id="assignIssueLabel">
+                        <b>Delete Issue</b>
+                    </h5>
+
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form @submit.prevent="">
+                        <div class="mb-3">
+                            <label for="issue" class="form-label">Select Issue</label>
+                            <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
+                                <option disabled value="undefined">Select Issue</option>
+                                <option v-for="issue in issuelist"  :key="issue.id" :value="issue">
+                                    {{ issue.issue }}
+                                </option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" @click.prevent="doDeleteIssue" class="btn btn-danger me-2"
+                        data-bs-dismiss="modal" :disabled="selectedIssue == undefined">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
         data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
@@ -252,19 +325,6 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                         @click="selectedIssue = undefined; selectedJob = undefined;"></button>
                 </div>
                 <div class="modal-body">
-                    <button class="btn btn-primary mb-3" @click="showText = !showText">Create New Issue</button>
-                    <form v-if="showText" class="p-3 border rounded bg-light mb-3">
-                        <div class="mb-3">
-                            <label for="newIssue" class="form-label">Enter Issue</label>
-                            <input id="newIssue" v-model="newIssue" type="text" placeholder="Enter Issue"
-                                class="form-control" required>
-                        </div>
-                        <div>
-                            <button type="submit" @click.prevent="doCreateIssue" class="btn btn-primary me-2"
-                                v-bind:disabled="!newIssue">Submit</button>
-                            <button @click.prevent="showText = !showText" class="btn btn-secondary">Cancel</button>
-                        </div>
-                    </form>
                     <form @submit.prevent="">
                         <div class="mb-3">
                             <label for="issue" class="form-label">Select Issue</label>
@@ -293,10 +353,14 @@ const openGCodeModal = async (job: Job, printerName: string) => {
     </div>
 
     <div class="container">
-        <!-- <b>Error Log</b> -->
-        <div class="d-flex justify-content-center align-items-center" style="margin-bottom: 0.5rem;">
-            <div class="d-flex justify-content-center">
-                <div style="position: relative;">
+        <b>Error Log</b>
+        <div class="row w-100" style="margin-bottom: 0.5rem;">
+            
+            <div class="col-4 text-start" style="padding-left: 0"></div>
+
+            <div class="col-4 d-flex justify-content-center align-items-center">
+                <div class="d-flex justify-content-center">
+                    <div style="position: relative;">
                     <button type="button" class="btn btn-primary dropdown-toggle"
                         @click.stop="filterDropdown = !filterDropdown">
                         Filter
@@ -409,8 +473,20 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                             <button @click.prevent="clearFilter" class="btn btn-danger">Clear Filter</button>
                         </div>
                     </form>
-                </div>
-            </div>
+                    </div>
+                    </div>
+                    </div>  
+                    <div class="col-4 text-end" style="padding-right: 0">
+                        <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#assignissueModal">
+                            <i class="fas fa-plus"></i>
+                            New
+                        </button>
+
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteissueModal">
+                            <i class="fas fa-trash-alt"></i>
+                            Delete
+                        </button>
+                    </div>
         </div>
 
         <table class="table-striped">
@@ -508,7 +584,6 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                 </li>
             </ul>
         </nav>
-
     </div>
 </template>
 <style scoped>

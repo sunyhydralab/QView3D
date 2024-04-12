@@ -55,4 +55,22 @@ class Issue(db.Model):
                 jsonify({"error": "Failed to add job. Database error"}),
                 500,
             )
+            
+    @classmethod
+    def delete_issue(cls, issue_id):
+        try:
+            # issue = cls.query.filter_by(id=issue_id).first()
+            issue = cls.query.get(issue_id)
+            if issue:
+                db.session.delete(issue)
+                db.session.commit()
+                return {"success": True, "message": "Issue successfully deleted"}
+            else:
+                return {"success": False, "message": "Issue not found"}
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return (
+                jsonify({"error": "Failed to delete issue. Database error"}),
+                500,
+            )
     
