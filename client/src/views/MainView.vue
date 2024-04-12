@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useSetStatus, type Device, printers } from '@/model/ports';
 import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
-import { type Job, useReleaseJob, useStartJob, useRemoveJob, useGetFile, jobTime, useAssignComment } from '@/model/jobs';
+import { type Job, useReleaseJob, useStartJob, useRemoveJob, useGetFile, useGetJobFile, jobTime, useAssignComment } from '@/model/jobs';
 import { useRouter } from 'vue-router';
 import { onMounted, ref } from 'vue';
 import draggable from 'vuedraggable'
@@ -18,6 +18,7 @@ const { issues } = useGetIssues()
 const { createIssue } = useCreateIssues()
 const { assign } = useAssignIssue()
 const { assignComment } = useAssignComment()
+const { getFileDownload } = useGetJobFile()
 
 const router = useRouter();
 let currentJob = ref<Job>();
@@ -209,14 +210,14 @@ const doAssignIssue = async () => {
           <!-- Display other attributes of the job -->
           <div class="row">
             <div class="col-sm-12">
-              <div class="card bg-light mb-3">
+              <div class="card mb-3">
                 <div class="card-body">
                   <h5 class="card-title"><i class="fas fa-chart-line"></i> <b>Progress:</b> {{ currentJob?.progress ?
                     `${currentJob?.progress.toFixed(2)}%` : '0.00%' }}</h5>
                   <div class="progress">
                     <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
                       :style="{ width: `${currentJob?.progress ? currentJob?.progress.toFixed(2) : '0'}%` }"
-                      aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                      aria-valuemin="0" aria-valuemax="100"></div>
                   </div>
                 </div>
               </div>
@@ -224,7 +225,7 @@ const doAssignIssue = async () => {
           </div>
           <div class="row">
             <div class="col-sm-3">
-              <div class="card bg-light mb-3">
+              <div class="card mb-3" style="border: 1px solid #484848">
                 <div class="card-body">
                   <div class="row">
                     <div class="col-12">
@@ -425,7 +426,7 @@ const doAssignIssue = async () => {
             <td v-else><i>idle</i></td>
             <td class="truncate" :title="printer.name">
               <button type="button" class="btn btn-link" @click="sendToQueueView(printer)"
-                      style="padding: 0; border: none; display: inline-block; width: 100%; text-align: center;">
+                style="padding: 0; border: none; display: inline-block; width: 100%; text-align: center;">
                 <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                   {{ printer.name }}
                 </div>
@@ -539,10 +540,6 @@ const doAssignIssue = async () => {
               <div
                 v-else-if="printer.queue?.[0] && (printer.queue?.[0].status == 'complete' || printer.queue?.[0].status == 'cancelled')">
                 <div class="buttons-progress">
-                  <div type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#issueModal"
-                    @click=setJob(printer.queue?.[0])>
-                    Fail
-                  </div>
                   <div type="button" class="btn btn-secondary"
                     @click="releasePrinter(printer.queue?.[0], 1, printer.id)">
                     Clear
@@ -555,11 +552,15 @@ const doAssignIssue = async () => {
                       aria-expanded="false">
                     </div>
                     <div class="dropdown-menu">
-                      <div class="dropdown-item" v-for="otherPrinter in printers.filter(p => p.id !== printer.id)"
-                        :key="otherPrinter.id" @click="releasePrinter(printer.queue?.[0], 2, otherPrinter.id!)">
-                        {{ otherPrinter.name }}
+                      <div class="dropdown-item" v-for="printer in printers" :key="printer.id"
+                        @click="releasePrinter(printer.queue?.[0], 2, printer.id!)">
+                        {{ printer.name }}
                       </div>
                     </div>
+                  </div>
+                  <div type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#issueModal"
+                    @click=setJob(printer.queue?.[0])>
+                    Fail
                   </div>
                 </div>
               </div>
@@ -578,12 +579,14 @@ const doAssignIssue = async () => {
 
             </td>
 
-            <td style="width: 1%; white-space: nowrap">
+            <td style="width: 1%; white-space: nowrap"
+              :class="{ 'not-draggable': printer.queue && printer.queue.length == 0 }">
               <div class="dropdown">
                 <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                   <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
                     style="background: none; border: none;">
-                    <i class="fas fa-ellipsis"></i>
+                    <i class="fas fa-ellipsis"
+                      :class="{ 'icon-disabled': printer.queue && printer.queue.length == 0 }"></i>
                   </button>
                   <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
                     <li>
@@ -611,6 +614,13 @@ const doAssignIssue = async () => {
                         @click="printer.name && openModal(printer.queue[0], printer.name, 2, printer)">
                         <i class="fa-solid fa-image"></i>
                         <span class="ms-2">GCode Image</span>
+                      </a>
+                    </li>
+                    <li>
+                      <a class="dropdown-item d-flex align-items-center" @click="getFileDownload(printer.queue[0].id)"
+                        :disabled="printer.queue[0].file_name_original.includes('.gcode:')">
+                        <i class="fas fa-download"></i>
+                        <span class="ms-2">Download</span>
                       </a>
                     </li>
                   </ul>
@@ -697,17 +707,5 @@ const doAssignIssue = async () => {
 
 table {
   table-layout: fixed;
-}
-
-.btn-circle {
-  width: 30px;
-  height: 30px;
-  padding: 0.375em 0;
-  border-radius: 50%;
-  font-size: 0.75em;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
 }
 </style>

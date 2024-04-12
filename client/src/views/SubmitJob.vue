@@ -253,12 +253,13 @@ const triggerFileInput = () => {
         <!-- <b>Submit Job View</b> -->
 
         <div class="card" style="border: 1px solid #484848; background: #d8d8d8;">
-            <div class="card-body" >
+            <div class="card-body">
                 <form @submit.prevent="handleSubmit" ref="form">
 
                     <div class="mb-3">
                         <label for="printer" class="form-label">Select Printer</label>
-                        <div class="card" style="max-height: 120px; overflow-y: auto; background-color: #f4f4f4 !important; border-color: #929292 !important;">
+                        <div class="card"
+                            style="max-height: 120px; overflow-y: auto; background-color: #f4f4f4 !important; border-color: #484848 !important;">
                             <ul class="list-unstyled card-body m-0" style="padding-top: .5rem; padding-bottom: .5rem;">
                                 <li>
                                     <div class="form-check">
@@ -301,8 +302,7 @@ const triggerFileInput = () => {
                         <input ref="fileInput" @change="handleFileUpload" style="display: none;" type="file" id="file"
                             name="file" accept=".gcode">
                         <div class="input-group">
-                            <button type="button" @click="triggerFileInput"
-                                class="btn btn-primary">Browse</button>
+                            <button type="button" @click="triggerFileInput" class="btn btn-primary">Browse</button>
                             <label class="form-control" style="width: 220px;">
                                 <div v-if="fileName" class="ellipsis" style="width: 200px;">
                                     {{ fileName }}
@@ -320,8 +320,10 @@ const triggerFileInput = () => {
                         <label for="quantity" class="form-label">Quantity</label>
                         <input v-model="quantity" class="form-control" type="number" id="quantity" name="quantity"
                             min="1" @keydown="onlyNumber($event)">
+                    </div>
 
-                        <div class="col-3">
+                    <div class="row mb-3">
+                        <div class="col-2">
                             <div class="form-check">
                                 <input v-model="priority" class="form-check-input" type="checkbox" id="priority"
                                     name="priority">
@@ -329,7 +331,9 @@ const triggerFileInput = () => {
                             </div>
                         </div>
 
-                        <div class="col-3">
+                        <div class="col-6"></div>
+
+                        <div class="col-2">
                             <div class="form-check">
                                 <input v-model="favorite" class="form-check-input" type="checkbox" id="favorite"
                                     name="favorite">
@@ -359,9 +363,10 @@ const triggerFileInput = () => {
 </template>
 
 <style scoped>
-.form-control, .list-group-item {
+.form-control,
+.list-group-item {
     background-color: #f4f4f4 !important;
-    border-color: #929292 !important;
+    border-color: #484848 !important;
 }
 
 .form-container {
@@ -374,5 +379,9 @@ const triggerFileInput = () => {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.card {
+    --bs-card-border-color: #484848;
 }
 </style>

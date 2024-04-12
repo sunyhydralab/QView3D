@@ -362,4 +362,8 @@ const doCloseRegisterModal = async () => {
 .alert {
     margin-bottom: 0;
 }
+
+.modal-body{
+    background: #cdcdcd
+}
 </style>
