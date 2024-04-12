@@ -262,13 +262,11 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form class="p-3 border rounded bg-light mb-3">
-                        <div class="mb-3">
-                            <label for="newIssue" class="form-label">Enter Issue</label>
-                            <input id="newIssue" type="text" placeholder="Enter Issue" v-model="newIssue"
-                                class="form-control" required>
-                        </div>
-                    </form>
+                    <div class="mb-3">
+                        <label for="newIssue" class="form-label">Enter Issue</label>
+                        <input id="newIssue" type="text" placeholder="Enter Issue" v-model="newIssue"
+                            class="form-control" required>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -296,7 +294,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                             <label for="issue" class="form-label">Select Issue</label>
                             <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
                                 <option disabled value="undefined">Select Issue</option>
-                                <option v-for="issue in issuelist"  :key="issue.id" :value="issue">
+                                <option v-for="issue in issuelist" :key="issue.id" :value="issue">
                                     {{ issue.issue }}
                                 </option>
                             </select>
@@ -353,14 +351,10 @@ const openGCodeModal = async (job: Job, printerName: string) => {
     </div>
 
     <div class="container">
-        <b>Error Log</b>
         <div class="row w-100" style="margin-bottom: 0.5rem;">
-            
-            <div class="col-4 text-start" style="padding-left: 0"></div>
 
-            <div class="col-4 d-flex justify-content-center align-items-center">
-                <div class="d-flex justify-content-center">
-                    <div style="position: relative;">
+            <div class="col-1 text-start" style="padding-left: 0">
+                <div style="position: relative;">
                     <button type="button" class="btn btn-primary dropdown-toggle"
                         @click.stop="filterDropdown = !filterDropdown">
                         Filter
@@ -376,7 +370,8 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <div class="mb-3">
                             <label class="form-label">Device:</label>
-                            <div class="card" style="max-height: 120px; overflow-y: auto;">
+                            <div class="card"
+                                style="max-height: 120px; overflow-y: auto; background-color: #f4f4f4 !important; border-color: #484848 !important;">
                                 <ul class="list-unstyled card-body m-0"
                                     style="padding-top: .5rem; padding-bottom: .5rem;">
                                     <li v-for="printer in printers" :key="printer.id">
@@ -406,7 +401,8 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <div class="mb-3">
                             <label class="form-label">Issue:</label>
-                            <div class="card" style="max-height: 120px; overflow-y: auto;">
+                            <div class="card"
+                                style="max-height: 120px; overflow-y: auto; background-color: #f4f4f4 !important; border-color: #484848 !important;">
                                 <ul class="list-unstyled card-body m-0"
                                     style="padding-top: .5rem; padding-bottom: .5rem;">
                                     <li v-for="issue in issuelist" :key="issue.id">
@@ -473,20 +469,23 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                             <button @click.prevent="clearFilter" class="btn btn-danger">Clear Filter</button>
                         </div>
                     </form>
-                    </div>
-                    </div>
-                    </div>  
-                    <div class="col-4 text-end" style="padding-right: 0">
-                        <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#assignissueModal">
-                            <i class="fas fa-plus"></i>
-                            New
-                        </button>
+                </div>
+            </div>
 
-                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteissueModal">
-                            <i class="fas fa-trash-alt"></i>
-                            Delete
-                        </button>
-                    </div>
+            <div class="col-7 text-center"></div>
+
+            <div class="col-4 text-end" style="padding-right: 0">
+                <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal"
+                    data-bs-target="#assignissueModal">
+                    <i class="fas fa-plus"></i>
+                    New
+                </button>
+
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteissueModal">
+                    <i class="fas fa-trash-alt"></i>
+                    Delete
+                </button>
+            </div>
         </div>
 
         <table class="table-striped">
@@ -589,12 +588,12 @@ const openGCodeModal = async (job: Job, printerName: string) => {
 <style scoped>
 .dropdown-card {
     position: absolute !important;
-    left: 50% !important;
     top: calc(100% + 2px) !important;
     /* Adjust this value to increase or decrease the gap */
-    transform: translateX(-50%) !important;
     width: 400px;
     z-index: 1000;
+    background: #d8d8d8;
+    border: 1px solid #484848;
 }
 
 .dropdown-submenu {

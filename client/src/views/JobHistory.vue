@@ -345,19 +345,6 @@ const closeDropdown = (evt: any) => {
                         @click="selectedIssue = undefined; selectedJob = undefined;"></button>
                 </div>
                 <div class="modal-body">
-                    <button class="btn btn-primary mb-3" @click="showText = !showText">Create New Issue</button>
-                    <form v-if="showText" class="p-3 border rounded bg-light mb-3">
-                        <div class="mb-3">
-                            <label for="newIssue" class="form-label">Enter Issue</label>
-                            <input id="newIssue" v-model="newIssue" type="text" placeholder="Enter Issue"
-                                class="form-control" required>
-                        </div>
-                        <div>
-                            <button type="submit" @click.prevent="doCreateIssue" class="btn btn-primary me-2"
-                                v-bind:disabled="!newIssue">Submit</button>
-                            <button @click.prevent="showText = !showText" class="btn btn-secondary">Cancel</button>
-                        </div>
-                    </form>
                     <form @submit.prevent="">
                         <div class="mb-3">
                             <label for="issue" class="form-label">Select Issue</label>
@@ -413,7 +400,7 @@ const closeDropdown = (evt: any) => {
     <!-- bootstrap off canvas to the right -->
     <div class="offcanvas offcanvas-end" data-bs-backdrop="static" tabindex="-1" id="offcanvasRight"
         aria-labelledby="offcanvasRightLabel" style="background-color: #b9b9b9;">
-      <div class="offcanvas-header" style="background-color: #484848; color: #dbdbdb;">
+        <div class="offcanvas-header" style="background-color: #484848; color: #dbdbdb;">
             <div class="container-fluid">
                 <div class="row align-items-center">
                     <div class="col">
@@ -535,14 +522,14 @@ const closeDropdown = (evt: any) => {
                             <label for="pageSize" class="form-label">
                                 Jobs per page, out of {{ totalJobs }}:
                             </label>
-                            <input id="pageSize" type="number" v-model.number="pageSize" min="1"
-                                class="form-control">
+                            <input id="pageSize" type="number" v-model.number="pageSize" min="1" class="form-control">
                         </div>
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <div class="mb-3">
                             <label class="form-label">Device:</label>
-                            <div class="card" style="max-height: 120px; overflow-y: auto;">
+                            <div class="card"
+                                style="max-height: 120px; overflow-y: auto; background-color: #f4f4f4 !important; border-color: #484848 !important;">
                                 <ul class="list-unstyled card-body m-0"
                                     style="padding-top: .5rem; padding-bottom: .5rem;">
                                     <li v-for="printer in printers" :key="printer.id">
@@ -590,14 +577,14 @@ const closeDropdown = (evt: any) => {
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <label class="form-label">Order:</label>
                         <div class="form-check mb-2">
-                            <input class="form-check-input" type="radio" name="order" id="orderNewest"
-                                value="newest" v-model="order">
+                            <input class="form-check-input" type="radio" name="order" id="orderNewest" value="newest"
+                                v-model="order">
                             <label class="form-check-label" for="orderNewest">Newest to
                                 Oldest</label>
                         </div>
                         <div class="form-check mb-2">
-                            <input class="form-check-input" type="radio" name="order" id="orderOldest"
-                                value="oldest" v-model="order">
+                            <input class="form-check-input" type="radio" name="order" id="orderOldest" value="oldest"
+                                v-model="order">
                             <label class="form-check-label" for="orderOldest">Oldest to Newest</label>
                         </div>
                         <div class="my-2 border-top"
@@ -626,7 +613,7 @@ const closeDropdown = (evt: any) => {
                     class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#exampleModal">
                     <i class="fa-solid fa-recycle"></i>
                 </button>
-            
+
                 <button type="button"
                     @click="openModal(deleteModalTitle, 'Are you sure you want to delete these jobs? This action cannot be <b>undone</b>.', 'confirmDelete')"
                     class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#exampleModal"
@@ -648,7 +635,8 @@ const closeDropdown = (evt: any) => {
                     <th>Date Completed</th>
                     <th>Actions</th>
                     <th class="col-checkbox">
-                        <input class="form-check-input" type="checkbox" @change="selectAllJobs" v-model="selectAllCheckbox">
+                        <input class="form-check-input" type="checkbox" @change="selectAllJobs"
+                            v-model="selectAllCheckbox" :disabled="filteredJobs.length === 0">
                     </th>
                 </tr>
             </thead>
@@ -752,12 +740,12 @@ const closeDropdown = (evt: any) => {
 <style scoped>
 .dropdown-card {
     position: absolute !important;
-    left: 50% !important;
     top: calc(100% + 2px) !important;
     /* Adjust this value to increase or decrease the gap */
-    transform: translateX(-50%) !important;
     width: 400px;
     z-index: 1000;
+    background: #d8d8d8;
+    border: 1px solid #484848;
 }
 
 .dropdown-submenu {
@@ -865,5 +853,15 @@ ul.dropdown-menu.w-100.show li.divider {
 
 label.form-check-label {
     cursor: pointer;
+}
+
+.form-control{
+    background: #f4f4f4;
+    border: 1px solid #484848;
+}
+
+.form-select{
+    background-color: #f4f4f4 !important;
+    border-color: #484848 !important;
 }
 </style>

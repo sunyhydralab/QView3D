@@ -180,6 +180,7 @@ class Job(db.Model):
             if isinstance(file, bytes):
                 file_data = file
             else:
+                file.seek(0)
                 file_data = file.read()
 
             try:

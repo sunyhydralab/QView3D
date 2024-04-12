@@ -81,16 +81,16 @@ th {
   border: 1px solid #484848;
 }
 
-.dropdown-menu.show {
+.dropdown-menu.show, .dropdown-menu .dropdown-menu {
   background-color: #d8d8d8;
   border: 1px solid #484848;
 }
 
-.dropdown-menu li a:hover, .dropdown-item:hover {
+.dropdown-menu li a:hover, .dropdown-item:hover .dropdown-submenu .dropdown-item:hover{
   background-color: #c0c0c0;
 }
 
-.dropdown-menu li a:active, .dropdown-item:active{
+.dropdown-menu li a:active, .dropdown-item:active, .dropdown-submenu .dropdown-item:active{
   background-color: #7561a9;
 }
 
@@ -125,4 +125,12 @@ th {
 
 .modal-body .card {
   border: 1px solid #484848;
+}
+
+a, .btn-link {
+  color: #7561a9;
+}
+
+a:hover, .btn-link:hover {
+  color: #5e548e;
 }

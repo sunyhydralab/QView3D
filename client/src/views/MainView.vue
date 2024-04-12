@@ -419,11 +419,14 @@ const doAssignIssue = async () => {
         dragClass="hidden-ghost" v-if="printers.length > 0">
         <template #item="{ element: printer }">
           <tr :id="printer.id">
+
             <td
               v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0].id }}
             </td>
+
             <td v-else><i>idle</i></td>
+
             <td class="truncate" :title="printer.name">
               <button type="button" class="btn btn-link" @click="sendToQueueView(printer)"
                 style="padding: 0; border: none; display: inline-block; width: 100%; text-align: center;">
@@ -432,6 +435,7 @@ const doAssignIssue = async () => {
                 </div>
               </button>
             </td>
+
             <td>
               <div class="d-flex align-items-center justify-content-center">
                 <!-- <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
@@ -446,11 +450,13 @@ const doAssignIssue = async () => {
                 </p>
               </div>
             </td>
+
             <td class="truncate" :title="printer.queue?.[0]?.name"
               v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0]?.name }}
             </td>
             <td v-else></td>
+
             <td class="truncate" :title="printer.queue?.[0]?.file_name_original"
               v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0]?.file_name_original }}
@@ -476,18 +482,6 @@ const doAssignIssue = async () => {
                   v-if="printer.status == 'printing' && printer.queue?.[0].released == 0">
                   Start Print
                 </HoldButton>
-
-                <!-- <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'warning'"
-                  @button-held="setPrinterStatus(printer, 'paused')"
-                  v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0) && printer.queue?.[0]?.extruded === 1">
-                  Pause
-                </HoldButton>
-
-                <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'warning'"
-                  @button-held="setPrinterStatus(printer, 'colorchange')"
-                  v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0) && printer.queue?.[0]?.extruded === 1">
-                  Color&nbsp;Change
-                </HoldButton> -->
 
                 <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'success'"
                   @button-held="setPrinterStatus(printer, 'paused')"
@@ -616,7 +610,7 @@ const doAssignIssue = async () => {
                         <span class="ms-2">GCode Image</span>
                       </a>
                     </li>
-                    <li>
+                    <li v-if="printer.queue[0]">
                       <a class="dropdown-item d-flex align-items-center" @click="getFileDownload(printer.queue[0].id)"
                         :disabled="printer.queue[0].file_name_original.includes('.gcode:')">
                         <i class="fas fa-download"></i>
@@ -631,12 +625,14 @@ const doAssignIssue = async () => {
             <td class="text-center handle" :class="{ 'not-draggable': printers.length <= 1 }">
               <i class="fas fa-grip-vertical" :class="{ 'icon-disabled': printers.length <= 1 }"></i>
             </td>
+
           </tr>
         </template>
       </draggable>
     </table>
-    <div v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">
-        here</RouterLink>, or restart the server.
+    <div v-if="printers.length === 0" style="margin-top: 1rem;">
+      No printers available. Either register a printer <RouterLink to="/registration">here</RouterLink>, or restart the
+      server.
     </div>
   </div>
 </template>
