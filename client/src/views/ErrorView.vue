@@ -719,4 +719,14 @@ ul.dropdown-menu.w-100.show li.divider {
 label.form-check-label {
     cursor: pointer;
 }
+
+.form-control{
+    background: #f4f4f4;
+    border: 1px solid #484848;
+  }
+  
+  .form-select{
+    background-color: #f4f4f4 !important;
+    border-color: #484848 !important;
+  }
 </style>

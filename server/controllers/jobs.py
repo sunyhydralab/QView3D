@@ -389,7 +389,7 @@ def delete_job():
             queue.deleteJob(job_id, printer_id) 
 
             # Delete job from the database
-            Job.delete_job(job_id)
+        Job.delete_job(job_id)
 
         return jsonify({"success": True, "message": f"Job with ID {job_id} deleted successfully."}), 200
 
