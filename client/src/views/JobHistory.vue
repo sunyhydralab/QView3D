@@ -244,7 +244,7 @@ const confirmDelete = async () => {
 
 const selectAllJobs = () => {
     if (selectAllCheckbox.value) {
-        const newSelectedJobs = filteredJobs.value.filter(job => !selectedJobs.value.includes(job));
+        const newSelectedJobs = filteredJobs.value.filter(job => !selectedJobs.value.includes(job) && job.status !== 'printing');
         selectedJobs.value = [...selectedJobs.value, ...newSelectedJobs];
     } else {
         selectedJobs.value = selectedJobs.value.filter(job => !filteredJobs.value.includes(job));
@@ -713,7 +713,7 @@ const closeDropdown = (evt: any) => {
                         </div>
                     </td>
                     <td>
-                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job">
+                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job" :disabled="job.status === 'printing'">
                     </td>
                 </tr>
             </tbody>
