@@ -1,21 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch, nextTick } from 'vue';
 import { printers, useRegisterPrinter, useGetPorts, useRetrievePrinters, useRetrievePrintersInfo, useRepair, useMoveHead, type Device } from '../model/ports';
 import HoldButton from './HoldButton.vue';
+import { toast } from '@/model/toast';
 
 const { ports } = useGetPorts();
 const { retrieve } = useRetrievePrinters();
 const { retrieveInfo } = useRetrievePrintersInfo();
 const { register } = useRegisterPrinter();
-const { repair } = useRepair();
 const { move } = useMoveHead();
 
 let customname = ref('') // Stores the user input name of printer
 let selectedDevice = ref<Device | null>(null)
 let devices = ref<Array<Device>>([]) // Stores the list of devices
-
-let progress = ref(0)
-let interval: NodeJS.Timeout | null = null
 
 const emit = defineEmits(['close', 'submit-form'])
 
@@ -32,8 +29,16 @@ onMounted(async () => {
 })
 
 const doGetPorts = async () => {
-    const allDevices = await ports();
-    devices.value = allDevices
+    try {
+        const allDevices = await ports();
+        devices.value = allDevices;
+
+        // toast message
+        toast.success('Ports refreshed successfully!');
+    } catch (error) {
+        // handle error
+        toast.error('Failed to refresh ports!');
+    }
 }
 
 const doRegister = async () => {
@@ -61,10 +66,6 @@ const doRegister = async () => {
     clearSelectedDevice()
 }
 
-const doRepair = async () => {
-    await repair()
-}
-
 const clearSelectedDevice = () => {
     setTimeout(() => {
         selectedDevice.value = null;
@@ -75,23 +76,21 @@ const clearSelectedDevice = () => {
 const doMove = async (printer: Device) => {
     await move(printer.device)
 }
+
 </script>
 
 <template>
     <div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true"
         data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content bg-light" style="border: 2px solid #333;">
+            <div class="modal-content bg-light">
                 <div class="modal-header">
                     <h5 class="modal-title" id="registerModalLabel">Register Printers</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
                         @click="clearSelectedDevice"></button>
                 </div>
                 <div class="modal-body">
-                    <div v-if="!selectedDevice" class="d-flex mb-3 justify-content-between">
-                        <button class="btn btn-primary w-100 me-3" @click="doRepair()">Repair Ports</button>
-                        <button class="btn btn-primary w-100" @click="doGetPorts()">Refresh Ports</button>
-                    </div>
+                    <button class="btn btn-primary mb-4 w-100" @click="doGetPorts()">Refresh Ports</button>
                     <form @submit.prevent="$emit('submit-form')">
                         <div class="mb-3">
                             <label for="ports" class="form-label">Select Device</label>
@@ -105,15 +104,15 @@ const doMove = async (printer: Device) => {
                         <div v-if="selectedDevice">
                             <div class="mb-3">
                                 <label class="form-label">Device</label>
-                                <p class="form-text border p-1 rounded">{{ selectedDevice.device }}</p>
+                                <p class="form-text p-1 rounded">{{ selectedDevice.device }}</p>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Description</label>
-                                <p class="form-text border p-1 rounded">{{ selectedDevice.description }}</p>
+                                <p class="form-text p-1 rounded">{{ selectedDevice.description }}</p>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">HWID</label>
-                                <p class="form-text border p-1 rounded">{{ selectedDevice.hwid }}</p>
+                                <p class="form-text p-1 rounded">{{ selectedDevice.hwid }}</p>
                             </div>
                             <label for="name" class="form-label">Custom Name</label>
                             <input type="text" class="form-control" id="name" placeholder="Custom Name" maxlength="49"
@@ -126,7 +125,8 @@ const doMove = async (printer: Device) => {
                         @click="doRegister">Submit</button>
                     <div v-if="selectedDevice">
                         <div class="tooltip">
-                            <HoldButton :color="'secondary'" @button-held="doMove(selectedDevice)">Move Printer Head</HoldButton>
+                            <HoldButton :color="'secondary'" @button-held="doMove(selectedDevice as Device)">Move
+                                Printer Head</HoldButton>
                             <span class="tooltiptext">Moves printer 10mm upwards! Please check printers before.</span>
                         </div>
                     </div>
@@ -138,4 +138,61 @@ const doMove = async (printer: Device) => {
     </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.tooltip {
+    position: relative;
+    display: inline-block;
+    opacity: 1;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    opacity: 0;
+    /* Add this */
+    transition: opacity 0.2s linear, visibility 0.2s linear 0.2s;
+    /* Add delay to visibility transition */
+    width: 200px;
+    background-color: #484848;
+    color: #dbdbdb;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 0;
+    position: absolute;
+    z-index: 2000;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+}
+
+.tooltip .tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #484848 transparent transparent transparent;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 0.2s linear;
+    /* Add this */
+}
+
+.modal-body {
+    background: #b9b9b9;
+}
+
+.form-text{
+    background: #cdcdcd;
+    border: 1px solid #484848;
+}
+
+.form-select{
+    background-color: #f4f4f4 !important;
+    border-color: #484848 !important;
+}
+</style>

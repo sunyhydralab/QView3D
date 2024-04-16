@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useSetStatus, type Device, printers } from '@/model/ports';
 import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
-import { type Job, useReleaseJob, useStartJob, useRemoveJob, useGetFile, jobTime, useAssignComment } from '@/model/jobs';
+import { type Job, useReleaseJob, useStartJob, useRemoveJob, useGetFile, useGetJobFile, jobTime, useAssignComment } from '@/model/jobs';
 import { useRouter } from 'vue-router';
 import { onMounted, ref } from 'vue';
 import draggable from 'vuedraggable'
@@ -18,6 +18,7 @@ const { issues } = useGetIssues()
 const { createIssue } = useCreateIssues()
 const { assign } = useAssignIssue()
 const { assignComment } = useAssignComment()
+const { getFileDownload } = useGetJobFile()
 
 const router = useRouter();
 let currentJob = ref<Job>();
@@ -139,61 +140,44 @@ const doAssignIssue = async () => {
 
 
   <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
-    data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
+  data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
-        <div class="modal-header d-flex align-items-end">
-          <h5 class="modal-title mb-0" id="assignIssueLabel" style="line-height: 1;">Job #{{ selectedJob?.id
-            }}</h5>
-          <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px; line-height: 1;">{{
-            selectedJob?.date }}</h6>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
-            @click="selectedIssue = undefined; selectedJob = undefined;"></button>
-        </div>
-        <div class="modal-body">
-          <button class="btn btn-primary mb-3" @click="showText = !showText">Create New Issue</button>
-          <form v-if="showText" class="p-3 border rounded bg-light mb-3">
-            <div class="mb-3">
-              <label for="newIssue" class="form-label">Enter Issue</label>
-              <input id="newIssue" v-model="newIssue" type="text" placeholder="Enter Issue" class="form-control"
-                required>
-            </div>
-            <div>
-              <button type="submit" @click.prevent="doCreateIssue" class="btn btn-primary me-2"
-                v-bind:disabled="!newIssue">Submit</button>
-              <button @click.prevent="showText = !showText" class="btn btn-secondary">Cancel</button>
-            </div>
-          </form>
-          <form @submit.prevent="">
-            <div class="mb-3">
-              <label for="issue" class="form-label">Select Issue</label>
-              <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
-                <option disabled value="undefined">Select Issue</option>
-                <option v-for="issue in issuelist" :value="issue">
-                  {{ issue.issue }}
-                </option>
-              </select>
-            </div>
-          </form>
-          <div v-if="selectedIssue !== undefined" class="alert alert-danger mt-3">
-            Warning: Assigning an issue to a job in Job History will set the job status to Error and remove
-            it from any active print queues. Please ensure that the job has been completed before assigning
-            an issue.
+          <div class="modal-header d-flex align-items-end">
+              <h5 class="modal-title mb-0" id="assignIssueLabel" style="line-height: 1;">Job #{{ selectedJob?.id
+                  }}</h5>
+              <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px; line-height: 1;">{{
+                  selectedJob?.date }}</h6>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                  @click="selectedIssue = undefined; selectedJob = undefined;"></button>
           </div>
-          <div class="form-group mt-3">
-            <label for="exampleFormControlTextarea1">Comments</label>
-            <textarea class="form-control" id="exampleFormControlTextarea1" rows="3" v-model="jobComments"></textarea>
+          <div class="modal-body">
+              <form @submit.prevent="">
+                  <div class="mb-3">
+                      <label for="issue" class="form-label">Select Issue</label>
+                      <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
+                          <option disabled value="undefined">Select Issue</option>
+                          <option v-for="issue in issuelist" :value="issue">
+                              {{ issue.issue }}
+                          </option>
+                      </select>
+                  </div>
+              </form>
+              <div class="form-group mt-3">
+                  <label for="exampleFormControlTextarea1">Comments</label>
+                  <textarea class="form-control" id="exampleFormControlTextarea1" rows="3"
+                      v-model="jobComments"></textarea>
+              </div>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-            @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
-          <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save
-            Changes</button>
-        </div>
+          <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                  @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
+              <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save
+                  Changes</button>
+          </div>
       </div>
-    </div>
   </div>
+</div>
 
 
 
@@ -209,14 +193,14 @@ const doAssignIssue = async () => {
           <!-- Display other attributes of the job -->
           <div class="row">
             <div class="col-sm-12">
-              <div class="card bg-light mb-3">
+              <div class="card mb-3">
                 <div class="card-body">
                   <h5 class="card-title"><i class="fas fa-chart-line"></i> <b>Progress:</b> {{ currentJob?.progress ?
-            `${currentJob?.progress.toFixed(2)}%` : '0.00%' }}</h5>
+                    `${currentJob?.progress.toFixed(2)}%` : '0.00%' }}</h5>
                   <div class="progress">
                     <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
                       :style="{ width: `${currentJob?.progress ? currentJob?.progress.toFixed(2) : '0'}%` }"
-                      aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                      aria-valuemin="0" aria-valuemax="100"></div>
                   </div>
                 </div>
               </div>
@@ -224,7 +208,7 @@ const doAssignIssue = async () => {
           </div>
           <div class="row">
             <div class="col-sm-3">
-              <div class="card bg-light mb-3">
+              <div class="card mb-3" style="border: 1px solid #484848">
                 <div class="card-body">
                   <div class="row">
                     <div class="col-12">
@@ -233,7 +217,7 @@ const doAssignIssue = async () => {
                     <!-- <div class="col-12">{{ formatTime(currentJob?.job_client?.elapsed_time!) }}</div> -->
                     <div class="col-12">
                       {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
-            formatTime(currentJob?.job_client?.elapsed_time!) }}
+                        formatTime(currentJob?.job_client?.elapsed_time!) }}
                     </div>
                   </div>
                 </div>
@@ -249,7 +233,7 @@ const doAssignIssue = async () => {
                     <!-- <div class="col-12">{{ formatTime(currentJob?.job_client?.remaining_time!) }}</div> -->
                     <div class="col-12">
                       {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
-            formatTime(currentJob?.job_client?.remaining_time!) }}
+                        formatTime(currentJob?.job_client?.remaining_time!) }}
                     </div>
                   </div>
                 </div>
@@ -269,7 +253,7 @@ const doAssignIssue = async () => {
                       <div v-else>
                         <div v-if="currentJob?.job_client?.extra_time">
                           {{ formatTime(currentJob?.job_client.total_time!) + ' + ' +
-            formatTime(currentJob?.job_client.extra_time!) }}
+                            formatTime(currentJob?.job_client.extra_time!) }}
                         </div>
                         <div v-else>
                           {{ formatTime(currentJob?.job_client?.total_time!) }}
@@ -290,7 +274,7 @@ const doAssignIssue = async () => {
                     <!-- <div class="col-12">{{ formatETA(currentJob?.job_client?.eta!) ?? "Waiting to start heating..."  }}</div> -->
                     <div class="col-12">
                       {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
-            formatETA(currentJob?.job_client?.eta!) }}
+                        formatETA(currentJob?.job_client?.eta!) }}
                     </div>
                   </div>
                 </div>
@@ -400,14 +384,15 @@ const doAssignIssue = async () => {
 
 
   <div class="container">
-    <b>Home</b>
-    <table>
+    <!-- <b>Home</b> -->
+    <table class="table-striped">
       <tr>
+        <!-- NEED TO FIX THIS FOR EVERY DISPLAYS -->
         <th style="width: 64px">Job ID</th>
         <th style="width: 130px">Printer name</th>
-        <th style="width: 100px">Job Name</th>
-        <th style="width: 120px">File</th>
         <th style="width: 142px">Printer Status</th>
+        <th style="width: 110px">Job Name</th>
+        <th style="width: 110px">File</th>
         <th style="width: 314px">Printer Options</th>
         <th style="width: 315px">Progress</th>
         <th style="width: 75px;">Actions</th>
@@ -417,36 +402,29 @@ const doAssignIssue = async () => {
         dragClass="hidden-ghost" v-if="printers.length > 0">
         <template #item="{ element: printer }">
           <tr :id="printer.id">
+
             <td
               v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0].id }}
             </td>
+
             <td v-else><i>idle</i></td>
+
             <td class="truncate" :title="printer.name">
-              <button type="button" class="btn btn-link" @click="sendToQueueView(printer)" style="padding: 0; border: none; display: inline-block; width: 100%; text-align: left;">
+              <button type="button" class="btn btn-link" @click="sendToQueueView(printer)"
+                style="padding: 0; border: none; display: inline-block; width: 100%; text-align: center;">
                 <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                   {{ printer.name }}
                 </div>
               </button>
             </td>
-            <td class="truncate"
-              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))"
-              :title="printer.queue?.[0]?.name">
-              {{ printer.queue?.[0]?.name }}
-            </td>
-            <td v-else></td>
-            <td class="truncate"
-              v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))"
-              :title="printer.queue?.[0]?.file_name_original">
-              {{ printer.queue?.[0]?.file_name_original }}
-            </td>
-            <td v-else></td>
+
             <td>
-              <div class="d-flex align-items-center">
+              <div class="d-flex align-items-center justify-content-center">
                 <!-- <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
                     Change filament
                   </p> -->
-                <p v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0" style="color: red"
+                <p v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0" style="color: #ad6060"
                   class="mb-0 me-2">
                   Waiting release
                 </p>
@@ -456,14 +434,20 @@ const doAssignIssue = async () => {
               </div>
             </td>
 
+            <td class="truncate" :title="printer.queue?.[0]?.name"
+              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+              {{ printer.queue?.[0]?.name }}
+            </td>
+            <td v-else></td>
+
+            <td class="truncate" :title="printer.queue?.[0]?.file_name_original"
+              v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+              {{ printer.queue?.[0]?.file_name_original }}
+            </td>
+            <td v-else></td>
+
             <td>
               <div class="buttons">
-
-                <button class="btn btn-primary"
-                  v-if="printer.status == 'configuring' || printer.status == 'ready' || printer.status == 'error' || printer.status == 'complete'"
-                  @click="setPrinterStatus(printer, 'offline')">
-                  Turn Offline
-                </button>
 
                 <button class="btn btn-primary"
                   v-if="printer.status == 'configuring' || printer.status == 'offline' || printer.status == 'error'"
@@ -471,29 +455,37 @@ const doAssignIssue = async () => {
                   Set to Ready
                 </button>
 
+                <button class="btn btn-danger"
+                  v-if="printer.status == 'configuring' || printer.status == 'ready' || printer.status == 'error' || printer.status == 'complete'"
+                  @click="setPrinterStatus(printer, 'offline')">
+                  Turn Offline
+                </button>
+
                 <HoldButton :color="'success'" @button-held="startPrint(printer.id!, printer.queue?.[0].id)"
                   v-if="printer.status == 'printing' && printer.queue?.[0].released == 0">
                   Start Print
                 </HoldButton>
 
-                <HoldButton :color="'danger'" @button-held="setPrinterStatus(printer, 'complete')"
-                  v-if="printer.status == 'printing' || printer.status == 'colorchange'">
-                  Stop
-                </HoldButton>
-
-                <HoldButton :color="'warning'" @button-held="setPrinterStatus(printer, 'paused')"
-                  v-if="printer.status === 'printing' && printer.queue?.[0]?.released !== 0">
+                <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'success'"
+                  @button-held="setPrinterStatus(printer, 'paused')"
+                  v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
                   Pause
                 </HoldButton>
 
-                <HoldButton :color="'warning'" @button-held="setPrinterStatus(printer, 'colorchange')"
-                  v-if="printer.status === 'printing' && printer.queue?.[0]?.released !== 0">
+                <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'success'"
+                  @button-held="setPrinterStatus(printer, 'colorchange')"
+                  v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
                   Color&nbsp;Change
                 </HoldButton>
 
                 <HoldButton :color="'secondary'" @button-held="setPrinterStatus(printer, 'printing')"
                   v-if="printer.status == 'paused'">
                   Unpause
+                </HoldButton>
+
+                <HoldButton :color="'danger'" @button-held="setPrinterStatus(printer, 'complete')"
+                  v-if="(printer.status == 'printing' || printer.status == 'colorchange')">
+                  Stop
                 </HoldButton>
 
                 <div v-if="printer.status == 'colorchange'" class="mt-2">
@@ -515,9 +507,9 @@ const doAssignIssue = async () => {
                   </div>
                   <!-- job progress set to 2 decimal places -->
                   <p style="position: absolute; width: 100%; text-align: center; color: black;">{{
-            printer.queue?.[0].progress
-              ?
-              `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
+                    printer.queue?.[0].progress
+                      ?
+                      `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
                 </div>
                 <!-- </div> -->
               </div>
@@ -525,10 +517,6 @@ const doAssignIssue = async () => {
               <div
                 v-else-if="printer.queue?.[0] && (printer.queue?.[0].status == 'complete' || printer.queue?.[0].status == 'cancelled')">
                 <div class="buttons-progress">
-                  <div type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#issueModal"
-                    @click=setJob(printer.queue?.[0])>
-                    Fail
-                  </div>
                   <div type="button" class="btn btn-secondary"
                     @click="releasePrinter(printer.queue?.[0], 1, printer.id)">
                     Clear
@@ -541,11 +529,15 @@ const doAssignIssue = async () => {
                       aria-expanded="false">
                     </div>
                     <div class="dropdown-menu">
-                      <div class="dropdown-item" v-for="otherPrinter in printers.filter(p => p.id !== printer.id)"
-                        :key="otherPrinter.id" @click="releasePrinter(printer.queue?.[0], 2, otherPrinter.id!)">
-                        {{ otherPrinter.name }}
+                      <div class="dropdown-item" v-for="printer in printers" :key="printer.id"
+                        @click="releasePrinter(printer.queue?.[0], 2, printer.id!)">
+                        {{ printer.name }}
                       </div>
                     </div>
+                  </div>
+                  <div type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#issueModal"
+                    @click=setJob(printer.queue?.[0])>
+                    Fail
                   </div>
                 </div>
               </div>
@@ -564,12 +556,14 @@ const doAssignIssue = async () => {
 
             </td>
 
-            <td style="width: 1%; white-space: nowrap">
+            <td style="width: 1%; white-space: nowrap"
+              :class="{ 'not-draggable': printer.queue && printer.queue.length == 0 }">
               <div class="dropdown">
                 <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                   <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
                     style="background: none; border: none;">
-                    <i class="fas fa-ellipsis"></i>
+                    <i class="fas fa-ellipsis"
+                      :class="{ 'icon-disabled': printer.queue && printer.queue.length == 0 }"></i>
                   </button>
                   <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
                     <li>
@@ -581,7 +575,7 @@ const doAssignIssue = async () => {
                         <span class="ms-2">Info</span>
                       </a>
                     </li>
-                    <li>
+                    <!-- <li>
                       <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
                         data-bs-target="#gcodeLiveViewModal" v-if="printer.queue && printer.queue.length > 0"
                         v-bind:job="printer.queue[0]"
@@ -589,7 +583,7 @@ const doAssignIssue = async () => {
                         <i class="fa-solid fa-magnifying-glass"></i>
                         <span class="ms-2">GCode Live View</span>
                       </a>
-                    </li>
+                    </li> -->
                     <li>
                       <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
                         data-bs-target="#gcodeImageModal" v-if="printer.queue && printer.queue.length > 0"
@@ -597,6 +591,13 @@ const doAssignIssue = async () => {
                         @click="printer.name && openModal(printer.queue[0], printer.name, 2, printer)">
                         <i class="fa-solid fa-image"></i>
                         <span class="ms-2">GCode Image</span>
+                      </a>
+                    </li>
+                    <li v-if="printer.queue[0]">
+                      <a class="dropdown-item d-flex align-items-center" @click="getFileDownload(printer.queue[0].id)"
+                        :disabled="printer.queue[0].file_name_original.includes('.gcode:')">
+                        <i class="fas fa-download"></i>
+                        <span class="ms-2">Download</span>
                       </a>
                     </li>
                   </ul>
@@ -607,13 +608,15 @@ const doAssignIssue = async () => {
             <td class="text-center handle" :class="{ 'not-draggable': printers.length <= 1 }">
               <i class="fas fa-grip-vertical" :class="{ 'icon-disabled': printers.length <= 1 }"></i>
             </td>
+
           </tr>
         </template>
       </draggable>
     </table>
-    <div v-if="printers.length === 0">No printers available. Either register a printer <RouterLink to="/registration">
-      here</RouterLink>, or restart the server.
-      </div>
+    <div v-if="printers.length === 0" style="margin-top: 1rem;">
+      No printers available. Either register a printer <RouterLink to="/registration">here</RouterLink>, or restart the
+      server.
+    </div>
   </div>
 </template>
 
@@ -629,7 +632,8 @@ const doAssignIssue = async () => {
   justify-content: space-between;
   flex-wrap: wrap;
 }
-.buttons > * {
+
+.buttons>* {
   flex: 1 0 auto;
   margin: 0 0.375rem;
   flex-shrink: 0;
@@ -682,34 +686,15 @@ const doAssignIssue = async () => {
 
 table {
   table-layout: fixed;
-  width: 100%;
-  border-collapse: collapse;
 }
 
-th,
-td {
-  border: 2px solid #dddddd;
-  text-align: left;
-  padding: 8px;
+.form-control{
+  background: #f4f4f4;
+  border: 1px solid #484848;
 }
 
-th {
-  background-color: #f2f2f2;
-}
-
-p {
-  margin: 0;
-}
-
-.btn-circle {
-  width: 30px;
-  height: 30px;
-  padding: 0.375em 0;
-  border-radius: 50%;
-  font-size: 0.75em;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+.form-select{
+  background-color: #f4f4f4 !important;
+  border-color: #484848 !important;
 }
 </style>

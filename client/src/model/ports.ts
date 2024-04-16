@@ -47,7 +47,7 @@ export function useRegisterPrinter() {
       try {
         const response = await api('register', { printer })
         if (response) {
-          if (response.success == false) {
+          if (response.success === false) {
             toast.error(response.message)
           } else if (response.success === true) {
             toast.success(response.message)

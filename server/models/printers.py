@@ -90,13 +90,16 @@ class Printer(db.Model):
 
     @classmethod
     def create_printer(cls, device, description, hwid, name, status):
-        try:
-            printerExists = cls.searchByDevice(hwid)
+        try:                
+            hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
+            hwid_without_location = '-'.join(hwid_parts[:-1])
+            
+            printerExists = cls.searchByDevice(hwid_without_location)
             if printerExists:
                 printer = cls.query.filter_by(hwid=hwid).first()
                 return {
                     "success": False,
-                    "message": f"Port already registered under hwid: {printer.name}.",
+                    "message": "Printer already registered.",
                 }
             else:
                 hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
@@ -335,13 +338,6 @@ class Printer(db.Model):
                 else:
                     self.responseCount = 0
 
-                # if response == "echo:busy processing" and self.prevMes == "":
-                #     self.responseCount+=1 
-                #     if(self.responseCount>=5):
-                #         self.setStatus("colorchange")
-                # else: 
-                #     self.responseCount = 0
-
                 if ("T:" in response) and ("B:" in response):
                     # Extract the temperature values using regex
                     temp_t = re.search(r'T:(\d+.\d+)', response)
@@ -441,9 +437,13 @@ class Printer(db.Model):
                         job.setTime(datetime.now(), 3)
                         # job.setTime(job.calculateTotalTime(), 0)
                         # job.setTime(job.updateEta(), 1)
-                        print("color change command")
+                        print("color change in LINE")
                         self.setStatus("colorchange")
                         job.setFilePause(1)
+
+                    if("M569" in line) and (job.getExtruded()==0):
+                        print("extruded")
+                        job.setExtruded(1)
                     
                     if self.prevMes == "M602":
                         self.prevMes=""
@@ -466,14 +466,14 @@ class Printer(db.Model):
                                 job.setTime(job.calculateColorChangeTotal(), 0)
                                 job.setTime(datetime.min, 3)
                                 break
-
+                    
                     # software color change
                     if (self.getStatus()=="colorchange" and job.getFilePause()==0):
                         job.setTime(datetime.now(), 3)
                         # job.setTime(job.calculateTotalTime(), 0)
                         # job.setTime(job.updateEta(), 1)
                         self.sendGcode("M600") # color change command
-                        print("color change command sent")
+                        print("color change COMMAND sent")
                         job.setTime(job.colorEta(), 1)
                         job.setTime(job.calculateColorChangeTotal(), 0)
                         job.setTime(datetime.min, 3)
@@ -490,6 +490,7 @@ class Printer(db.Model):
                     job.setProgress(progress)
                 
                     
+                    # if self.getStatus() == "complete" and job.extruded != 0:
                     if self.getStatus() == "complete":
                         return "cancelled"
 
@@ -503,7 +504,7 @@ class Printer(db.Model):
             return "error"
 
     # Function to send "ending" gcode commands
-    def endingSequence(self):
+    def endingSequence(self, job=None):
         try:
             # *** Ender 3 Pro ending sequence ***
             # self.gcodeEnding("G91") # Relative positioning
@@ -530,9 +531,12 @@ class Printer(db.Model):
             self.gcodeEnding("M104 S0")# ; turn off temperature
             self.gcodeEnding("M140 S0")# ; turn off heatbed
             self.gcodeEnding("M107")# ; turn off fan
-            self.gcodeEnding("G1 X241 Y170 F3600")# ; park
+
+            if(job and job.getExtruded()==1):
+                self.gcodeEnding("G1 X241 Y170 F3600")# ; park
             # self.gcodeEnding("{if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+23, max_print_height)} F300")# ; Move print head up{endif}
-            self.gcodeEnding("G4")# ; wait
+                self.gcodeEnding("G4")# ; wait
+
             self.gcodeEnding("M900 K0")# ; reset LA
             self.gcodeEnding("M142 S36")# ; reset heatbreak target temp
             self.gcodeEnding("M84 X Y E")# ; disable motors   
@@ -601,7 +605,7 @@ class Printer(db.Model):
             self.sendStatusToJob(job, job.id, "error")
             # self.setError("Error")
         elif verdict == "cancelled":
-            self.endingSequence()
+            self.endingSequence(job)
             self.sendStatusToJob(job, job.id, "cancelled")
             self.disconnect()
             

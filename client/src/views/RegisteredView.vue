@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, useRegisterPrinter, type Device, useMoveHead, useRetrievePrinters } from '../model/ports'
+import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters } from '../model/ports'
 import { ref, onMounted } from 'vue';
 import { toast } from '../model/toast'
 import RegisterModal from '../components/RegisterModal.vue'
 
-const { ports } = useGetPorts();
 const { retrieve } = useRetrievePrinters();
 const { retrieveInfo } = useRetrievePrintersInfo();
 const { hardReset } = useHardReset();
@@ -15,13 +14,8 @@ const { editName } = useEditName();
 const { removeThread } = useRemoveThread();
 const { editThread } = useEditThread();
 const { diagnose } = useDiagnosePrinter();
-const { repair } = useRepair()
-const { move } = useMoveHead()
-const { register } = useRegisterPrinter()
+const { repair } = useRepair();
 
-let customname = ref('') // Stores the user input name of printer
-let selectedDevice = ref<Device | null>(null) // device user selects to register.
-let devices = ref<Array<Device>>([]) // Stores the list of devices
 let registered = ref<Array<Device>>([]) // Stores array of printers already registered in the system
 let editMode = ref(false)
 let editNum = ref<number | undefined>(0)
@@ -86,6 +80,10 @@ const saveName = async (printer: Device) => {
     editNum.value = undefined
 }
 
+const doRepair = async () => {
+    await repair()
+}
+
 const doDiagnose = async (printer: Device) => {
     message.value = `Diagnosing <b>${printer.name}</b>:<br/><br/>This printer is registered under port <b>${printer.device}</b>.`
     showMessage.value = true
@@ -145,16 +143,16 @@ const doCloseRegisterModal = async () => {
     </div>
 
     <div class="container">
-        <b>Registered View</b>
+        <!-- <b>Registered View</b> -->
         <!-- register modal opens with a button-->
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#registerModal">
             Register Printer
         </button>
         <RegisterModal id="registerModal" @close="doCloseRegisterModal" />
 
-        <div v-if="registered.length != 0" class="row row-cols-1 row-cols-md-3">
-            <div class="col" v-for="printer in registered" :key="printer.id">
-                <div class="card bg-light rounded" style="width: 385px">
+        <div v-if="registered.length != 0" class="d-flex flex-wrap justify-content-start">
+            <div v-for="printer in registered" :key="printer.id">
+                <div class="card m-2 rounded" style="width: 416px; background: #d8d8d8;">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-4" v-if="!editMode || !(editNum == printer.id)">{{ printer.name }}
@@ -201,7 +199,7 @@ const doCloseRegisterModal = async () => {
                                                 @click="toggleMessage(printer)">
                                                 <i class="fas fa-stethoscope"></i>
                                                 <span class="ms-2">{{ messageId == printer.id && showMessage ?
-                        'Clear Message' : 'Diagnose Printer' }}</span>
+                                                    'Clear Message' : 'Diagnose Printer' }}</span>
                                             </a>
                                         </li>
                                     </ul>
@@ -221,7 +219,10 @@ const doCloseRegisterModal = async () => {
                         <div v-if="messageId == printer.id && showMessage"
                             class="alert alert-danger d-flex flex-column align-items-center justify-content-center">
                             <h6 v-html="message"></h6>
-                            <button class="btn btn-secondary mt-auto" @click="clearMessage()">Clear</button>
+                            <div class="d-flex justify-content-between">
+                                <button class="btn btn-secondary me-3" @click="clearMessage()">Clear</button>
+                                <button class="btn btn-primary w-100" @click="doRepair()">Repair Ports</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -247,11 +248,7 @@ const doCloseRegisterModal = async () => {
 
 .form-container,
 .card {
-    border: 2px solid #333;
-}
-
-.card {
-    margin-top: 20px;
+    border: 1px solid #484848;
 }
 
 .register {
@@ -279,11 +276,6 @@ const doCloseRegisterModal = async () => {
     color: red;
     margin-bottom: 10px;
     /* Add margin to the bottom */
-}
-
-.card {
-    margin-bottom: 20px;
-    /* Add margin to create space between cards */
 }
 
 .modal-dialog {
@@ -369,5 +361,9 @@ const doCloseRegisterModal = async () => {
 
 .alert {
     margin-bottom: 0;
+}
+
+.modal-body{
+    background: #cdcdcd
 }
 </style>

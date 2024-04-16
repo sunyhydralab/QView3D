@@ -98,17 +98,19 @@ onMounted(async () => {
 
         favoriteJobs.value = await getFavoriteJobs()
 
-        // // make 10 dummy printers
-        // for (let i = 2; i < 11; i++) {
-        //     printers.value.push({
-        //         id: i, 
-        //         name: `Printer ${i}`,
-        //         device: '',
-        //         description: '',
-        //         hwid: '',
-        //         queue: []
-        //     })
-        // }
+        // make 10 dummy printers
+        /*
+        for (let i = 2; i < 12; i++) {
+            printers.value.push({
+                id: i, 
+                name: `Printer ${i}`,
+                device: '',
+                description: '',
+                hwid: '',
+                queue: []
+            })
+        }
+        */
 
         document.addEventListener('click', closeDropdown);
 
@@ -242,7 +244,7 @@ const confirmDelete = async () => {
 
 const selectAllJobs = () => {
     if (selectAllCheckbox.value) {
-        const newSelectedJobs = filteredJobs.value.filter(job => !selectedJobs.value.includes(job));
+        const newSelectedJobs = filteredJobs.value.filter(job => !selectedJobs.value.includes(job) && job.status !== 'printing');
         selectedJobs.value = [...selectedJobs.value, ...newSelectedJobs];
     } else {
         selectedJobs.value = selectedJobs.value.filter(job => !filteredJobs.value.includes(job));
@@ -343,19 +345,6 @@ const closeDropdown = (evt: any) => {
                         @click="selectedIssue = undefined; selectedJob = undefined;"></button>
                 </div>
                 <div class="modal-body">
-                    <button class="btn btn-primary mb-3" @click="showText = !showText">Create New Issue</button>
-                    <form v-if="showText" class="p-3 border rounded bg-light mb-3">
-                        <div class="mb-3">
-                            <label for="newIssue" class="form-label">Enter Issue</label>
-                            <input id="newIssue" v-model="newIssue" type="text" placeholder="Enter Issue"
-                                class="form-control" required>
-                        </div>
-                        <div>
-                            <button type="submit" @click.prevent="doCreateIssue" class="btn btn-primary me-2"
-                                v-bind:disabled="!newIssue">Submit</button>
-                            <button @click.prevent="showText = !showText" class="btn btn-secondary">Cancel</button>
-                        </div>
-                    </form>
                     <form @submit.prevent="">
                         <div class="mb-3">
                             <label for="issue" class="form-label">Select Issue</label>
@@ -410,8 +399,8 @@ const closeDropdown = (evt: any) => {
 
     <!-- bootstrap off canvas to the right -->
     <div class="offcanvas offcanvas-end" data-bs-backdrop="static" tabindex="-1" id="offcanvasRight"
-        aria-labelledby="offcanvasRightLabel">
-        <div class="offcanvas-header bg-primary text-white">
+        aria-labelledby="offcanvasRightLabel" style="background-color: #b9b9b9;">
+        <div class="offcanvas-header" style="background-color: #484848; color: #dbdbdb;">
             <div class="container-fluid">
                 <div class="row align-items-center">
                     <div class="col">
@@ -434,10 +423,8 @@ const closeDropdown = (evt: any) => {
                 <div class="grid-container job">
                     <p class="my-auto truncate-name">{{ job.name }}</p>
                     <p class="my-auto truncate-file">{{ job.file_name_original }}</p>
-                    <p class="my-auto truncate-name">{{ job.name }}</p>
-                    <p class="my-auto truncate-file">{{ job.file_name_original }}</p>
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-star text-warning" style="margin-right: 10px;" data-bs-toggle="modal"
+                        <i class="fas fa-star" style="color: #60AEAE; margin-right: 10px;" data-bs-toggle="modal"
                             data-bs-target="#favoriteModal" @click="jobToUnfavorite = job"></i>
                         <button class="btn btn-secondary download" style="margin-right: 10px;"
                             @click="getFileDownload(job.id)" :disabled="job.file_name_original.includes('.gcode:')">
@@ -520,11 +507,113 @@ const closeDropdown = (evt: any) => {
     </div>
 
     <div class="container">
-        <b>Job History View</b>
+        <!-- <b>Job History View</b> -->
         <!-- delete jobs, filter dropdown, clear space -->
         <div class="row w-100" style="margin-bottom: 0.5rem;">
 
             <div class="col-1 text-start" style="padding-left: 0">
+                <div style="position: relative;">
+                    <button type="button" class="btn btn-primary dropdown-toggle"
+                        @click.stop="filterDropdown = !filterDropdown">
+                        Filter
+                    </button>
+                    <form v-show="filterDropdown" class="card dropdown-card p-3">
+                        <div class="mb-3">
+                            <label for="pageSize" class="form-label">
+                                Jobs per page, out of {{ totalJobs }}:
+                            </label>
+                            <input id="pageSize" type="number" v-model.number="pageSize" min="1" class="form-control">
+                        </div>
+                        <div class="my-2 border-top"
+                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                        <div class="mb-3">
+                            <label class="form-label">Device:</label>
+                            <div class="card"
+                                style="max-height: 120px; overflow-y: auto; background-color: #f4f4f4 !important; border-color: #484848 !important;">
+                                <ul class="list-unstyled card-body m-0"
+                                    style="padding-top: .5rem; padding-bottom: .5rem;">
+                                    <li v-for="printer in printers" :key="printer.id">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" :value="printer.id"
+                                                v-model="selectedPrinters" :id="'printer-' + printer.id">
+                                            <label class="form-check-label" :for="'printer-' + printer.id">
+                                                {{ printer.name }}
+                                            </label>
+                                        </div>
+                                    </li>
+                                    <div class="border-top"
+                                        style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                                    <li>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="0"
+                                                v-model="selectedPrinters" id="printer-0">
+                                            <label class="form-check-label" for="printer-0">
+                                                Deregistered printers
+                                            </label>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="my-2 border-top"
+                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                        <div class="mb-3">
+                            <label for="searchJob" class="form-label">Search for jobs:</label>
+                            <input type="text" id="searchJob" class="form-control" v-model="searchJob">
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="searchByJobName"
+                                v-model="searchByJobName" :disabled="isOnlyJobNameChecked"
+                                @change="ensureOneCheckboxChecked">
+                            <label class="form-check-label" for="searchByJobName">Search by Job Name</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="searchByFileName"
+                                v-model="searchByFileName" :disabled="isOnlyFileNameChecked"
+                                @change="ensureOneCheckboxChecked">
+                            <label class="form-check-label" for="searchByFileName">Search by File Name</label>
+                        </div>
+                        <div class="my-2 border-top"
+                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                        <label class="form-label">Order:</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="order" id="orderNewest" value="newest"
+                                v-model="order">
+                            <label class="form-check-label" for="orderNewest">Newest to
+                                Oldest</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="order" id="orderOldest" value="oldest"
+                                v-model="order">
+                            <label class="form-check-label" for="orderOldest">Oldest to Newest</label>
+                        </div>
+                        <div class="my-2 border-top"
+                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="favorite" id="orderFav"
+                                value="favorite" v-model="favoriteOnly">
+                            <label class="form-check-label" for="orderFav">Favorites</label>
+                        </div>
+                        <div class="my-2 border-top"
+                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                        <div class="d-flex justify-content-center">
+                            <button @click.prevent="submitFilter" class="btn btn-primary me-3">Submit
+                                Filter</button>
+                            <button @click.prevent="clearFilter" class="btn btn-danger">Clear Filter</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-10 d-flex justify-content-center align-items-center"></div>
+
+            <div class="col-1 text-end" style="padding-right: 0;">
+                <button
+                    @click="openModal(clearSpaceTitle, 'Are you sure you want to clear space? This action will remove the files from jobs that are older than 6 months, except for those marked as favorite jobs, and this cannot be <b>undone</b>.', 'clear')"
+                    class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                    <i class="fa-solid fa-recycle"></i>
+                </button>
+
                 <button type="button"
                     @click="openModal(deleteModalTitle, 'Are you sure you want to delete these jobs? This action cannot be <b>undone</b>.', 'confirmDelete')"
                     class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#exampleModal"
@@ -533,145 +622,41 @@ const closeDropdown = (evt: any) => {
                 </button>
             </div>
 
-            <div class="col-10 d-flex justify-content-center align-items-center">
-                <div class="d-flex justify-content-center">
-                    <div style="position: relative;">
-                        <button type="button" class="btn btn-primary dropdown-toggle"
-                            @click.stop="filterDropdown = !filterDropdown">
-                            Filter
-                        </button>
-                        <form v-show="filterDropdown" class="card dropdown-card p-3">
-                            <div class="mb-3">
-                                <label for="pageSize" class="form-label">
-                                    Jobs per page, out of {{ totalJobs }}:
-                                </label>
-                                <input id="pageSize" type="number" v-model.number="pageSize" min="1"
-                                    class="form-control">
-                            </div>
-                            <div class="my-2 border-top"
-                                style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
-                            <div class="mb-3">
-                                <label class="form-label">Device:</label>
-                                <div class="card" style="max-height: 120px; overflow-y: auto;">
-                                    <ul class="list-unstyled card-body m-0"
-                                        style="padding-top: .5rem; padding-bottom: .5rem;">
-                                        <li v-for="printer in printers" :key="printer.id">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" :value="printer.id"
-                                                    v-model="selectedPrinters" :id="'printer-' + printer.id">
-                                                <label class="form-check-label" :for="'printer-' + printer.id">
-                                                    {{ printer.name }}
-                                                </label>
-                                            </div>
-                                        </li>
-                                        <div class="border-top"
-                                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
-                                        <li>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" value="0"
-                                                    v-model="selectedPrinters" id="printer-0">
-                                                <label class="form-check-label" for="printer-0">
-                                                    Deregistered printers
-                                                </label>
-                                            </div>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div class="my-2 border-top"
-                                style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
-                            <div class="mb-3">
-                                <label for="searchJob" class="form-label">Search for jobs:</label>
-                                <input type="text" id="searchJob" class="form-control" v-model="searchJob">
-                            </div>
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" id="searchByJobName"
-                                    v-model="searchByJobName" :disabled="isOnlyJobNameChecked"
-                                    @change="ensureOneCheckboxChecked">
-                                <label class="form-check-label" for="searchByJobName">Search by Job Name</label>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" id="searchByFileName"
-                                    v-model="searchByFileName" :disabled="isOnlyFileNameChecked"
-                                    @change="ensureOneCheckboxChecked">
-                                <label class="form-check-label" for="searchByFileName">Search by File Name</label>
-                            </div>
-                            <div class="my-2 border-top"
-                                style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
-                            <label class="form-label">Order:</label>
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="radio" name="order" id="orderNewest"
-                                    value="newest" v-model="order">
-                                <label class="form-check-label" for="orderNewest">Newest to
-                                    Oldest</label>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="radio" name="order" id="orderOldest"
-                                    value="oldest" v-model="order">
-                                <label class="form-check-label" for="orderOldest">Oldest to Newest</label>
-                            </div>
-                            <div class="my-2 border-top"
-                                style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="favorite" id="orderFav"
-                                    value="favorite" v-model="favoriteOnly">
-                                <label class="form-check-label" for="orderFav">Favorites</label>
-                            </div>
-                            <div class="my-2 border-top"
-                                style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
-                            <div class="d-flex justify-content-center">
-                                <button @click.prevent="submitFilter" class="btn btn-primary me-3">Submit
-                                    Filter</button>
-                                <button @click.prevent="clearFilter" class="btn btn-danger">Clear Filter</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-1 text-end" style="padding-right: 0">
-                <button
-                    @click="openModal(clearSpaceTitle, 'Are you sure you want to clear space? This action will remove the files from jobs that are older than 6 months, except for those marked as favorite jobs, and this cannot be <b>undone</b>.', 'clear')"
-                    class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exampleModal">
-                    <i class="fa-solid fa-recycle"></i>
-                </button>
-            </div>
-
         </div>
 
-        <table class="table">
+        <table class="table-striped">
             <thead>
                 <tr>
-                    <th class="col-checkbox">
-                        <input type="checkbox" @change="selectAllJobs" v-model="selectAllCheckbox">
-                    </th>
                     <th>Job ID</th>
+                    <th>Printer</th>
                     <th>Job Title</th>
                     <th>File</th>
-                    <th>Date Completed</th>
                     <th>Final Status</th>
-                    <th>Printer</th>
+                    <th>Date Completed</th>
                     <th>Actions</th>
+                    <th class="col-checkbox">
+                        <input class="form-check-input" type="checkbox" @change="selectAllJobs"
+                            v-model="selectAllCheckbox" :disabled="filteredJobs.length === 0">
+                    </th>
                 </tr>
             </thead>
             <tbody v-if="filteredJobs.length > 0">
                 <tr v-for="job in filteredJobs" :key="job.id">
-                    <td>
-                        <input type="checkbox" v-model="selectedJobs" :value="job">
-                    </td>
                     <td>{{ job.id }}</td>
+                    <td>{{ job.printer }}</td>
                     <td>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            {{ job.name }}
+                        <div style="display: flex; justify-content: start; align-items: center;">
                             <div class="d-flex align-items-center" @click="favoriteJob(job, !job.favorite)">
                                 <i :class="job.favorite ? 'fas fa-star' : 'far fa-star'"></i>
+                            </div>
+                            <div style="margin-left: 10px;">
+                                {{ job.name }}
                             </div>
                         </div>
                     </td>
                     <td>{{ job.file_name_original }}</td>
-                    <td>{{ job.date }}</td>
                     <td>{{ job.status }}</td>
-                    <td>{{ job.printer }}</td>
+                    <td>{{ job.date }}</td>
                     <td>
                         <div class="dropdown">
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
@@ -727,6 +712,9 @@ const closeDropdown = (evt: any) => {
                             </div>
                         </div>
                     </td>
+                    <td>
+                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job" :disabled="job.status === 'printing'">
+                    </td>
                 </tr>
             </tbody>
             <tbody v-else>
@@ -737,7 +725,7 @@ const closeDropdown = (evt: any) => {
             </tbody>
         </table>
         <nav aria-label="Page navigation">
-            <ul class="pagination">
+            <ul class="pagination mt-2">
                 <li class="page-item" :class="{ 'disabled': page <= 1 }">
                     <a class="page-link" href="#" @click.prevent="changePage(page - 1)">Previous</a>
                 </li>
@@ -752,12 +740,12 @@ const closeDropdown = (evt: any) => {
 <style scoped>
 .dropdown-card {
     position: absolute !important;
-    left: 50% !important;
     top: calc(100% + 2px) !important;
     /* Adjust this value to increase or decrease the gap */
-    transform: translateX(-50%) !important;
     width: 400px;
     z-index: 1000;
+    background: #d8d8d8;
+    border: 1px solid #484848;
 }
 
 .dropdown-submenu {
@@ -813,22 +801,19 @@ const closeDropdown = (evt: any) => {
 }
 
 .header {
-    border: 1px solid #e0e0e0;
     padding-left: 10px;
     padding-right: 10px;
+    padding-top: 10px;
     border-radius: 5px;
     margin-bottom: 10px;
-    background-color: #f2f2f2;
-}
-
-.header h5 {
-    text-decoration: underline;
+    background-color: #7561a9;
+    color: #dbdbdb;
 }
 
 .job {
-    border: 1px solid #e0e0e0;
     padding: 10px;
     border-radius: 5px;
+    background-color: #d8d8d8;
 }
 
 .offcanvas {
@@ -848,19 +833,7 @@ const closeDropdown = (evt: any) => {
 }
 
 table {
-    width: 100%;
     border-collapse: collapse;
-}
-
-th,
-td {
-    border: 2px solid #dddddd;
-    text-align: left;
-    padding: 8px;
-}
-
-th {
-    background-color: #f2f2f2;
 }
 
 ul.dropdown-menu.w-100.show li {
@@ -880,5 +853,15 @@ ul.dropdown-menu.w-100.show li.divider {
 
 label.form-check-label {
     cursor: pointer;
+}
+
+.form-control{
+    background: #f4f4f4;
+    border: 1px solid #484848;
+}
+
+.form-select{
+    background-color: #f4f4f4 !important;
+    border-color: #484848 !important;
 }
 </style>
