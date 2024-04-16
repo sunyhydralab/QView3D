@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import 'bootstrap/dist/js/bootstrap.bundle'
-import { RouterView, useRoute } from 'vue-router'
+import { RouterView } from 'vue-router'
 import NavBar from './components/NavBar.vue'
-import { onMounted, watchEffect } from 'vue';
-import { setupPortRepairSocket, setupCanPauseSocket, setupErrorSocket, setupJobStatusSocket, setupPauseFeedbackSocket, setupProgressSocket, setupQueueSocket, setupReleaseSocket, setupStatusSocket, setupTempSocket, setupGCodeViewerSocket } from './model/sockets';
+import { onMounted } from 'vue';
+import { setupPortRepairSocket, setupErrorSocket, setupJobStatusSocket, setupPauseFeedbackSocket, setupProgressSocket, setupQueueSocket, setupReleaseSocket, setupStatusSocket, setupTempSocket, setupGCodeViewerSocket, setupExtrusionSocket } from './model/sockets';
 import { useRetrievePrintersInfo, printers } from './model/ports';
 import { setupTimeSocket } from './model/jobs';
 
 const { retrieveInfo } = useRetrievePrintersInfo();
-const route = useRoute();
 
 onMounted(async () => {
   printers.value = await retrieveInfo()
@@ -22,22 +21,16 @@ onMounted(async () => {
   setupTimeSocket(printers)
   setupTempSocket(printers)
   setupGCodeViewerSocket(printers)
-  // setupCanPauseSocket(printers) //not sure if needed
   setupPauseFeedbackSocket(printers) //not sure if needed
   setupReleaseSocket(printers)
   setupPortRepairSocket(printers)
+  setupExtrusionSocket(printers)
 })
-
-// watchEffect(async () => {
-//   if (route.fullPath) {
-//   printers.value = await retrieveInfo()
-//   }
-// })
 
 </script>
 
 <template>
-  <nav>
+  <nav style="padding-bottom: 2.5rem;">
     <NavBar />
   </nav>
   <div class="">

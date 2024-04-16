@@ -1,17 +1,9 @@
 @import url('bootstrap/dist/css/bootstrap.min.css');
 @import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 
-:root {
-  --danger-dark: #ff7a87;
-  --danger-light: #f7b5bb;
-  --warning-dark: #ffdd78;
-  --warning-light: #ffedb8;
-  --secondary-dark: #87929c;
-  --secondary-light: #b2b9bf;
-  --primary-dark: #5ea6f2;
-  --primary-light: #b8d4ff;
-  --success-dark: #5cb85c;
-  --success-light: #b8f2b8;
+body {
+  /* background-color: #9191aa; */
+  background-color: #b9b9b9;
 }
 
 * {
@@ -22,8 +14,54 @@ input {
   font-family: 'Public Sans', sans-serif;
 }
 
-.dropdown {
-  cursor: pointer;
+input[type='checkbox'],
+input[type='radio'],
+input[type='text'],
+input[type='number'],
+input[type='name'],
+.border-top {
+  background-color: #f4f4f4 !important;
+  border-color: #484848 !important;
+}
+
+input[type='checkbox']:checked,
+input[type='radio']:checked {
+  background-color: #60aeae !important;
+  border-color: #60aeae !important;
+}
+
+table {
+  color: #1b1b1b;
+  background-color: #d8d8d8;
+  border: 1px solid #929292 !important; /* Add this line */
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table td,
+.table th {
+  border-left: none !important;
+  border-right: none !important;
+}
+
+th {
+  background-color: #b9b9b9 !important;
+  border-left: none !important;
+  border-right: none !important;
+}
+
+td,
+th {
+  border-top: 1px solid #929292 !important;
+  border-bottom: 1px solid #929292 !important;
+  border-left: none !important;
+  border-right: none !important;
+  text-align: center !important;
+  padding: 8px;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .container {
@@ -31,48 +69,68 @@ input {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin-top: 20px;
+  margin-bottom: 20px;
 }
+
+.accordion-button,
+.accordion-button:not(.collapsed) {
+  background-color: #d8d8d8;
+}
+
+.accordion-item {
+  border: 1px solid #484848;
+}
+
+.dropdown-menu.show, .dropdown-menu .dropdown-menu {
+  background-color: #d8d8d8;
+  border: 1px solid #484848;
+}
+
+.dropdown-menu li a:hover, .dropdown-item:hover .dropdown-submenu .dropdown-item:hover{
+  background-color: #c0c0c0;
+}
+
+.dropdown-menu li a:active, .dropdown-item:active, .dropdown-submenu .dropdown-item:active{
+  background-color: #7561a9;
+}
+
+.dropdown {
+  cursor: pointer;
+}
+
 .form-check-label {
   user-select: none;
 }
 
-.tooltip {
-  position: relative;
-  display: inline-block;
-  opacity: 1;
+.modal-content {
+  background-color: #b9b9b9;
+  border: 1px solid #484848;
 }
 
-.tooltip .tooltiptext {
-  visibility: hidden;
-  opacity: 0; /* Add this */
-  transition: opacity 0.2s linear, visibility 0.2s linear 0.2s; /* Add delay to visibility transition */
-  width: 200px;
-  background-color: black;
-  color: #fff;
-  text-align: center;
-  border-radius: 6px;
-  padding: 5px 0;
-  position: absolute;
-  z-index: 2000;
-  bottom: 125%;
-  left: 50%;
-  margin-left: -100px;
+.modal-header {
+  background-color: #9f9f9f;
+  border-bottom: 1px solid #484848;
 }
 
-.tooltip .tooltiptext::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  margin-left: -5px;
-  border-width: 5px;
-  border-style: solid;
-  border-color: black transparent transparent transparent;
+.modal-footer {
+  background-color: #9f9f9f;
+  border-top: 1px solid #484848;
 }
 
-.tooltip:hover .tooltiptext {
-  visibility: visible;
-  opacity: 1;
-  transition: opacity 0.2s linear; /* Add this */
+.modal-body .card-body {
+  background-color: #cdcdcd;
+  /* border radius */
+  border-radius: 5px;
+}
+
+.modal-body .card {
+  border: 1px solid #484848;
+}
+
+a, .btn-link {
+  color: #7561a9;
+}
+
+a:hover, .btn-link:hover {
+  color: #5e548e;
 }

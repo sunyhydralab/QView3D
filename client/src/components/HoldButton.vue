@@ -7,8 +7,11 @@ let progress = ref(0)
 let interval: NodeJS.Timeout | null = null
 
 const props = defineProps({
-    color: String
+    color: String,
+    disabled: Number
 })
+
+const disabled = props.disabled
 
 onUnmounted(() => {
     if (interval) clearInterval(interval);
