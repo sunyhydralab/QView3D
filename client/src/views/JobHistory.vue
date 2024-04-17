@@ -439,8 +439,6 @@ const closeDropdown = (evt: any) => {
                             <li v-for="printer in printers" :key="printer.id">
                                 <a class="dropdown-item" @click="handleRerun(job, printer)"
                                     data-bs-dismiss="offcanvas">{{ printer.name }}</a>
-                                <a class="dropdown-item" @click="handleRerun(job, printer)"
-                                    data-bs-dismiss="offcanvas">{{ printer.name }}</a>
                             </li>
                         </ul>
                     </div>
@@ -662,7 +660,7 @@ const closeDropdown = (evt: any) => {
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                                 <button type="button" id="settingsDropdown" data-bs-toggle="dropdown"
                                     aria-expanded="false" style="background: none; border: none;">
-                                    <i class="fas fa-ellipsis"></i>
+                                    <i class="fa-solid fa-bars"></i>
                                 </button>
                                 <ul class="dropdown-menu" aria-labelledby="settingsDropdown" style="z-index: 2000;">
                                     <li>

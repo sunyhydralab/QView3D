@@ -7,7 +7,6 @@ import { onMounted, ref } from 'vue';
 import draggable from 'vuedraggable'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 import GCode3DLiveViewer from '@/components/GCode3DLiveViewer.vue';
-import HoldButton from '@/components/HoldButton.vue';
 
 const { setStatus } = useSetStatus();
 const { releaseJob } = useReleaseJob()
@@ -140,44 +139,43 @@ const doAssignIssue = async () => {
 
 
   <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
-  data-bs-backdrop="static">
-  <div class="modal-dialog modal-dialog-centered">
+    data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
-          <div class="modal-header d-flex align-items-end">
-              <h5 class="modal-title mb-0" id="assignIssueLabel" style="line-height: 1;">Job #{{ selectedJob?.id
-                  }}</h5>
-              <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px; line-height: 1;">{{
-                  selectedJob?.date }}</h6>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
-                  @click="selectedIssue = undefined; selectedJob = undefined;"></button>
+        <div class="modal-header d-flex align-items-end">
+          <h5 class="modal-title mb-0" id="assignIssueLabel" style="line-height: 1;">Job #{{ selectedJob?.id
+            }}</h5>
+          <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px; line-height: 1;">{{
+            selectedJob?.date }}</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+            @click="selectedIssue = undefined; selectedJob = undefined;"></button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="">
+            <div class="mb-3">
+              <label for="issue" class="form-label">Select Issue</label>
+              <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
+                <option disabled value="undefined">Select Issue</option>
+                <option v-for="issue in issuelist" :value="issue">
+                  {{ issue.issue }}
+                </option>
+              </select>
+            </div>
+          </form>
+          <div class="form-group mt-3">
+            <label for="exampleFormControlTextarea1">Comments</label>
+            <textarea class="form-control" id="exampleFormControlTextarea1" rows="3" v-model="jobComments"></textarea>
           </div>
-          <div class="modal-body">
-              <form @submit.prevent="">
-                  <div class="mb-3">
-                      <label for="issue" class="form-label">Select Issue</label>
-                      <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
-                          <option disabled value="undefined">Select Issue</option>
-                          <option v-for="issue in issuelist" :value="issue">
-                              {{ issue.issue }}
-                          </option>
-                      </select>
-                  </div>
-              </form>
-              <div class="form-group mt-3">
-                  <label for="exampleFormControlTextarea1">Comments</label>
-                  <textarea class="form-control" id="exampleFormControlTextarea1" rows="3"
-                      v-model="jobComments"></textarea>
-              </div>
-          </div>
-          <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-                  @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
-              <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save
-                  Changes</button>
-          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+            @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
+          <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save
+            Changes</button>
+        </div>
       </div>
+    </div>
   </div>
-</div>
 
 
 
@@ -461,32 +459,32 @@ const doAssignIssue = async () => {
                   Turn Offline
                 </button>
 
-                <HoldButton :color="'success'" @button-held="startPrint(printer.id!, printer.queue?.[0].id)"
-                  v-if="printer.status == 'printing' && printer.queue?.[0].released == 0">
+                <button class="btn btn-success" v-if="printer.status == 'printing' && printer.queue?.[0].released == 0"
+                  @click="startPrint(printer.id!, printer.queue?.[0].id)">
                   Start Print
-                </HoldButton>
+                </button>
 
-                <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'success'"
-                  @button-held="setPrinterStatus(printer, 'paused')"
+                <button class="btn btn-success" :disabled="printer.queue?.[0]?.extruded"
+                  @click="setPrinterStatus(printer, 'paused')"
                   v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
                   Pause
-                </HoldButton>
+                </button>
 
-                <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'success'"
-                  @button-held="setPrinterStatus(printer, 'colorchange')"
+                <button class="btn btn-success" :disabled="printer.queue?.[0]?.extruded"
+                  @click="setPrinterStatus(printer, 'colorchange')"
                   v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
                   Color&nbsp;Change
-                </HoldButton>
+                </button>
 
-                <HoldButton :color="'secondary'" @button-held="setPrinterStatus(printer, 'printing')"
+                <button class="btn btn-secondary" @click="setPrinterStatus(printer, 'printing')"
                   v-if="printer.status == 'paused'">
                   Unpause
-                </HoldButton>
+                </button>
 
-                <HoldButton :color="'danger'" @button-held="setPrinterStatus(printer, 'complete')"
+                <button class="btn btn-danger" @click="setPrinterStatus(printer, 'complete')"
                   v-if="(printer.status == 'printing' || printer.status == 'colorchange')">
                   Stop
-                </HoldButton>
+                </button>
 
                 <div v-if="printer.status == 'colorchange'" class="mt-2">
                   See LCD screen
@@ -562,7 +560,7 @@ const doAssignIssue = async () => {
                 <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                   <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
                     style="background: none; border: none;">
-                    <i class="fas fa-ellipsis"
+                    <i class="fa-solid fa-bars"
                       :class="{ 'icon-disabled': printer.queue && printer.queue.length == 0 }"></i>
                   </button>
                   <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
@@ -688,12 +686,12 @@ table {
   table-layout: fixed;
 }
 
-.form-control{
+.form-control {
   background: #f4f4f4;
   border: 1px solid #484848;
 }
 
-.form-select{
+.form-select {
   background-color: #f4f4f4 !important;
   border-color: #484848 !important;
 }

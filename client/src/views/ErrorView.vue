@@ -515,7 +515,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                                 <button type="button" id="settingsDropdown" data-bs-toggle="dropdown"
                                     aria-expanded="false" style="background: none; border: none;">
-                                    <i class="fas fa-ellipsis"></i>
+                                    <i class="fa-solid fa-bars"></i>
                                 </button>
                                 <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
                                     <li>
@@ -690,16 +690,6 @@ table {
     border-collapse: collapse;
 }
 
-th,
-td {
-    border: 2px solid #dddddd;
-    text-align: left;
-    padding: 8px;
-}
-
-th {
-    background-color: #f2f2f2;
-}
 
 ul.dropdown-menu.w-100.show li {
     margin-left: 1rem;

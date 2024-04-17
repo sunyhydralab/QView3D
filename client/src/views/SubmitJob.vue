@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers, useRetrievePrintersInfo, type Device } from '../model/ports'
-import { useAddJobToQueue, useGetFile, type Job, useAutoQueue } from '../model/jobs'
+import { selectedPrinters, file, quantity, priority, favorite, name, useAddJobToQueue, useGetFile, type Job, useAutoQueue } from '../model/jobs'
 import { ref, onMounted, watch, watchEffect, computed } from 'vue'
 import { useRoute } from 'vue-router';
 import { toast } from '@/model/toast';
@@ -21,15 +21,6 @@ const printer = route.params.printer ? JSON.parse(route.params.printer as string
 const form = ref<HTMLFormElement | null>(null);
 let isSubmitDisabled = false;
 
-// Collect form data
-const selectedPrinters = ref<Array<Device>>([])
-
-const file = ref<File>()
-const quantity = ref<number>(1)
-const priority = ref<number>(0)
-const favorite = ref<boolean>(false)
-const name = ref<string>('')
-
 const isGcodeImageVisible = ref(false)
 
 // file upload
@@ -44,6 +35,7 @@ const handleFileUpload = (event: Event) => {
     } else {
         file.value = uploadedFile
         fileName.value = uploadedFile?.name || ''
+        name.value = fileName.value.replace('.gcode', '') || ''
     }
 }
 
@@ -173,6 +165,11 @@ function resetValues() {
 }
 
 watchEffect(() => {
+    if (quantity.value > 1000) {
+        quantity.value = 1000
+        toast.error('Quantity cannot be greater than 1000')
+    }
+
     isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0))
 });
 
@@ -267,6 +264,10 @@ const triggerFileInput = () => {
 
                     <div class="mb-3">
                         <label for="file" class="form-label">Upload your .gcode file</label>
+                        <div class="tooltip">
+                            <span class="text-danger">*</span>
+                            <span class="tooltiptext">The file name should not be longer than 50 characters</span>
+                        </div>
                         <input ref="fileInput" @change="handleFileUpload" style="display: none;" type="file" id="file"
                             name="file" accept=".gcode">
                         <div class="input-group">
@@ -286,6 +287,10 @@ const triggerFileInput = () => {
 
                     <div class="mb-3">
                         <label for="quantity" class="form-label">Quantity</label>
+                        <div class="tooltip">
+                        <span class="text-danger">*</span>
+                        <span class="tooltiptext">Quantity cannot be greater than 1000</span>
+                        </div>
                         <input v-model="quantity" class="form-control" type="number" id="quantity" name="quantity"
                             min="1" @keydown="onlyNumber($event)">
                     </div>
@@ -312,6 +317,10 @@ const triggerFileInput = () => {
 
                     <div class="mb-3">
                         <label for="name" class="form-label">Name</label>
+                        <div class="tooltip">
+                            <span class="text-danger">*</span>
+                            <span class="tooltiptext">Moves printer 10mm upwards! Please check printers before.</span>
+                        </div>
                         <input v-model="name" class="form-control" type="text" id="name" name="name">
                     </div>
 
@@ -351,5 +360,9 @@ const triggerFileInput = () => {
 
 .card {
     --bs-card-border-color: #484848;
+}
+
+.text-danger {
+    cursor: help;
 }
 </style>

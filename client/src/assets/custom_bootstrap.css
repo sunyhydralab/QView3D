@@ -9,6 +9,8 @@
   --primary-light: #b8d4ff;
   --success-dark: #5b9695;
   --success-light: #9aacab;
+
+  --bs-font-sans-serif: 'Public Sans', sans-serif;
 }
 
 .btn-primary {

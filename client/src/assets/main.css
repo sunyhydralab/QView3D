@@ -6,11 +6,7 @@ body {
   background-color: #b9b9b9;
 }
 
-* {
-  font-family: 'Public Sans', sans-serif;
-}
-
-input {
+*, input {
   font-family: 'Public Sans', sans-serif;
 }
 
@@ -33,7 +29,7 @@ input[type='radio']:checked {
 table {
   color: #1b1b1b;
   background-color: #d8d8d8;
-  border: 1px solid #929292 !important; /* Add this line */
+  border: 1px solid #929292;
   width: 100%;
   border-collapse: collapse;
 }
@@ -52,7 +48,7 @@ th {
 
 td,
 th {
-  border-top: 1px solid #929292 !important;
+  border-top: 1px solid #929292;
   border-bottom: 1px solid #929292 !important;
   border-left: none !important;
   border-right: none !important;
@@ -133,4 +129,49 @@ a, .btn-link {
 
 a:hover, .btn-link:hover {
   color: #5e548e;
+}
+
+.tooltip {
+  position: relative;
+  display: inline-block;
+  opacity: 1;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.2s linear, visibility 0.2s linear 0.2s;
+  width: 200px;
+  background-color: #484848;
+  color: #dbdbdb;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 2000;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -100px;
+}
+
+.tooltip .tooltiptext::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #484848 transparent transparent transparent;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.2s linear;
+}
+
+.tooltip .tooltiptext:hover {
+  visibility: hidden;
+  opacity: 0;
 }
