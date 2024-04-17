@@ -191,9 +191,16 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
             :data-bs-target="'#panelsStayOpen-collapse' + index" :aria-expanded="printer.isExpanded"
             :aria-controls="'panelsStayOpen-collapse' + index" :class="{ collapsed: !printer.isExpanded }">
             <b>{{ printer.name }}:&nbsp;
-              <span class="status-text" :style="{ color: statusColor(printer.status) }">{{
-                capitalizeFirstLetter(printer.status)
-              }}</span>
+
+              <span v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0">
+                Pending Release
+              </span>
+              <span v-else>
+                <span class="status-text" :style="{ color: statusColor(printer.status) }">{{
+      capitalizeFirstLetter(printer.status)
+    }}
+                </span>
+              </span>
             </b>
           </button>
         </h2>
@@ -255,7 +262,10 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                     </td>
                     <td>{{ job.file_name_original }}</td>
                     <td>{{ job.date }}</td>
-                    <td>{{ job.status }}</td>
+
+                    <td v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0">Pending release</td>
+                    <td v-else>{{ job.status }}</td>
+
                     <td style="width:">
                       <div class="dropdown">
                         <div style="
@@ -278,8 +288,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                               </a>
                             </li>
                             <li>
-                              <a class="dropdown-item d-flex align-items-center"
-                                @click="getFileDownload(job.id)"
+                              <a class="dropdown-item d-flex align-items-center" @click="getFileDownload(job.id)"
                                 :disabled="job.file_name_original.includes('.gcode:')">
                                 <i class="fas fa-download"></i>
                                 <span class="ms-2">Download</span>

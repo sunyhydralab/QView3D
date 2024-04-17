@@ -426,7 +426,7 @@ const doAssignIssue = async () => {
                   </p> -->
                 <p v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0" style="color: #ad6060"
                   class="mb-0 me-2">
-                  Waiting release
+                  Pending release
                 </p>
                 <p v-else class="mb-0 me-2">
                   {{ printer.status }}
