@@ -91,10 +91,10 @@ class Printer(db.Model):
     @classmethod
     def create_printer(cls, device, description, hwid, name, status):
         try:                
-            hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
-            hwid_without_location = '-'.join(hwid_parts[:-1])
+            # hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
+            # hwid_without_location = '-'.join(hwid_parts[:-1])
             
-            printerExists = cls.searchByDevice(hwid_without_location)
+            printerExists = cls.searchByDevice(hwid)
             if printerExists:
                 printer = cls.query.filter_by(hwid=hwid).first()
                 return {
@@ -102,13 +102,13 @@ class Printer(db.Model):
                     "message": "Printer already registered.",
                 }
             else:
-                hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
-                hwid_without_location = '-'.join(hwid_parts[:-1])
+                # hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
+                # hwid_without_location = '-'.join(hwid_parts[:-1])
 
                 printer = cls(
                     device=device,
                     description=description,
-                    hwid=hwid_without_location,
+                    hwid=hwid,
                     name=name,
                     status=status,
                     # date = datetime.now(get_localzone())
@@ -162,14 +162,17 @@ class Printer(db.Model):
         ports = serial.tools.list_ports.comports()
         printerList = []
         for port in ports:
+            hwid = port.hwid # get hwid 
+            hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
+            hwid_without_location = '-'.join(hwid_parts[:-1])
             port_info = {
                 "device": port.device,
                 "description": port.description,
-                "hwid": port.hwid,
+                "hwid": hwid_without_location,
             }
             # supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
-            if "original" in port.description.lower() or "prusa" in port.description.lower() or "n/a" not in port.hwid.lower():
-                printerList.append(port_info)
+            # if "original" in port.description.lower() or "prusa" in port.description.lower() or "n/a" not in port.hwid.lower():
+            printerList.append(port_info)
         return printerList
 
     @classmethod
@@ -218,10 +221,8 @@ class Printer(db.Model):
             # if(ser and ser.isOpen()):
             ports = Printer.getConnectedPorts()
             for port in ports:
-                hwid = port.hwid # get hwid 
-                hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
-                hwid_without_location = '-'.join(hwid_parts[:-1])
-                if hwid_without_location == cls.query.get(printerid).hwid:
+                hwid = port["hwid"] # get hwid 
+                if hwid == cls.query.get(printerid).hwid:
                     ser = serial.Serial(port["device"], 115200, timeout=1)
                     ser.close()
                     break 
@@ -259,9 +260,9 @@ class Printer(db.Model):
             ports = Printer.getConnectedPorts()
             for port in ports:
                 hwid = port.hwid # get hwid 
-                hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
-                hwid_without_location = '-'.join(hwid_parts[:-1])
-                if hwid_without_location == cls.query.get(printerid).hwid:
+                # hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
+                # hwid_without_location = '-'.join(hwid_parts[:-1])
+                if hwid == cls.query.get(printerid).hwid:
                     ser = serial.Serial(port["device"], 115200, timeout=1)
                     ser.close()
                     break 
