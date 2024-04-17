@@ -171,8 +171,8 @@ class Printer(db.Model):
                 "hwid": hwid_without_location,
             }
             # supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
-            # if "original" in port.description.lower() or "prusa" in port.description.lower() or "n/a" not in port.hwid.lower():
-            printerList.append(port_info)
+            if "original" in port.description.lower() or "prusa" in port.description.lower() or "n/a" not in port.hwid.lower():
+                printerList.append(port_info)
         return printerList
 
     @classmethod
@@ -302,6 +302,23 @@ class Printer(db.Model):
             #     break
         ser.close()
         return 
+    
+    @classmethod 
+    def repairPorts(cls): 
+        try:
+            ports = serial.tools.list_ports.comports()    
+            for port in ports: 
+                hwid = port.hwid # get hwid 
+                hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
+                hwid_without_location = '-'.join(hwid_parts[:-1])
+                printer = Printer.getPrinterByHwid(hwid_without_location)
+                if printer is not None: 
+                    if(printer.getDevice()!=port.device): 
+                        printer.editPort(printer.getId(), port.device)
+            return {"success": True, "message": "Printer port(s) successfully updated."}
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return jsonify({"error": "Unexpected error occurred"}), 500
         
     def connect(self):
         try:
@@ -571,6 +588,7 @@ class Printer(db.Model):
             begin = self.beginPrint(job)
             
             if begin==True: 
+                Printer.repairPorts() 
                 self.connect()
                 if self.getSer():
                     self.responseCount = 0
@@ -726,3 +744,5 @@ class Printer(db.Model):
             current_app.socketio.emit('can_pause', {'printerid': self.id, 'canPause': canPause})
         except Exception as e:
             print('Error setting canPause:', e)
+            
+            

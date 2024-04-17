@@ -3,6 +3,7 @@ import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useQueueR
 import { ref, onMounted } from 'vue';
 import { toast } from '../model/toast'
 import RegisterModal from '../components/RegisterModal.vue'
+import router from '@/router';
 
 const { retrieve } = useRetrievePrinters();
 const { retrieveInfo } = useRetrievePrintersInfo();
@@ -82,6 +83,8 @@ const saveName = async (printer: Device) => {
 
 const doRepair = async () => {
     await repair()
+    router.go(0)
+
 }
 
 const doDiagnose = async (printer: Device) => {
