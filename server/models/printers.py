@@ -104,6 +104,7 @@ class Printer(db.Model):
             else:
                 hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
                 hwid_without_location = '-'.join(hwid_parts[:-1])
+
                 printer = cls(
                     device=device,
                     description=description,
@@ -167,7 +168,7 @@ class Printer(db.Model):
                 "hwid": port.hwid,
             }
             # supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
-            if "original" in port.description.lowercase() or "prusa" in port.description.lowercase() or "n/a" not in port.hwid.lowercase():
+            if "original" in port.description.lower() or "prusa" in port.description.lower() or "n/a" not in port.hwid.lower():
                 printerList.append(port_info)
         return printerList
 
@@ -183,8 +184,8 @@ class Printer(db.Model):
                     hwid_without_location = '-'.join(hwid_parts[:-1])
                     printerExists = cls.searchByDevice(hwid_without_location)
                     if printerExists:
-                        printer = cls.query.filter_by(hwid=port.hwid).first()
-                        diagnoseString += f"<b>Device</b> {port.device} is registered with the following details: <br><br> <b>Name:</b> {printer.name} <br> <b>Device:</b> {printer.device}, <br> <b>Description:</b> {printer.description}, <br> <b>HWID:</b> {printer.hwid}"
+                        printer = cls.query.filter_by(hwid=hwid_without_location).first()
+                        diagnoseString += f"<hr><br>Device <b>{port.device}</b> is registered with the following details: <br><br> <b>Name:</b> {printer.name} <br> <b>Device:</b> {printer.device}, <br> <b>Description:</b> {printer.description}, <br><b> HWID:</b> {printer.hwid}"
             if diagnoseString == "":
                 diagnoseString = "The port this printer is registered under is <b>not found</b>. Please check the connection and try again."
             # return diagnoseString
@@ -217,7 +218,10 @@ class Printer(db.Model):
             # if(ser and ser.isOpen()):
             ports = Printer.getConnectedPorts()
             for port in ports:
-                if port["hwid"] == cls.query.get(printerid).hwid:
+                hwid = port.hwid # get hwid 
+                hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
+                hwid_without_location = '-'.join(hwid_parts[:-1])
+                if hwid_without_location == cls.query.get(printerid).hwid:
                     ser = serial.Serial(port["device"], 115200, timeout=1)
                     ser.close()
                     break 
@@ -254,7 +258,10 @@ class Printer(db.Model):
         try:
             ports = Printer.getConnectedPorts()
             for port in ports:
-                if port["hwid"] == cls.query.get(printerid).hwid:
+                hwid = port.hwid # get hwid 
+                hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
+                hwid_without_location = '-'.join(hwid_parts[:-1])
+                if hwid_without_location == cls.query.get(printerid).hwid:
                     ser = serial.Serial(port["device"], 115200, timeout=1)
                     ser.close()
                     break 

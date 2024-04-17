@@ -41,12 +41,13 @@ def registerPrinter():
         res = Printer.create_printer(device=device, description=description, hwid=hwid, name=name, status='ready')
         if(res["success"] == True):
             id = res['printer_id']
-                    
+            hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
+            hwid_without_location = '-'.join(hwid_parts[:-1])
             thread_data = {
                 "id": id, 
                 "device": device,
                 "description": description,
-                "hwid": hwid,
+                "hwid": hwid_without_location,
                 "name": name
             }
             
@@ -103,11 +104,7 @@ def repair_ports():
             hwid_without_location = '-'.join(hwid_parts[:-1])
             printer = Printer.getPrinterByHwid(hwid_without_location)
             if printer is not None: 
-                # print(printer)
-                print("PRINTER NOT NONE: printer device ", printer.getDevice(), "port device", port.device)
                 if(printer.getDevice()!=port.device): 
-                    # print("printer device ", printer.getDevice(), "port device", port.device)
-                    # print(printer.getId())
                     printer.editPort(printer.getId(), port.device)
         return {"success": True, "message": "Printer port(s) successfully updated."}
 
