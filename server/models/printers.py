@@ -167,8 +167,8 @@ class Printer(db.Model):
                 "hwid": port.hwid,
             }
             # supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
-            # if port.description in supportedPrinters:
-            printerList.append(port_info)
+            if "original" in port.description.lowercase() or "prusa" in port.description.lowercase() or "n/a" not in port.hwid.lowercase():
+                printerList.append(port_info)
         return printerList
 
     @classmethod
@@ -179,7 +179,9 @@ class Printer(db.Model):
             for port in ports:
                 if port.device == deviceToDiagnose:
                     diagnoseString += f"The system has found a <b>matching port</b> with the following details: <br><br> <b>Device:</b> {port.device}, <br> <b>Description:</b> {port.description}, <br> <b>HWID:</b> {port.hwid}"
-                    printerExists = cls.searchByDevice(port.hwid)
+                    hwid_parts = port.hwid.split('-')  # Replace '-' with the actual separator
+                    hwid_without_location = '-'.join(hwid_parts[:-1])
+                    printerExists = cls.searchByDevice(hwid_without_location)
                     if printerExists:
                         printer = cls.query.filter_by(hwid=port.hwid).first()
                         diagnoseString += f"<b>Device</b> {port.device} is registered with the following details: <br><br> <b>Name:</b> {printer.name} <br> <b>Device:</b> {printer.device}, <br> <b>Description:</b> {printer.description}, <br> <b>HWID:</b> {printer.hwid}"
