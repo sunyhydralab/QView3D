@@ -70,6 +70,7 @@ def add_job_to_queue():
         favorite = request.form['favorite']
         # favorite = 1 if _favorite == 'true' else 0
         quantity = request.form['quantity']
+        td_id = int(request.form['td_id'])
         favoriteOne = False 
 
         for i in range(int(quantity)):
@@ -80,7 +81,7 @@ def add_job_to_queue():
                 favorite = 0
                 
             status = 'inqueue' # set status 
-            res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite) # insert into DB 
+            res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite, td_id) # insert into DB 
             
             # retrieve job from DB
             id = res['id']
@@ -116,6 +117,8 @@ def auto_queue():
         quantity = request.form['quantity']
 
         favorite = request.form['favorite']
+        td_id = request.form['td_id']
+
         favoriteOne = False 
         for i in range(int(quantity)):
             status = 'inqueue' # set status 
@@ -128,7 +131,7 @@ def auto_queue():
                 favorite = 0
             # favorite = 1 if _favorite == 'true' else 0
             
-            res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite) # insert into DB 
+            res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite, td_id) # insert into DB 
             
             id = res['id']
             
@@ -530,9 +533,9 @@ def rerunjob(printerpk, jobpk, position):
     status = 'inqueue' # set status 
     file_name_original = job.getFileNameOriginal() # get original file name
     favorite = job.getFileFavorite() # get favorite status
-    
+    td_id = job.getTdId() 
     # Insert new job into DB and return new PK 
-    res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original, favorite = favorite) # insert into DB 
+    res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original, favorite = favorite, td_id=td_id) # insert into DB 
     
     id = res['id']
     file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique

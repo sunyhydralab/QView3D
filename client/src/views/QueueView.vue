@@ -211,7 +211,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
             <table class="table-striped">
               <thead>
                 <tr>
-                  <th class="col-1">Job ID</th>
+                  <th class="col-1">TeamDynamix</th>
                   <th class="col-2">Rerun Job</th>
                   <th class="col-1">Position</th>
                   <th>Job Title</th>
@@ -234,7 +234,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                 <template #item="{ element: job }">
                   <tr :id="job.id.toString()" :data-printer-id="printer.id" :data-job-id="job.id"
                     :data-job-status="job.status" :key="job.id" :class="{ printing: job.status === 'printing' }">
-                    <td>{{ job.id }}</td>
+                    <td>{{ job.td_id }}</td>
 
                     <td class="text-center">
                       <div class="btn-group w-100">

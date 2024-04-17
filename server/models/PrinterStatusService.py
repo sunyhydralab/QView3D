@@ -154,6 +154,7 @@ class PrinterStatusService:
                     "file_pause": job.filePause, 
                     "comments": job.comments, 
                     "extruded": job.extruded,
+                    "td_id": job.td_id,
                 }
                 printer_info['queue'].append(job_info)
             

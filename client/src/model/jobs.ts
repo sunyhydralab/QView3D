@@ -21,6 +21,8 @@ export interface Job {
   printer: string //store printer name
   printerid: number
 
+  td_id: number //store td_id of job
+
   errorid?: number
   error?: string // store issue name 
 

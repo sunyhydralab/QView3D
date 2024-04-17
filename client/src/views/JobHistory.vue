@@ -627,7 +627,7 @@ const closeDropdown = (evt: any) => {
         <table class="table-striped">
             <thead>
                 <tr>
-                    <th>Job ID</th>
+                    <th>TeamDynamix</th>
                     <th>Printer</th>
                     <th>Job Title</th>
                     <th>File</th>
@@ -642,7 +642,7 @@ const closeDropdown = (evt: any) => {
             </thead>
             <tbody v-if="filteredJobs.length > 0">
                 <tr v-for="job in filteredJobs" :key="job.id">
-                    <td>{{ job.id }}</td>
+                    <td>{{ job.td_id }}</td>
                     <td>{{ job.printer }}</td>
                     <td>
                         <div style="display: flex; justify-content: start; align-items: center;">

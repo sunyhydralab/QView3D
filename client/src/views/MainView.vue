@@ -388,7 +388,7 @@ const doAssignIssue = async () => {
     <table class="table-striped">
       <tr>
         <!-- NEED TO FIX THIS FOR EVERY DISPLAYS -->
-        <th style="width: 64px">Job ID</th>
+        <th style="width: 64px">TDID</th>
         <th style="width: 130px">Printer name</th>
         <th style="width: 142px">Printer Status</th>
         <th style="width: 110px">Job Name</th>
@@ -405,7 +405,7 @@ const doAssignIssue = async () => {
 
             <td
               v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
-              {{ printer.queue?.[0].id }}
+              {{ printer.queue?.[0].td_id }}
             </td>
 
             <td v-else><i>idle</i></td>

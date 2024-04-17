@@ -26,7 +26,6 @@ socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socket
 app.socketio = socketio  # Add the SocketIO object to the app object
 
 # IMPORTING BLUEPRINTS 
-from controllers.display import display_bp
 from controllers.ports import ports_bp
 from controllers.jobs import jobs_bp
 from controllers.statusService import status_bp, getStatus 
@@ -53,7 +52,6 @@ db.init_app(app)
 migrate = Migrate(app, db)
 
 # # Register the display_bp Blueprint
-app.register_blueprint(display_bp)
 app.register_blueprint(ports_bp)
 app.register_blueprint(jobs_bp)
 app.register_blueprint(status_bp)

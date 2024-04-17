@@ -171,8 +171,8 @@ class Printer(db.Model):
                 "hwid": hwid_without_location,
             }
             # supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
-            if "original" in port.description.lower() or "prusa" in port.description.lower() or "n/a" not in port.hwid.lower():
-                printerList.append(port_info)
+            # if "original" in port.description.lower() or "prusa" in port.description.lower() or "n/a" not in port.hwid.lower():
+            printerList.append(port_info)
         return printerList
 
     @classmethod
