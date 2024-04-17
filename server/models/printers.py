@@ -547,32 +547,43 @@ class Printer(db.Model):
             return "error"
 
     def printNextInQueue(self):
-        self.connect()
+        # self.connect()
         job = self.getQueue().getNext()  # get next job
         try:
-            if self.getSer():
-                self.responseCount = 0
-                job.saveToFolder()
-                path = job.generatePath()
+        # if self.getSer():
+            # self.responseCount = 0
+            # job.saveToFolder()
+            # path = job.generatePath()
 
-                self.setStatus("printing")  # set printer status to printing
-                self.sendStatusToJob(job, job.id, "printing")
+            self.setStatus("printing")  # set printer status to printing
+            self.sendStatusToJob(job, job.id, "printing")
 
-                begin = self.beginPrint(job)
-                
-                if begin==True: 
+            begin = self.beginPrint(job)
+            
+            if begin==True: 
+                self.connect()
+                if self.getSer():
+                    self.responseCount = 0
+                    job.saveToFolder()
+                    path = job.generatePath()
                     verdict = self.parseGcode(path, job)  # passes file to code. returns "complete" if successful, "error" if not.
                     self.handleVerdict(verdict, job)
-                else: 
-                    self.handleVerdict("misprint", job)    
+                    job.removeFileFromPath(path)  # remove file from folder after job complete
+                else:
+                    self.getQueue().deleteJob(job.id, self.id)
+                    # self.setStatus("error")
+                    self.setError("Printer not connected")
+                    self.sendStatusToJob(job, job.id, "error")
+            else: 
+                self.handleVerdict("misprint", job)    
 
-                job.removeFileFromPath(path)  # remove file from folder after job complete
-            # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready.
-            else:
-                self.getQueue().deleteJob(job.id, self.id)
-                # self.setStatus("error")
-                self.setError("Printer not connected")
-                self.sendStatusToJob(job, job.id, "error")
+            # job.removeFileFromPath(path)  # remove file from folder after job complete
+        # WHEN THE USER CLEARS THE JOB: remove job from queue, set printer status to ready.
+        # else:
+        #     self.getQueue().deleteJob(job.id, self.id)
+        #     # self.setStatus("error")
+        #     self.setError("Printer not connected")
+        #     self.sendStatusToJob(job, job.id, "error")
             return
         except Exception as e:
             # print("exception in printNextInQueue except")
@@ -582,7 +593,6 @@ class Printer(db.Model):
             self.setError(e)
             
     def beginPrint(self, job): 
-        print("in BEGIN PRINT")
         while True: 
             time.sleep(1)
             if job.getReleased()==1: 
