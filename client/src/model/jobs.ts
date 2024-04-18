@@ -533,3 +533,19 @@ export function useAssignComment() {
     }
   }
 }
+
+export function useDownloadCsv() {
+  return {
+    async csv() {
+      try {
+        const response = await api(`downloadcsv`)
+        const file = new Blob([response.file], { type: 'text/csv' })
+        const file_name = response.file_name
+        saveAs(file, file_name)
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while downloading the csv')
+      }
+    }
+  }
+}

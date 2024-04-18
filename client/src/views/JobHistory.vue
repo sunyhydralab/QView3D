@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { printers, useRetrievePrintersInfo, type Device } from '../model/ports'
-import { pageSize, useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useUpdateJobStatus } from '../model/jobs';
+import { pageSize, useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useUpdateJobStatus, useDownloadCsv } from '../model/jobs';
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
-
 const { jobhistory, getFavoriteJobs } = useGetJobs()
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { rerunJob } = useRerunJob()
@@ -19,6 +18,7 @@ const { createIssue } = useCreateIssues()
 const { assign } = useAssignIssue()
 const { assignComment } = useAssignComment()
 const { updateJobStatus } = useUpdateJobStatus()
+const {csv} = useDownloadCsv()
 
 const selectedPrinters = ref<Array<Number>>([])
 const selectedJobs = ref<Array<Job>>([]);
@@ -328,6 +328,10 @@ const closeDropdown = (evt: any) => {
     }
 }
 
+const doDownloadCsv = async () => {
+    await csv()
+}
+
 </script>
 
 <template>
@@ -607,7 +611,12 @@ const closeDropdown = (evt: any) => {
 
             <div class="col-10 d-flex justify-content-center align-items-center"></div>
 
-            <div class="col-1 text-end" style="padding-right: 0;">
+            <div class="col-1 text-end d-flex justify-content-between" style="padding-right: 0;">
+                
+                <button @click="doDownloadCsv" class="btn btn-success me-2">
+                    <i class="fa-solid fa-file-csv"></i>
+                </button>
+
                 <button
                     @click="openModal(clearSpaceTitle, 'Are you sure you want to clear space? This action will remove the files from jobs that are older than 6 months, except for those marked as favorite jobs, and this cannot be <b>undone</b>.', 'clear')"
                     class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#exampleModal">
@@ -713,7 +722,8 @@ const closeDropdown = (evt: any) => {
                         </div>
                     </td>
                     <td>
-                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job" :disabled="job.status === 'printing'">
+                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job"
+                            :disabled="job.status === 'printing'">
                     </td>
                 </tr>
             </tbody>
@@ -855,12 +865,12 @@ label.form-check-label {
     cursor: pointer;
 }
 
-.form-control{
+.form-control {
     background: #f4f4f4;
     border: 1px solid #484848;
 }
 
-.form-select{
+.form-select {
     background-color: #f4f4f4 !important;
     border-color: #484848 !important;
 }

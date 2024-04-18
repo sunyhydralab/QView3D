@@ -263,8 +263,9 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                     <td>{{ job.file_name_original }}</td>
                     <td>{{ job.date }}</td>
 
-                    <td v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0">Pending release</td>
+                    <td v-if="printer.queue && printer.status == 'printing' && printer.queue?.[0].released == 0 && job.status == 'printing'">Pending release</td>
                     <td v-else>{{ job.status }}</td>
+
 
                     <td style="width:">
                       <div class="dropdown">

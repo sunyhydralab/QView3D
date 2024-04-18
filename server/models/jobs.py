@@ -413,6 +413,10 @@ class Job(db.Model):
             db.session.rollback()
             print(f"Error setting comments: {e}")
             return None
+        
+    @classmethod
+    def downloadCSV(cls):
+        pass 
            
     def saveToFolder(self):
         file_data = self.getFile()
