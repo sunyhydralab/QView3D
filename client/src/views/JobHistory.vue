@@ -609,10 +609,10 @@ const doDownloadCsv = async () => {
                 </div>
             </div>
 
-            <div class="col-10 d-flex justify-content-center align-items-center"></div>
+            <div class="col-9 d-flex justify-content-center align-items-center"></div>
 
-            <div class="col-1 text-end d-flex justify-content-between" style="padding-right: 0;">
-                
+            <div class="col-2 text-end d-flex justify-content-end" style="padding-right: 0;">
+                            
                 <button @click="doDownloadCsv" class="btn btn-success me-2">
                     <i class="fa-solid fa-file-csv"></i>
                 </button>
