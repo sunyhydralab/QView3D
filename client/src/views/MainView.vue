@@ -6,7 +6,7 @@ import PrinterRow from '@/components/PrinterRow.vue'
 
 <template>
   <div class="container">
-    <table class="table-striped" id="table">
+    <table class="table-striped" ref="table">
       <tr>
         <th style="width: 64px">Job ID</th>
         <th style="width: 130px">Printer name</th>
@@ -37,7 +37,7 @@ import PrinterRow from '@/components/PrinterRow.vue'
   opacity: 0;
 }
 
-table {
-  table-layout: fixed;
+th {
+  user-select: none;
 }
 </style>

@@ -22,7 +22,7 @@ let selectAllCheckbox = ref(false)
 
 onUnmounted(() => {
   for (const printer of printers.value) {
-    printer.isExpanded = false
+    printer.isQueueExpanded = false
   }
 })
 
@@ -188,8 +188,8 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
       <div class="accordion-item" v-for="(printer, index) in printers" :key="printer.id">
         <h2 class="accordion-header" :id="'panelsStayOpen-heading' + index">
           <button class="accordion-button" type="button" data-bs-toggle="collapse"
-            :data-bs-target="'#panelsStayOpen-collapse' + index" :aria-expanded="printer.isExpanded"
-            :aria-controls="'panelsStayOpen-collapse' + index" :class="{ collapsed: !printer.isExpanded }">
+            :data-bs-target="'#panelsStayOpen-collapse' + index" :aria-expanded="printer.isQueueExpanded"
+            :aria-controls="'panelsStayOpen-collapse' + index" :class="{ collapsed: !printer.isQueueExpanded }">
             <b>{{ printer.name }}:&nbsp;
               <span class="status-text" :style="{ color: statusColor(printer.status) }">{{
                 capitalizeFirstLetter(printer.status)
@@ -198,8 +198,8 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
           </button>
         </h2>
         <div :id="'panelsStayOpen-collapse' + index" class="accordion-collapse collapse"
-          :class="{ show: printer.isExpanded }" :aria-labelledby="'panelsStayOpen-heading' + index"
-          @show.bs.collapse="printer.isExpanded = !printer.isExpanded">
+          :class="{ show: printer.isQueueExpanded }" :aria-labelledby="'panelsStayOpen-heading' + index"
+          @show.bs.collapse="printer.isQueueExpanded = !printer.isQueueExpanded">
           <div class="accordion-body">
             <div class="scrollable">
               <table class="table-striped">

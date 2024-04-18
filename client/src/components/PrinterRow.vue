@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { jobTime, useAssignComment, useGetFile, useGetJobFile, useReleaseJob, useRemoveJob, useStartJob, type Job } from '@/model/jobs';
 import { printers, useSetStatus, type Device } from '@/model/ports';
-import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
+import { type Issue, useGetIssues, useAssignIssue } from '../model/issues'
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 import GCode3DLiveViewer from '@/components/GCode3DLiveViewer.vue';
@@ -17,7 +17,6 @@ const { releaseJob } = useReleaseJob()
 const { removeJob } = useRemoveJob()
 const { getFile } = useGetFile()
 const { issues } = useGetIssues()
-const { createIssue } = useCreateIssues()
 const { assign } = useAssignIssue()
 const { assignComment } = useAssignComment()
 const { getFileDownload } = useGetJobFile()
@@ -27,17 +26,20 @@ let currentJob = ref<Job>();
 let currentPrinter = ref<Device>();
 const selectedJob = ref<Job>()
 const selectedIssue = ref<Issue>()
-const showText = ref(false)
-const newIssue = ref('')
 let issuelist = ref<Array<Issue>>([])
 
 let isGcodeImageVisible = ref(false)
 let isGcodeLiveViewVisible = ref(false)
 let jobComments = ref('')
 
+onMounted(async () => {
+    const retrieveissues = await issues()
+    issuelist.value = retrieveissues
+})
+
 const sendToQueueView = (printer: Device | undefined) => {
     if (printer) {
-        printer.isExpanded = true;
+        printer.isQueueExpanded = true;
         router.push({ name: 'QueueViewVue' });
     }
 }
@@ -80,10 +82,9 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
     }
 }
 
-onMounted(async () => {
-    const retrieveissues = await issues()
-    issuelist.value = retrieveissues
-})
+const openPrinterInfo = (printer: Device) => {
+    printer.isInfoExpanded = !printer.isInfoExpanded;
+}
 
 const releasePrinter = async (jobToFind: Job | undefined, key: number, printerIdToPrintTo: number) => {
     await releaseJob(jobToFind, key, printerIdToPrintTo)
@@ -98,7 +99,7 @@ function formatTime(milliseconds: number): string {
     const minutesStr = minutes < 10 ? '0' + minutes : minutes
     const secondsStr = seconds < 10 ? '0' + seconds : seconds
 
-    if ((hoursStr + ':' + minutesStr + ':' + secondsStr === 'NaN:NaN:NaN')) return 'Printer calibrating...'
+    if ((hoursStr + ':' + minutesStr + ':' + secondsStr === 'NaN:NaN:NaN')) return '<i>idle</i>'
     return hoursStr + ':' + minutesStr + ':' + secondsStr
 }
 
@@ -108,21 +109,10 @@ function formatETA(milliseconds: number): string {
 
 
     if (isNaN(date.getTime()) || timeString === "07:00 PM") {
-        return 'Printer calibrating...'
+        return '<i>idle</i>'
     }
 
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-}
-
-
-
-const doCreateIssue = async () => {
-    await createIssue(newIssue.value)
-    const newIssues = await issues()
-    console.log(newIssues)
-    issuelist.value = newIssues
-    newIssue.value = ''
-    showText.value = false
 }
 
 const doAssignIssue = async () => {
@@ -176,153 +166,6 @@ const doAssignIssue = async () => {
                         @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
                     <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save
                         Changes</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-
-    <!-- bootstrap 'infoModal' -->
-    <div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="infoModalLabel"><b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Display other attributes of the job -->
-                    <div class="row">
-                        <div class="col-sm-12">
-                            <div class="card mb-3">
-                                <div class="card-body">
-                                    <h5 class="card-title"><i class="fas fa-chart-line"></i> <b>Progress:</b> {{
-                                        currentJob?.progress ?
-                                            `${currentJob?.progress.toFixed(2)}%` : '0.00%' }}</h5>
-                                    <div class="progress">
-                                        <div class="progress-bar progress-bar-striped progress-bar-animated"
-                                            role="progressbar"
-                                            :style="{ width: `${currentJob?.progress ? currentJob?.progress.toFixed(2) : '0'}%` }"
-                                            aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-sm-3">
-                            <div class="card mb-3" style="border: 1px solid #484848">
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-12">
-                                            <h5 class="card-title"><i class="fas fa-hourglass-half"></i> <b>Elapsed
-                                                    Time:</b></h5>
-                                        </div>
-                                        <!-- <div class="col-12">{{ formatTime(currentJob?.job_client?.elapsed_time!) }}</div> -->
-                                        <div class="col-12">
-                                            {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
-                                            formatTime(currentJob?.job_client?.elapsed_time!) }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-sm-3">
-                            <div class="card bg-light mb-3">
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-12">
-                                            <h5 class="card-title"><i class="fas fa-hourglass-end"></i> <b>Remaining
-                                                    Time:</b></h5>
-                                        </div>
-                                        <!-- <div class="col-12">{{ formatTime(currentJob?.job_client?.remaining_time!) }}</div> -->
-                                        <div class="col-12">
-                                            {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
-                                            formatTime(currentJob?.job_client?.remaining_time!) }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-sm-3">
-                            <div class="card bg-light mb-3">
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-12">
-                                            <h5 class="card-title"><i class="fas fa-stopwatch"></i> <b>Total Time:</b>
-                                            </h5>
-                                        </div>
-                                        <div class="col-12">
-                                            <div v-if="currentPrinter?.status === 'colorchange'">
-                                                Waiting for filament change...
-                                            </div>
-                                            <div v-else>
-                                                <div v-if="currentJob?.job_client?.extra_time">
-                                                    {{ formatTime(currentJob?.job_client.total_time!) + ' + ' +
-                                                        formatTime(currentJob?.job_client.extra_time!) }}
-                                                </div>
-                                                <div v-else>
-                                                    {{ formatTime(currentJob?.job_client?.total_time!) }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-sm-3">
-                            <div class="card bg-light mb-3">
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-12">
-                                            <h5 class="card-title"><i class="fas fa-stopwatch"></i> <b>ETA:</b></h5>
-                                        </div>
-                                        <!-- <div class="col-12">{{ formatETA(currentJob?.job_client?.eta!) ?? "Waiting to start heating..."  }}</div> -->
-                                        <div class="col-12">
-                                            {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
-                                            formatETA(currentJob?.job_client?.eta!) }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-sm-12 col-md-6">
-                            <div class="card bg-light mb-3 h-100">
-                                <div class="card-body">
-                                    <h5 class="card-title"><i class="fas fa-file-alt"></i> <b>Job ID:</b> {{
-                                        currentJob?.id }}</h5>
-                                    <h5 class="card-title"><i class="fas fa-clock"></i> <b>Job Status:</b> {{
-                                        currentJob?.status }}</h5>
-                                    <h5 class="card-title"><i class="fas fa-file"></i> <b>File Name:</b> {{
-                                        currentJob?.file_name_original
-                                        }}</h5>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-sm-12 col-md-6">
-                            <div class="card bg-light mb-3 h-100">
-                                <div class="card-body">
-                                    <h5 class="card-title">
-                                        <i class="fas fa-thermometer-full"></i>
-                                        <b>Nozzle Temp: </b>
-                                        <span
-                                            v-html="currentPrinter?.extruder_temp ? currentPrinter.extruder_temp + '&deg;C' : '<i>idle</i>'"></span>
-                                    </h5>
-                                    <h5 class="card-title">
-                                        <i class="fas fa-thermometer-half"></i>
-                                        <b>Bed Temp: </b>
-                                        <span
-                                            v-html="currentPrinter?.bed_temp ? currentPrinter.bed_temp + '&deg;C' : '<i>idle</i>'"></span>
-                                    </h5>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -551,9 +394,8 @@ const doAssignIssue = async () => {
 
         </td>
 
-        <td style="width: 1%; white-space: nowrap"
-            :class="{ 'not-draggable': printer.queue && printer.queue.length == 0 }">
-            <div class="dropdown">
+        <td style="width: 1%; white-space: nowrap; height: 55px; padding-top: 5px;">
+            <div :class="{ 'not-draggable': printer.queue && printer.queue.length == 0 }" class="dropdown">
                 <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                     <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
                         style="background: none; border: none;">
@@ -561,15 +403,6 @@ const doAssignIssue = async () => {
                             :class="{ 'icon-disabled': printer.queue && printer.queue.length == 0 }"></i>
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
-                                data-bs-target="#infoModal" v-if="printer.queue && printer.queue.length > 0"
-                                v-bind:job="printer.queue![0]"
-                                @click="printer.name && openModal(printer.queue![0], printer.name, 0, printer)">
-                                <i class="fas fa-info"></i>
-                                <span class="ms-2">Info</span>
-                            </a>
-                        </li>
                         <!-- <li>
                   <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
                     data-bs-target="#gcodeLiveViewModal" v-if="printer.queue && printer.queue.length > 0"
@@ -599,41 +432,120 @@ const doAssignIssue = async () => {
                     </ul>
                 </div>
             </div>
+            <div style="height: 35%; padding-bottom: 5px;">
+                <i class="fa" :class="['fa-chevron-down', printer.isInfoExpanded ? 'rotate-up' : 'rotate-down']"
+                    @click="openPrinterInfo(printer)"></i>
+            </div>
         </td>
 
-        <td class="text-center handle" :class="{ 'not-draggable': printers.length <= 1 }">
+        <td class="text-center handle" :class="{ 'not-draggable': printers.length <= 1 }"
+            :rowspan="printer.isInfoExpanded ? 2 : 1">
             <i class="fas fa-grip-vertical" :class="{ 'icon-disabled': printers.length <= 1 }"></i>
         </td>
 
     </tr>
 
-    <tr>
-        <td><b>Filament:</b></td>
-        <td><b>Layer:</b></td>
-        <td>
-            <b>Nozzle Temp:</b>
-            <span v-html="currentPrinter?.extruder_temp ? currentPrinter.extruder_temp + ' &deg;C' : ' <i>idle</i>'"></span>
+    <tr v-if="printer.isInfoExpanded">
+        <td style="vertical-align: top; height: 100%;">
+            <div style="position: relative; top: 0;">
+                <b>Filament:</b>
+            </div>
+            <div style="position: relative; top: 50%;">
+                <span></span>
+            </div>
         </td>
-        <td>
-            <b>Bed Temp:</b>
-            <span v-html="currentPrinter?.bed_temp ? currentPrinter.bed_temp + ' &deg;C' : ' <i>idle</i>'"></span>
+        <td style="vertical-align: top; height: 100%;">
+            <div style="position: relative; top: 0;">
+                <b>Layer:</b>
+            </div>
+            <div style="position: relative; top: 50%;">
+                <span></span>
+            </div>
         </td>
-        <td>
-            <b>Elapsed Time:</b> {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
-                formatTime(currentJob?.job_client?.elapsed_time!) }}
+        <td style="vertical-align: top; height: 100%;">
+            <div style="position: relative; top: 0;">
+                <b>Nozzle Temp:</b>
+            </div>
+            <div style="position: relative; top: 50%;">
+                <span
+                    v-html="currentPrinter?.extruder_temp ? currentPrinter.extruder_temp + ' &deg;C' : ' <i>idle</i>'"></span>
+            </div>
         </td>
-        <td>
-            <b>Remaining Time:</b> {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
-                formatTime(currentJob?.job_client?.remaining_time!) }}
+        <td style="vertical-align: top; height: 100%;">
+            <div style="position: relative; top: 0;">
+                <b>Bed Temp:</b>
+            </div>
+            <div style="position: relative; top: 50%;">
+                <span v-html="currentPrinter?.bed_temp ? currentPrinter.bed_temp + ' &deg;C' : ' <i>idle</i>'"></span>
+            </div>
         </td>
-        <td>
-            <b>ETA:</b> {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
-                formatETA(currentJob?.job_client?.eta!) }}
+        <td style="vertical-align: top; height: 100%;">
+            <div style="position: relative; top: 0;">
+                <b>Elapsed:</b>
+            </div>
+            <div style="position: relative; top: 50%;">
+                <span
+                    v-html="currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' : formatTime(currentJob?.job_client?.elapsed_time!)"></span>
+            </div>
+        </td>
+        <td style="vertical-align: top; height: 100%;">
+            <div style="position: relative; top: 0;">
+                <b>Remaining:</b>
+            </div>
+            <div style="position: relative; top: 50%;">
+                <span
+                    v-html="currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' : formatTime(currentJob?.job_client?.remaining_time!)"></span>
+            </div>
+        </td>
+        <td style="vertical-align: top; height: 100%;">
+            <div style="position: relative; top: 0;">
+                <b>Total:</b>
+            </div>
+            <div style="position: relative; top: 50%;">
+                <span
+                    v-html="currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' : formatTime(currentJob?.job_client?.total_time!)"></span>
+            </div>
+        </td>
+        <td class="border-extended" style="vertical-align: top; height: 100%;">
+            <div style="position: relative; top: 0;">
+                <b>ETA:</b>
+            </div>
+            <div style="position: relative; top: 50%;;">
+                <span
+                    v-html="currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' : formatETA(currentJob?.job_client?.eta!)"></span>
+            </div>
         </td>
     </tr>
 </template>
 
 <style scoped>
+.border-extended {
+    position: relative;
+}
+
+.border-extended::after {
+    content: "";
+    position: absolute;
+    right: 0px;
+    top: -0.5px;
+    bottom: 0;
+    width: 1px;
+    background: #929292;
+    height: calc(100% + 1.5px);
+}
+
+.fa {
+    transition: transform 0.3s ease-in-out;
+}
+
+.rotate-up {
+    transform: rotate(0deg);
+}
+
+.rotate-down {
+    transform: rotate(180deg);
+}
+
 .truncate {
     white-space: nowrap;
     overflow: hidden;
