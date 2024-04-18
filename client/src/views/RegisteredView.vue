@@ -45,7 +45,20 @@ const doQueueRestore = async (printer: Device) => {
 }
 
 const doDelete = async (printer: Device) => {
+    if(printer.status=="printing"){
+        toast.error("Cannot deregister printer while status is printing. Please wait for the printer to finish")
+    }
+    const printerId = printer.id;
+    const foundPrinter = printers.value.find(p => p.id === printerId);    // code to find printer where printer.id is equal to the printer.id in the printers array
+    
+    if(foundPrinter?.status === "printing"){
+        toast.error("Cannot deregister printer while status is printing. Please turn offline or wait for the printer to finish printing.")
+        return
+    }
+
     printers.value = printers.value.filter(p => p.id !== printer.id)
+
+
     await nullifyJobs(printer.id)
 
     let response = await deletePrinter(printer.id)
