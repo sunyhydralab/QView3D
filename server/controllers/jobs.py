@@ -274,7 +274,9 @@ def releasejob():
 
         if key == 3: 
             Job.update_job_status(jobpk, "error")
+            printerobject.setError(job.comments)
             printerobject.setStatus("error") # printer ready to accept new prints 
+            
         elif key == 2: 
             rerunjob(printerid, jobpk, "front")
             

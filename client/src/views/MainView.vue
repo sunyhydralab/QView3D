@@ -3,7 +3,7 @@ import { useSetStatus, type Device, printers } from '@/model/ports';
 import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
 import { type Job, useReleaseJob, useStartJob, useRemoveJob, useGetFile, useGetJobFile, jobTime, useAssignComment } from '@/model/jobs';
 import { useRouter } from 'vue-router';
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, nextTick } from 'vue';
 import draggable from 'vuedraggable'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 import GCode3DLiveViewer from '@/components/GCode3DLiveViewer.vue';
@@ -127,12 +127,21 @@ const doCreateIssue = async () => {
 
 const doAssignIssue = async () => {
   if (selectedJob.value === undefined) return
+
+  // let printerIndex = printers.value.findIndex((printer) => printer.id === selectedJob.value?.printerid)
+
+  // if (printerIndex !== -1) {
+  //   printers.value[printerIndex].error = jobComments.value
+  // }
+  await assignComment(selectedJob.value, jobComments.value)
+
+
   await releasePrinter(selectedJob.value, 3, selectedJob.value.printerid)
 
   if (selectedIssue.value !== undefined) {
     await assign(selectedIssue.value.id, selectedJob.value.id)
   }
-  await assignComment(selectedJob.value, jobComments.value)
+  // await assignComment(selectedJob.value, jobComments.value)
   selectedJob.value.comment = jobComments.value
   selectedIssue.value = undefined
   selectedJob.value = undefined

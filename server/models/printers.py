@@ -647,8 +647,7 @@ class Printer(db.Model):
             self.disconnect()
             
         elif verdict== "misprint": 
-            self.sendStatusToJob(job, job.id, "cancelled")
-            
+            self.sendStatusToJob(job, job.id, "cancelled")            
         return 
     
     def fileExistsInPath(self, path):
