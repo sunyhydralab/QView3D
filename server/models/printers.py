@@ -630,7 +630,6 @@ class Printer(db.Model):
             
     def handleVerdict(self, verdict, job):
         # self.disconnect()
-        
         if verdict == "complete":
             self.disconnect()
             self.setStatus("complete")

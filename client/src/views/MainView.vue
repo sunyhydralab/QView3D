@@ -57,6 +57,10 @@ const setPrinterStatus = async (printer: Device, status: string) => {
 }
 
 const releasePrinter = async (jobToFind: Job | undefined, key: number, printerIdToPrintTo: number) => {
+  // code to locate printer object from printers array based on printerIdToPrintTo
+  let printer = printers.value.find((printer) => printer.id === printerIdToPrintTo)
+  printer!.error=""
+
   await releaseJob(jobToFind, key, printerIdToPrintTo)
 }
 
@@ -108,7 +112,6 @@ const startPrint = async (printerid: number, jobid: number) => {
 }
 
 const setJob = async (job: Job) => {
-  console.log("here")
   jobComments.value = job.comment || '';
   selectedJob.value = job;
 }
@@ -140,44 +143,43 @@ const doAssignIssue = async () => {
 
 
   <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
-  data-bs-backdrop="static">
-  <div class="modal-dialog modal-dialog-centered">
+    data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
-          <div class="modal-header d-flex align-items-end">
-              <h5 class="modal-title mb-0" id="assignIssueLabel" style="line-height: 1;">Job #{{ selectedJob?.id
-                  }}</h5>
-              <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px; line-height: 1;">{{
-                  selectedJob?.date }}</h6>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
-                  @click="selectedIssue = undefined; selectedJob = undefined;"></button>
+        <div class="modal-header d-flex align-items-end">
+          <h5 class="modal-title mb-0" id="assignIssueLabel" style="line-height: 1;">Job #{{ selectedJob?.id
+            }}</h5>
+          <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px; line-height: 1;">{{
+            selectedJob?.date }}</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+            @click="selectedIssue = undefined; selectedJob = undefined;"></button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="">
+            <div class="mb-3">
+              <label for="issue" class="form-label">Select Issue</label>
+              <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
+                <option disabled value="undefined">Select Issue</option>
+                <option v-for="issue in issuelist" :value="issue">
+                  {{ issue.issue }}
+                </option>
+              </select>
+            </div>
+          </form>
+          <div class="form-group mt-3">
+            <label for="exampleFormControlTextarea1">Comments</label>
+            <textarea class="form-control" id="exampleFormControlTextarea1" rows="3" v-model="jobComments"></textarea>
           </div>
-          <div class="modal-body">
-              <form @submit.prevent="">
-                  <div class="mb-3">
-                      <label for="issue" class="form-label">Select Issue</label>
-                      <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
-                          <option disabled value="undefined">Select Issue</option>
-                          <option v-for="issue in issuelist" :value="issue">
-                              {{ issue.issue }}
-                          </option>
-                      </select>
-                  </div>
-              </form>
-              <div class="form-group mt-3">
-                  <label for="exampleFormControlTextarea1">Comments</label>
-                  <textarea class="form-control" id="exampleFormControlTextarea1" rows="3"
-                      v-model="jobComments"></textarea>
-              </div>
-          </div>
-          <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-                  @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
-              <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save
-                  Changes</button>
-          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+            @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
+          <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save
+            Changes</button>
+        </div>
       </div>
+    </div>
   </div>
-</div>
 
 
 
@@ -196,7 +198,7 @@ const doAssignIssue = async () => {
               <div class="card mb-3">
                 <div class="card-body">
                   <h5 class="card-title"><i class="fas fa-chart-line"></i> <b>Progress:</b> {{ currentJob?.progress ?
-                    `${currentJob?.progress.toFixed(2)}%` : '0.00%' }}</h5>
+            `${currentJob?.progress.toFixed(2)}%` : '0.00%' }}</h5>
                   <div class="progress">
                     <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
                       :style="{ width: `${currentJob?.progress ? currentJob?.progress.toFixed(2) : '0'}%` }"
@@ -217,7 +219,7 @@ const doAssignIssue = async () => {
                     <!-- <div class="col-12">{{ formatTime(currentJob?.job_client?.elapsed_time!) }}</div> -->
                     <div class="col-12">
                       {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
-                        formatTime(currentJob?.job_client?.elapsed_time!) }}
+            formatTime(currentJob?.job_client?.elapsed_time!) }}
                     </div>
                   </div>
                 </div>
@@ -233,7 +235,7 @@ const doAssignIssue = async () => {
                     <!-- <div class="col-12">{{ formatTime(currentJob?.job_client?.remaining_time!) }}</div> -->
                     <div class="col-12">
                       {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
-                        formatTime(currentJob?.job_client?.remaining_time!) }}
+            formatTime(currentJob?.job_client?.remaining_time!) }}
                     </div>
                   </div>
                 </div>
@@ -253,7 +255,7 @@ const doAssignIssue = async () => {
                       <div v-else>
                         <div v-if="currentJob?.job_client?.extra_time">
                           {{ formatTime(currentJob?.job_client.total_time!) + ' + ' +
-                            formatTime(currentJob?.job_client.extra_time!) }}
+            formatTime(currentJob?.job_client.extra_time!) }}
                         </div>
                         <div v-else>
                           {{ formatTime(currentJob?.job_client?.total_time!) }}
@@ -274,7 +276,7 @@ const doAssignIssue = async () => {
                     <!-- <div class="col-12">{{ formatETA(currentJob?.job_client?.eta!) ?? "Waiting to start heating..."  }}</div> -->
                     <div class="col-12">
                       {{ currentPrinter?.status === 'colorchange' ? 'Waiting for filament change...' :
-                        formatETA(currentJob?.job_client?.eta!) }}
+            formatETA(currentJob?.job_client?.eta!) }}
                     </div>
                   </div>
                 </div>
@@ -507,9 +509,9 @@ const doAssignIssue = async () => {
                   </div>
                   <!-- job progress set to 2 decimal places -->
                   <p style="position: absolute; width: 100%; text-align: center; color: black;">{{
-                    printer.queue?.[0].progress
-                      ?
-                      `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
+            printer.queue?.[0].progress
+              ?
+              `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
                 </div>
                 <!-- </div> -->
               </div>
@@ -688,12 +690,12 @@ table {
   table-layout: fixed;
 }
 
-.form-control{
+.form-control {
   background: #f4f4f4;
   border: 1px solid #484848;
 }
 
-.form-select{
+.form-select {
   background-color: #f4f4f4 !important;
   border-color: #484848 !important;
 }

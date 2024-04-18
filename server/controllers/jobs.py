@@ -263,6 +263,7 @@ def releasejob():
         job = Job.findJob(jobpk) 
         printerid = job.getPrinterId() 
         printerobject = findPrinterObject(printerid)
+        printerobject.error = ""
         queue = printerobject.getQueue()
 
         queue.deleteJob(jobpk, printerid) # remove job from queue
