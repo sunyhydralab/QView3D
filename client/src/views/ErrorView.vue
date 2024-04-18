@@ -496,6 +496,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                     <th>File</th>
                     <th>Printer</th>
                     <th>Issue</th>
+                    <th>Comment</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -510,6 +511,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                     </td>
                     <td v-else>
                     </td>
+                    <td>{{  job.comment?.slice(0, 30) }}</td>
                     <td>
                         <div class="dropdown">
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
