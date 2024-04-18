@@ -370,7 +370,7 @@ const closeDropdown = (evt: any) => {
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
                         @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
-                    <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" @click="doAssignIssue">Save
                         Changes</button>
                 </div>
             </div>

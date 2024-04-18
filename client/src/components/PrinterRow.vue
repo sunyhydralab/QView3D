@@ -8,7 +8,9 @@ import GCode3DLiveViewer from '@/components/GCode3DLiveViewer.vue';
 import { onMounted, ref } from 'vue';
 
 const props = defineProps<{
+    id: number;
     printer: Device;
+    dataDraggable: boolean;
 }>();
 
 const { setStatus } = useSetStatus();
@@ -238,7 +240,7 @@ const doAssignIssue = async () => {
         </div>
     </div>
 
-    <tr :id="printer.id ? printer.id.toString() : ''">
+    <tr>
 
         <td
             v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
@@ -395,46 +397,37 @@ const doAssignIssue = async () => {
         </td>
 
         <td style="width: 1%; white-space: nowrap; height: 55px; padding-top: 5px;">
-            <div :class="{ 'not-draggable': printer.queue && printer.queue.length == 0 }" class="dropdown">
-                <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
-                    <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
-                        style="background: none; border: none;">
-                        <i class="fa-solid fa-bars"
-                            :class="{ 'icon-disabled': printer.queue && printer.queue.length == 0 }"></i>
-                    </button>
-                    <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
-                        <!-- <li>
-                  <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
-                    data-bs-target="#gcodeLiveViewModal" v-if="printer.queue && printer.queue.length > 0"
-                    v-bind:job="printer.queue![0]"
-                    @click="printer.name && openModal(printer.queue![0], printer.name, 1, printer)">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <span class="ms-2">GCode Live View</span>
-                  </a>
-                </li> -->
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
-                                data-bs-target="#gcodeImageModal" v-if="printer.queue && printer.queue.length > 0"
-                                v-bind:job="printer.queue![0]"
-                                @click="printer.name && openModal(printer.queue![0], printer.name, 2, printer)">
-                                <i class="fa-solid fa-image"></i>
-                                <span class="ms-2">GCode Image</span>
-                            </a>
-                        </li>
-                        <li v-if="printer.queue![0]">
-                            <a class="dropdown-item d-flex align-items-center"
-                                @click="getFileDownload(printer.queue![0].id)"
-                                :disabled="printer.queue![0].file_name_original.includes('.gcode:')">
-                                <i class="fas fa-download"></i>
-                                <span class="ms-2">Download</span>
-                            </a>
-                        </li>
-                    </ul>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <i class="fa" :class="['fa-chevron-down', printer.isInfoExpanded ? 'rotate-up' : 'rotate-down']"
+                        @click="openPrinterInfo(printer)"></i>
+                <div :class="{ 'not-draggable': printer.queue && printer.queue.length == 0 }" class="dropdown">
+                    <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                        <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+                            style="background: none; border: none;">
+                            <i class="fa-solid fa-bars"
+                                :class="{ 'icon-disabled': printer.queue && printer.queue.length == 0 }"></i>
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
+                                    data-bs-target="#gcodeImageModal" v-if="printer.queue && printer.queue.length > 0"
+                                    v-bind:job="printer.queue![0]"
+                                    @click="printer.name && openModal(printer.queue![0], printer.name, 2, printer)">
+                                    <i class="fa-solid fa-image"></i>
+                                    <span class="ms-2">GCode Image</span>
+                                </a>
+                            </li>
+                            <li v-if="printer.queue![0]">
+                                <a class="dropdown-item d-flex align-items-center"
+                                    @click="getFileDownload(printer.queue![0].id)"
+                                    :disabled="printer.queue![0].file_name_original.includes('.gcode:')">
+                                    <i class="fas fa-download"></i>
+                                    <span class="ms-2">Download</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-            </div>
-            <div style="height: 35%; padding-bottom: 5px;">
-                <i class="fa" :class="['fa-chevron-down', printer.isInfoExpanded ? 'rotate-up' : 'rotate-down']"
-                    @click="openPrinterInfo(printer)"></i>
             </div>
         </td>
 

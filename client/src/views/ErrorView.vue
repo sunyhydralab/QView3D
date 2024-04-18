@@ -343,7 +343,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
                         @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
-                    <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" @click="doAssignIssue">Save
                         Changes</button>
                 </div>
             </div>
@@ -496,7 +496,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                     <th>File</th>
                     <th>Printer</th>
                     <th>Issue</th>
-                    <th>Actions</th>
+                    <th style="width: 75px;">Actions</th>
                 </tr>
             </thead>
             <tbody v-if="filteredJobs.length > 0">

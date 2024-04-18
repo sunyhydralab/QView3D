@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { printers } from '@/model/ports';
+import { ref } from 'vue';
+import { printers as printersData } from '@/model/ports';
 import draggable from 'vuedraggable'
 import PrinterRow from '@/components/PrinterRow.vue'
+
+// Create a ref for the printers array
+const printers = ref(printersData);
 </script>
 
 <template>
@@ -18,10 +22,10 @@ import PrinterRow from '@/components/PrinterRow.vue'
         <th style="width: 75px;">Actions</th>
         <th style="width: 58px">Move</th>
       </tr>
-      <draggable v-model="printers" tag="tbody" :animation="300" item-key="printer.id" handle=".handle"
+      <draggable v-model="printers" tag="tbody" :animation="300" item-key="printer.id"
         dragClass="hidden-ghost" v-if="printers.length > 0">
         <template #item="{ element: printer }">
-          <PrinterRow :printer="printer"></PrinterRow>
+          <PrinterRow :id="printer.id" :printer="printer" :data-draggable="true"></PrinterRow>
         </template>
       </draggable>
     </table>

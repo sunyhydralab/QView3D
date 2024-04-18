@@ -212,13 +212,13 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                     <th>File</th>
                     <th>Date Added</th>
                     <th class="col-1">Job Status</th>
-                    <th>Actions</th>
                     <th class="col-checkbox">
                       <div class="checkbox-container">
                         <input class="form-check-input" type="checkbox" @change="() => selectAllJobs(printer)"
                           :disabled="printer.queue!.length === 0" v-model="selectAllCheckbox" />
                       </div>
                     </th>
+                    <th>Actions</th>
                     <th style="width: 0">Move</th>
                   </tr>
                 </thead>
@@ -258,6 +258,11 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                       <td>{{ job.file_name_original }}</td>
                       <td>{{ job.date }}</td>
                       <td>{{ job.status }}</td>
+                      
+                      <td class="text-center">
+                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job" />
+                      </td>
+
                       <td style="width:">
                         <div class="dropdown">
                           <div style="
@@ -289,10 +294,6 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                             </ul>
                           </div>
                         </div>
-                      </td>
-
-                      <td class="text-center">
-                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job" />
                       </td>
 
                       <td class="text-center handle" :class="{ 'not-draggable': job.status !== 'inqueue' }">

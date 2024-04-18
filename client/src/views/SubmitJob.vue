@@ -16,6 +16,7 @@ const route = useRoute();
 const job = route.params.job ? JSON.parse(route.params.job as string) : null;
 const fileName = ref<string>(job ? job.name : '')
 const printer = route.params.printer ? JSON.parse(route.params.printer as string) : null;
+const isAsteriksVisible = ref(true)
 
 // Form reference
 const form = ref<HTMLFormElement | null>(null);
@@ -174,6 +175,7 @@ watchEffect(() => {
 });
 
 const openModal = () => {
+    isAsteriksVisible.value = false
     isGcodeImageVisible.value = true
 }
 
@@ -203,7 +205,7 @@ const triggerFileInput = () => {
                     <h5 class="modal-title" id="gcodeImageModalLabel">
                         <b>{{ fileName }}</b>
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button @click="isAsteriksVisible = true" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
@@ -265,7 +267,7 @@ const triggerFileInput = () => {
                     <div class="mb-3">
                         <label for="file" class="form-label">Upload your .gcode file</label>
                         <div class="tooltip">
-                            <span class="text-danger">*</span>
+                            <span v-if="isAsteriksVisible" class="text-danger">*</span>
                             <span class="tooltiptext">The file name should not be longer than 50 characters</span>
                         </div>
                         <input ref="fileInput" @change="handleFileUpload" style="display: none;" type="file" id="file"
@@ -288,7 +290,7 @@ const triggerFileInput = () => {
                     <div class="mb-3">
                         <label for="quantity" class="form-label">Quantity</label>
                         <div class="tooltip">
-                        <span class="text-danger">*</span>
+                        <span v-if="isAsteriksVisible" class="text-danger">*</span>
                         <span class="tooltiptext">Quantity cannot be greater than 1000</span>
                         </div>
                         <input v-model="quantity" class="form-control" type="number" id="quantity" name="quantity"
@@ -318,13 +320,13 @@ const triggerFileInput = () => {
                     <div class="mb-3">
                         <label for="name" class="form-label">Name</label>
                         <div class="tooltip">
-                            <span class="text-danger">*</span>
-                            <span class="tooltiptext">Moves printer 10mm upwards! Please check printers before.</span>
+                            <span v-if="isAsteriksVisible" class="text-danger">*</span>
+                            <span class="tooltiptext">Assign a name for the job.</span>
                         </div>
                         <input v-model="name" class="form-control" type="text" id="name" name="name">
                     </div>
 
-                    <div class="mb-3">
+                    <div>
                         <button v-if="selectedPrinters.length > 1" :disabled="isSubmitDisabled" class="btn btn-primary"
                             type="submit">
                             Add to queues
