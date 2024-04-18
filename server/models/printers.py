@@ -44,6 +44,7 @@ class Printer(db.Model):
     bed_temp = 0
     canPause = 0
     prevMes = ""
+    colorChangeBuffer = 0 
 
     def __init__(self, device, description, hwid, name, status=status, id=None):
         self.device = device
@@ -59,6 +60,7 @@ class Printer(db.Model):
         self.bed_temp = 0
         self.canPause = 0
         self.prevMes=""
+        # self.colorChangeBuffer=0
 
         if id is not None:
             self.id = id
@@ -163,16 +165,18 @@ class Printer(db.Model):
         printerList = []
         for port in ports:
             hwid = port.hwid # get hwid 
-            hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
-            hwid_without_location = '-'.join(hwid_parts[:-1])
+            hwid_without_location = hwid.split(' LOCATION=')[0]  # Split at ' LOCATION=' and take the first part
             port_info = {
                 "device": port.device,
                 "description": port.description,
                 "hwid": hwid_without_location,
             }
             # supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
-            # if "original" in port.description.lower() or "prusa" in port.description.lower() or "n/a" not in port.hwid.lower():
-            printerList.append(port_info)
+
+            if (("original" in port.description.lower()) or ("prusa" in port.description.lower())) and (Printer.getPrinterByHwid(hwid_without_location) is None) :
+                printerList.append(port_info)
+
+                print(port_info)
         return printerList
 
     @classmethod
@@ -183,8 +187,8 @@ class Printer(db.Model):
             for port in ports:
                 if port.device == deviceToDiagnose:
                     diagnoseString += f"The system has found a <b>matching port</b> with the following details: <br><br> <b>Device:</b> {port.device}, <br> <b>Description:</b> {port.description}, <br> <b>HWID:</b> {port.hwid}"
-                    hwid_parts = port.hwid.split('-')  # Replace '-' with the actual separator
-                    hwid_without_location = '-'.join(hwid_parts[:-1])
+                    hwid = port.hwid 
+                    hwid_without_location = hwid.split(' LOCATION=')[0]
                     printerExists = cls.searchByDevice(hwid_without_location)
                     if printerExists:
                         printer = cls.query.filter_by(hwid=hwid_without_location).first()
@@ -304,26 +308,25 @@ class Printer(db.Model):
         ser.close()
         return 
     
-    @classmethod 
-    def repairPorts(cls): 
-        try:
-            ports = serial.tools.list_ports.comports()    
-            for port in ports: 
-                hwid = port.hwid # get hwid 
-                hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
-                hwid_without_location = '-'.join(hwid_parts[:-1])
-                printer = Printer.getPrinterByHwid(hwid_without_location)
-                if printer is not None: 
-                    if(printer.getDevice()!=port.device): 
-                        printer.editPort(printer.getId(), port.device)
-            return {"success": True, "message": "Printer port(s) successfully updated."}
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-            return jsonify({"error": "Unexpected error occurred"}), 500
+    # @classmethod 
+    # def repairPorts(cls): 
+    #     try:
+    #         ports = serial.tools.list_ports.comports()    
+    #         for port in ports: 
+    #             hwid = port.hwid # get hwid 
+    #             hwid_without_location = hwid.split(' LOCATION=')[0]
+    #             printer = Printer.getPrinterByHwid(hwid_without_location)
+    #             if printer is not None: 
+    #                 if(printer.getDevice()!=port.device): 
+    #                     printer.editPort(printer.getId(), port.device)
+    #         return {"success": True, "message": "Printer port(s) successfully updated."}
+    #     except Exception as e:
+    #         print(f"Unexpected error: {e}")
+    #         return jsonify({"error": "Unexpected error occurred"}), 500
         
     def connect(self):
         try:
-            self.ser = serial.Serial(self.device, 115200, timeout=1)
+            self.ser = serial.Serial(self.device, 115200, timeout=10)
             self.ser.write(f"M155 S5\n".encode("utf-8"))
         except Exception as e:
             self.setError(e)
@@ -442,14 +445,17 @@ class Printer(db.Model):
                         line = line.split(";")[
                             0
                         ].strip()  # Remove comments starting with ";"
+
                     if len(line) == 0 or line.startswith(";"):
+                        # if("layer" in line.lower() and job.getExtruded()==1): 
+                        #     print("SETTING BUFFER")
+                        #     self.setColorChangeBuffer(1)
                         continue
 
                     if("G29 A" in line) and job.getTimeStarted()==False:
                         job.setTimeStarted(True)
                         job.setTime(job.calculateEta(), 1)
                         job.setTime(datetime.now(), 2)
-                        print(job.job_time)
                  
                     res = self.sendGcode(line)
                     
@@ -459,18 +465,19 @@ class Printer(db.Model):
                         job.setTime(job.calculateColorChangeTotal(), 0)
                         job.setTime(datetime.min, 3)
                         job.setFilePause(0)
+                        # self.setColorChangeBuffer(0)
                         self.setStatus("printing")
                     
                     if("M600" in line):
                         job.setTime(datetime.now(), 3)
                         # job.setTime(job.calculateTotalTime(), 0)
                         # job.setTime(job.updateEta(), 1)
-                        print("color change in LINE")
                         self.setStatus("colorchange")
+                        # self.setColorChangeBuffer(3)
+                        # self.setColorChangeBuffer(1)
                         job.setFilePause(1)
 
                     if("M569" in line) and (job.getExtruded()==0):
-                        print("extruded")
                         job.setExtruded(1)
                     
                     if self.prevMes == "M602":
@@ -496,16 +503,17 @@ class Printer(db.Model):
                                 break
                     
                     # software color change
-                    if (self.getStatus()=="colorchange" and job.getFilePause()==0):
+                    if (self.getStatus()=="colorchange" and job.getFilePause()==0)# and self.colorChangeBuffer==1):
                         job.setTime(datetime.now(), 3)
                         # job.setTime(job.calculateTotalTime(), 0)
                         # job.setTime(job.updateEta(), 1)
+                        print("SENDING COLORCHANGE")
                         self.sendGcode("M600") # color change command
-                        print("color change COMMAND sent")
                         job.setTime(job.colorEta(), 1)
                         job.setTime(job.calculateColorChangeTotal(), 0)
                         job.setTime(datetime.min, 3)
                         job.setFilePause(1)
+                        # self.setColorChangeBuffer(0)
                         # self.setStatus("printing")
 
                     # Increment the sent lines
@@ -688,6 +696,9 @@ class Printer(db.Model):
     def setSer(self, port):
         self.ser = port
 
+    def setDevice(self, device): 
+        self.device = device 
+
     #  now when we set the status, we can emit the status to the frontend
 
     def setStatus(self, newStatus):
@@ -706,6 +717,7 @@ class Printer(db.Model):
         self.stopPrint = stopPrint
 
     def setError(self, error):
+        self.disconnect()
         self.error = str(error)
         self.setStatus("error")
         current_app.socketio.emit(
@@ -730,6 +742,15 @@ class Printer(db.Model):
         except requests.exceptions.RequestException as e:
             print(f"Failed to send status to job: {e}")
 
+    @classmethod 
+    def repairPorts(self):
+        try:
+            base_url = os.getenv("BASE_URL", "http://localhost:8000")
+            response = requests.post(f"{base_url}/repairports")
+
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to repair ports: {e}")
+
     def setTemps(self, extruder_temp, bed_temp):
         self.extruder_temp = extruder_temp
         self.bed_temp = bed_temp
@@ -743,5 +764,11 @@ class Printer(db.Model):
             current_app.socketio.emit('can_pause', {'printerid': self.id, 'canPause': canPause})
         except Exception as e:
             print('Error setting canPause:', e)
+
+    # def setColorChangeBuffer(self, buff): 
+    #     print(buff)
+    #     self.colorChangeBuffer = buff
+    #     current_app.socketio.emit('color_buff', {'printerid': self.id, 'colorChangeBuffer': buff})
+
             
             

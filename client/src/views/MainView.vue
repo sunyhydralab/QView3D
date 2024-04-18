@@ -483,6 +483,7 @@ const doAssignIssue = async () => {
                   Pause
                 </HoldButton>
 
+                <!-- <div v-if="printer.queue?.[0].extruded==1"> -->
                 <HoldButton :disabled="printer.queue?.[0]?.extruded" :color="'success'"
                   @button-held="setPrinterStatus(printer, 'colorchange')"
                   v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
@@ -493,14 +494,21 @@ const doAssignIssue = async () => {
                   v-if="printer.status == 'paused'">
                   Unpause
                 </HoldButton>
+                <!-- </div> -->
 
                 <HoldButton :color="'danger'" @button-held="setPrinterStatus(printer, 'complete')"
                   v-if="(printer.status == 'printing' || printer.status == 'colorchange')">
                   Stop
                 </HoldButton>
 
+                <!-- <div v-if="printer.status == 'colorchange' && printer.colorChangeBuffer==0" class="mt-2">
+                  Waiting for current layer to complete...
+                </div> -->
+                <!-- <div v-else-if="printer.status == 'colorchange' && printer.colorChangeBuffer==1" class="mt-2">
+                  Ready for color change. 
+                </div> -->
                 <div v-if="printer.status == 'colorchange'" class="mt-2">
-                  See LCD screen
+                  Ready for color change. 
                 </div>
 
               </div>

@@ -134,7 +134,8 @@ class PrinterStatusService:
                 "id": printer.id,
                 "error": printer.error, 
                 "canPause": printer.canPause,
-                "queue": [] # empty queue to store job objects 
+                "queue": [], # empty queue to store job objects 
+                # "colorChangeBuffer": printer.colorChangeBuffer
             }
             
             queue = printer.getQueue()
