@@ -389,6 +389,25 @@ class Job(db.Model):
             return None
         
     @classmethod
+    def unsetIssue(cls, job_id):
+        job = cls.query.get(job_id)
+
+        if job is None:
+            return None
+
+        # Set the job's error_id to None
+        job.error_id = None
+
+        # Commit the changes to the database
+        try:
+            db.session.commit()
+            return {"success": True, "message": "Issue removed successfully."}
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error unsetting issue: {e}")
+            return None
+        
+    @classmethod
     def setComment(cls, job_id, comments):
         job = cls.query.get(job_id)
 

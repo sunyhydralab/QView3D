@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { printers, type Device } from '../model/ports'
 import { type Issue, useGetIssues, useCreateIssues, useAssignIssue, useDeleteIssue } from '../model/issues'
-import { type Job, useGetErrorJobs, useAssignComment, useGetJobFile, useGetFile } from '../model/jobs';
+import { type Job, useGetErrorJobs, useAssignComment, useGetJobFile, useGetFile, useRemoveIssue } from '../model/jobs';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
@@ -14,6 +14,7 @@ const { assignComment } = useAssignComment()
 const { getFileDownload } = useGetJobFile()
 const { getFile } = useGetFile()
 const { deleteIssue } = useDeleteIssue()
+const { removeIssue } = useRemoveIssue()
 
 const showText = ref(false)
 const newIssue = ref('')
@@ -160,6 +161,10 @@ const doDeleteIssue = async () => {
 
 const doAssignIssue = async () => {
     if (selectedJob.value === undefined) return
+    if (selectedIssue.value == undefined) {
+        await removeIssue(selectedJob.value)    
+        submitFilter();
+    }
     if (selectedIssue.value !== undefined) {
         await assign(selectedIssue.value.id, selectedJob.value.id)
         selectedJob.value.errorid = selectedIssue.value.id
@@ -331,6 +336,8 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                                 <option v-for="issue in issuelist" :value="issue">
                                     {{ issue.issue }}
                                 </option>
+                                <option disabled class="separator">----------------</option>
+                                <option :value=undefined>Unassign Issue</option>
                             </select>
                         </div>
                     </form>
@@ -727,8 +734,8 @@ label.form-check-label {
     border: 1px solid #484848;
   }
   
-  .form-select{
+.form-select{
     background-color: #f4f4f4 !important;
     border-color: #484848 !important;
-  }
+}
 </style>
