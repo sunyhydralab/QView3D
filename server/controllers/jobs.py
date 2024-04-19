@@ -491,6 +491,19 @@ def assignIssue():
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
     
+@jobs_bp.route('/removeissue', methods=["POST"])
+def removeIssue():
+    try: 
+        data = request.get_json()
+        jobid = data['jobid']
+        job = Job.findJob(jobid)
+        jobid = job.getJobId()
+        res = job.unsetIssue(jobid)
+        return res
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
 @jobs_bp.route('/startprint', methods=["POST"])
 def startPrint(): 
     try: 
