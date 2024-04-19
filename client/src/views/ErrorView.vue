@@ -498,7 +498,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
         <table class="table-striped">
             <thead>
                 <tr>
-                    <th>Job ID</th>
+                    <th>Ticket ID</th>
                     <th>Job Title</th>
                     <th>File</th>
                     <th>Printer</th>
@@ -509,7 +509,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
             </thead>
             <tbody v-if="filteredJobs.length > 0">
                 <tr v-for="job in filteredJobs" :key="job.id">
-                    <td style="padding-left: 15px;">{{ job.id }}</td>
+                    <td style="padding-left: 15px;">{{ job.td_id }}</td>
                     <td>{{ job.name }}</td>
                     <td>{{ job.file_name_original }}</td>
                     <td>{{ job.printer }}</td>
