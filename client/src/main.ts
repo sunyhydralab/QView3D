@@ -2,6 +2,8 @@ import '@fortawesome/fontawesome-free/css/all.css'
 import './assets/main.css'
 import './assets/custom_bootstrap.css'
 import 'vue-toast-notification/dist/theme-sugar.css';
+import 'bootstrap-daterangepicker/daterangepicker.css';
+
 
 import { createApp } from 'vue'
 

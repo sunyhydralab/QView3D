@@ -399,7 +399,7 @@ const doAssignIssue = async () => {
     <table class="table-striped">
       <tr>
         <!-- NEED TO FIX THIS FOR EVERY DISPLAYS -->
-        <th style="width: 64px">TDID</th>
+        <th style="width: 64px">ID</th>
         <th style="width: 130px">Printer name</th>
         <th style="width: 142px">Printer Status</th>
         <th style="width: 110px">Job Name</th>

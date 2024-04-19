@@ -491,7 +491,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
         <table class="table-striped">
             <thead>
                 <tr>
-                    <th>TeamDynamix</th>
+                    <th>Ticket ID</th>
                     <th>Job Title</th>
                     <th>File</th>
                     <th>Printer</th>

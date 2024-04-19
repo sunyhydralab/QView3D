@@ -5,6 +5,9 @@ import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
+
+
+
 const { jobhistory, getFavoriteJobs } = useGetJobs()
 const { retrieveInfo } = useRetrievePrintersInfo()
 const { rerunJob } = useRerunJob()
@@ -78,6 +81,8 @@ let offcanvasElement: HTMLElement | null = null;
 
 onMounted(async () => {
     try {
+
+        
         const retrieveissues = await issues()
         issuelist.value = retrieveissues
 
@@ -591,6 +596,7 @@ const doDownloadCsv = async () => {
                                 v-model="order">
                             <label class="form-check-label" for="orderOldest">Oldest to Newest</label>
                         </div>
+
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <div class="form-check mb-2">
@@ -613,9 +619,9 @@ const doDownloadCsv = async () => {
 
             <div class="col-2 text-end d-flex justify-content-end" style="padding-right: 0;">
                             
-                <button @click="doDownloadCsv" class="btn btn-success me-2">
+                <!-- <button @click="doDownloadCsv" class="btn btn-success me-2">
                     <i class="fa-solid fa-file-csv"></i>
-                </button>
+                </button> -->
 
                 <button
                     @click="openModal(clearSpaceTitle, 'Are you sure you want to clear space? This action will remove the files from jobs that are older than 6 months, except for those marked as favorite jobs, and this cannot be <b>undone</b>.', 'clear')"
@@ -636,7 +642,7 @@ const doDownloadCsv = async () => {
         <table class="table-striped">
             <thead>
                 <tr>
-                    <th>TeamDynamix</th>
+                    <th>Ticket ID</th>
                     <th>Printer</th>
                     <th>Job Title</th>
                     <th>File</th>

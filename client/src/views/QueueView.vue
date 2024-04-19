@@ -211,7 +211,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
             <table class="table-striped">
               <thead>
                 <tr>
-                  <th class="col-1">TeamDynamix</th>
+                  <th class="col-1">Ticket ID</th>
                   <th class="col-2">Rerun Job</th>
                   <th class="col-1">Position</th>
                   <th>Job Title</th>
