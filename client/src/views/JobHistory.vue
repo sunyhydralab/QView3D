@@ -99,7 +99,6 @@ onMounted(async () => {
         favoriteJobs.value = await getFavoriteJobs()
 
         // make 10 dummy printers
-        /*
         for (let i = 2; i < 12; i++) {
             printers.value.push({
                 id: i, 
@@ -110,7 +109,6 @@ onMounted(async () => {
                 queue: []
             })
         }
-        */
 
         document.addEventListener('click', closeDropdown);
 
