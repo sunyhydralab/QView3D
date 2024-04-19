@@ -3,6 +3,7 @@ import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useQueueR
 import { ref, onMounted } from 'vue';
 import { toast } from '../model/toast'
 import RegisterModal from '../components/RegisterModal.vue'
+import router from '@/router';
 
 const { retrieve } = useRetrievePrinters();
 const { retrieveInfo } = useRetrievePrintersInfo();
@@ -44,7 +45,20 @@ const doQueueRestore = async (printer: Device) => {
 }
 
 const doDelete = async (printer: Device) => {
+    if(printer.status=="printing"){
+        toast.error("Cannot deregister printer while status is printing. Please wait for the printer to finish")
+    }
+    const printerId = printer.id;
+    const foundPrinter = printers.value.find(p => p.id === printerId);    // code to find printer where printer.id is equal to the printer.id in the printers array
+    
+    if(foundPrinter?.status === "printing"){
+        toast.error("Cannot deregister printer while status is printing. Please turn offline or wait for the printer to finish printing.")
+        return
+    }
+
     printers.value = printers.value.filter(p => p.id !== printer.id)
+
+
     await nullifyJobs(printer.id)
 
     let response = await deletePrinter(printer.id)
@@ -82,6 +96,8 @@ const saveName = async (printer: Device) => {
 
 const doRepair = async () => {
     await repair()
+    router.go(0)
+
 }
 
 const doDiagnose = async (printer: Device) => {
@@ -223,6 +239,8 @@ const doCloseRegisterModal = async () => {
                         <h6 class="card-text mb-0 text-muted"> <b>Printer device:</b> {{ printer.device }}</h6>
                         <h6 class="card-text mb-0"> <b>Printer description:</b> {{ printer.description }}</h6>
                         <h6 class="card-text mt-0"> <b>Date registered:</b> {{ printer.date }}</h6>
+                        <h6 class="card-text mt-0"> <b>HWID:</b> {{ printer.hwid }}</h6>
+
                         <div v-if="messageId == printer.id && showMessage"
                             class="alert alert-danger d-flex flex-column align-items-center justify-content-center">
                             <h6 v-html="message"></h6>

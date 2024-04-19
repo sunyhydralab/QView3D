@@ -96,7 +96,7 @@ const doMove = async (printer: Device) => {
                             <select class="form-select" id="ports" v-model="selectedDevice" required>
                                 <option disabled value="null">Select Device</option>
                                 <option v-for="printer in devices" :value="printer" :key="printer.device">
-                                    {{ printer.device }}
+                                    {{ printer.description }}
                                 </option>
                             </select>
                         </div>

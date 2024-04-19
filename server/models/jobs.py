@@ -30,6 +30,9 @@ class Job(db.Model):
     # foreign key relationship to match jobs to the printer printed on
     printer_id = db.Column(db.Integer, db.ForeignKey('printer.id'), nullable=True)
     printer = db.relationship('Printer', backref='Job')
+    
+    # TeamDynamics ID 
+    td_id = db.Column(db.Integer, nullable=True)
 
     #FK to issue 
     error_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=True)
@@ -52,12 +55,13 @@ class Job(db.Model):
 
 
     
-    def __init__(self, file, name, printer_id, status, file_name_original, favorite):
+    def __init__(self, file, name, printer_id, status, file_name_original, favorite, td_id):
         self.file = file 
         self.name = name 
         self.printer_id = printer_id 
         self.status = status 
         self.file_name_original = file_name_original # original file name without PK identifier 
+        self.td_id = td_id
         self.file_name_pk = None
         self.favorite = favorite
         self.released = 0 
@@ -116,7 +120,8 @@ class Job(db.Model):
                 "favorite": job.favorite, 
                 "errorid": job.error_id, 
                 "error": job.error.issue if job.error else 'None', 
-                "comment": job.comments
+                "comment": job.comments, 
+                "td_id": job.td_id
             } for job in jobs]
 
             return jobs_data, pagination.total
@@ -165,7 +170,8 @@ class Job(db.Model):
                 "file_name_original": job.file_name_original,
                 "errorid": job.error_id, 
                 "error": job.error.issue if job.error else 'None', 
-                "comment": job.comments
+                "comment": job.comments, 
+                "td_id": job.td_id
             } for job in jobs]
             
 
@@ -175,7 +181,7 @@ class Job(db.Model):
             return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500
 
     @classmethod
-    def jobHistoryInsert(cls, name, printer_id, status, file, file_name_original, favorite): 
+    def jobHistoryInsert(cls, name, printer_id, status, file, file_name_original, favorite, td_id): 
         try:
             if isinstance(file, bytes):
                 file_data = file
@@ -196,7 +202,8 @@ class Job(db.Model):
                 printer_id=printer_id,
                 status=status,
                 file_name_original = file_name_original,
-                favorite = favorite
+                favorite = favorite, 
+                td_id = td_id
             )
 
             db.session.add(job)
@@ -406,6 +413,10 @@ class Job(db.Model):
             db.session.rollback()
             print(f"Error setting comments: {e}")
             return None
+        
+    @classmethod
+    def downloadCSV(cls):
+        pass 
            
     def saveToFolder(self):
         file_data = self.getFile()
@@ -571,6 +582,9 @@ class Job(db.Model):
     
     def getReleased(self): 
         return self.released
+    
+    def getTdId(self): 
+        return self.td_id
 
     def setPath(self, path): 
         self.path = path 

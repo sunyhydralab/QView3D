@@ -25,6 +25,7 @@ export interface Device {
   isInfoExpanded?: boolean
   extruder_temp?: number
   bed_temp?: number
+  colorChangeBuffer?: number 
 }
 
 export let printers = ref<Device[]>([])

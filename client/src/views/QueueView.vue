@@ -191,9 +191,16 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
             :data-bs-target="'#panelsStayOpen-collapse' + index" :aria-expanded="printer.isQueueExpanded"
             :aria-controls="'panelsStayOpen-collapse' + index" :class="{ collapsed: !printer.isQueueExpanded }">
             <b>{{ printer.name }}:&nbsp;
-              <span class="status-text" :style="{ color: statusColor(printer.status) }">{{
-                capitalizeFirstLetter(printer.status)
-              }}</span>
+
+              <span v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0">
+                Pending Release
+              </span>
+              <span v-else>
+                <span class="status-text" :style="{ color: statusColor(printer.status) }">{{
+      capitalizeFirstLetter(printer.status)
+    }}
+                </span>
+              </span>
             </b>
           </button>
         </h2>
@@ -205,7 +212,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
               <table class="table-striped">
                 <thead>
                   <tr style="position: sticky; top: 0; z-index: 100; background-color: white;">
-                    <th class="col-1">Job ID</th>
+                    <th class="col-1">Ticket ID</th>
                     <th class="col-2">Rerun Job</th>
                     <th class="col-1">Position</th>
                     <th>Job Title</th>
@@ -257,8 +264,11 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                       </td>
                       <td>{{ job.file_name_original }}</td>
                       <td>{{ job.date }}</td>
-                      <td>{{ job.status }}</td>
-                      
+                      <td
+                        v-if="printer.queue && printer.status == 'printing' && printer.queue?.[0].released == 0 && job.status == 'printing'">
+                        Pending release</td>
+                      <td v-else>{{ job.status }}</td>
+
                       <td class="text-center">
                         <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job" />
                       </td>

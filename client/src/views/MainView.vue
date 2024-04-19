@@ -52,7 +52,8 @@ const restoreExpandedState = () => {
   <div class="container">
     <table ref="table">
       <tr>
-        <th style="width: 64px">Job ID</th>
+        <!-- NEED TO FIX THIS FOR EVERY DISPLAYS -->
+        <th style="width: 64px">ID</th>
         <th style="width: 130px">Printer name</th>
         <th style="width: 142px">Printer Status</th>
         <th style="width: 110px">Job Name</th>
