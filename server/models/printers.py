@@ -503,7 +503,7 @@ class Printer(db.Model):
                                 break
                     
                     # software color change
-                    if (self.getStatus()=="colorchange" and job.getFilePause()==0)# and self.colorChangeBuffer==1):
+                    if (self.getStatus()=="colorchange" and job.getFilePause()==0):# and self.colorChangeBuffer==1):
                         job.setTime(datetime.now(), 3)
                         # job.setTime(job.calculateTotalTime(), 0)
                         # job.setTime(job.updateEta(), 1)
