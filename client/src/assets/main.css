@@ -20,12 +20,6 @@ input[type='name'],
   border-color: #484848 !important;
 }
 
-input[type='checkbox']:checked,
-input[type='radio']:checked {
-  background-color: #60aeae !important;
-  border-color: #60aeae !important;
-}
-
 table {
   color: #1b1b1b;
   background-color: #d8d8d8;
@@ -86,10 +80,6 @@ th {
   background-color: #c0c0c0;
 }
 
-.dropdown-menu li a:active, .dropdown-item:active, .dropdown-submenu .dropdown-item:active{
-  background-color: #7561a9;
-}
-
 .dropdown {
   cursor: pointer;
 }
@@ -121,14 +111,6 @@ th {
 
 .modal-body .card {
   border: 1px solid #484848;
-}
-
-a, .btn-link {
-  color: #7561a9;
-}
-
-a:hover, .btn-link:hover {
-  color: #5e548e;
 }
 
 .tooltip {
