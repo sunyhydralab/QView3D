@@ -208,7 +208,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
           :class="{ show: printer.isQueueExpanded }" :aria-labelledby="'panelsStayOpen-heading' + index"
           @show.bs.collapse="printer.isQueueExpanded = !printer.isQueueExpanded">
           <div class="accordion-body">
-            <div class="scrollable">
+            <div :class="{ 'scrollable': printer.queue!.length > 4 }">
               <table class="table-striped">
                 <thead>
                   <tr style="position: sticky; top: 0; z-index: 100; background-color: white;">
