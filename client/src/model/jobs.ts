@@ -21,6 +21,8 @@ export interface Job {
   printer: string //store printer name
   printerid: number
 
+  td_id: number //store td_id of job
+
   errorid?: number
   error?: string // store issue name 
 
@@ -527,6 +529,22 @@ export function useAssignComment() {
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while assigning the comment')
+      }
+    }
+  }
+}
+
+export function useDownloadCsv() {
+  return {
+    async csv() {
+      try {
+        const response = await api(`downloadcsv`)
+        const file = new Blob([response.file], { type: 'text/csv' })
+        const file_name = response.file_name
+        saveAs(file, file_name)
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while downloading the csv')
       }
     }
   }

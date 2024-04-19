@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { printers, useRetrievePrintersInfo, type Device } from '../model/ports'
-import { pageSize, useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useUpdateJobStatus } from '../model/jobs';
+import { pageSize, useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useUpdateJobStatus, useDownloadCsv } from '../model/jobs';
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
+
+
 
 const { jobhistory, getFavoriteJobs } = useGetJobs()
 const { retrieveInfo } = useRetrievePrintersInfo()
@@ -19,6 +21,7 @@ const { createIssue } = useCreateIssues()
 const { assign } = useAssignIssue()
 const { assignComment } = useAssignComment()
 const { updateJobStatus } = useUpdateJobStatus()
+const {csv} = useDownloadCsv()
 
 const selectedPrinters = ref<Array<Number>>([])
 const selectedJobs = ref<Array<Job>>([]);
@@ -78,6 +81,8 @@ let offcanvasElement: HTMLElement | null = null;
 
 onMounted(async () => {
     try {
+
+        
         const retrieveissues = await issues()
         issuelist.value = retrieveissues
 
@@ -326,6 +331,10 @@ const closeDropdown = (evt: any) => {
     if (filterDropdown.value && evt.target.closest('.dropdown-card') === null) {
         filterDropdown.value = false;
     }
+}
+
+const doDownloadCsv = async () => {
+    await csv()
 }
 
 </script>
@@ -587,6 +596,7 @@ const closeDropdown = (evt: any) => {
                                 v-model="order">
                             <label class="form-check-label" for="orderOldest">Oldest to Newest</label>
                         </div>
+
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <div class="form-check mb-2">
@@ -605,9 +615,14 @@ const closeDropdown = (evt: any) => {
                 </div>
             </div>
 
-            <div class="col-10 d-flex justify-content-center align-items-center"></div>
+            <div class="col-9 d-flex justify-content-center align-items-center"></div>
 
-            <div class="col-1 text-end" style="padding-right: 0;">
+            <div class="col-2 text-end d-flex justify-content-end" style="padding-right: 0;">
+                            
+                <!-- <button @click="doDownloadCsv" class="btn btn-success me-2">
+                    <i class="fa-solid fa-file-csv"></i>
+                </button> -->
+
                 <button
                     @click="openModal(clearSpaceTitle, 'Are you sure you want to clear space? This action will remove the files from jobs that are older than 6 months, except for those marked as favorite jobs, and this cannot be <b>undone</b>.', 'clear')"
                     class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#exampleModal">
@@ -627,7 +642,7 @@ const closeDropdown = (evt: any) => {
         <table class="table-striped">
             <thead>
                 <tr>
-                    <th>Job ID</th>
+                    <th>Ticket ID</th>
                     <th>Printer</th>
                     <th>Job Title</th>
                     <th>File</th>
@@ -642,7 +657,7 @@ const closeDropdown = (evt: any) => {
             </thead>
             <tbody v-if="filteredJobs.length > 0">
                 <tr v-for="job in filteredJobs" :key="job.id">
-                    <td>{{ job.id }}</td>
+                    <td>{{ job.td_id }}</td>
                     <td>{{ job.printer }}</td>
                     <td>
                         <div style="display: flex; justify-content: start; align-items: center;">
@@ -713,7 +728,8 @@ const closeDropdown = (evt: any) => {
                         </div>
                     </td>
                     <td>
-                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job" :disabled="job.status === 'printing'">
+                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job"
+                            :disabled="job.status === 'printing'">
                     </td>
                 </tr>
             </tbody>
@@ -855,12 +871,12 @@ label.form-check-label {
     cursor: pointer;
 }
 
-.form-control{
+.form-control {
     background: #f4f4f4;
     border: 1px solid #484848;
 }
 
-.form-select{
+.form-select {
     background-color: #f4f4f4 !important;
     border-color: #484848 !important;
 }

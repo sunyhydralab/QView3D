@@ -29,6 +29,7 @@ const quantity = ref<number>(1)
 const priority = ref<number>(0)
 const favorite = ref<boolean>(false)
 const name = ref<string>('')
+const tdid = ref<number>(0)
 
 const isGcodeImageVisible = ref(false)
 
@@ -94,6 +95,7 @@ const handleSubmit = async () => {
         formData.append('file', file.value as File) // append form data
         formData.append('name', name.value as string)
         formData.append('priority', priority.value.toString())
+        formData.append('td_id', tdid.value.toString())
         // If favorite is true and it's not set yet, set it for the first job only
         if (favorite.value && !isFavoriteSet) {
             formData.append('favorite', 'true')
@@ -130,6 +132,8 @@ const handleSubmit = async () => {
                 formData.append('printerid', printer?.id?.toString() || '');
                 formData.append('priority', priority.value.toString())
                 formData.append('quantity', numPrints.toString())
+                formData.append('td_id', tdid.value.toString())
+
                 // If favorite is true and it's not set yet, set it for the first job only
                 if (favorite.value && !isFavoriteSet) {
                     formData.append('favorite', 'true')
@@ -170,6 +174,7 @@ function resetValues() {
     name.value = "";
     fileName.value = '';
     file.value = undefined;
+    tdid.value = 0;
 }
 
 watchEffect(() => {
@@ -288,6 +293,12 @@ const triggerFileInput = () => {
                         <label for="quantity" class="form-label">Quantity</label>
                         <input v-model="quantity" class="form-control" type="number" id="quantity" name="quantity"
                             min="1" @keydown="onlyNumber($event)">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label">TeamDynamix ID</label>
+                        <input v-model="tdid" class="form-control" type="number" id="tdid" name="tdid"
+                            @keydown="onlyNumber($event)">
                     </div>
 
                     <div class="row mb-3">

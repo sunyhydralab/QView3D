@@ -12,6 +12,8 @@ from werkzeug.utils import secure_filename
 import os 
 import gzip
 from flask import current_app
+import serial
+import serial.tools.list_ports
 
 # get data for jobs 
 jobs_bp = Blueprint("jobs", __name__)
@@ -70,6 +72,7 @@ def add_job_to_queue():
         favorite = request.form['favorite']
         # favorite = 1 if _favorite == 'true' else 0
         quantity = request.form['quantity']
+        td_id = int(request.form['td_id'])
         favoriteOne = False 
 
         for i in range(int(quantity)):
@@ -80,7 +83,7 @@ def add_job_to_queue():
                 favorite = 0
                 
             status = 'inqueue' # set status 
-            res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite) # insert into DB 
+            res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite, td_id) # insert into DB 
             
             # retrieve job from DB
             id = res['id']
@@ -116,6 +119,8 @@ def auto_queue():
         quantity = request.form['quantity']
 
         favorite = request.form['favorite']
+        td_id = request.form['td_id']
+
         favoriteOne = False 
         for i in range(int(quantity)):
             status = 'inqueue' # set status 
@@ -128,7 +133,7 @@ def auto_queue():
                 favorite = 0
             # favorite = 1 if _favorite == 'true' else 0
             
-            res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite) # insert into DB 
+            res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite, td_id) # insert into DB 
             
             id = res['id']
             
@@ -260,6 +265,7 @@ def releasejob():
         job = Job.findJob(jobpk) 
         printerid = job.getPrinterId() 
         printerobject = findPrinterObject(printerid)
+        printerobject.error = ""
         queue = printerobject.getQueue()
 
         queue.deleteJob(jobpk, printerid) # remove job from queue
@@ -270,7 +276,9 @@ def releasejob():
 
         if key == 3: 
             Job.update_job_status(jobpk, "error")
+            printerobject.setError(job.comments)
             printerobject.setStatus("error") # printer ready to accept new prints 
+            
         elif key == 2: 
             rerunjob(printerid, jobpk, "front")
             
@@ -515,6 +523,35 @@ def saveComment():
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
     
+@jobs_bp.route('/downloadcsv', methods=["GET"])
+def downloadCSV():
+    try:
+        res = Job.downloadCSV()
+        return res
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+
+@jobs_bp.route("/repairports", methods=["POST", "GET"])
+def repair_ports(): 
+    try:
+        ports = serial.tools.list_ports.comports()    
+        print("PORTS: ", ports)
+        for port in ports: 
+            hwid = port.hwid # get hwid 
+            hwid_without_location = hwid.split(' LOCATION=')[0]
+            printer = Printer.getPrinterByHwid(hwid_without_location)
+            if printer is not None: 
+                if(printer.getDevice()!=port.device):
+                    printer.editPort(printer.getId(), port.device)
+                    printerthread = findPrinterObject(printer.getId())
+                    printerthread.setDevice(port.device)
+        return {"success": True, "message": "Printer port(s) successfully updated."}
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
+    
 def findPrinterObject(printer_id): 
     threads = printer_status_service.getThreadArray()
     return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer  
@@ -530,9 +567,9 @@ def rerunjob(printerpk, jobpk, position):
     status = 'inqueue' # set status 
     file_name_original = job.getFileNameOriginal() # get original file name
     favorite = job.getFileFavorite() # get favorite status
-    
+    td_id = job.getTdId() 
     # Insert new job into DB and return new PK 
-    res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original, favorite = favorite) # insert into DB 
+    res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original, favorite = favorite, td_id=td_id) # insert into DB 
     
     id = res['id']
     file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
