@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers, useRetrievePrintersInfo, type Device } from '../model/ports'
-import { useAddJobToQueue, useGetFile, type Job, useAutoQueue } from '../model/jobs'
+import { selectedPrinters, file, fileName, quantity, priority, favorite, name, useAddJobToQueue, useGetFile, type Job, useAutoQueue } from '../model/jobs'
 import { ref, onMounted, watch, watchEffect, computed } from 'vue'
 import { useRoute } from 'vue-router';
 import { toast } from '@/model/toast';
@@ -14,21 +14,13 @@ const { getFile } = useGetFile();
 const route = useRoute();
 
 const job = route.params.job ? JSON.parse(route.params.job as string) : null;
-const fileName = ref<string>(job ? job.name : '')
 const printer = route.params.printer ? JSON.parse(route.params.printer as string) : null;
+const isAsteriksVisible = ref(true)
 
 // Form reference
 const form = ref<HTMLFormElement | null>(null);
 let isSubmitDisabled = false;
 
-// Collect form data
-const selectedPrinters = ref<Array<Device>>([])
-
-const file = ref<File>()
-const quantity = ref<number>(1)
-const priority = ref<number>(0)
-const favorite = ref<boolean>(false)
-const name = ref<string>('')
 const tdid = ref<number>(0)
 
 const isGcodeImageVisible = ref(false)
@@ -45,13 +37,14 @@ const handleFileUpload = (event: Event) => {
     } else {
         file.value = uploadedFile
         fileName.value = uploadedFile?.name || ''
+        name.value = fileName.value.replace('.gcode', '') || ''
     }
 }
 
 // validate quantity
 const validateQuantity = () => {
     if (quantity.value < 1) {
-        quantity.value = 1
+        quantity.value = selectedPrinters.value.length
     }
     if (quantity.value < selectedPrinters.value.length) {
         toast.error('Quantity must be greater than or equal to the number of selected printers')
@@ -63,7 +56,7 @@ const validateQuantity = () => {
 // fills printers array with printers that have threads from the database
 onMounted(async () => {
     try {
-        if (printer) {
+        if (printer && !selectedPrinters.value.some(selectedPrinter => selectedPrinter.id === printer.id)) {
             selectedPrinters.value.push(printer)
         }
 
@@ -168,7 +161,7 @@ const handleSubmit = async () => {
 
 function resetValues() {
     selectedPrinters.value = [];
-    quantity.value = 1;
+    quantity.value = selectedPrinters.value.length;
     priority.value = 0;
     favorite.value = false;
     name.value = "";
@@ -178,10 +171,18 @@ function resetValues() {
 }
 
 watchEffect(() => {
+    if (quantity.value > 1000) {
+        quantity.value = 1000
+        toast.error('Quantity cannot be greater than 1000')
+    }
+    if (quantity.value < selectedPrinters.value.length) {
+        quantity.value = selectedPrinters.value.length
+    }
     isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0))
 });
 
 const openModal = () => {
+    isAsteriksVisible.value = false
     isGcodeImageVisible.value = true
 }
 
@@ -190,6 +191,9 @@ const allSelected = computed({
     set: (value) => {
         if (value) {
             selectedPrinters.value = printers.value.slice();
+            if (quantity.value < selectedPrinters.value.length) {
+                quantity.value = selectedPrinters.value.length;
+            }
         } else {
             selectedPrinters.value = [];
         }
@@ -211,7 +215,8 @@ const triggerFileInput = () => {
                     <h5 class="modal-title" id="gcodeImageModalLabel">
                         <b>{{ fileName }}</b>
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button @click="isAsteriksVisible = true" type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
@@ -272,6 +277,10 @@ const triggerFileInput = () => {
 
                     <div class="mb-3">
                         <label for="file" class="form-label">Upload your .gcode file</label>
+                        <div class="tooltip">
+                            <span v-if="isAsteriksVisible" class="text-danger">*</span>
+                            <span class="tooltiptext">The file name should not be longer than 50 characters</span>
+                        </div>
                         <input ref="fileInput" @change="handleFileUpload" style="display: none;" type="file" id="file"
                             name="file" accept=".gcode">
                         <div class="input-group">
@@ -291,6 +300,10 @@ const triggerFileInput = () => {
 
                     <div class="mb-3">
                         <label for="quantity" class="form-label">Quantity</label>
+                        <div class="tooltip">
+                            <span v-if="isAsteriksVisible" class="text-danger">*</span>
+                            <span class="tooltiptext">Quantity cannot be greater than 1000</span>
+                        </div>
                         <input v-model="quantity" class="form-control" type="number" id="quantity" name="quantity"
                             min="1" @keydown="onlyNumber($event)">
                     </div>
@@ -323,10 +336,14 @@ const triggerFileInput = () => {
 
                     <div class="mb-3">
                         <label for="name" class="form-label">Name</label>
+                        <div class="tooltip">
+                            <span v-if="isAsteriksVisible" class="text-danger">*</span>
+                            <span class="tooltiptext">Assign a name for the job.</span>
+                        </div>
                         <input v-model="name" class="form-control" type="text" id="name" name="name">
                     </div>
 
-                    <div class="mb-3">
+                    <div>
                         <button v-if="selectedPrinters.length > 1" :disabled="isSubmitDisabled" class="btn btn-primary"
                             type="submit">
                             Add to queues
@@ -362,5 +379,9 @@ const triggerFileInput = () => {
 
 .card {
     --bs-card-border-color: #484848;
+}
+
+.text-danger {
+    cursor: help;
 }
 </style>

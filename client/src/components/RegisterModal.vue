@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue';
 import { printers, useRegisterPrinter, useGetPorts, useRetrievePrinters, useRetrievePrintersInfo, useRepair, useMoveHead, type Device } from '../model/ports';
-import HoldButton from './HoldButton.vue';
 import { toast } from '@/model/toast';
 
 const { ports } = useGetPorts();
@@ -122,11 +121,10 @@ const doMove = async (printer: Device) => {
                 </div>
                 <div class="modal-footer d-flex justify-content-between">
                     <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" v-bind:disabled="!customname"
-                        @click="doRegister">Submit</button>
+                        @click="doRegister">Register</button>
                     <div v-if="selectedDevice">
                         <div class="tooltip">
-                            <HoldButton :color="'secondary'" @button-held="doMove(selectedDevice as Device)">Move
-                                Printer Head</HoldButton>
+                            <div type="button" class="btn btn-primary" @click="doMove(selectedDevice as Device)">Move Printer Head</div>
                             <span class="tooltiptext">Moves printer 10mm upwards! Please check printers before.</span>
                         </div>
                     </div>
@@ -139,49 +137,6 @@ const doMove = async (printer: Device) => {
 </template>
 
 <style scoped>
-.tooltip {
-    position: relative;
-    display: inline-block;
-    opacity: 1;
-}
-
-.tooltip .tooltiptext {
-    visibility: hidden;
-    opacity: 0;
-    /* Add this */
-    transition: opacity 0.2s linear, visibility 0.2s linear 0.2s;
-    /* Add delay to visibility transition */
-    width: 200px;
-    background-color: #484848;
-    color: #dbdbdb;
-    text-align: center;
-    border-radius: 6px;
-    padding: 5px 0;
-    position: absolute;
-    z-index: 2000;
-    bottom: 125%;
-    left: 50%;
-    margin-left: -100px;
-}
-
-.tooltip .tooltiptext::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    margin-left: -5px;
-    border-width: 5px;
-    border-style: solid;
-    border-color: #484848 transparent transparent transparent;
-}
-
-.tooltip:hover .tooltiptext {
-    visibility: visible;
-    opacity: 1;
-    transition: opacity 0.2s linear;
-    /* Add this */
-}
-
 .modal-body {
     background: #b9b9b9;
 }

@@ -4,16 +4,7 @@ import { useRoute } from 'vue-router';
 
 const route = useRoute();
 
-const pageNames: { [key: string]: string } = {
-  '/': 'Home',
-  '/queue': 'Queues',
-  '/registration': 'Registration',
-  '/submit': 'Submit Job',
-  '/history': 'Job History',
-  '/error': 'Error Log'
-};
-
-const currentPage = computed(() => pageNames[route.path]);
+const isSubmitRoute = computed(() => route.path.startsWith('/submit'));
 </script>
 
 <template>
@@ -28,7 +19,8 @@ const currentPage = computed(() => pageNames[route.path]);
         <span class="navbar-toggler-icon"></span>
       </button>
 
-      <div class="collapse navbar-collapse justify-content-end" id="navbarNav" style="padding-right: 1rem;"> <!-- Add justify-content-end class here -->
+      <div class="collapse navbar-collapse justify-content-end" id="navbarNav" style="padding-right: 1rem;">
+        <!-- Add justify-content-end class here -->
         <ul class="navbar-nav">
           <li class="nav-item">
             <router-link to="/" class="nav-link" active-class="active-tab">HOME</router-link>
@@ -40,7 +32,7 @@ const currentPage = computed(() => pageNames[route.path]);
             <router-link to="/registration" class="nav-link" active-class="active-tab">REGISTRATION</router-link>
           </li>
           <li class="nav-item">
-            <router-link to="/submit" class="nav-link" active-class="active-tab">SUBMIT JOB</router-link>
+            <router-link to="/submit" class="nav-link" :class="{ 'active-tab': isSubmitRoute }">SUBMIT JOB</router-link>
           </li>
           <li class="nav-item">
             <router-link to="/history" class="nav-link" active-class="active-tab">JOB HISTORY</router-link>
@@ -59,7 +51,7 @@ const currentPage = computed(() => pageNames[route.path]);
 
 <style scoped>
 .logo {
-  height:45px;
+  height: 45px;
   position: relative;
   right: 20px;
   padding-top: 5px;
@@ -72,9 +64,11 @@ const currentPage = computed(() => pageNames[route.path]);
 }
 
 .nav-link {
-  font-size: 1.2em; /* Adjust the value as needed */
+  font-size: 1.2em;
+  /* Adjust the value as needed */
   font-weight: bold;
-  padding-right: 1.5rem !important; /* Adjust the value as needed */
+  padding-right: 1.5rem !important;
+  /* Adjust the value as needed */
   color: #a8a8a8;
 }
 

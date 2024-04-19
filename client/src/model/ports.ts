@@ -21,7 +21,8 @@ export interface Device {
   error?: string
   canPause?: number
   queue?: Job[] //  Store job array to store queue for each printer.
-  isExpanded?: boolean
+  isQueueExpanded?: boolean
+  isInfoExpanded?: boolean
   extruder_temp?: number
   bed_temp?: number
   colorChangeBuffer?: number 

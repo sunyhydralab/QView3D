@@ -161,7 +161,7 @@ const doCloseRegisterModal = async () => {
     <div class="container">
         <!-- <b>Registered View</b> -->
         <!-- register modal opens with a button-->
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#registerModal">
+        <button type="button" class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#registerModal">
             Register Printer
         </button>
         <RegisterModal id="registerModal" @close="doCloseRegisterModal" />
@@ -177,7 +177,7 @@ const doCloseRegisterModal = async () => {
                                 <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                                     <button type="button" id="settingsDropdown" data-bs-toggle="dropdown"
                                         aria-expanded="false" style="background: none; border: none;">
-                                        <i class="fas fa-ellipsis"></i>
+                                        <i class="fa-solid fa-bars"></i>
                                     </button>
                                     <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
                                         <li>
@@ -187,21 +187,28 @@ const doCloseRegisterModal = async () => {
                                                 <span class="ms-2">Edit Name</span>
                                             </a>
                                         </li>
-                                        <li>
-                                            <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
-                                                data-bs-target="#exampleModal"
-                                                @click="openModal('Hard Reset', 'Are you sure you want to do a hard reset of this printer?', 'doHardReset', printer)">
-                                                <i class="fas fa-sync"></i>
-                                                <span class="ms-2">Hard Reset</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item d-flex align-items-center"
-                                                @click="doQueueRestore(printer)">
-                                                <i class="fas fa-undo"></i>
-                                                <span class="ms-2">Restore Queue</span>
-                                            </a>
-                                        </li>
+                                        <div class="tooltip" style="width: 100%;">
+                                            <li>
+                                                <a class="dropdown-item d-flex align-items-center"
+                                                    style="font-size: 1rem;" data-bs-toggle="modal"
+                                                    data-bs-target="#exampleModal"
+                                                    @click="openModal('Hard Reset', 'Are you sure you want to do a hard reset of this printer?', 'doHardReset', printer)">
+                                                    <i class="fas fa-sync"></i>
+                                                    <span class="ms-2">Hard Reset</span>
+                                                </a>
+                                            </li>
+                                            <span class="tooltiptext">Resets the printers thread.</span>
+                                        </div>
+                                        <div class="tooltip" style="width: 100%;">
+                                            <li>
+                                                <a class="dropdown-item d-flex align-items-center"
+                                                    style="font-size: 1rem;" @click=" doQueueRestore(printer)">
+                                                    <i class="fas fa-undo"></i>
+                                                    <span class="ms-2">Restore Queue</span>
+                                                </a>
+                                            </li>
+                                            <span class="tooltiptext">Restores the printers queue.</span>
+                                        </div>
                                         <li>
                                             <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
                                                 data-bs-target="#exampleModal"
@@ -381,7 +388,7 @@ const doCloseRegisterModal = async () => {
     margin-bottom: 0;
 }
 
-.modal-body{
+.modal-body {
     background: #cdcdcd
 }
 </style>

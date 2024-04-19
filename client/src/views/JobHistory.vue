@@ -104,18 +104,16 @@ onMounted(async () => {
         favoriteJobs.value = await getFavoriteJobs()
 
         // make 10 dummy printers
-        /*
-        for (let i = 2; i < 12; i++) {
-            printers.value.push({
-                id: i, 
-                name: `Printer ${i}`,
-                device: '',
-                description: '',
-                hwid: '',
-                queue: []
-            })
-        }
-        */
+        // for (let i = 2; i < 12; i++) {
+        //     printers.value.push({
+        //         id: i, 
+        //         name: `Printer ${i}`,
+        //         device: '',
+        //         description: '',
+        //         hwid: '',
+        //         queue: []
+        //     })
+        // }
 
         document.addEventListener('click', closeDropdown);
 
@@ -379,7 +377,7 @@ const doDownloadCsv = async () => {
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
                         @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
-                    <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" @click="doAssignIssue">Save
                         Changes</button>
                 </div>
             </div>
@@ -446,8 +444,6 @@ const doDownloadCsv = async () => {
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="printerDropdown">
                             <li v-for="printer in printers" :key="printer.id">
-                                <a class="dropdown-item" @click="handleRerun(job, printer)"
-                                    data-bs-dismiss="offcanvas">{{ printer.name }}</a>
                                 <a class="dropdown-item" @click="handleRerun(job, printer)"
                                     data-bs-dismiss="offcanvas">{{ printer.name }}</a>
                             </li>
@@ -677,7 +673,7 @@ const doDownloadCsv = async () => {
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                                 <button type="button" id="settingsDropdown" data-bs-toggle="dropdown"
                                     aria-expanded="false" style="background: none; border: none;">
-                                    <i class="fas fa-ellipsis"></i>
+                                    <i class="fa-solid fa-bars"></i>
                                 </button>
                                 <ul class="dropdown-menu" aria-labelledby="settingsDropdown" style="z-index: 2000;">
                                     <li>

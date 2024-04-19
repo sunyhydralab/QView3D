@@ -28,8 +28,7 @@
     "vue-router": "^4.2.5",
     "vue-socket.io-extended": "^4.2.0",
     "vue-toast-notification": "^3.1.2",
-    "vue2-daterange-picker": "^0.6.8",
-    "vue3-daterange-picker": "^1.0.1",
+    "vue3-colorpicker": "^2.3.0",
     "vue3-toast": "^0.0.1",
     "vuedraggable": "^4.1.0"
   },

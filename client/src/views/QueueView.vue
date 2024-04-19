@@ -22,7 +22,7 @@ let selectAllCheckbox = ref(false)
 
 onUnmounted(() => {
   for (const printer of printers.value) {
-    printer.isExpanded = false
+    printer.isQueueExpanded = false
   }
 })
 
@@ -188,8 +188,8 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
       <div class="accordion-item" v-for="(printer, index) in printers" :key="printer.id">
         <h2 class="accordion-header" :id="'panelsStayOpen-heading' + index">
           <button class="accordion-button" type="button" data-bs-toggle="collapse"
-            :data-bs-target="'#panelsStayOpen-collapse' + index" :aria-expanded="printer.isExpanded"
-            :aria-controls="'panelsStayOpen-collapse' + index" :class="{ collapsed: !printer.isExpanded }">
+            :data-bs-target="'#panelsStayOpen-collapse' + index" :aria-expanded="printer.isQueueExpanded"
+            :aria-controls="'panelsStayOpen-collapse' + index" :class="{ collapsed: !printer.isQueueExpanded }">
             <b>{{ printer.name }}:&nbsp;
 
               <span v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0">
@@ -205,116 +205,119 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
           </button>
         </h2>
         <div :id="'panelsStayOpen-collapse' + index" class="accordion-collapse collapse"
-          :class="{ show: printer.isExpanded }" :aria-labelledby="'panelsStayOpen-heading' + index"
-          @show.bs.collapse="printer.isExpanded = !printer.isExpanded">
+          :class="{ show: printer.isQueueExpanded }" :aria-labelledby="'panelsStayOpen-heading' + index"
+          @show.bs.collapse="printer.isQueueExpanded = !printer.isQueueExpanded">
           <div class="accordion-body">
-            <table class="table-striped">
-              <thead>
-                <tr>
-                  <th class="col-1">Ticket ID</th>
-                  <th class="col-2">Rerun Job</th>
-                  <th class="col-1">Position</th>
-                  <th>Job Title</th>
-                  <th>File</th>
-                  <th>Date Added</th>
-                  <th class="col-1">Job Status</th>
-                  <th>Actions</th>
-                  <th class="col-checkbox">
-                    <div class="checkbox-container">
-                      <input class="form-check-input" type="checkbox" @change="() => selectAllJobs(printer)"
-                        :disabled="printer.queue!.length === 0" v-model="selectAllCheckbox" />
-                    </div>
-                  </th>
-                  <th style="width: 0">Move</th>
-                </tr>
-              </thead>
-              <draggable v-model="printer.queue" tag="tbody" :animation="300" itemKey="job.id" handle=".handle"
-                dragClass="hidden-ghost" :onEnd="handleDragEnd" v-if="printer.queue && printer.queue.length"
-                :move="isInqueue">
-                <template #item="{ element: job }">
-                  <tr :id="job.id.toString()" :data-printer-id="printer.id" :data-job-id="job.id"
-                    :data-job-status="job.status" :key="job.id" :class="{ printing: job.status === 'printing' }">
-                    <td>{{ job.td_id }}</td>
+            <div :class="{ 'scrollable': printer.queue!.length > 4 }">
+              <table class="table-striped">
+                <thead>
+                  <tr style="position: sticky; top: 0; z-index: 100; background-color: white;">
+                    <th class="col-1">Ticket ID</th>
+                    <th class="col-2">Rerun Job</th>
+                    <th class="col-1">Position</th>
+                    <th>Job Title</th>
+                    <th>File</th>
+                    <th>Date Added</th>
+                    <th class="col-1">Job Status</th>
+                    <th class="col-checkbox">
+                      <div class="checkbox-container">
+                        <input class="form-check-input" type="checkbox" @change="() => selectAllJobs(printer)"
+                          :disabled="printer.queue!.length === 0" v-model="selectAllCheckbox" />
+                      </div>
+                    </th>
+                    <th>Actions</th>
+                    <th style="width: 0">Move</th>
+                  </tr>
+                </thead>
+                <draggable v-model="printer.queue" tag="tbody" :animation="300" itemKey="job.id" handle=".handle"
+                  dragClass="hidden-ghost" :onEnd="handleDragEnd" v-if="printer.queue && printer.queue.length"
+                  :move="isInqueue">
+                  <template #item="{ element: job }">
+                    <tr :id="job.id.toString()" :data-printer-id="printer.id" :data-job-id="job.id"
+                      :data-job-status="job.status" :key="job.id" :class="{ printing: job.status === 'printing' }">
+                      <td>{{ job.id }}</td>
 
-                    <td class="text-center">
-                      <div class="btn-group w-100">
-                        <div class="btn btn-primary" @click="handleRerun(job, printer)">
-                          Rerun Job
-                        </div>
-                        <div class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"
-                          aria-expanded="false"></div>
-                        <div class="dropdown-menu">
-                          <div class="dropdown-item" v-for="otherPrinter in printers.filter((p) => p.id !== printer.id)"
-                            :key="otherPrinter.id" @click="handleRerun(job, otherPrinter)">
-                            {{ otherPrinter.name }}
+                      <td class="text-center">
+                        <div class="btn-group w-100">
+                          <div class="btn btn-primary" @click="handleRerun(job, printer)">
+                            Rerun Job
+                          </div>
+                          <div class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"
+                            aria-expanded="false"></div>
+                          <div class="dropdown-menu">
+                            <div class="dropdown-item"
+                              v-for="otherPrinter in printers.filter((p) => p.id !== printer.id)" :key="otherPrinter.id"
+                              @click="handleRerun(job, otherPrinter)">
+                              {{ otherPrinter.name }}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td class="text-center">
-                      <b>
-                        {{ printer.queue ? printer.queue.findIndex((j) => j === job) + 1 : '' }}
-                      </b>
-                    </td>
-                    <td>
-                      <b>{{ job.name }}</b>
-                    </td>
-                    <td>{{ job.file_name_original }}</td>
-                    <td>{{ job.date }}</td>
+                      <td class="text-center">
+                        <b>
+                          {{ printer.queue ? printer.queue.findIndex((j) => j === job) + 1 : '' }}
+                        </b>
+                      </td>
+                      <td>
+                        <b>{{ job.name }}</b>
+                      </td>
+                      <td>{{ job.file_name_original }}</td>
+                      <td>{{ job.date }}</td>
+                      <td
+                        v-if="printer.queue && printer.status == 'printing' && printer.queue?.[0].released == 0 && job.status == 'printing'">
+                        Pending release</td>
+                      <td v-else>{{ job.status }}</td>
 
-                    <td v-if="printer.queue && printer.status == 'printing' && printer.queue?.[0].released == 0 && job.status == 'printing'">Pending release</td>
-                    <td v-else>{{ job.status }}</td>
+                      <td class="text-center">
+                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job" />
+                      </td>
 
-
-                    <td style="width:">
-                      <div class="dropdown">
-                        <div style="
+                      <td style="width:">
+                        <div class="dropdown">
+                          <div style="
                             display: flex;
                             justify-content: center;
                             align-items: center;
                             height: 100%;
                           ">
-                          <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
-                            style="background: none; border: none">
-                            <i class="fas fa-ellipsis"></i>
-                          </button>
-                          <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
-                            <li>
-                              <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
-                                data-bs-target="#gcodeImageModal" v-if="printer.queue && printer.queue.length > 0"
-                                @click="printer.name && openModal(job, printer.name, 2, printer)">
-                                <i class="fa-solid fa-image"></i>
-                                <span class="ms-2">GCode Image</span>
-                              </a>
-                            </li>
-                            <li>
-                              <a class="dropdown-item d-flex align-items-center" @click="getFileDownload(job.id)"
-                                :disabled="job.file_name_original.includes('.gcode:')">
-                                <i class="fas fa-download"></i>
-                                <span class="ms-2">Download</span>
-                              </a>
-                            </li>
-                          </ul>
+                            <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+                              style="background: none; border: none">
+                              <i class="fa-solid fa-bars"></i>
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
+                              <li>
+                                <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
+                                  data-bs-target="#gcodeImageModal" v-if="printer.queue && printer.queue.length > 0"
+                                  @click="printer.name && openModal(job, printer.name, 2, printer)">
+                                  <i class="fa-solid fa-image"></i>
+                                  <span class="ms-2">GCode Image</span>
+                                </a>
+                              </li>
+                              <li>
+                                <a class="dropdown-item d-flex align-items-center" @click="getFileDownload(job.id)"
+                                  :disabled="job.file_name_original.includes('.gcode:')">
+                                  <i class="fas fa-download"></i>
+                                  <span class="ms-2">Download</span>
+                                </a>
+                              </li>
+                            </ul>
+                          </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td class="text-center">
-                      <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job" :disabled="job.status !== 'inqueue'"/>
-                    </td>
+                      <td class="text-center handle" :class="{ 'not-draggable': job.status !== 'inqueue' }">
+                        <i class="fas fa-grip-vertical" :class="{ 'icon-disabled': job.status !== 'inqueue' }"></i>
+                      </td>
+                    </tr>
+                  </template>
+                </draggable>
 
-                    <td class="text-center handle" :class="{ 'not-draggable': job.status !== 'inqueue' }">
-                      <i class="fas fa-grip-vertical" :class="{ 'icon-disabled': job.status !== 'inqueue' }"></i>
-                    </td>
-                  </tr>
-                </template>
-              </draggable>
-
-              <tr v-if="printer.queue && printer.queue.length === 0">
-                <td colspan="10" class="text-center">No jobs in queue</td>
-              </tr>
-            </table>
+                <tr v-if="printer.queue && printer.queue.length === 0">
+                  <td colspan="10" class="text-center">No jobs in queue</td>
+                </tr>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -323,6 +326,23 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
 </template>
 
 <style scoped>
+.scrollable {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+table {
+  color: #1b1b1b;
+  background-color: #d8d8d8;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+td,
+th {
+  border-top: 0px solid #929292 !important;
+}
+
 .dropdown-item {
   display: flex;
   align-items: center;
@@ -385,6 +405,7 @@ table {
   border-bottom: 0px !important;
   border-left: 0px !important;
   border-right: 0px !important;
+  border-top: 0px !important;
 }
 
 table tr:last-child td {

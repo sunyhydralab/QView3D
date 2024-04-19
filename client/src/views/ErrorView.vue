@@ -350,7 +350,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
                         @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
-                    <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">Save
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" @click="doAssignIssue">Save
                         Changes</button>
                 </div>
             </div>
@@ -504,7 +504,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                     <th>Printer</th>
                     <th>Issue</th>
                     <th>Comment</th>
-                    <th>Actions</th>
+                    <th style="width: 75px;">Actions</th>
                 </tr>
             </thead>
             <tbody v-if="filteredJobs.length > 0">
@@ -524,7 +524,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                                 <button type="button" id="settingsDropdown" data-bs-toggle="dropdown"
                                     aria-expanded="false" style="background: none; border: none;">
-                                    <i class="fas fa-ellipsis"></i>
+                                    <i class="fa-solid fa-bars"></i>
                                 </button>
                                 <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
                                     <li>
@@ -577,7 +577,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
             </tbody>
             <tbody v-else>
                 <tr>
-                    <td colspan="6">No jobs with errors found. </td>
+                    <td colspan="7">No jobs with errors found. </td>
                 </tr>
             </tbody>
         </table>
@@ -699,16 +699,6 @@ table {
     border-collapse: collapse;
 }
 
-th,
-td {
-    border: 2px solid #dddddd;
-    text-align: left;
-    padding: 8px;
-}
-
-th {
-    background-color: #f2f2f2;
-}
 
 ul.dropdown-menu.w-100.show li {
     margin-left: 1rem;
