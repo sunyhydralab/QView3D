@@ -577,7 +577,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
             </tbody>
             <tbody v-else>
                 <tr>
-                    <td colspan="6">No jobs with errors found. </td>
+                    <td colspan="7">No jobs with errors found. </td>
                 </tr>
             </tbody>
         </table>
