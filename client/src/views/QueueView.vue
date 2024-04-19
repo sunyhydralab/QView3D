@@ -191,9 +191,16 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
             :data-bs-target="'#panelsStayOpen-collapse' + index" :aria-expanded="printer.isExpanded"
             :aria-controls="'panelsStayOpen-collapse' + index" :class="{ collapsed: !printer.isExpanded }">
             <b>{{ printer.name }}:&nbsp;
-              <span class="status-text" :style="{ color: statusColor(printer.status) }">{{
-                capitalizeFirstLetter(printer.status)
-              }}</span>
+
+              <span v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0">
+                Pending Release
+              </span>
+              <span v-else>
+                <span class="status-text" :style="{ color: statusColor(printer.status) }">{{
+      capitalizeFirstLetter(printer.status)
+    }}
+                </span>
+              </span>
             </b>
           </button>
         </h2>
@@ -204,7 +211,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
             <table class="table-striped">
               <thead>
                 <tr>
-                  <th class="col-1">Job ID</th>
+                  <th class="col-1">Ticket ID</th>
                   <th class="col-2">Rerun Job</th>
                   <th class="col-1">Position</th>
                   <th>Job Title</th>
@@ -227,7 +234,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                 <template #item="{ element: job }">
                   <tr :id="job.id.toString()" :data-printer-id="printer.id" :data-job-id="job.id"
                     :data-job-status="job.status" :key="job.id" :class="{ printing: job.status === 'printing' }">
-                    <td>{{ job.id }}</td>
+                    <td>{{ job.td_id }}</td>
 
                     <td class="text-center">
                       <div class="btn-group w-100">
@@ -255,7 +262,11 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                     </td>
                     <td>{{ job.file_name_original }}</td>
                     <td>{{ job.date }}</td>
-                    <td>{{ job.status }}</td>
+
+                    <td v-if="printer.queue && printer.status == 'printing' && printer.queue?.[0].released == 0 && job.status == 'printing'">Pending release</td>
+                    <td v-else>{{ job.status }}</td>
+
+
                     <td style="width:">
                       <div class="dropdown">
                         <div style="
@@ -278,8 +289,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                               </a>
                             </li>
                             <li>
-                              <a class="dropdown-item d-flex align-items-center"
-                                @click="getFileDownload(job.id)"
+                              <a class="dropdown-item d-flex align-items-center" @click="getFileDownload(job.id)"
                                 :disabled="job.file_name_original.includes('.gcode:')">
                                 <i class="fas fa-download"></i>
                                 <span class="ms-2">Download</span>

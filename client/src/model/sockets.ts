@@ -186,3 +186,17 @@ export function setupExtrusionSocket(printers: any) {
     }
   })
 }
+
+export function setupColorChangeBuffer(printers: any) {
+  socket.on('color_buff', (data: any) => {
+    if (printers) {
+      const printer = printers.value.find((p: Device) => p.id === data.printerid)
+      if (printer) {
+        printer.colorChangeBuffer = data.colorChangeBuffer
+      }
+    } else {
+      console.error('printers or printers.value is undefined')
+    }
+  })
+  console.log('color change buffer socket set up')
+}
