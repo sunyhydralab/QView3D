@@ -255,4 +255,15 @@ a:hover,
 .btn-link:hover {
     color: var(--bs-primary-color-hover, #5e548e);
 }
+
+.dp__theme_light {
+    --dp-primary-color: var(--bs-primary-color, #7561a9) !important;
+    --dp-primary-disabled-color: var(--bs-primary-color-disabled, #9681ca) !important;
+    --dp-primary-text-color: #f8f5f5 !important;
+}
+
+.dp__action_cancel, .dp__action_cancel:hover {
+    color: #484848 !important;
+    border: 1px solid #484848 !important;
+}
 </style>

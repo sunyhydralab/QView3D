@@ -5,6 +5,8 @@ import { type Job, useGetErrorJobs, useAssignComment, useGetJobFile, useGetFile,
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
+import VueDatePicker from '@vuepic/vue-datepicker';
+import '@vuepic/vue-datepicker/dist/main.css';
 
 const { jobhistoryError } = useGetErrorJobs()
 const { issues } = useGetIssues()
@@ -27,6 +29,7 @@ const selectedJobs = ref<Array<Job>>([]);
 const searchJob = ref(''); // This will hold the current search query
 const searchByJobName = ref(true);
 const searchByFileName = ref(true);
+const date = ref(null as Date | null);
 
 const router = useRouter();
 
@@ -107,6 +110,21 @@ const changePage = async (newPage: any) => {
 async function submitFilter() {
     filterDropdown.value = false;
 
+    let startDateString = null;
+    let endDateString = null;
+
+    if (date.value && Array.isArray(date.value)) {
+        const dateArray = date.value as unknown as Date[];
+        if (dateArray.length >= 2) {
+            startDateString = dateArray[0]?.toISOString();
+            if (dateArray[1] != undefined) {
+                endDateString = dateArray[1]?.toISOString();
+            } else {
+                endDateString = dateArray[0]?.toISOString();
+            }
+        }
+    }
+
     jobs.value = []
     oldestFirst.value = order.value === 'oldest';
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
@@ -119,6 +137,10 @@ async function submitFilter() {
         searchCriteria.value = searchJob.value;
     }
     console.log("ISSUES, " + selectedIssues.value)
+
+    // *** PASS START AND END DATE HERE, THEY ARE STRINGS ***
+    // ***  NEED TO HANDLE IF DATE IS EMPTY/NULL ***
+
     // Get the total number of jobs first, without considering the page number
     const [, total] = await jobhistoryError(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value);
     totalJobs.value = total;
@@ -135,6 +157,29 @@ async function submitFilter() {
     jobs.value = joblist;
 
     selectedJobs.value = [];
+
+    date.value = null;
+}
+
+function clearFilter() {
+    page.value = 1;
+    // pageSize.value = 10;
+
+    selectedPrinters.value = [];
+    selectedIssues.value = [];
+
+    if (order.value === 'oldest') {
+        order.value = 'newest';
+    }
+    favoriteOnly.value = false;
+
+    searchJob.value = '';
+    searchByJobName.value = true;
+    searchByFileName.value = true;
+
+    date.value = null;
+
+    submitFilter();
 }
 
 const ensureOneCheckboxChecked = () => {
@@ -162,7 +207,7 @@ const doDeleteIssue = async () => {
 const doAssignIssue = async () => {
     if (selectedJob.value === undefined) return
     if (selectedIssue.value == undefined) {
-        await removeIssue(selectedJob.value)    
+        await removeIssue(selectedJob.value)
         submitFilter();
     }
     if (selectedIssue.value !== undefined) {
@@ -179,25 +224,6 @@ const doAssignIssue = async () => {
 const setJob = async (job: Job) => {
     jobComments.value = job.comment || '';
     selectedJob.value = job;
-}
-
-function clearFilter() {
-    page.value = 1;
-    // pageSize.value = 10;
-
-    selectedPrinters.value = [];
-    selectedIssues.value = [];
-
-    if (order.value === 'oldest') {
-        order.value = 'newest';
-    }
-    favoriteOnly.value = false;
-
-    searchJob.value = '';
-    searchByJobName.value = true;
-    searchByFileName.value = true;
-
-    submitFilter();
 }
 
 const closeDropdown = (evt: any) => {
@@ -470,6 +496,10 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                         </div>
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                        <label class="form-label">Date Range:</label>
+                        <VueDatePicker v-model="date" range />
+                        <div class="my-2 border-top"
+                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <div class="d-flex justify-content-center">
                             <button @click.prevent="submitFilter" class="btn btn-primary me-3">Submit
                                 Filter</button>
@@ -518,7 +548,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                     </td>
                     <td v-else>
                     </td>
-                    <td>{{  job.comment?.slice(0, 30) }}</td>
+                    <td>{{ job.comment?.slice(0, 30) }}</td>
                     <td>
                         <div class="dropdown">
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
@@ -719,12 +749,12 @@ label.form-check-label {
     cursor: pointer;
 }
 
-.form-control{
+.form-control {
     background: #f4f4f4;
     border: 1px solid #484848;
-  }
-  
-.form-select{
+}
+
+.form-select {
     background-color: #f4f4f4 !important;
     border-color: #484848 !important;
 }

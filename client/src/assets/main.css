@@ -6,8 +6,12 @@ body {
   background-color: #b9b9b9;
 }
 
-*, input {
+*, input{
   font-family: 'Public Sans', sans-serif;
+}
+
+.dp__action_button {
+  font-family: 'Public Sans', sans-serif !important;
 }
 
 input[type='checkbox'],
@@ -156,4 +160,22 @@ th {
 .tooltip .tooltiptext:hover {
   visibility: hidden;
   opacity: 0;
+}
+
+.dp__input, .dp__input:focus, .dp__input:hover {
+  background-color: #f4f4f4 !important;
+  border-color: #484848 !important;
+}
+
+.dp__theme_light, .dp__arrow_bottom {
+  background-color: #f4f4f4 !important;
+  border-color: #484848 !important;
+  --dp-range-between-dates-background-color: #dddddd !important;
+  --dp-range-between-border-color: #dddddd !important;
+  --dp-hover-color: #c0c0c0 !important;
+  --dp-background-color: #f4f4f4 !important;
+}
+
+.dp__input_icon, .dp__clear_icon {
+  color: #484848 !important;
 }

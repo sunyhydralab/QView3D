@@ -5,8 +5,8 @@ import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
-
-
+import VueDatePicker from '@vuepic/vue-datepicker';
+import '@vuepic/vue-datepicker/dist/main.css';
 
 const { jobhistory, getFavoriteJobs } = useGetJobs()
 const { retrieveInfo } = useRetrievePrintersInfo()
@@ -21,7 +21,7 @@ const { createIssue } = useCreateIssues()
 const { assign } = useAssignIssue()
 const { assignComment } = useAssignComment()
 const { updateJobStatus } = useUpdateJobStatus()
-const {csv} = useDownloadCsv()
+const { csv } = useDownloadCsv()
 
 const selectedPrinters = ref<Array<Number>>([])
 const selectedJobs = ref<Array<Job>>([]);
@@ -34,6 +34,7 @@ const selectedJob = ref<Job>()
 const newIssue = ref('')
 const selectedIssue = ref<Issue | undefined>(undefined)
 let issuelist = ref<Array<Issue>>([])
+const date = ref(null as Date | null);
 
 const router = useRouter();
 
@@ -81,8 +82,6 @@ let offcanvasElement: HTMLElement | null = null;
 
 onMounted(async () => {
     try {
-
-        
         const retrieveissues = await issues()
         issuelist.value = retrieveissues
 
@@ -173,6 +172,21 @@ const changePage = async (newPage: any) => {
 async function submitFilter() {
     filterDropdown.value = false;
 
+    let startDateString = null;
+    let endDateString = null;
+
+    if (date.value && Array.isArray(date.value)) {
+        const dateArray = date.value as unknown as Date[];
+        if (dateArray.length >= 2) {
+            startDateString = dateArray[0]?.toISOString();
+            if (dateArray[1] != undefined) {
+                endDateString = dateArray[1]?.toISOString();
+            } else {
+                endDateString = dateArray[0]?.toISOString();
+            }
+        }
+    }
+
     jobs.value = []
     oldestFirst.value = order.value === 'oldest';
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
@@ -184,6 +198,9 @@ async function submitFilter() {
     } else {
         searchCriteria.value = searchJob.value;
     }
+
+    // *** PASS START AND END DATE HERE, THEY ARE STRINGS ***
+    // ***  NEED TO HANDLE IF DATE IS EMPTY/NULL ***
 
     // Get the total number of jobs first, without considering the page number
     const [, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
@@ -202,6 +219,8 @@ async function submitFilter() {
 
     selectedJobs.value = [];
     selectAllCheckbox.value = false;
+
+    date.value = null;
 }
 
 function clearFilter() {
@@ -218,6 +237,8 @@ function clearFilter() {
     searchJob.value = '';
     searchByJobName.value = true;
     searchByFileName.value = true;
+
+    date.value = null;
 
     submitFilter();
 }
@@ -592,7 +613,10 @@ const doDownloadCsv = async () => {
                                 v-model="order">
                             <label class="form-check-label" for="orderOldest">Oldest to Newest</label>
                         </div>
-
+                        <div class="my-2 border-top"
+                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                        <label class="form-label">Date Range:</label>
+                        <VueDatePicker v-model="date" range />
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <div class="form-check mb-2">
@@ -614,7 +638,6 @@ const doDownloadCsv = async () => {
             <div class="col-9 d-flex justify-content-center align-items-center"></div>
 
             <div class="col-2 text-end d-flex justify-content-end" style="padding-right: 0;">
-                            
                 <!-- <button @click="doDownloadCsv" class="btn btn-success me-2">
                     <i class="fa-solid fa-file-csv"></i>
                 </button> -->
