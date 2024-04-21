@@ -1,21 +1,28 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, watchEffect } from 'vue';
 import { ColorPicker } from "vue3-colorpicker";
 import "vue3-colorpicker/style.css";
 
-const primary = ref<string>("#7561a9");
+const primary = ref<string>("rgb(117, 97, 169)");
 const primaryFont = ref<string>("white");
-const success = ref<string>("#60AEAE");
+const success = ref<string>("rgb(96, 174, 174)");
 const successFont = ref<string>("white");
 
-const primaryTemp = ref<string>("7561a9");
+const primaryTemp = ref<string>("rgb(117, 97, 169)");
+const primaryFontTemp = ref<string>("white");
 const gradientColorPrimary = ref("linear-gradient(0deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 100%)");
-const successTemp = ref<string>("60AEAE");
+const successTemp = ref<string>("rgb(96, 174, 174)");
+const successFontTemp = ref<string>("white");
 const gradientColorSuccess = ref("linear-gradient(0deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 100%)");
+
+const uploadedFontFace = ref<FontFace | null>(null);
+const uploadedFontFaceTemp = ref<FontFace | null>(null);
+const fontFileName = ref(null);
 
 const revertColors = () => {
     primaryTemp.value = "rgb(117, 97, 169)";
     successTemp.value = "rgb(96, 174, 174)";
+
     saveColors();
 };
 
@@ -31,11 +38,10 @@ const saveColors = () => {
     document.documentElement.style.setProperty('--bs-primary-color', primary.value);
     document.documentElement.style.setProperty('--bs-pagination-bg', primary.value);
     let darkenedColor = newShade(primary.value, -10);
-    console.log(darkenedColor);
     document.documentElement.style.setProperty('--bs-primary-color-hover', darkenedColor);
     let darkenedColor2 = newShade(primary.value, -20);
     document.documentElement.style.setProperty('--bs-primary-color-active', darkenedColor2);
-    let lightenedColor = newShade(primary.value, 10);
+    let lightenedColor = newShade(primary.value, 25);
     document.documentElement.style.setProperty('--bs-primary-color-disabled', lightenedColor);
 
     document.documentElement.style.setProperty('--bs-success-color', success.value);
@@ -43,9 +49,35 @@ const saveColors = () => {
     document.documentElement.style.setProperty('--bs-success-color-hover', darkenedColorSuccess);
     let darkenedColor2Success = newShade(success.value, -20);
     document.documentElement.style.setProperty('--bs-success-color-active', darkenedColor2Success);
-    let lightenedColorSuccess = newShade(success.value, 10);
+    let lightenedColorSuccess = newShade(success.value, 25);
     document.documentElement.style.setProperty('--bs-success-color-disabled', lightenedColorSuccess);
 };
+
+watchEffect(() => {
+    if (primaryTemp.value !== primary.value || successTemp.value !== success.value) {
+        primaryFontTemp.value = fontColor(primaryTemp.value);
+        successFontTemp.value = fontColor(successTemp.value);
+
+        document.documentElement.style.setProperty('--bs-primary-font-color-temp', primaryFontTemp.value);
+        document.documentElement.style.setProperty('--bs-success-font-color-temp', successFontTemp.value);
+
+        document.documentElement.style.setProperty('--bs-primary-color-temp', primaryTemp.value);
+        let darkenedColor = newShade(primaryTemp.value, -10);
+        document.documentElement.style.setProperty('--bs-primary-color-hover-temp', darkenedColor);
+        let darkenedColor2 = newShade(primaryTemp.value, -20);
+        document.documentElement.style.setProperty('--bs-primary-color-active-temp', darkenedColor2);
+        let lightenedColor = newShade(primaryTemp.value, 25);
+        document.documentElement.style.setProperty('--bs-primary-color-disabled-temp', lightenedColor);
+
+        document.documentElement.style.setProperty('--bs-success-color-temp', successTemp.value);
+        let darkenedColorSuccess = newShade(successTemp.value, -10);
+        document.documentElement.style.setProperty('--bs-success-color-hover-temp', darkenedColorSuccess);
+        let darkenedColor2Success = newShade(successTemp.value, -20);
+        document.documentElement.style.setProperty('--bs-success-color-active-temp', darkenedColor2Success);
+        let lightenedColorSuccess = newShade(successTemp.value, 25);
+        document.documentElement.style.setProperty('--bs-success-color-disabled-temp', lightenedColorSuccess);
+    }
+});
 
 const newShade = (rgb: string, magnitude: number): string => {
     // Extract the individual red, green, and blue color values
@@ -82,6 +114,45 @@ const fontColor = (rgb: string) => {
     return brightness(rgb) > 155 ? 'black' : 'white';
 }
 
+const handleFontUpload = (event: any) => {
+    let file = event.target.files[0];
+    fontFileName.value = file.name;
+    let reader = new FileReader();
+
+    reader.onloadend = () => {
+        if (reader.result) {
+            let fontFace = new FontFace('userFontTemp', reader.result as ArrayBuffer);
+            fontFace.load().then((loadedFace) => {
+                uploadedFontFaceTemp.value = loadedFace;
+                uploadedFontFace.value = loadedFace; // Update uploadedFontFace
+                document.fonts.add(uploadedFontFaceTemp.value);
+                document.documentElement.style.setProperty('--user-font-temp', 'userFontTemp');
+            });
+        }
+    };
+
+    reader.readAsArrayBuffer(file);
+};
+
+const triggerFileInput = () => {
+    const fileInput = document.getElementById('fontFile') as HTMLInputElement;
+    fileInput.click();
+}
+
+const revertFont = () => {
+    document.documentElement.style.removeProperty('--user-font');
+    uploadedFontFaceTemp.value = null;
+    uploadedFontFace.value = null;
+    fontFileName.value = null;
+};
+
+const saveFont = () => {
+    if (uploadedFontFaceTemp.value) {
+        uploadedFontFace.value = uploadedFontFaceTemp.value;
+        document.documentElement.style.setProperty('--user-font', 'userFontTemp');
+    }
+};
+
 </script>
 
 <template>
@@ -109,8 +180,12 @@ const fontColor = (rgb: string) => {
                     </div>
                 </div>
                 <div class="card-footer d-flex justify-content-between">
-                    <button class="btn btn-primary" @click="revertColors">Revert</button>
-                    <button class="btn btn-success" @click="saveColors">Save</button>
+                    <button class="btn"
+                        :class="{ 'btn-primary-temp': primaryTemp !== primary, 'btn-primary': primaryTemp === primary }"
+                        @click="revertColors">Revert</button>
+                    <button class="btn"
+                        :class="{ 'btn-success-temp': successTemp !== success, 'btn-success': successTemp === success }"
+                        @click="saveColors">Save</button>
                 </div>
             </div>
             <div class="card">
@@ -118,10 +193,32 @@ const fontColor = (rgb: string) => {
                     <h5 class="card-title">Font</h5>
                 </div>
                 <div class="card-body">
+                    <div class="mb-3">
+                        <label for="fontFile" class="form-label">Upload your .ttf file</label>
+                        <input ref="fontFileInput" @change="handleFontUpload" style="display: none;" type="file"
+                            id="fontFile" name="fontFile" accept=".ttf">
+                        <div class="input-group">
+                            <button type="button" @click="triggerFileInput" class="btn btn-primary">Browse</button>
+                            <label class="form-control" style="width: 220px;">
+                                <div v-if="fontFileName" class="ellipsis" style="width: 200px;"> {{ fontFileName }}
+                                </div>
+                                <div v-else>No font selected.</div>
+                            </label>
+                        </div>
+                    </div>
+                    <div v-if="uploadedFontFace">
+                        <div class="mb-3">
+                            <label for="fontPreview" class="form-label">Font Preview</label>
+                            <div id="fontPreview"
+                                style="font-family: var(--user-font-temp, 'Public Sans'), sans-serif !important;">The
+                                quick brown fox jumps over the lazy
+                                dog.</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-footer d-flex justify-content-between">
-                    <button class="btn btn-primary" @click="revertColors">Revert</button>
-                    <button class="btn btn-success" @click="saveColors">Save</button>
+                    <button class="btn btn-primary" @click="revertFont">Revert</button>
+                    <button class="btn btn-success" @click="saveFont" v-bind:disabled="!fontFileName">Save</button>
                 </div>
             </div>
         </div>
@@ -135,6 +232,18 @@ const fontColor = (rgb: string) => {
 </template>
 
 <style scoped>
+.form-control,
+.list-group-item {
+    background-color: #f4f4f4 !important;
+    border-color: #484848 !important;
+}
+
+.ellipsis {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .color-picker-container {
     display: flex;
     flex-direction: column;
@@ -186,21 +295,21 @@ const fontColor = (rgb: string) => {
     --bs-btn-disabled-border-color: var(--bs-primary-color-disabled, #9681ca);
 }
 
-.btn-danger {
-    --bs-btn-color: #fff;
-    --bs-btn-bg: #ad6060;
-    --bs-btn-border-color: #ad6060;
-    --bs-btn-hover-color: #fff;
-    --bs-btn-hover-bg: #935252;
-    --bs-btn-hover-border-color: #935252;
-    --bs-btn-focus-shadow-rgb: 225, 83, 97;
-    --bs-btn-active-color: #fff;
-    --bs-btn-active-bg: #794343;
-    --bs-btn-active-border-color: #794343;
+.btn-primary-temp {
+    --bs-btn-color: var(--bs-primary-font-color-temp, #fff);
+    --bs-btn-bg: var(--bs-primary-color-temp, #7561a9);
+    --bs-btn-border-color: var(--bs-primary-color-temp, #7561a9);
+    --bs-btn-hover-color: var(--bs-primary-font-color-temp, #fff);
+    --bs-btn-hover-bg: var(--bs-primary-color-hover-temp, #5e548e);
+    --bs-btn-hover-border-color: var(--bs-primary-color-hover-temp, #5e548e);
+    --bs-btn-focus-shadow-rgb: 49, 132, 253;
+    --bs-btn-active-color: var(--bs-primary-font-color-temp, #fff);
+    --bs-btn-active-bg: var(--bs-primary-color-active-temp, #51457c);
+    --bs-btn-active-border-color: var(--bs-primary-color-active-temp, #51457c);
     --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
-    --bs-btn-disabled-color: #fff;
-    --bs-btn-disabled-bg: #ad6060;
-    --bs-btn-disabled-border-color: #ad6060;
+    --bs-btn-disabled-color: var(--bs-primary-font-color-temp, #fff);
+    --bs-btn-disabled-bg: var(--bs-primary-color-disabled-temp, #9681ca);
+    --bs-btn-disabled-border-color: var(--bs-primary-color-disabled-temp, #9681ca);
 }
 
 .btn-success {
@@ -218,6 +327,40 @@ const fontColor = (rgb: string) => {
     --bs-btn-disabled-color: var(--bs-success-font-color, #fff);
     --bs-btn-disabled-bg: var(--bs-success-color-disabled, #88d3d3);
     --bs-btn-disabled-border-color: var(--bs-success-color-disabled, #88d3d3);
+}
+
+.btn-success-temp {
+    --bs-btn-color: var(--bs-success-font-color-temp, #fff);
+    --bs-btn-bg: var(--bs-success-color-temp, #60aeae);
+    --bs-btn-border-color: var(--bs-success-color-temp, #60aeae);
+    --bs-btn-hover-color: var(--bs-success-font-color-temp, #fff);
+    --bs-btn-hover-bg: var(--bs-success-color-hover-temp, #4a8e8b);
+    --bs-btn-hover-border-color: var(--bs-success-color-hover-temp, #4a8e8b);
+    --bs-btn-focus-shadow-rgb: 60, 153, 110;
+    --bs-btn-active-color: var(--bs-success-font-color-temp, #fff);
+    --bs-btn-active-bg: var(--bs-success-color-active-temp, #3e7776);
+    --bs-btn-active-border-color: var(--bs-success-color-active-temp, #3e7776);
+    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    --bs-btn-disabled-color: var(--bs-success-font-color-temp, #fff);
+    --bs-btn-disabled-bg: var(--bs-success-color-disabled-temp, #88d3d3);
+    --bs-btn-disabled-border-color: var(--bs-success-color-disabled-temp, #88d3d3);
+}
+
+.btn-danger {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #ad6060;
+    --bs-btn-border-color: #ad6060;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #935252;
+    --bs-btn-hover-border-color: #935252;
+    --bs-btn-focus-shadow-rgb: 225, 83, 97;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #794343;
+    --bs-btn-active-border-color: #794343;
+    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-bg: #ad6060;
+    --bs-btn-disabled-border-color: #ad6060;
 }
 
 .btn-link {
@@ -325,5 +468,14 @@ a:hover,
 
 .d-flex.align-items-center .fas.fa-star {
     color: var(--bs-success-color, #60aeae);
+}
+
+*,
+input {
+    font-family: var(--user-font, 'Public Sans'), sans-serif;
+}
+
+.dp__action_button {
+    font-family: var(--user-font, 'Public Sans'), sans-serif !important
 }
 </style>
