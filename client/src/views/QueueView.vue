@@ -74,17 +74,21 @@ function capitalizeFirstLetter(string: string | undefined) {
 }
 
 function statusColor(status: string | undefined) {
+  let primaryColor = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9';
+  let primtaryColorActive = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color-active').trim() || '#51457C';
+  let secondaryColorActive = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-secondary-color-active').trim() || '#3e7776';
+  
   switch (status) {
     case 'ready':
-      return '#3E7776'
+      return secondaryColorActive
     case 'error':
       return '#ad6060'
     case 'offline':
       return 'black'
     case 'printing':
-      return '#51457C'
+      return primtaryColorActive
     case 'complete':
-      return '#7561A9'
+      return primaryColor
     default:
       return '#black'
   }

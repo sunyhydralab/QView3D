@@ -80,7 +80,7 @@ th {
   border: 1px solid #484848;
 }
 
-.dropdown-menu li a:hover, .dropdown-item:hover .dropdown-submenu .dropdown-item:hover{
+.dropdown-menu li a:hover, .dropdown-item:hover, .dropdown-submenu .dropdown-item:hover{
   background-color: #c0c0c0;
 }
 

@@ -96,27 +96,8 @@ const isSubmitRoute = computed(() => route.path.startsWith('/submit'));
   font-weight: bolder;
 }
 
-.nav-link:not(.active-tab):hover {
-  color: #7561A9;
-}
-
 body {
   margin: 0;
   padding: 0;
-}
-
-.current-page {
-  background-color: #7561A9;
-  color: white;
-  padding: 5px;
-  display: inline-block;
-  border-right: 2px solid #7561a9;
-  border-bottom: 2px solid #7561a9;
-  border-bottom-right-radius: 5px;
-  position: relative;
-  z-index: 1;
-  box-shadow: 0 2px 6px -2px #303035;
-  padding-left: 15px;
-  padding-right: 15px;
 }
 </style>

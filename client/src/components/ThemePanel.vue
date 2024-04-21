@@ -4,7 +4,9 @@ import { ColorPicker } from "vue3-colorpicker";
 import "vue3-colorpicker/style.css";
 
 const primary = ref<string>("#7561a9");
+const primaryFont = ref<string>("white");
 const success = ref<string>("#60AEAE");
+const successFont = ref<string>("white");
 
 const primaryTemp = ref<string>("7561a9");
 const gradientColorPrimary = ref("linear-gradient(0deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 100%)");
@@ -12,50 +14,73 @@ const successTemp = ref<string>("60AEAE");
 const gradientColorSuccess = ref("linear-gradient(0deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 100%)");
 
 const revertColors = () => {
-    primaryTemp.value = "#7561a9";
-    successTemp.value = "#60AEAE";
+    primaryTemp.value = "rgb(117, 97, 169)";
+    successTemp.value = "rgb(96, 174, 174)";
     saveColors();
 };
 
 const saveColors = () => {
     primary.value = primaryTemp.value;
+    primaryFont.value = fontColor(primary.value);
     success.value = successTemp.value;
-    console.log(primary.value, success.value);
+    successFont.value = fontColor(success.value);
+
+    document.documentElement.style.setProperty('--bs-primary-font-color', primaryFont.value);
+    document.documentElement.style.setProperty('--bs-success-font-color', successFont.value);
 
     document.documentElement.style.setProperty('--bs-primary-color', primary.value);
     document.documentElement.style.setProperty('--bs-pagination-bg', primary.value);
-    let darkenedColor = newShade(primary.value, -20);
+    let darkenedColor = newShade(primary.value, -10);
     console.log(darkenedColor);
     document.documentElement.style.setProperty('--bs-primary-color-hover', darkenedColor);
-    let darkenedColor2 = newShade(primary.value, -40);
+    let darkenedColor2 = newShade(primary.value, -20);
     document.documentElement.style.setProperty('--bs-primary-color-active', darkenedColor2);
-    let lightenedColor = newShade(primary.value, 20);
+    let lightenedColor = newShade(primary.value, 10);
     document.documentElement.style.setProperty('--bs-primary-color-disabled', lightenedColor);
 
     document.documentElement.style.setProperty('--bs-success-color', success.value);
-    let darkenedColorSuccess = newShade(success.value, -20);
+    let darkenedColorSuccess = newShade(success.value, -10);
     document.documentElement.style.setProperty('--bs-success-color-hover', darkenedColorSuccess);
-    let darkenedColor2Success = newShade(success.value, -40);
+    let darkenedColor2Success = newShade(success.value, -20);
     document.documentElement.style.setProperty('--bs-success-color-active', darkenedColor2Success);
-    let lightenedColorSuccess = newShade(success.value, 20);
+    let lightenedColorSuccess = newShade(success.value, 10);
     document.documentElement.style.setProperty('--bs-success-color-disabled', lightenedColorSuccess);
 };
 
-const newShade = (hexColor: string, magnitude: number) => {
-    hexColor = hexColor.replace(`#`, ``);
-    const decimalColor = parseInt(hexColor, 16);
+const newShade = (rgb: string, magnitude: number): string => {
+    // Extract the individual red, green, and blue color values
+    let rgbValues = rgb.match(/\d+/g);
 
-    let r = ((decimalColor >> 16) & 0xff) + magnitude;
-    r = r > 255 ? 255 : r < 0 ? 0 : r;
+    if (!rgbValues) {
+        throw new Error('Invalid RGB color');
+    }
 
-    let g = ((decimalColor >> 8) & 0xff) + magnitude;
-    g = g > 255 ? 255 : g < 0 ? 0 : g;
+    let [r, g, b] = rgbValues.map(Number);
 
-    let b = (decimalColor & 0xff) + magnitude;
-    b = b > 255 ? 255 : b < 0 ? 0 : b;
+    // Adjust color brightness
+    r = Math.round(Math.min(Math.max(0, r + (r * magnitude / 100)), 255));
+    g = Math.round(Math.min(Math.max(0, g + (g * magnitude / 100)), 255));
+    b = Math.round(Math.min(Math.max(0, b + (b * magnitude / 100)), 255));
 
-    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+    // Return the new color in RGB format
+    return `rgb(${r}, ${g}, ${b})`;
 };
+
+const brightness = (rgb: string) => {
+    let rgbValues = rgb.match(/\d+/g);
+
+    if (!rgbValues) {
+        throw new Error('Invalid RGB color');
+    }
+
+    let [r, g, b] = rgbValues.map(Number);
+
+    return Math.round(((r * 299) + (g * 587) + (b * 114)) / 1000);
+}
+
+const fontColor = (rgb: string) => {
+    return brightness(rgb) > 155 ? 'black' : 'white';
+}
 
 </script>
 
@@ -145,18 +170,18 @@ const newShade = (hexColor: string, magnitude: number) => {
 
 <style>
 .btn-primary {
-    --bs-btn-color: #fff;
+    --bs-btn-color: var(--bs-primary-font-color, #fff);
     --bs-btn-bg: var(--bs-primary-color, #7561a9);
     --bs-btn-border-color: var(--bs-primary-color, #7561a9);
-    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-color: var(--bs-primary-font-color, #fff);
     --bs-btn-hover-bg: var(--bs-primary-color-hover, #5e548e);
     --bs-btn-hover-border-color: var(--bs-primary-color-hover, #5e548e);
     --bs-btn-focus-shadow-rgb: 49, 132, 253;
-    --bs-btn-active-color: #fff;
+    --bs-btn-active-color: var(--bs-primary-font-color, #fff);
     --bs-btn-active-bg: var(--bs-primary-color-active, #51457c);
     --bs-btn-active-border-color: var(--bs-primary-color-active, #51457c);
     --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
-    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-color: var(--bs-primary-font-color, #fff);
     --bs-btn-disabled-bg: var(--bs-primary-color-disabled, #9681ca);
     --bs-btn-disabled-border-color: var(--bs-primary-color-disabled, #9681ca);
 }
@@ -179,18 +204,18 @@ const newShade = (hexColor: string, magnitude: number) => {
 }
 
 .btn-success {
-    --bs-btn-color: #fff;
+    --bs-btn-color: var(--bs-success-font-color, #fff);
     --bs-btn-bg: var(--bs-success-color, #60aeae);
-    --bs-btn-border-color: #60aeae;
-    --bs-btn-hover-color: #fff;
+    --bs-btn-border-color: var(--bs-success-color, #60aeae);
+    --bs-btn-hover-color: var(--bs-success-font-color, #fff);
     --bs-btn-hover-bg: var(--bs-success-color-hover, #4a8e8b);
     --bs-btn-hover-border-color: var(--bs-success-color-hover, #4a8e8b);
     --bs-btn-focus-shadow-rgb: 60, 153, 110;
-    --bs-btn-active-color: #fff;
+    --bs-btn-active-color: var(--bs-success-font-color, #fff);
     --bs-btn-active-bg: var(--bs-success-color-active, #3e7776);
-    --bs-btn-active-border-color: #3e7776;
+    --bs-btn-active-border-color: var(--bs-success-color-active, #3e7776);
     --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
-    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-color: var(--bs-success-font-color, #fff);
     --bs-btn-disabled-bg: var(--bs-success-color-disabled, #88d3d3);
     --bs-btn-disabled-border-color: var(--bs-success-color-disabled, #88d3d3);
 }
@@ -203,18 +228,18 @@ const newShade = (hexColor: string, magnitude: number) => {
     --bs-pagination-padding-x: 0.75rem;
     --bs-pagination-padding-y: 0.375rem;
     --bs-pagination-font-size: 1rem;
-    --bs-pagination-color: #fff;
+    --bs-pagination-color: var(--bs-primary-font-color, #fff);
     --bs-pagination-bg: var(--bs-primary-color, #7561a9);
     --bs-pagination-border-width: var(--bs-border-width);
     --bs-pagination-border-color: #929292;
     --bs-pagination-border-radius: var(--bs-border-radius);
-    --bs-pagination-hover-color: #fff;
+    --bs-pagination-hover-color: var(--bs-primary-font-color, #fff);
     --bs-pagination-hover-bg: var(--bs-primary-color-hover, #5e548e);
     --bs-pagination-hover-border-color: #929292;
-    --bs-pagination-focus-color: #fff;
+    --bs-pagination-focus-color: var(--bs-primary-font-color, #fff);
     --bs-pagination-focus-bg: var(--bs-primary-color-hover, #5e548e);
     --bs-pagination-focus-box-shadow: 0 0 0 0.25rem rgba(49, 132, 253, 0.25);
-    --bs-pagination-active-color: #fff;
+    --bs-pagination-active-color: var(--bs-primary-font-color, #fff);
     --bs-pagination-active-bg: var(--bs-primary-color-active, #51457c);
     --bs-pagination-active-border-color: #929292;
     --bs-pagination-disabled-color: #525252;
@@ -244,6 +269,7 @@ input[type='radio']:checked {
 .dropdown-item:active,
 .dropdown-submenu .dropdown-item:active {
     background-color: var(--bs-primary-color, #7561a9);
+    color: var(--bs-primary-font-color, #fff);
 }
 
 a,
@@ -259,11 +285,45 @@ a:hover,
 .dp__theme_light {
     --dp-primary-color: var(--bs-primary-color, #7561a9) !important;
     --dp-primary-disabled-color: var(--bs-primary-color-disabled, #9681ca) !important;
-    --dp-primary-text-color: #f8f5f5 !important;
+    --dp-primary-text-color: var(--bs-primary-font-color, #fff) !important;
 }
 
-.dp__action_cancel, .dp__action_cancel:hover {
+.dp__action_cancel,
+.dp__action_cancel:hover {
     color: #484848 !important;
     border: 1px solid #484848 !important;
+}
+
+.nav-link:not(.active-tab):hover {
+    color: #7561A9;
+}
+
+.current-page {
+    background-color: #7561A9;
+    color: white;
+    padding: 5px;
+    display: inline-block;
+    border-right: 2px solid #7561a9;
+    border-bottom: 2px solid #7561a9;
+    border-bottom-right-radius: 5px;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 2px 6px -2px #303035;
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+.header {
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    background-color: #7561a9;
+    color: #dbdbdb;
+}
+
+.d-flex.align-items-center .fas.fa-star {
+    color: var(--bs-success-color, #60aeae);
 }
 </style>

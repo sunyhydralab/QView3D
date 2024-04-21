@@ -452,7 +452,7 @@ const doDownloadCsv = async () => {
                     <p class="my-auto truncate-name">{{ job.name }}</p>
                     <p class="my-auto truncate-file">{{ job.file_name_original }}</p>
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-star" style="color: #60AEAE; margin-right: 10px;" data-bs-toggle="modal"
+                        <i class="fas fa-star" style="margin-right: 10px;" data-bs-toggle="modal"
                             data-bs-target="#favoriteModal" @click="jobToUnfavorite = job"></i>
                         <button class="btn btn-secondary download" style="margin-right: 10px;"
                             @click="getFileDownload(job.id)" :disabled="job.file_name_original.includes('.gcode:')">
@@ -833,16 +833,6 @@ const doDownloadCsv = async () => {
     display: grid;
     grid-template-columns: 1fr 2fr 1fr;
     gap: 10px;
-}
-
-.header {
-    padding-left: 10px;
-    padding-right: 10px;
-    padding-top: 10px;
-    border-radius: 5px;
-    margin-bottom: 10px;
-    background-color: #7561a9;
-    color: #dbdbdb;
 }
 
 .job {
