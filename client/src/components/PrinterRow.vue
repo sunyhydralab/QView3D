@@ -539,4 +539,9 @@ table {
     background-color: #f4f4f4 !important;
     border-color: #484848 !important;
 }
-</style>useAssignComment, useGetFile, useGetJobFile, useRemoveJob, onMounted,
+
+.alert {
+    margin: 0;
+    padding: 0.3rem;
+}
+</style>
