@@ -34,16 +34,16 @@ function formatETA(milliseconds: number): string {
 let expandedState: (string | undefined)[] = [];
 
 const collapseAll = () => {
-    expandedState = printers.value.filter(printer => printer.isInfoExpanded).map(printer => printer.id?.toString());
-    printers.value.forEach(printer => printer.isInfoExpanded = false);
+  expandedState = printers.value.filter(printer => printer.isInfoExpanded).map(printer => printer.id?.toString());
+  printers.value.forEach(printer => printer.isInfoExpanded = false);
 }
 
 const restoreExpandedState = () => {
-    printers.value.forEach(printer => {
-        if (expandedState.includes(printer.id?.toString())) {
-            printer.isInfoExpanded = true;
-        }
-    });
+  printers.value.forEach(printer => {
+    if (expandedState.includes(printer.id?.toString())) {
+      printer.isInfoExpanded = true;
+    }
+  });
 }
 
 </script>
@@ -64,7 +64,7 @@ const restoreExpandedState = () => {
         <th style="width: 58px">Move</th>
       </tr>
       <draggable v-model="printers" tag="tbody" :animation="300" item-key="printer.id" handle=".handle"
-      dragClass="hidden-ghost" v-if="printers.length > 0" @start="collapseAll" @end="restoreExpandedState">
+        dragClass="hidden-ghost" v-if="printers.length > 0" @start="collapseAll" @end="restoreExpandedState">
         <template #item="{ element: printer }">
           <div v-if="printer.isInfoExpanded" class="expanded-info">
             <tr :id="printer.id">
@@ -178,6 +178,11 @@ const restoreExpandedState = () => {
   background: #929292;
   height: calc(100% + 1.5px);
 }
+
+table {
+  table-layout: fixed;
+}
+
 th {
   user-select: none;
 }

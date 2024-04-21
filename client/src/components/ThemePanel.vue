@@ -295,16 +295,16 @@ a:hover,
 }
 
 .nav-link:not(.active-tab):hover {
-    color: #7561A9;
+    color: var(--bs-primary-color, #7561a9);
 }
 
 .current-page {
-    background-color: #7561A9;
+    background-color: var(--bs-primary-color, #7561a9);
     color: white;
     padding: 5px;
     display: inline-block;
-    border-right: 2px solid #7561a9;
-    border-bottom: 2px solid #7561a9;
+    border-right: 2px solid var(--bs-primary-color, #7561a9);
+    border-bottom: 2px solid var(--bs-primary-color, #7561a9);
     border-bottom-right-radius: 5px;
     position: relative;
     z-index: 1;
@@ -319,7 +319,7 @@ a:hover,
     padding-top: 10px;
     border-radius: 5px;
     margin-bottom: 10px;
-    background-color: #7561a9;
+    background-color: var(--bs-primary-color, #7561a9);
     color: #dbdbdb;
 }
 
