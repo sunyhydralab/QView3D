@@ -238,7 +238,7 @@ const doCloseRegisterModal = async () => {
                         </div>
                         <h6 class="card-text mb-0 text-muted"> <b>Printer device:</b> {{ printer.device }}</h6>
                         <h6 class="card-text mb-0"> <b>Printer description:</b> {{ printer.description }}</h6>
-                        <h6 class="card-text mt-0"> <b>Date registered:</b> {{ printer.date }}</h6>
+                        <h6 class="card-text mb-0"> <b>Date registered:</b> {{ printer.date }}</h6>
                         <h6 class="card-text mt-0"> <b>HWID:</b> {{ printer.hwid }}</h6>
 
                         <div v-if="messageId == printer.id && showMessage"
