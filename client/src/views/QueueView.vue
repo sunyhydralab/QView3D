@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onUnmounted, ref, computed } from 'vue'
+import { onUnmounted, ref, computed, watchEffect, onMounted } from 'vue'
 import { printers, type Device } from '../model/ports'
 import { useRerunJob, useRemoveJob, type Job, useMoveJob, useGetFile, useGetJobFile } from '../model/jobs'
 import draggable from 'vuedraggable'
@@ -20,11 +20,34 @@ let currentJob = ref<Job | null>(null)
 let isGcodeImageVisible = ref(false)
 let selectAllCheckbox = ref(false)
 
+const primaryColor = ref('');
+const primaryColorActive = ref('');
+const successColorActive = ref('');
+let observer: MutationObserver;
+
+onMounted(() => {
+  observer = new MutationObserver(() => {
+    primaryColor.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9';
+    primaryColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color-active').trim() || '#51457C';
+    successColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-success-color-active').trim() || '#3e7776';
+  });
+
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+});
+
+
 onUnmounted(() => {
   for (const printer of printers.value) {
     printer.isQueueExpanded = false
   }
+  observer.disconnect();
 })
+
+watchEffect(() => {
+  primaryColor.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9';
+  primaryColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color-active').trim() || '#51457C';
+  successColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-success-color-active').trim() || '#3e7776';
+});
 
 const handleRerun = async (job: Job, printer: Device) => {
   await rerunJob(job, printer)
@@ -74,23 +97,19 @@ function capitalizeFirstLetter(string: string | undefined) {
 }
 
 function statusColor(status: string | undefined) {
-  let primaryColor = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9';
-  let primtaryColorActive = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color-active').trim() || '#51457C';
-  let secondaryColorActive = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-secondary-color-active').trim() || '#3e7776';
-  
   switch (status) {
     case 'ready':
-      return secondaryColorActive
+      return successColorActive.value;
     case 'error':
-      return '#ad6060'
+      return '#ad6060';
     case 'offline':
-      return 'black'
+      return 'black';
     case 'printing':
-      return primtaryColorActive
+      return primaryColorActive.value;
     case 'complete':
-      return primaryColor
+      return primaryColor.value;
     default:
-      return '#black'
+      return 'black';
   }
 }
 
@@ -201,8 +220,8 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
               </span>
               <span v-else>
                 <span class="status-text" :style="{ color: statusColor(printer.status) }">{{
-      capitalizeFirstLetter(printer.status)
-    }}
+                  capitalizeFirstLetter(printer.status)
+                }}
                 </span>
               </span>
             </b>

@@ -425,6 +425,12 @@ a:hover,
     color: var(--bs-primary-color-hover, #5e548e);
 }
 
+a:active,
+.btn-link:active,
+.btn:first-child:active {
+    color: var(--bs-primary-color-active, #51457c);
+}
+
 .dp__theme_light {
     --dp-primary-color: var(--bs-primary-color, #7561a9) !important;
     --dp-primary-disabled-color: var(--bs-primary-color-disabled, #9681ca) !important;
@@ -476,6 +482,6 @@ input {
 }
 
 .dp__action_button {
-    font-family: var(--user-font, 'Public Sans'), sans-serif !important
+    font-family: var(--user-font, 'Public Sans'), sans-serif !important;
 }
 </style>
