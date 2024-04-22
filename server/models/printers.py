@@ -173,10 +173,9 @@ class Printer(db.Model):
             }
             # supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
 
-            if (("original" in port.description.lower()) or ("prusa" in port.description.lower())) and (Printer.getPrinterByHwid(hwid_without_location) is None) :
-                printerList.append(port_info)
+        if (("original" in port.description.lower()) or ("prusa" in port.description.lower())) and (Printer.getPrinterByHwid(hwid_without_location) is None) :
+            printerList.append(port_info)
 
-                print(port_info)
         return printerList
 
     @classmethod
@@ -301,7 +300,8 @@ class Printer(db.Model):
             # logic here about time elapsed since last response
 
         response = ser.readline().decode("utf-8").strip()
-        if("ok" not in response):
+        print(response)
+        if("error" in response):
             return "none"
             # if "ok" in response:
             #     break
