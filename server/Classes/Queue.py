@@ -98,6 +98,7 @@ class Queue:
                 "comments": job.comments, 
                 "extruded": job.extruded,
                 "td_id": job.td_id,
+                "filament": job.filament,
             }
             queue.append(job_info)
         return queue

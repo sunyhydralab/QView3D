@@ -225,8 +225,8 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
               </span>
               <span v-else>
                 <span class="status-text" :style="{ color: statusColor(printer.status) }">{{
-                  capitalizeFirstLetter(printer.status)
-                }}
+              capitalizeFirstLetter(printer.status)
+            }}
                 </span>
               </span>
             </b>

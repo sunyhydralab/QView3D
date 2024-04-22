@@ -33,6 +33,7 @@ class Job(db.Model):
     
     # TeamDynamics ID 
     td_id = db.Column(db.Integer, nullable=True)
+    filament = db.Column(db.String(50), nullable=True)
 
     #FK to issue 
     error_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=True)
@@ -55,13 +56,14 @@ class Job(db.Model):
 
 
     
-    def __init__(self, file, name, printer_id, status, file_name_original, favorite, td_id):
+    def __init__(self, file, name, printer_id, status, file_name_original, favorite, td_id, filament):
         self.file = file 
         self.name = name 
         self.printer_id = printer_id 
         self.status = status 
         self.file_name_original = file_name_original # original file name without PK identifier 
         self.td_id = td_id
+        self.filament = filament
         self.file_name_pk = None
         self.favorite = favorite
         self.released = 0 
@@ -121,7 +123,8 @@ class Job(db.Model):
                 "errorid": job.error_id, 
                 "error": job.error.issue if job.error else 'None', 
                 "comment": job.comments, 
-                "td_id": job.td_id
+                "td_id": job.td_id,
+                "filament": job.filament
             } for job in jobs]
 
             return jobs_data, pagination.total
@@ -171,7 +174,8 @@ class Job(db.Model):
                 "errorid": job.error_id, 
                 "error": job.error.issue if job.error else 'None', 
                 "comment": job.comments, 
-                "td_id": job.td_id
+                "td_id": job.td_id,
+                "filament": job.filament
             } for job in jobs]
             
 
@@ -181,7 +185,7 @@ class Job(db.Model):
             return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500
 
     @classmethod
-    def jobHistoryInsert(cls, name, printer_id, status, file, file_name_original, favorite, td_id): 
+    def jobHistoryInsert(cls, name, printer_id, status, file, file_name_original, favorite, td_id, filament): 
         try:
             if isinstance(file, bytes):
                 file_data = file
@@ -203,7 +207,8 @@ class Job(db.Model):
                 status=status,
                 file_name_original = file_name_original,
                 favorite = favorite, 
-                td_id = td_id
+                td_id = td_id,
+                filament = filament
             )
 
             db.session.add(job)
@@ -438,7 +443,7 @@ class Job(db.Model):
         pass 
 
     @classmethod
-    def getFilament(cls, job_id):
+    def getFilamentFromJob(cls, job_id):
         job = cls.query.get(job_id)
         # Get the job's file
         file_data = job.getFile()
@@ -513,6 +518,9 @@ class Job(db.Model):
 
     def getJobId(self):
         return self.id
+    
+    def getFilament(self):
+        return self.filament
 
     def getFilePause(self):
         return self.filePause

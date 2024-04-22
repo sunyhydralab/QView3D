@@ -126,14 +126,25 @@ const handleFontUpload = (event: any) => {
             let fontFace = new FontFace('userFontTemp', reader.result as ArrayBuffer);
             fontFace.load().then((loadedFace) => {
                 uploadedFontFaceTemp.value = loadedFace;
-                uploadedFontFace.value = loadedFace; // Update uploadedFontFace
-                document.fonts.add(uploadedFontFaceTemp.value);
+                // Set the CSS variable here for the preview
                 document.documentElement.style.setProperty('--user-font-temp', 'userFontTemp');
             });
         }
     };
 
     reader.readAsArrayBuffer(file);
+};
+
+const saveFont = () => {
+    if (uploadedFontFaceTemp.value) {
+        uploadedFontFace.value = uploadedFontFaceTemp.value;
+        document.fonts.add(uploadedFontFace.value); // Add the font to document.fonts here
+        document.documentElement.style.setProperty('--user-font', 'userFontTemp'); // Set the CSS variable here
+        // Reset the temporary CSS variable
+        document.documentElement.style.setProperty('--user-font-temp', 'Public Sans');
+        uploadedFontFaceTemp.value = null;
+        fontFileName.value = null;
+    }
 };
 
 const triggerFileInput = () => {
@@ -146,13 +157,6 @@ const revertFont = () => {
     uploadedFontFaceTemp.value = null;
     uploadedFontFace.value = null;
     fontFileName.value = null;
-};
-
-const saveFont = () => {
-    if (uploadedFontFaceTemp.value) {
-        uploadedFontFace.value = uploadedFontFaceTemp.value;
-        document.documentElement.style.setProperty('--user-font', 'userFontTemp');
-    }
 };
 
 </script>
@@ -206,15 +210,6 @@ const saveFont = () => {
                                 </div>
                                 <div v-else>No font selected.</div>
                             </label>
-                        </div>
-                    </div>
-                    <div v-if="uploadedFontFace">
-                        <div class="mb-3">
-                            <label for="fontPreview" class="form-label">Font Preview</label>
-                            <div id="fontPreview"
-                                style="font-family: var(--user-font-temp, 'Public Sans'), sans-serif !important;">The
-                                quick brown fox jumps over the lazy
-                                dog.</div>
                         </div>
                     </div>
                 </div>
@@ -429,7 +424,7 @@ a:hover,
 
 a:active,
 .btn-link:active {
-    color: var(--bs-primary-color-active, #51457c) !important;
+    color: var(--bs-primary-color-active, #fff) !important;
 }
 
 .dp__theme_light {
