@@ -16,6 +16,7 @@ export const quantity = ref<number>(1)
 export const priority = ref<number>(0)
 export const favorite = ref<boolean>(false)
 export const name = ref<string>('')
+export const filament = ref<string>('')
 
 export interface Job {
   id: number

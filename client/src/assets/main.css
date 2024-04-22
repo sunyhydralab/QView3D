@@ -121,8 +121,8 @@ th {
   visibility: hidden;
   opacity: 0;
   transition:
-    opacity 0.2s linear,
-    visibility 0.2s linear 0.2s;
+  opacity 0.2s linear,
+  visibility 0.2s linear 0.2s;
   width: 200px;
   background-color: #484848;
   color: #dbdbdb;

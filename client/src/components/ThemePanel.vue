@@ -22,6 +22,8 @@ const fontFileName = ref(null);
 const revertColors = () => {
     primaryTemp.value = "rgb(117, 97, 169)";
     successTemp.value = "rgb(96, 174, 174)";
+    primaryFontTemp.value = fontColor(primaryTemp.value);
+    successFontTemp.value = fontColor(successTemp.value);
 
     saveColors();
 };
@@ -426,9 +428,8 @@ a:hover,
 }
 
 a:active,
-.btn-link:active,
-.btn:first-child:active {
-    color: var(--bs-primary-color-active, #51457c);
+.btn-link:active {
+    color: var(--bs-primary-color-active, #51457c) !important;
 }
 
 .dp__theme_light {
