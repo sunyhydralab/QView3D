@@ -602,17 +602,6 @@ export function useGetFilament() {
         console.error(error)
         toast.error('An error occurred while retrieving the filament')
       }
-    },
-    async getFilamentFromFile(file: File) {
-      try {
-        // file File to string
-        const fileString = await file.text()
-        const response = await api(`getfilamentfromfile?file=${fileString}`)
-        return response
-      } catch (error) {
-        console.error(error)
-        toast.error('An error occurred while retrieving the filament')
-      }
     }
   }
 }

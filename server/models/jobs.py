@@ -438,7 +438,8 @@ class Job(db.Model):
         pass 
 
     @classmethod
-    def getFilament(cls, job):
+    def getFilament(cls, job_id):
+        job = cls.query.get(job_id)
         # Get the job's file
         file_data = job.getFile()
         # Decompress the file
@@ -454,6 +455,21 @@ class Job(db.Model):
                 # Extract the filament type
                 filament_type = line.split('=')[1].strip()
                 break
+
+        return filament_type
+    
+    @classmethod
+    def getFilamentFromFile(cls, file_str):
+        # Split the file into lines
+        lines = file_str.split('\n')
+        # Iterate over the lines in the file
+        for line in lines:
+            # Check if the line contains the filament used
+            if line.startswith('; filament_type = '):
+                # Extract the filament type
+                filament_type = line.split('=')[1].strip()
+                break
+
         return filament_type
            
     def saveToFolder(self):

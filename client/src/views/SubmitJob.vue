@@ -9,7 +9,7 @@ import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue';
 const { addJobToQueue } = useAddJobToQueue()
 const { auto } = useAutoQueue()
 const { getFile } = useGetFile();
-const { getFilament, getFilamentFromFile } = useGetFilament();
+const { getFilament } = useGetFilament();
 
 const route = useRoute();
 
@@ -24,10 +24,10 @@ let isSubmitDisabled = false;
 
 const isGcodeImageVisible = ref(false)
 
-const filamentTypes = ['PLA', 'ABS', 'PETG', 'ASA', 'TPU', 'CPE', 'PVA', 'HIPS', 'PC', 'PP', 'PS', 'Other']
+const filamentTypes = ['PLA', 'PETG', 'ABS', 'ASA', 'FLEX', 'HIPS', 'EDGE', 'NGEN', 'PA', 'PVA', 'PCTG', 'PP', 'PC', 'CPE', 'PEBA', 'PVB', 'PLA TOUGH', 'METAL', 'PET']
 
 // file upload
-const handleFileUpload = async (event: Event) => {
+const handleFileUpload = (event: Event) => {
     const target = event.target as HTMLInputElement;
     const uploadedFile = target.files ? target.files[0] : undefined;
     if (uploadedFile && uploadedFile.name.length > 50) {
@@ -41,9 +41,13 @@ const handleFileUpload = async (event: Event) => {
         name.value = fileName.value.replace('.gcode', '') || ''
 
         if (file.value) {
-            filament.value = await getFilamentFromFile(file.value)
+            getFilamentFromFile(file.value).then(filamentType => {
+                filament.value = filamentType ? filamentType.toString() : '';
+            }).catch(() => {
+                filament.value = '';
+            });
         } else {
-            filament.value = ''
+            filament.value = '';
         }
     }
 }
@@ -233,6 +237,26 @@ const triggerFileInput = () => {
 const selectFilament = (type: string) => {
     filament.value = type
 }
+
+const getFilamentFromFile = (file: File) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const lines = (event.target?.result as string).split('\n').reverse();
+            for (let line of lines) {
+                if (line.startsWith('; filament_type = ')) {
+                    resolve(line.split('= ')[1]);
+                    return;
+                }
+            }
+            resolve(null);
+        };
+        reader.onerror = function() {
+            reject(new Error("Failed to read file"));
+        };
+        reader.readAsText(file);
+    });
+};
 
 </script>
 <template>
