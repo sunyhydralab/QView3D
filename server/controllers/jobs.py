@@ -564,6 +564,17 @@ def repair_ports():
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
     
+@jobs_bp.route("/getfilament", methods=["GET"])
+def getFilament(): 
+    try:
+        job_id = request.args.get('jobid', default=-1, type=int)
+        job = Job.findJob(job_id)
+        res = job.getFilament()
+        return res
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
     
 def findPrinterObject(printer_id): 
     threads = printer_status_service.getThreadArray()

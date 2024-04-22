@@ -31,6 +31,18 @@ let expandedState: (string | undefined)[] = [];
 onMounted(async () => {
   const retrieveissues = await issues()
   issuelist.value = retrieveissues
+
+  const imageModal = document.getElementById('gcodeImageModal')
+
+  imageModal?.addEventListener('hidden.bs.modal', () => {
+    isGcodeImageVisible.value = false;
+  });
+
+  const liveModal = document.getElementById('gcodeLiveViewModal')
+
+  liveModal?.addEventListener('hidden.bs.modal', () => {
+    isGcodeLiveViewVisible.value = false;
+  });
 })
 
 function formatTime(milliseconds: number): string {
@@ -156,8 +168,7 @@ const setJob = async (job: Job) => {
 
   <!-- bootstrap 'gcodeLiveViewModal' -->
   <div class="modal fade" id="gcodeLiveViewModal" tabindex="-1" aria-labelledby="gcodeLiveViewModalLaebl"
-    aria-hidden="true" @shown.bs.modal="isGcodeLiveViewVisible = true"
-    @hidden.bs.modal="isGcodeLiveViewVisible = false">
+    aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
       <div class="modal-content">
         <div class="modal-header">
@@ -176,8 +187,7 @@ const setJob = async (job: Job) => {
   </div>
 
   <!-- bootstrap 'gcodeImageModal' -->
-  <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true"
-    @shown.bs.modal="isGcodeImageVisible = true" @hidden.bs.modal="isGcodeImageVisible = false">
+  <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
       <div class="modal-content">
         <div class="modal-header">

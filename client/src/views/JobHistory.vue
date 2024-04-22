@@ -116,6 +116,12 @@ onMounted(async () => {
 
         document.addEventListener('click', closeDropdown);
 
+        const modal = document.getElementById('gcodeImageModal');
+
+        modal?.addEventListener('hidden.bs.modal', () => {
+            isGcodeImageVisible.value = false;
+        });
+
     } catch (error) {
         console.error(error)
     }
@@ -406,8 +412,7 @@ const doDownloadCsv = async () => {
     </div>
 
     <!-- gcode image viewer modal -->
-    <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true"
-        @shown.bs.modal="isGcodeImageVisible = true" @hidden.bs.modal="isGcodeImageVisible = false">
+    <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-xl">
             <div class="modal-content">
                 <div class="modal-header">

@@ -16,6 +16,7 @@ export const quantity = ref<number>(1)
 export const priority = ref<number>(0)
 export const favorite = ref<boolean>(false)
 export const name = ref<string>('')
+export const tdid = ref<number>(0)
 export const filament = ref<string>('')
 
 export interface Job {
@@ -39,6 +40,7 @@ export interface Job {
   comment?: string // store comments
 
   extruded?: number 
+  filament?: string
 
   file_pause: number
   priority?: string
@@ -584,6 +586,32 @@ export function useDownloadCsv() {
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while downloading the csv')
+      }
+    }
+  }
+}
+
+export function useGetFilament() {
+  return {
+    async getFilament(job: Job) {
+      try {
+        const jobid = job.id
+        const response = await api(`getfilament?jobid=${jobid}`)
+        return response
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while retrieving the filament')
+      }
+    },
+    async getFilamentFromFile(file: File) {
+      try {
+        // file File to string
+        const fileString = await file.text()
+        const response = await api(`getfilamentfromfile?file=${fileString}`)
+        return response
+      } catch (error) {
+        console.error(error)
+        toast.error('An error occurred while retrieving the filament')
       }
     }
   }

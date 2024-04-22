@@ -436,6 +436,25 @@ class Job(db.Model):
     @classmethod
     def downloadCSV(cls):
         pass 
+
+    @classmethod
+    def getFilament(cls, job):
+        # Get the job's file
+        file_data = job.getFile()
+        # Decompress the file
+        decompressed_data = gzip.decompress(file_data)
+        # Convert the decompressed data to a string
+        file_str = decompressed_data.decode('utf-8')
+        # Split the file into lines
+        lines = file_str.split('\n')
+        # Iterate over the lines in the file
+        for line in lines:
+            # Check if the line contains the filament used
+            if line.startswith('; filament_type = '):
+                # Extract the filament type
+                filament_type = line.split('=')[1].strip()
+                break
+        return filament_type
            
     def saveToFolder(self):
         file_data = self.getFile()

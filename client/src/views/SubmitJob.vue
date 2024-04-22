@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers } from '../model/ports'
-import { selectedPrinters, file, fileName, quantity, priority, favorite, name, filament, useAddJobToQueue, useGetFile, useAutoQueue } from '../model/jobs'
+import { selectedPrinters, file, fileName, quantity, priority, favorite, name, tdid, filament, useAddJobToQueue, useGetFile, useAutoQueue, useGetFilament } from '../model/jobs'
 import { ref, onMounted, watchEffect, computed } from 'vue'
 import { useRoute } from 'vue-router';
 import { toast } from '@/model/toast';
@@ -9,6 +9,7 @@ import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue';
 const { addJobToQueue } = useAddJobToQueue()
 const { auto } = useAutoQueue()
 const { getFile } = useGetFile();
+const { getFilament, getFilamentFromFile } = useGetFilament();
 
 const route = useRoute();
 
@@ -21,14 +22,12 @@ const isAsteriksVisible2 = ref(true)
 const form = ref<HTMLFormElement | null>(null);
 let isSubmitDisabled = false;
 
-const tdid = ref<number>(0)
-
 const isGcodeImageVisible = ref(false)
 
 const filamentTypes = ['PLA', 'ABS', 'PETG', 'ASA', 'TPU', 'CPE', 'PVA', 'HIPS', 'PC', 'PP', 'PS', 'Other']
 
 // file upload
-const handleFileUpload = (event: Event) => {
+const handleFileUpload = async (event: Event) => {
     const target = event.target as HTMLInputElement;
     const uploadedFile = target.files ? target.files[0] : undefined;
     if (uploadedFile && uploadedFile.name.length > 50) {
@@ -40,6 +39,12 @@ const handleFileUpload = (event: Event) => {
         file.value = uploadedFile
         fileName.value = uploadedFile?.name || ''
         name.value = fileName.value.replace('.gcode', '') || ''
+
+        if (file.value) {
+            filament.value = await getFilamentFromFile(file.value)
+        } else {
+            filament.value = ''
+        }
     }
 }
 
@@ -66,6 +71,7 @@ onMounted(async () => {
             file.value = await getFile(job)
             fileName.value = file.value?.name || ''
             name.value = job.name
+            filament.value = await getFilament(job) || ''
         }
 
         const modal = document.getElementById('gcodeImageModal');
@@ -110,6 +116,7 @@ const handleSubmit = async () => {
         formData.append('name', name.value as string)
         formData.append('priority', priority.value.toString())
         formData.append('td_id', tdid.value.toString())
+        formData.append('filament', filament.value as string)
         // If favorite is true and it's not set yet, set it for the first job only
         if (favorite.value && !isFavoriteSet) {
             formData.append('favorite', 'true')
@@ -147,6 +154,7 @@ const handleSubmit = async () => {
                 formData.append('priority', priority.value.toString())
                 formData.append('quantity', numPrints.toString())
                 formData.append('td_id', tdid.value.toString())
+                formData.append('filament', filament.value as string)
 
                 // If favorite is true and it's not set yet, set it for the first job only
                 if (favorite.value && !isFavoriteSet) {
@@ -189,6 +197,7 @@ function resetValues() {
     fileName.value = '';
     file.value = undefined;
     tdid.value = 0;
+    filament.value = '';
 }
 
 watchEffect(() => {
@@ -199,7 +208,7 @@ watchEffect(() => {
     if (quantity.value < selectedPrinters.value.length) {
         quantity.value = selectedPrinters.value.length
     }
-    isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0))
+    isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0) && filament.value !== '')
 });
 
 const allSelected = computed({
@@ -327,7 +336,7 @@ const selectFilament = (type: string) => {
                         </div>
                         <div class="input-group">
                             <div class="dropdown w-100" id="filamentDropdown">
-                                <button class="btn btn-success dropdown-toggle w-100" type="button"
+                                <button class="btn btn-primary dropdown-toggle w-100" type="button"
                                     id="dropdownMenuButton" data-bs-toggle="dropdown"
                                     :aria-expanded="filament ? 'false' : 'true'">
                                     {{ filament || 'Select Filament' }}
