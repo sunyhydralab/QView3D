@@ -714,8 +714,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                         </a>
                       </li>
                       <li v-if="printer.queue[0]">
-                        <a class="dropdown-item d-flex align-items-center"
-                          @click="getFileDownload(printer.queue[0].id)"
+                        <a class="dropdown-item d-flex align-items-center" @click="getFileDownload(printer.queue[0].id)"
                           :disabled="printer.queue[0].file_name_original.includes('.gcode:')">
                           <i class="fas fa-download"></i>
                           <span class="ms-2">Download</span>
