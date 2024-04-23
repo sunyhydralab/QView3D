@@ -7,7 +7,7 @@ import { socket } from './myFetch'
 
 export function api(action: string, body?: unknown, method?: string, headers?: any) {
   headers = headers ?? {}
-  return myFetch.api(`${action}`, body, method, headers).catch((err) => console.log(err))
+  return myFetch.api(`${action}`, body, method, headers).catch((err) => console.log(action))
 }
 
 export interface Device {

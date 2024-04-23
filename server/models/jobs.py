@@ -460,6 +460,8 @@ class Job(db.Model):
                 # Extract the filament type
                 filament_type = line.split('=')[1].strip()
                 break
+            else:
+                filament_type = ""
 
         return filament_type
     

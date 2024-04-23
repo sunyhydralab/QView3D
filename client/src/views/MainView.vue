@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watchEffect } from 'vue';
+import { nextTick, onMounted, ref, watchEffect } from 'vue';
 import { printers, useSetStatus, type Device } from '@/model/ports';
 import draggable from 'vuedraggable'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
@@ -100,7 +100,7 @@ const doAssignIssue = async () => {
   selectedIssue.value = undefined
   selectedJob.value = undefined
 
-  console.log(jobComments.value)
+  await nextTick()
 }
 
 const openModal = async (job: Job, printerName: string, num: number, printer: Device) => {
@@ -154,6 +154,7 @@ const openPrinterInfo = (printer: Device) => {
 
 const releasePrinter = async (jobToFind: Job | undefined, key: number, printerIdToPrintTo: number) => {
   await releaseJob(jobToFind, key, printerIdToPrintTo)
+  await nextTick()
 }
 
 </script>
@@ -244,8 +245,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
     <div class="modal-dialog modal-dialog-centered modal-xl">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="gcodeModalLabel"><b>{{ currentJob?.printer }}:</b> {{ currentJob?.name
-            }}</h5>
+          <h5 class="modal-title" id="gcodeModalLabel"><b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
@@ -343,7 +343,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
 
                   <button class="btn btn-success"
                     v-if="printer.status == 'printing' && printer.queue?.[0].released == 0"
-                    @click="startPrint(printer.id!, printer.queue![0].id)">
+                    @click="startPrint(printer.id, printer.queue[0].id)">
                     Start Print
                   </button>
 
@@ -378,7 +378,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
 
               <td style="width: 250px;">
                 <div
-                  v-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange') && printer.queue && printer.queue![0].released == 1">
+                  v-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange') && printer.queue && printer.queue[0].released == 1">
                   <!-- <div v-for="job in printer.queue" :key="job.id"> -->
                   <!-- Display the elapsed time -->
                   <div class="progress" style="position: relative;">
@@ -388,9 +388,9 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                     </div>
                     <!-- job progress set to 2 decimal places -->
                     <p style="position: absolute; width: 100%; text-align: center; color: black;">{{
-              printer.queue?.[0].progress
-                ?
-                `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
+                      printer.queue?.[0].progress
+                        ?
+                        `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
                   </div>
                   <!-- </div> -->
                 </div>
@@ -399,11 +399,11 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                   v-else-if="printer.queue?.[0] && (printer.queue?.[0].status == 'complete' || printer.queue?.[0].status == 'cancelled')">
                   <div class="buttons-progress">
                     <div type="button" class="btn btn-secondary"
-                      @click="releasePrinter(printer.queue?.[0], 1, printer.id!)">
+                      @click="releasePrinter(printer.queue?.[0], 1, printer.id)">
                       Clear
                     </div>
                     <div class="btn-group">
-                      <div class="btn btn-primary no-wrap" @click="releasePrinter(printer.queue?.[0], 2, printer.id!)">
+                      <div class="btn btn-primary no-wrap" @click="releasePrinter(printer.queue?.[0], 2, printer.id)">
                         Clear/Rerun
                       </div>
                       <div class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"
@@ -417,7 +417,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                       </div>
                     </div>
                     <div type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#issueModal"
-                      @click=setJob(printer.queue![0])>
+                      @click=setJob(printer.queue[0])>
                       Fail
                     </div>
                   </div>
@@ -453,16 +453,16 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                         <li>
                           <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
                             data-bs-target="#gcodeImageModal" v-if="printer.queue && printer.queue.length > 0"
-                            v-bind:job="printer.queue![0]"
-                            @click="printer.name && openModal(printer.queue![0], printer.name, 2, printer)">
+                            v-bind:job="printer.queue[0]"
+                            @click="printer.name && openModal(printer.queue[0], printer.name, 2, printer)">
                             <i class="fa-solid fa-image"></i>
                             <span class="ms-2">GCode Image</span>
                           </a>
                         </li>
-                        <li v-if="printer.queue![0]">
+                        <li v-if="printer.queue[0]">
                           <a class="dropdown-item d-flex align-items-center"
-                            @click="getFileDownload(printer.queue![0].id)"
-                            :disabled="printer.queue![0].file_name_original.includes('.gcode:')">
+                            @click="getFileDownload(printer.queue[0].id)"
+                            :disabled="printer.queue[0].file_name_original.includes('.gcode:')">
                             <i class="fas fa-download"></i>
                             <span class="ms-2">Download</span>
                           </a>
@@ -522,25 +522,25 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
               </td>
               <td class="borderless-top">
                 <span
-                  v-html="printer?.status === 'colorchange' ? 'Waiting for filament change...' : formatTime(printer.queue[0]?.job_client?.elapsed_time!)"></span>
+                  v-html="printer?.status === 'colorchange' ? 'Waiting for filament change...' : formatTime(printer.queue[0]?.job_client?.elapsed_time)"></span>
               </td>
               <td class="borderless-top">
                 <span
-                  v-html="printer?.status === 'colorchange' ? 'Waiting for filament change...' : formatTime(printer.queue[0]?.job_client?.remaining_time!)"></span>
+                  v-html="printer?.status === 'colorchange' ? 'Waiting for filament change...' : formatTime(printer.queue[0]?.job_client?.remaining_time)"></span>
               </td>
               <td class="borderless-top">
                 <span
-                  v-html="printer?.status === 'colorchange' ? 'Waiting for filament change...' : formatTime(printer.queue[0]?.job_client?.total_time!)"></span>
+                  v-html="printer?.status === 'colorchange' ? 'Waiting for filament change...' : formatTime(printer.queue[0]?.job_client?.total_time)"></span>
               </td>
               <td class="borderless-top border-extended">
                 <span
-                  v-html="printer?.status === 'colorchange' ? 'Waiting for filament change...' : formatETA(printer.queue[0]?.job_client?.eta!)"></span>
+                  v-html="printer?.status === 'colorchange' ? 'Waiting for filament change...' : formatETA(printer.queue[0]?.job_client?.eta)"></span>
               </td>
             </tr>
           </div>
           <tr v-else :id="printer.id">
             <td
-              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled') && (printer.queue[0])))">
+              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0].id }}
             </td>
             <td v-else><i>idle</i></td>
@@ -597,7 +597,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                 </button>
 
                 <button class="btn btn-success" v-if="printer.status == 'printing' && printer.queue?.[0].released == 0"
-                  @click="startPrint(printer.id!, printer.queue![0].id)">
+                  @click="startPrint(printer.id, printer.queue[0].id)">
                   Start Print
                 </button>
 
@@ -632,7 +632,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
 
             <td style="width: 250px;">
               <div
-                v-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange') && printer.queue && printer.queue![0].released == 1">
+                v-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange') && printer.queue && printer.queue[0].released == 1">
                 <!-- <div v-for="job in printer.queue" :key="job.id"> -->
                 <!-- Display the elapsed time -->
                 <div class="progress" style="position: relative;">
@@ -642,9 +642,9 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                   </div>
                   <!-- job progress set to 2 decimal places -->
                   <p style="position: absolute; width: 100%; text-align: center; color: black;">{{
-              printer.queue?.[0].progress
-                ?
-                `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
+                    printer.queue?.[0].progress
+                      ?
+                      `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
                 </div>
                 <!-- </div> -->
               </div>
@@ -653,11 +653,11 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                 v-else-if="printer.queue?.[0] && (printer.queue?.[0].status == 'complete' || printer.queue?.[0].status == 'cancelled')">
                 <div class="buttons-progress">
                   <div type="button" class="btn btn-secondary"
-                    @click="releasePrinter(printer.queue?.[0], 1, printer.id!)">
+                    @click="releasePrinter(printer.queue?.[0], 1, printer.id)">
                     Clear
                   </div>
                   <div class="btn-group">
-                    <div class="btn btn-primary no-wrap" @click="releasePrinter(printer.queue?.[0], 2, printer.id!)">
+                    <div class="btn btn-primary no-wrap" @click="releasePrinter(printer.queue?.[0], 2, printer.id)">
                       Clear/Rerun
                     </div>
                     <div class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"
@@ -671,7 +671,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                     </div>
                   </div>
                   <div type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#issueModal"
-                    @click=setJob(printer.queue![0])>
+                    @click=setJob(printer.queue[0])>
                     Fail
                   </div>
                 </div>
@@ -707,16 +707,16 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                       <li>
                         <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
                           data-bs-target="#gcodeImageModal" v-if="printer.queue && printer.queue.length > 0"
-                          v-bind:job="printer.queue![0]"
-                          @click="printer.name && openModal(printer.queue![0], printer.name, 2, printer)">
+                          v-bind:job="printer.queue[0]"
+                          @click="printer.name && openModal(printer.queue[0], printer.name, 2, printer)">
                           <i class="fa-solid fa-image"></i>
                           <span class="ms-2">GCode Image</span>
                         </a>
                       </li>
-                      <li v-if="printer.queue![0]">
+                      <li v-if="printer.queue[0]">
                         <a class="dropdown-item d-flex align-items-center"
-                          @click="getFileDownload(printer.queue![0].id)"
-                          :disabled="printer.queue![0].file_name_original.includes('.gcode:')">
+                          @click="getFileDownload(printer.queue[0].id)"
+                          :disabled="printer.queue[0].file_name_original.includes('.gcode:')">
                           <i class="fas fa-download"></i>
                           <span class="ms-2">Download</span>
                         </a>
