@@ -440,8 +440,9 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
 
               <td style="width: 1%; white-space: nowrap;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <i class="fa fa-chevron-down" :class="printer.isInfoExpanded ? 'rotate-down' : 'rotate-up'"
-                    @click="openPrinterInfo(printer)"></i>
+                  <i :class="{ 'fa fa-chevron-down': !printer.isInfoExpanded, 'fa fa-chevron-up': printer.isInfoExpanded }"
+                    @click="openPrinterInfo(printer)">
+                  </i>
                   <div :class="{ 'not-draggable': printer.queue && printer.queue.length == 0 }" class="dropdown">
                     <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                       <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
@@ -459,9 +460,17 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                             <span class="ms-2">GCode Image</span>
                           </a>
                         </li>
+                        <li>
+                          <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
+                            data-bs-target="#gcodeLiveViewModal" v-if="printer.queue && printer.queue.length > 0"
+                            v-bind:job="printer.queue[0]"
+                            @click="printer.name && openModal(printer.queue[0], printer.name, 1, printer)">
+                            <i class="fas fa-code"></i>
+                            <span class="ms-2">GCode Live</span>
+                          </a>
+                        </li>
                         <li v-if="printer.queue[0]">
-                          <a class="dropdown-item d-flex align-items-center"
-                            @click="getFileDownload(printer.queue[0].id)"
+                          <a class="dropdown-item d-flex align-items-center" @click="getFileDownload(printer.queue[0].id)"
                             :disabled="printer.queue[0].file_name_original.includes('.gcode:')">
                             <i class="fas fa-download"></i>
                             <span class="ms-2">Download</span>
@@ -694,8 +703,9 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
 
             <td style="width: 1%; white-space: nowrap;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <i class="fa fa-chevron-down" :class="printer.isInfoExpanded ? 'rotate-down' : 'rotate-up'"
-                  @click="openPrinterInfo(printer)"></i>
+                <i :class="{ 'fa fa-chevron-down': !printer.isInfoExpanded, 'fa fa-chevron-up': printer.isInfoExpanded }"
+                  @click="openPrinterInfo(printer)">
+                </i>
                 <div :class="{ 'not-draggable': printer.queue && printer.queue.length == 0 }" class="dropdown">
                   <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                     <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
@@ -711,6 +721,15 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                           @click="printer.name && openModal(printer.queue[0], printer.name, 2, printer)">
                           <i class="fa-solid fa-image"></i>
                           <span class="ms-2">GCode Image</span>
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
+                          data-bs-target="#gcodeLiveViewModal" v-if="printer.queue && printer.queue.length > 0"
+                          v-bind:job="printer.queue[0]"
+                          @click="printer.name && openModal(printer.queue[0], printer.name, 1, printer)">
+                          <i class="fas fa-code"></i>
+                          <span class="ms-2">GCode Live</span>
                         </a>
                       </li>
                       <li v-if="printer.queue[0]">
@@ -788,35 +807,6 @@ th {
 
 .expanded-info {
   display: contents;
-}
-
-
-@keyframes rotateDown {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(180deg);
-  }
-}
-
-@keyframes rotateUp {
-  0% {
-    transform: rotate(180deg);
-  }
-
-  100% {
-    transform: rotate(0deg);
-  }
-}
-
-.rotate-down {
-  animation: rotateDown 0.3s ease-in-out forwards;
-}
-
-.rotate-up {
-  animation: rotateUp 0.3s ease-in-out forwards;
 }
 
 .border-extended {
