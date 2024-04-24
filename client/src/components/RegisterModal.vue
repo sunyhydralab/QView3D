@@ -21,6 +21,10 @@ onMounted(async () => {
 
     const modalElement = document.getElementById('registerModal')
     if (modalElement) {
+        modalElement.addEventListener('shown.bs.modal', () => {
+            doGetPorts();
+        });
+
         modalElement.addEventListener('hidden.bs.modal', () => {
             emit('close');
         });
@@ -28,16 +32,8 @@ onMounted(async () => {
 })
 
 const doGetPorts = async () => {
-    try {
-        const allDevices = await ports();
-        devices.value = allDevices;
-
-        // toast message
-        toast.success('Ports refreshed successfully!');
-    } catch (error) {
-        // handle error
-        toast.error('Failed to refresh ports!');
-    }
+    const allDevices = await ports();
+    devices.value = allDevices;
 }
 
 const doRegister = async () => {
@@ -89,7 +85,6 @@ const doMove = async (printer: Device) => {
                         @click="clearSelectedDevice"></button>
                 </div>
                 <div class="modal-body">
-                    <button class="btn btn-primary mb-4 w-100" @click="doGetPorts()">Refresh Ports</button>
                     <form @submit.prevent="$emit('submit-form')">
                         <div class="mb-3">
                             <label for="ports" class="form-label">Select Device</label>
@@ -124,8 +119,9 @@ const doMove = async (printer: Device) => {
                         @click="doRegister">Register</button>
                     <div v-if="selectedDevice">
                         <div class="tooltip">
-                            <div type="button" class="btn btn-primary" @click="doMove(selectedDevice as Device)">Move Printer Head</div>
-                            <span class="tooltiptext">Moves printer 10mm upwards! Please check printers before.</span>
+                            <div type="button" class="btn btn-primary" @click="doMove(selectedDevice as Device)">Home
+                                Printer</div>
+                            <span class="tooltiptext">This will auto home the selected printer.</span>
                         </div>
                     </div>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
@@ -141,12 +137,12 @@ const doMove = async (printer: Device) => {
     background: #b9b9b9;
 }
 
-.form-text{
+.form-text {
     background: #cdcdcd;
     border: 1px solid #484848;
 }
 
-.form-select{
+.form-select {
     background-color: #f4f4f4 !important;
     border-color: #484848 !important;
 }
