@@ -388,9 +388,9 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                     </div>
                     <!-- job progress set to 2 decimal places -->
                     <p style="position: absolute; width: 100%; text-align: center; color: black;">{{
-              printer.queue?.[0].progress
-                ?
-                `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
+                      printer.queue?.[0].progress
+                        ?
+                        `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
                   </div>
                   <!-- </div> -->
                 </div>
@@ -653,9 +653,9 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                   </div>
                   <!-- job progress set to 2 decimal places -->
                   <p style="position: absolute; width: 100%; text-align: center; color: black;">{{
-              printer.queue?.[0].progress
-                ?
-                `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
+                    printer.queue?.[0].progress
+                      ?
+                      `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
                 </div>
                 <!-- </div> -->
               </div>
@@ -759,7 +759,9 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
       </draggable>
     </table>
     <div v-if="printers.length === 0" style="margin-top: 1rem;">
-      No printers available. Either register a printer <RouterLink class="routerLink" to="/registration">here</RouterLink>, or restart the
+      No printers available. Either register a printer <RouterLink class="routerLink" to="/registration">here
+      </RouterLink>,
+      or restart the
       server.
     </div>
   </div>
@@ -889,10 +891,6 @@ th {
 
 .no-wrap {
   white-space: nowrap;
-}
-
-table {
-  table-layout: fixed;
 }
 
 .form-control {

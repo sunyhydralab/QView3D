@@ -227,8 +227,10 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                   {{ capitalizeFirstLetter(printer.status) }}
                 </span>
               </span>
-              <span v-if="printer.queue?.length != 1" style="position: absolute; right: 50px;">{{ printer.queue?.length || 0 }} jobs in queue</span>
-              <span v-if="printer.queue?.length == 1" style="position: absolute; right: 50px;">{{ printer.queue?.length || 0 }} job in queue</span>
+              <span v-if="printer.queue?.length != 1" style="position: absolute; right: 50px;">{{ printer.queue?.length
+                || 0 }} jobs in queue</span>
+              <span v-if="printer.queue?.length == 1" style="position: absolute; right: 50px;">{{ printer.queue?.length
+                || 0 }} job in queue</span>
             </b>
           </button>
         </h2>
@@ -240,31 +242,29 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
               <table class="table-striped">
                 <thead>
                   <tr style="position: sticky; top: 0; z-index: 100; background-color: white;">
-                    <th class="col-1">Ticket ID</th>
-                    <th class="col-2">Rerun Job</th>
-                    <th class="col-1">Position</th>
-                    <th>Job Title</th>
-                    <th>File</th>
-                    <th>Date Added</th>
-                    <th class="col-1">Job Status</th>
-                    <th class="col-checkbox">
+                    <th style="width: 102px;">Ticket ID</th>
+                    <th style="width: 143px;">Rerun Job</th>
+                    <th style="width: 76px;">Position</th>
+                    <th style="width: 215px;">Job Title</th>
+                    <th style="width: 215px;">File</th>
+                    <th style="width: 220px;">Date Added</th>
+                    <th style="width: 96px;">Job Status</th>
+                    <th style="width: 75px;">Actions</th>
+                    <th style="width: 48px;">
                       <div class="checkbox-container">
                         <input class="form-check-input" type="checkbox" @change="() => selectAllJobs(printer)"
                           :disabled="printer.queue!.length === 0" v-model="selectAllCheckbox" />
                       </div>
                     </th>
-                    <th>Actions</th>
-                    <th style="width: 0">Move</th>
+                    <th style="width: 58px">Move</th>
                   </tr>
                 </thead>
                 <draggable v-model="printer.queue" tag="tbody" :animation="300" itemKey="job.id" handle=".handle"
                   dragClass="hidden-ghost" :onEnd="handleDragEnd" v-if="printer.queue && printer.queue.length"
                   :move="isInqueue">
                   <template #item="{ element: job }">
-                    <tr :id="job.id.toString()" :data-printer-id="printer.id" :data-job-id="job.id"
-                      :data-job-status="job.status" :key="job.id" :class="{ printing: job.status === 'printing' }">
-                      <td>{{ job.id }}</td>
-
+                    <tr :id="job.id" :class="{ printing: job.status === 'printing' }">
+                      <td class="truncate" :title="job.td_id">{{ job.td_id }}</td>
                       <td class="text-center">
                         <div class="btn-group w-100">
                           <div class="btn btn-primary" @click="handleRerun(job, printer)">
@@ -287,19 +287,15 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                           {{ printer.queue ? printer.queue.findIndex((j) => j === job) + 1 : '' }}
                         </b>
                       </td>
-                      <td>
+                      <td class="truncate" :title="job.name">
                         <b>{{ job.name }}</b>
                       </td>
-                      <td>{{ job.file_name_original }}</td>
-                      <td>{{ job.date }}</td>
-                      <td
+                      <td class="truncate" :title="job.file_name_original">{{ job.file_name_original }}</td>
+                      <td class="truncate" :title="job.date">{{ job.date }}</td>
+                      <td class="truncate" :title="job.status"
                         v-if="printer.queue && printer.status == 'printing' && printer.queue?.[0].released == 0 && job.status == 'printing'">
-                        Pending release</td>
+                        pending release</td>
                       <td v-else>{{ job.status }}</td>
-
-                      <td class="text-center">
-                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job" />
-                      </td>
 
                       <td style="width:">
                         <div class="dropdown">
@@ -334,6 +330,10 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                         </div>
                       </td>
 
+                      <td class="text-center">
+                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job" />
+                      </td>
+
                       <td class="text-center handle" :class="{ 'not-draggable': job.status !== 'inqueue' }">
                         <i class="fas fa-grip-vertical" :class="{ 'icon-disabled': job.status !== 'inqueue' }"></i>
                       </td>
@@ -354,6 +354,12 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
 </template>
 
 <style scoped>
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .scrollable {
   max-height: 230px;
   overflow-y: auto;
@@ -364,6 +370,7 @@ table {
   background-color: #d8d8d8;
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 td,

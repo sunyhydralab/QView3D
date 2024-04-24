@@ -668,14 +668,14 @@ const doDownloadCsv = async () => {
         <table class="table-striped">
             <thead>
                 <tr>
-                    <th style="width: 112px;">Ticket ID</th>
-                    <th>Printer</th>
-                    <th>Job Title</th>
-                    <th>File</th>
-                    <th>Final Status</th>
-                    <th>Date Completed</th>
+                    <th style="width: 105px;">Ticket ID</th>
+                    <th style="width: 200px;">Printer</th>
+                    <th style="width: 232px;">Job Title</th>
+                    <th style="width: 232px;">File</th>
+                    <th style="width: 145px;">Final Status</th>
+                    <th style="width: 257px;">Date Completed</th>
                     <th style="width: 75px;">Actions</th>
-                    <th class="col-checkbox">
+                    <th style="width: 48px;" class="col-checkbox">
                         <input class="form-check-input" type="checkbox" @change="selectAllJobs"
                             v-model="selectAllCheckbox" :disabled="filteredJobs.length === 0">
                     </th>
@@ -683,21 +683,21 @@ const doDownloadCsv = async () => {
             </thead>
             <tbody v-if="filteredJobs.length > 0">
                 <tr v-for="job in filteredJobs" :key="job.id">
-                    <td>{{ job.td_id }}</td>
-                    <td>{{ job.printer }}</td>
+                    <td class="truncate" :title="job.td_id.toString()">{{ job.td_id }}</td>
+                    <td class="truncate" :title="job.printer">{{ job.printer }}</td>
                     <td>
                         <div style="display: flex; justify-content: start; align-items: center;">
                             <div class="d-flex align-items-center" @click="favoriteJob(job, !job.favorite)">
                                 <i :class="job.favorite ? 'fas fa-star' : 'far fa-star'"></i>
                             </div>
-                            <div style="margin-left: 10px;">
+                            <div class="truncate" style="margin-left: 10px;" :title="job.name">
                                 {{ job.name }}
                             </div>
                         </div>
                     </td>
-                    <td>{{ job.file_name_original }}</td>
-                    <td>{{ job.status }}</td>
-                    <td>{{ job.date }}</td>
+                    <td class="truncate" :title="job.file_name_original">{{ job.file_name_original }}</td>
+                    <td class="truncate" :title="job.status">{{ job.status }}</td>
+                    <td class="truncate" :title="job.date?.toString()">{{ job.date }}</td>
                     <td>
                         <div class="dropdown">
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
@@ -761,7 +761,8 @@ const doDownloadCsv = async () => {
             </tbody>
             <tbody v-else>
                 <tr>
-                    <td colspan="8">No jobs found. Submit your first job <RouterLink class="routerLink" to="/submit">here!</RouterLink>
+                    <td colspan="8">No jobs found. Submit your first job <RouterLink class="routerLink" to="/submit">
+                            here!</RouterLink>
                     </td>
                 </tr>
             </tbody>
@@ -780,6 +781,12 @@ const doDownloadCsv = async () => {
     </div>
 </template>
 <style scoped>
+.truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .dropdown-card {
     position: absolute !important;
     top: calc(100% + 2px) !important;
@@ -865,7 +872,9 @@ const doDownloadCsv = async () => {
 }
 
 table {
+    width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 ul.dropdown-menu.w-100.show li {

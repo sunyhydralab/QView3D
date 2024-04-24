@@ -544,27 +544,27 @@ const openGCodeModal = async (job: Job, printerName: string) => {
         <table class="table-striped">
             <thead>
                 <tr>
-                    <th style="width: 112px;">Ticket ID</th>
+                    <th style="width: 105px;">Ticket ID</th>
                     <th style="width: 200px;">Printer</th>
-                    <th style="width: 200px;">Job Title</th>
-                    <th style="width: 200px;">File</th>
-                    <th style="width: 200px;">Issue</th>
-                    <th style="width: 333px;">Comment</th>
+                    <th style="width: 232px;">Job Title</th>
+                    <th style="width: 232px;">File</th>
+                    <th style="width: 150px;">Issue</th>
+                    <th style="width: 300px;">Comment</th>
                     <th style="width: 75px;">Actions</th>
                 </tr>
             </thead>
             <tbody v-if="filteredJobs.length > 0">
                 <tr v-for="job in filteredJobs" :key="job.id">
-                    <td>{{ job.td_id }}</td>
-                    <td>{{ job.printer }}</td>
-                    <td>{{ job.name }}</td>
-                    <td>{{ job.file_name_original }}</td>
-                    <td v-if="job.errorid != null && job.errorid != 0">
+                    <td class="truncate" :title="job.td_id.toString()">{{ job.td_id }}</td>
+                    <td class="truncate" :title="job.printer">{{ job.printer }}</td>
+                    <td class="truncate" :title="job.name">{{ job.name }}</td>
+                    <td class="truncate" :title="job.file_name_original">{{ job.file_name_original }}</td>
+                    <td class="truncate" :title="job.error" v-if="job.errorid != null && job.errorid != 0">
                         {{ job.error }}
                     </td>
                     <td v-else>
                     </td>
-                    <td class="truncate">{{ job.comment }}</td>
+                    <td class="truncate" :title="job.comment">{{ job.comment }}</td>
                     <td>
                         <div class="dropdown">
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
@@ -687,7 +687,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
+}
 
 .truncate-name {
     max-width: 200px;
@@ -743,6 +743,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
 table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 
