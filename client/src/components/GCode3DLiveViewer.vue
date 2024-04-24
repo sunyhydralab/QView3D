@@ -37,7 +37,7 @@ onMounted(async () => {
         if (canvas.value) {
             preview = GCodePreview.init({
                 canvas: canvas.value,
-                extrusionColor: 'hotpink',
+                extrusionColor: getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9',
                 backgroundColor: 'black',
                 buildVolume: { x: 250, y: 210, z: 220, r: 0, i: 0, j: 0 },
             });

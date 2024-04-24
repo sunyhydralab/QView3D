@@ -2,12 +2,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 
 body {
-  /* background-color: #9191aa; */
   background-color: #b9b9b9;
-}
-
-*, input {
-  font-family: 'Public Sans', sans-serif;
 }
 
 input[type='checkbox'],
@@ -71,12 +66,15 @@ th {
   border: 1px solid #484848;
 }
 
-.dropdown-menu.show, .dropdown-menu .dropdown-menu {
+.dropdown-menu.show,
+.dropdown-menu .dropdown-menu {
   background-color: #d8d8d8;
   border: 1px solid #484848;
 }
 
-.dropdown-menu li a:hover, .dropdown-item:hover .dropdown-submenu .dropdown-item:hover{
+.dropdown-menu li a:hover,
+.dropdown-item:hover,
+.dropdown-submenu .dropdown-item:hover {
   background-color: #c0c0c0;
 }
 
@@ -122,7 +120,9 @@ th {
 .tooltip .tooltiptext {
   visibility: hidden;
   opacity: 0;
-  transition: opacity 0.2s linear, visibility 0.2s linear 0.2s;
+  transition:
+  opacity 0.2s linear,
+  visibility 0.2s linear 0.2s;
   width: 200px;
   background-color: #484848;
   color: #dbdbdb;
@@ -137,7 +137,7 @@ th {
 }
 
 .tooltip .tooltiptext::after {
-  content: "";
+  content: '';
   position: absolute;
   top: 100%;
   left: 50%;
@@ -156,4 +156,26 @@ th {
 .tooltip .tooltiptext:hover {
   visibility: hidden;
   opacity: 0;
+}
+
+.dp__input,
+.dp__input:focus,
+.dp__input:hover {
+  background-color: #f4f4f4 !important;
+  border-color: #484848 !important;
+}
+
+.dp__theme_light,
+.dp__arrow_bottom {
+  background-color: #f4f4f4 !important;
+  border-color: #484848 !important;
+  --dp-range-between-dates-background-color: #dddddd !important;
+  --dp-range-between-border-color: #dddddd !important;
+  --dp-hover-color: #c0c0c0 !important;
+  --dp-background-color: #f4f4f4 !important;
+}
+
+.dp__input_icon,
+.dp__clear_icon {
+  color: #484848 !important;
 }

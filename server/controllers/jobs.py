@@ -564,7 +564,6 @@ def repair_ports():
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
     
-    
 def findPrinterObject(printer_id): 
     threads = printer_status_service.getThreadArray()
     return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer  
@@ -580,9 +579,9 @@ def rerunjob(printerpk, jobpk, position):
     status = 'inqueue' # set status 
     file_name_original = job.getFileNameOriginal() # get original file name
     favorite = job.getFileFavorite() # get favorite status
-    td_id = job.getTdId() 
+    td_id = job.getTdId()
     # Insert new job into DB and return new PK 
-    res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original, favorite = favorite, td_id=td_id) # insert into DB 
+    res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original, favorite=favorite, td_id=td_id) # insert into DB 
     
     id = res['id']
     file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique

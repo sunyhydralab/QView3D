@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onUnmounted, ref, computed } from 'vue'
+import { onUnmounted, ref, computed, watchEffect, onMounted } from 'vue'
 import { printers, type Device } from '../model/ports'
 import { useRerunJob, useRemoveJob, type Job, useMoveJob, useGetFile, useGetJobFile } from '../model/jobs'
 import draggable from 'vuedraggable'
@@ -20,11 +20,40 @@ let currentJob = ref<Job | null>(null)
 let isGcodeImageVisible = ref(false)
 let selectAllCheckbox = ref(false)
 
+const primaryColor = ref('');
+const primaryColorActive = ref('');
+const successColorActive = ref('');
+let observer: MutationObserver;
+
+onMounted(() => {
+  observer = new MutationObserver(() => {
+    primaryColor.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9';
+    primaryColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color-active').trim() || '#51457C';
+    successColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-success-color-active').trim() || '#3e7776';
+  });
+
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+
+  const modal = document.getElementById('gcodeImageModal')
+
+  modal?.addEventListener('hidden.bs.modal', () => {
+    isGcodeImageVisible.value = false
+  });
+});
+
+
 onUnmounted(() => {
   for (const printer of printers.value) {
     printer.isQueueExpanded = false
   }
+  observer.disconnect();
 })
+
+watchEffect(() => {
+  primaryColor.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9';
+  primaryColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color-active').trim() || '#51457C';
+  successColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-success-color-active').trim() || '#3e7776';
+});
 
 const handleRerun = async (job: Job, printer: Device) => {
   await rerunJob(job, printer)
@@ -76,17 +105,17 @@ function capitalizeFirstLetter(string: string | undefined) {
 function statusColor(status: string | undefined) {
   switch (status) {
     case 'ready':
-      return '#3E7776'
+      return successColorActive.value;
     case 'error':
-      return '#ad6060'
+      return '#ad6060';
     case 'offline':
-      return 'black'
+      return 'black';
     case 'printing':
-      return '#51457C'
+      return primaryColorActive.value;
     case 'complete':
-      return '#7561A9'
+      return primaryColor.value;
     default:
-      return '#black'
+      return 'black';
   }
 }
 
@@ -118,8 +147,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
 </script>
 
 <template>
-  <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true"
-    @shown.bs.modal="isGcodeImageVisible = true" @hidden.bs.modal="isGcodeImageVisible = false">
+  <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
       <div class="modal-content">
         <div class="modal-header">
@@ -181,7 +209,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
 
     <div v-if="printers.length === 0">
       No printers available. Either register a printer
-      <RouterLink to="/registration"> here </RouterLink>, or restart the server.
+      <RouterLink class="routerLink" to="/registration"> here </RouterLink>, or restart the server.
     </div>
 
     <div v-else class="accordion" id="accordionPanelsStayOpenExample">
@@ -191,16 +219,16 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
             :data-bs-target="'#panelsStayOpen-collapse' + index" :aria-expanded="printer.isQueueExpanded"
             :aria-controls="'panelsStayOpen-collapse' + index" :class="{ collapsed: !printer.isQueueExpanded }">
             <b>{{ printer.name }}:&nbsp;
-
               <span v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0">
                 Pending Release
               </span>
               <span v-else>
-                <span class="status-text" :style="{ color: statusColor(printer.status) }">{{
-      capitalizeFirstLetter(printer.status)
-    }}
+                <span class="status-text" :style="{ color: statusColor(printer.status) }">
+                  {{ capitalizeFirstLetter(printer.status) }}
                 </span>
               </span>
+              <span v-if="printer.queue?.length != 1" style="position: absolute; right: 50px;">{{ printer.queue?.length || 0 }} jobs in queue</span>
+              <span v-if="printer.queue?.length == 1" style="position: absolute; right: 50px;">{{ printer.queue?.length || 0 }} job in queue</span>
             </b>
           </button>
         </h2>
@@ -208,7 +236,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
           :class="{ show: printer.isQueueExpanded }" :aria-labelledby="'panelsStayOpen-heading' + index"
           @show.bs.collapse="printer.isQueueExpanded = !printer.isQueueExpanded">
           <div class="accordion-body">
-            <div :class="{ 'scrollable': printer.queue!.length > 4 }">
+            <div :class="{ 'scrollable': printer.queue!.length > 3 }">
               <table class="table-striped">
                 <thead>
                   <tr style="position: sticky; top: 0; z-index: 100; background-color: white;">
@@ -327,7 +355,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
 
 <style scoped>
 .scrollable {
-  max-height: 260px;
+  max-height: 230px;
   overflow-y: auto;
 }
 

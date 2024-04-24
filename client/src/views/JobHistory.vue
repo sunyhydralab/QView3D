@@ -1,27 +1,24 @@
 <script setup lang="ts">
-import { printers, useRetrievePrintersInfo, type Device } from '../model/ports'
-import { pageSize, useGetJobs, type Job, useRerunJob, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useUpdateJobStatus, useDownloadCsv } from '../model/jobs';
-import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
-import { type Issue, useGetIssues, useCreateIssues, useAssignIssue } from '../model/issues'
+import { printers, type Device } from '../model/ports'
+import { pageSize, useGetJobs, type Job, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useDownloadCsv, useRemoveIssue } from '../model/jobs';
+import { computed, onMounted, onBeforeUnmount, ref, watchEffect } from 'vue';
+import { type Issue, useGetIssues, useAssignIssue } from '../model/issues'
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
-
-
+import VueDatePicker from '@vuepic/vue-datepicker';
+import '@vuepic/vue-datepicker/dist/main.css';
 
 const { jobhistory, getFavoriteJobs } = useGetJobs()
-const { retrieveInfo } = useRetrievePrintersInfo()
-const { rerunJob } = useRerunJob()
 const { getFileDownload } = useGetJobFile()
 const { getFile } = useGetFile()
 const { deleteJob } = useDeleteJob()
 const { clearSpace } = useClearSpace()
 const { favorite } = useFavoriteJob()
 const { issues } = useGetIssues()
-const { createIssue } = useCreateIssues()
 const { assign } = useAssignIssue()
 const { assignComment } = useAssignComment()
-const { updateJobStatus } = useUpdateJobStatus()
-const {csv} = useDownloadCsv()
+const { removeIssue } = useRemoveIssue()
+const { csv } = useDownloadCsv()
 
 const selectedPrinters = ref<Array<Number>>([])
 const selectedJobs = ref<Array<Job>>([]);
@@ -31,9 +28,10 @@ const searchJob = ref(''); // This will hold the current search query
 const searchByJobName = ref(true);
 const searchByFileName = ref(true);
 const selectedJob = ref<Job>()
-const newIssue = ref('')
-const selectedIssue = ref<Issue | undefined>(undefined)
+const selectedIssue = ref<Issue>()
+const selectedIssueId = ref<number>()
 let issuelist = ref<Array<Issue>>([])
+const date = ref(null as Date | null);
 
 const router = useRouter();
 
@@ -81,8 +79,6 @@ let offcanvasElement: HTMLElement | null = null;
 
 onMounted(async () => {
     try {
-
-        
         const retrieveissues = await issues()
         issuelist.value = retrieveissues
 
@@ -117,6 +113,12 @@ onMounted(async () => {
 
         document.addEventListener('click', closeDropdown);
 
+        const modal = document.getElementById('gcodeImageModal');
+
+        modal?.addEventListener('hidden.bs.modal', () => {
+            isGcodeImageVisible.value = false;
+        });
+
     } catch (error) {
         console.error(error)
     }
@@ -137,6 +139,14 @@ onBeforeUnmount(() => {
         offcanvasElement.removeEventListener('hidden.bs.offcanvas', onHiddenOffcanvas);
     }
     document.removeEventListener('click', closeDropdown);
+});
+
+watchEffect(() => {
+    if (selectedJob.value) {
+        const issueName = selectedJob.value.error;
+        const issue = issuelist.value.find((issue: any) => issue.issue === issueName);
+        selectedIssueId.value = issue ? issue.id : undefined;
+    }
 });
 
 const handleRerun = async (job: Job, printer: Device) => {
@@ -173,6 +183,21 @@ const changePage = async (newPage: any) => {
 async function submitFilter() {
     filterDropdown.value = false;
 
+    let startDateString = null;
+    let endDateString = null;
+
+    if (date.value && Array.isArray(date.value)) {
+        const dateArray = date.value as unknown as Date[];
+        if (dateArray.length >= 2) {
+            startDateString = dateArray[0]?.toISOString();
+            if (dateArray[1] != undefined) {
+                endDateString = dateArray[1]?.toISOString();
+            } else {
+                endDateString = dateArray[0]?.toISOString();
+            }
+        }
+    }
+
     jobs.value = []
     oldestFirst.value = order.value === 'oldest';
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
@@ -184,6 +209,9 @@ async function submitFilter() {
     } else {
         searchCriteria.value = searchJob.value;
     }
+
+    // *** PASS START AND END DATE HERE, THEY ARE STRINGS ***
+    // ***  NEED TO HANDLE IF DATE IS EMPTY/NULL ***
 
     // Get the total number of jobs first, without considering the page number
     const [, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
@@ -202,6 +230,8 @@ async function submitFilter() {
 
     selectedJobs.value = [];
     selectAllCheckbox.value = false;
+
+    date.value = null;
 }
 
 function clearFilter() {
@@ -218,6 +248,8 @@ function clearFilter() {
     searchJob.value = '';
     searchByJobName.value = true;
     searchByFileName.value = true;
+
+    date.value = null;
 
     submitFilter();
 }
@@ -301,27 +333,21 @@ const setJob = async (job: Job) => {
     selectedJob.value = job;
 }
 
-const doCreateIssue = async () => {
-    await createIssue(newIssue.value)
-    const newIssues = await issues()
-    console.log(newIssues)
-    issuelist.value = newIssues
-    newIssue.value = ''
-    showText.value = false
-}
-
 const doAssignIssue = async () => {
     if (selectedJob.value === undefined) return
-    if (selectedIssue.value !== undefined) {
-        await assign(selectedIssue.value.id, selectedJob.value.id)
-        selectedJob.value.error = selectedIssue.value!.issue
-        await updateJobStatus(selectedJob.value.id, 'error')
-        selectedJob.value.status = 'error'
-
+    const selectedIssueObject = issuelist.value.find((issue: any) => issue.id === selectedIssueId.value);
+    if (selectedIssueObject == undefined) {
+        await removeIssue(selectedJob.value)
+        submitFilter();
+    }
+    if (selectedIssueObject !== undefined) {
+        await assign(selectedIssueObject.id, selectedJob.value.id)
+        selectedJob.value.errorid = selectedIssueObject.id
+        selectedJob.value.error = selectedIssueObject.issue
     }
     await assignComment(selectedJob.value, jobComments.value)
     selectedJob.value.comment = jobComments.value
-    selectedIssue.value = undefined
+    selectedIssueId.value = undefined
     selectedJob.value = undefined
 }
 
@@ -355,11 +381,13 @@ const doDownloadCsv = async () => {
                     <form @submit.prevent="">
                         <div class="mb-3">
                             <label for="issue" class="form-label">Select Issue</label>
-                            <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
+                            <select name="issue" id="issue" v-model="selectedIssueId" class="form-select" required>
                                 <option disabled value="undefined">Select Issue</option>
-                                <option v-for="issue in issuelist" :value="issue">
+                                <option v-for="issue in issuelist" :value="issue.id">
                                     {{ issue.issue }}
                                 </option>
+                                <option disabled class="separator">----------------</option>
+                                <option :value=undefined>Unassign Issue</option>
                             </select>
                         </div>
                     </form>
@@ -385,8 +413,8 @@ const doDownloadCsv = async () => {
     </div>
 
     <!-- gcode image viewer modal -->
-    <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true"
-        @shown.bs.modal="isGcodeImageVisible = true" @hidden.bs.modal="isGcodeImageVisible = false">
+    <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
@@ -431,7 +459,7 @@ const doDownloadCsv = async () => {
                     <p class="my-auto truncate-name">{{ job.name }}</p>
                     <p class="my-auto truncate-file">{{ job.file_name_original }}</p>
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-star" style="color: #60AEAE; margin-right: 10px;" data-bs-toggle="modal"
+                        <i class="fas fa-star" style="margin-right: 10px;" data-bs-toggle="modal"
                             data-bs-target="#favoriteModal" @click="jobToUnfavorite = job"></i>
                         <button class="btn btn-secondary download" style="margin-right: 10px;"
                             @click="getFileDownload(job.id)" :disabled="job.file_name_original.includes('.gcode:')">
@@ -592,7 +620,10 @@ const doDownloadCsv = async () => {
                                 v-model="order">
                             <label class="form-check-label" for="orderOldest">Oldest to Newest</label>
                         </div>
-
+                        <div class="my-2 border-top"
+                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                        <label class="form-label">Date Range:</label>
+                        <VueDatePicker v-model="date" range />
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <div class="form-check mb-2">
@@ -614,7 +645,6 @@ const doDownloadCsv = async () => {
             <div class="col-9 d-flex justify-content-center align-items-center"></div>
 
             <div class="col-2 text-end d-flex justify-content-end" style="padding-right: 0;">
-                            
                 <!-- <button @click="doDownloadCsv" class="btn btn-success me-2">
                     <i class="fa-solid fa-file-csv"></i>
                 </button> -->
@@ -731,7 +761,7 @@ const doDownloadCsv = async () => {
             </tbody>
             <tbody v-else>
                 <tr>
-                    <td colspan="8">No jobs found. Submit your first job <RouterLink to="/submit">here!</RouterLink>
+                    <td colspan="8">No jobs found. Submit your first job <RouterLink class="routerLink" to="/submit">here!</RouterLink>
                     </td>
                 </tr>
             </tbody>
@@ -810,16 +840,6 @@ const doDownloadCsv = async () => {
     display: grid;
     grid-template-columns: 1fr 2fr 1fr;
     gap: 10px;
-}
-
-.header {
-    padding-left: 10px;
-    padding-right: 10px;
-    padding-top: 10px;
-    border-radius: 5px;
-    margin-bottom: 10px;
-    background-color: #7561a9;
-    color: #dbdbdb;
 }
 
 .job {

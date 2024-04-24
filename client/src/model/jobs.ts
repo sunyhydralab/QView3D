@@ -16,6 +16,8 @@ export const quantity = ref<number>(1)
 export const priority = ref<number>(0)
 export const favorite = ref<boolean>(false)
 export const name = ref<string>('')
+export const tdid = ref<number>(0)
+export const filament = ref<string>('')
 
 export interface Job {
   id: number
@@ -33,11 +35,12 @@ export interface Job {
   td_id: number //store td_id of job
 
   errorid?: number
-  error?: string // store issue name 
+  error?: string // store issue name
 
   comment?: string // store comments
 
-  extruded?: number 
+  extruded?: number
+  filament?: string
 
   file_pause: number
   priority?: string
@@ -57,7 +60,6 @@ export interface Job {
 
 export function jobTime(job: Job, printers: any) {
   if (printers) {
-
     if (!job.job_client) {
       job.job_client = {
         total_time: 0,
@@ -70,7 +72,6 @@ export function jobTime(job: Job, printers: any) {
     if (!job.job_server) {
       // job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
       job.job_server = [0, new Date(0, 0, 0, 0), new Date(0, 0, 0, 0), new Date(0, 0, 0, 0)]
-
     }
 
     const printerid = job.printerid
@@ -88,16 +89,22 @@ export function jobTime(job: Job, printers: any) {
       let totalTime = job.job_server![0]
       job.job_client!.total_time = totalTime * 1000
 
-      let eta = job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
+      let eta =
+        job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
       job.job_client!.eta = eta + job.job_client!.extra_time
 
-      if (printer.status === 'printing' || printer.status === 'colorchange' || printer.status === 'paused') {
-        const now = Date.now();
-        const elapsedTime = now - new Date(job.job_server![2]).getTime();
-        job.job_client!.elapsed_time = Math.round(elapsedTime / 1000) * 1000;
+      if (
+        printer.status === 'printing' ||
+        printer.status === 'colorchange' ||
+        printer.status === 'paused'
+      ) {
+        const now = Date.now()
+        const elapsedTime = now - new Date(job.job_server![2]).getTime()
+        job.job_client!.elapsed_time = Math.round(elapsedTime / 1000) * 1000
         if (!isNaN(job.job_client!.elapsed_time)) {
           if (job.job_client!.elapsed_time <= job.job_client!.total_time) {
-            job.job_client!.remaining_time = job.job_client!.total_time - job.job_client!.elapsed_time
+            job.job_client!.remaining_time =
+              job.job_client!.total_time - job.job_client!.elapsed_time
           }
         }
       }
@@ -108,18 +115,17 @@ export function jobTime(job: Job, printers: any) {
 
       // Update elapsed_time after the first second
       if (job.job_client!.elapsed_time === 0) {
-        job.job_client!.elapsed_time = 1;
+        job.job_client!.elapsed_time = 1
       }
     }
 
     // Call updateJobTime immediately when jobTime is called
-    updateJobTime();
+    updateJobTime()
 
     // Continue to call updateJobTime at regular intervals
     job.timer = setInterval(updateJobTime, 1000)
   } else {
-    console.error('printers is undefined');
-
+    console.error('printers is undefined')
   }
 }
 
@@ -141,10 +147,9 @@ export function setupTimeSocket(printers: any) {
         }
         // job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
         job.job_server = [0, '00:00:00', '00:00:00', '00:00:00']
-
       }
 
-      if (typeof (data.new_time) === 'number') {
+      if (typeof data.new_time === 'number') {
         job.job_server[data.index] = data.new_time
       } else {
         job.job_server[data.index] = Date.parse(data.new_time)
@@ -152,14 +157,22 @@ export function setupTimeSocket(printers: any) {
 
       jobTime(job, printers)
     } else {
-      console.error('printers or printers.value is undefined');
+      console.error('printers or printers.value is undefined')
     }
   })
 }
 
 export function useGetJobs() {
   return {
-    async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean) {
+    async jobhistory(
+      page: number,
+      pageSize: number,
+      printerIds?: number[],
+      oldestFirst?: boolean,
+      searchJob: string = '',
+      searchCriteria: string = '',
+      favoriteOnly?: boolean
+    ) {
       try {
         const response = await api(
           `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&favoriteOnly=${favoriteOnly}`
@@ -182,9 +195,9 @@ export function useGetJobs() {
   }
 }
 
-export function useUpdateJobStatus () {
+export function useUpdateJobStatus() {
   return {
-    async updateJobStatus (jobid: number, status: string) {
+    async updateJobStatus(jobid: number, status: string) {
       try {
         const response = await api('assigntoerror', { jobid, status })
         return response
@@ -194,12 +207,20 @@ export function useUpdateJobStatus () {
       }
     }
   }
-
 }
 
 export function useGetErrorJobs() {
   return {
-    async jobhistoryError(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean, issues?: number[]) {
+    async jobhistoryError(
+      page: number,
+      pageSize: number,
+      printerIds?: number[],
+      oldestFirst?: boolean,
+      searchJob: string = '',
+      searchCriteria: string = '',
+      favoriteOnly?: boolean,
+      issues?: number[]
+    ) {
       try {
         const response = await api(
           `geterrorjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&issueIds=${JSON.stringify(issues)}`
@@ -452,13 +473,13 @@ export function useClearSpace() {
 export function useFavoriteJob() {
   return {
     async favorite(job: Job, favorite: boolean) {
-      let jobid = job?.id;
+      let jobid = job?.id
       try {
         const response = await api(`favoritejob`, { jobid, favorite })
         if (response.success) {
-          job.favorite = favorite ? true : false;
+          job.favorite = favorite ? true : false
         }
-        return response;
+        return response
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while favoriting the job')
@@ -506,7 +527,7 @@ export function useStartJob() {
     async start(jobid: number, printerid: number) {
       try {
         const response = await api(`startprint`, { jobid, printerid })
-        return response;
+        return response
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while starting the job')
@@ -570,7 +591,6 @@ export function useRemoveIssue() {
     }
   }
 }
-
 
 export function useDownloadCsv() {
   return {

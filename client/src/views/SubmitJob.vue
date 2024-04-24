@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { printers, useRetrievePrintersInfo, type Device } from '../model/ports'
-import { selectedPrinters, file, fileName, quantity, priority, favorite, name, useAddJobToQueue, useGetFile, type Job, useAutoQueue } from '../model/jobs'
-import { ref, onMounted, watch, watchEffect, computed } from 'vue'
+import { printers } from '../model/ports'
+import { selectedPrinters, file, fileName, quantity, priority, favorite, name, tdid, filament, useAddJobToQueue, useGetFile, useAutoQueue } from '../model/jobs'
+import { ref, onMounted, watchEffect, computed } from 'vue'
 import { useRoute } from 'vue-router';
 import { toast } from '@/model/toast';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue';
 
-const { retrieveInfo } = useRetrievePrintersInfo()
 const { addJobToQueue } = useAddJobToQueue()
 const { auto } = useAutoQueue()
 const { getFile } = useGetFile();
@@ -21,9 +20,9 @@ const isAsteriksVisible = ref(true)
 const form = ref<HTMLFormElement | null>(null);
 let isSubmitDisabled = false;
 
-const tdid = ref<number>(0)
-
 const isGcodeImageVisible = ref(false)
+
+const filamentTypes = ['PLA', 'PETG', 'ABS', 'ASA', 'FLEX', 'HIPS', 'EDGE', 'NGEN', 'PA', 'PVA', 'PCTG', 'PP', 'PC', 'CPE', 'PEBA', 'PVB', 'PLA TOUGH', 'METAL', 'PET']
 
 // file upload
 const handleFileUpload = (event: Event) => {
@@ -38,6 +37,16 @@ const handleFileUpload = (event: Event) => {
         file.value = uploadedFile
         fileName.value = uploadedFile?.name || ''
         name.value = fileName.value.replace('.gcode', '') || ''
+
+        if (file.value) {
+            getFilament(file.value).then(filamentType => {
+                filament.value = filamentType ? filamentType.toString() : '';
+            }).catch(() => {
+                filament.value = '';
+            });
+        } else {
+            filament.value = '';
+        }
     }
 }
 
@@ -64,7 +73,33 @@ onMounted(async () => {
             file.value = await getFile(job)
             fileName.value = file.value?.name || ''
             name.value = job.name
+            if (file.value) {
+                getFilament(file.value).then(filamentType => {
+                    filament.value = filamentType ? filamentType.toString() : '';
+                }).catch(() => {
+                    filament.value = '';
+                });
+            } else {
+                filament.value = '';
+            }
         }
+
+        const modal = document.getElementById('gcodeImageModal');
+
+        modal?.addEventListener('hidden.bs.modal', () => {
+            isGcodeImageVisible.value = false;
+            isAsteriksVisible.value = true;
+        });
+
+        const filamentDropdown = document.getElementById('filamentDropdown');
+
+        filamentDropdown?.addEventListener('shown.bs.dropdown', () => {
+            isAsteriksVisible.value = false;
+        });
+
+        filamentDropdown?.addEventListener('hidden.bs.dropdown', () => {
+            isAsteriksVisible.value = true;
+        });
     } catch (error) {
         console.error('There has been a problem with your fetch operation:', error)
     }
@@ -89,6 +124,7 @@ const handleSubmit = async () => {
         formData.append('name', name.value as string)
         formData.append('priority', priority.value.toString())
         formData.append('td_id', tdid.value.toString())
+        formData.append('filament', filament.value as string)
         // If favorite is true and it's not set yet, set it for the first job only
         if (favorite.value && !isFavoriteSet) {
             formData.append('favorite', 'true')
@@ -126,6 +162,7 @@ const handleSubmit = async () => {
                 formData.append('priority', priority.value.toString())
                 formData.append('quantity', numPrints.toString())
                 formData.append('td_id', tdid.value.toString())
+                formData.append('filament', filament.value as string)
 
                 // If favorite is true and it's not set yet, set it for the first job only
                 if (favorite.value && !isFavoriteSet) {
@@ -168,6 +205,7 @@ function resetValues() {
     fileName.value = '';
     file.value = undefined;
     tdid.value = 0;
+    filament.value = '';
 }
 
 watchEffect(() => {
@@ -178,13 +216,8 @@ watchEffect(() => {
     if (quantity.value < selectedPrinters.value.length) {
         quantity.value = selectedPrinters.value.length
     }
-    isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0))
+    isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0) && filament.value !== '')
 });
-
-const openModal = () => {
-    isAsteriksVisible.value = false
-    isGcodeImageVisible.value = true
-}
 
 const allSelected = computed({
     get: () => selectedPrinters.value.length > 0 && selectedPrinters.value.length === printers.value.length,
@@ -205,18 +238,41 @@ const triggerFileInput = () => {
     fileInput.click();
 }
 
+const selectFilament = (type: string) => {
+    filament.value = type
+}
+
+const getFilament = (file: File) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            const lines = (event.target?.result as string).split('\n').reverse();
+            for (let line of lines) {
+                if (line.startsWith('; filament_type = ')) {
+                    resolve(line.split('= ')[1]);
+                    return;
+                }
+            }
+            resolve(null);
+        };
+        reader.onerror = function () {
+            reject(new Error("Failed to read file"));
+        };
+        reader.readAsText(file);
+    });
+};
+
 </script>
 <template>
-    <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true"
-        @shown.bs.modal="isGcodeImageVisible = true" @hidden.bs.modal="isGcodeImageVisible = false">
+    <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="gcodeImageModalLabel">
                         <b>{{ fileName }}</b>
                     </h5>
-                    <button @click="isAsteriksVisible = true" type="button" class="btn-close" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
@@ -235,7 +291,7 @@ const triggerFileInput = () => {
                 <form @submit.prevent="handleSubmit" ref="form">
 
                     <div class="mb-3">
-                        <label for="printer" class="form-label">Select Printer</label>
+                        <label for="printer" class="form-label">Select Printer {{ isGcodeImageVisible }}</label>
                         <div class="card"
                             style="max-height: 120px; overflow-y: auto; background-color: #f4f4f4 !important; border-color: #484848 !important;">
                             <ul class="list-unstyled card-body m-0" style="padding-top: .5rem; padding-bottom: .5rem;">
@@ -292,16 +348,39 @@ const triggerFileInput = () => {
                                 <div v-else>No file selected.</div>
                             </label>
                             <button type="button" class="btn btn-primary" data-bs-toggle="modal"
-                                data-bs-target="#gcodeImageModal" @click="openModal()" v-bind:disabled="!fileName">
+                                data-bs-target="#gcodeImageModal"
+                                @click="() => { isGcodeImageVisible = true; isAsteriksVisible = false }"
+                                v-bind:disabled="!fileName">
                                 <i class="fa-regular fa-image"></i>
                             </button>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="quantity" class="form-label">Quantity</label>
+                        <label for="filament" class="form-label">Filament</label>
                         <div class="tooltip">
                             <span v-if="isAsteriksVisible" class="text-danger">*</span>
+                            <span class="tooltiptext">The filament needs to be selected if not prefilled.</span>
+                        </div>
+                        <div class="input-group">
+                            <div class="dropdown w-100" id="filamentDropdown">
+                                <button class="btn btn-primary dropdown-toggle w-100" type="button"
+                                    id="dropdownMenuButton" data-bs-toggle="dropdown"
+                                    :aria-expanded="filament ? 'false' : 'true'">
+                                    {{ filament || 'Select Filament' }}
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-scrollable w-100"
+                                    aria-labelledby="dropdownMenuButton">
+                                    <li><a class="dropdown-item" v-for="type in filamentTypes" :key="type"
+                                            @click="selectFilament(type)">{{ type }}</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label">Quantity</label>
+                        <div v-if="isAsteriksVisible" class="text-danger tooltip">*
                             <span class="tooltiptext">Quantity cannot be greater than 1000</span>
                         </div>
                         <input v-model="quantity" class="form-control" type="number" id="quantity" name="quantity"
@@ -359,6 +438,11 @@ const triggerFileInput = () => {
 </template>
 
 <style scoped>
+.dropdown-menu-scrollable {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
 .form-control,
 .list-group-item {
     background-color: #f4f4f4 !important;

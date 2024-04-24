@@ -435,8 +435,8 @@ class Job(db.Model):
         
     @classmethod
     def downloadCSV(cls):
-        pass 
-           
+        pass
+               
     def saveToFolder(self):
         file_data = self.getFile()
         decompressed_data = gzip.decompress(file_data)
