@@ -286,7 +286,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
             <tr :id="printer.id">
               <td
                 v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
-                {{ printer.queue?.[0].td_id }}
+                {{ printer.queue?.[0].id }}
               </td>
               <td v-else><i>idle</i></td>
 
@@ -557,7 +557,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
           <tr v-else :id="printer.id">
             <td
               v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
-              {{ printer.queue?.[0].id }}
+              {{ printer.queue?.[0].td_id }}
             </td>
             <td v-else><i>idle</i></td>
 
@@ -619,13 +619,13 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
 
                 <button class="btn btn-success" :disabled="Boolean(printer.queue?.[0]?.extruded)"
                   @click="setPrinterStatus(printer, 'paused')"
-                  v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
+                  v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0 && printer.queue?.[0]?.extruded==1)">
                   Pause
                 </button>
 
                 <button class="btn btn-success" :disabled="Boolean(printer.queue?.[0]?.extruded)"
                   @click="setPrinterStatus(printer, 'colorchange')"
-                  v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
+                  v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0 && printer.queue?.[0]?.extruded==1)">
                   Color&nbsp;Change
                 </button>
 
@@ -639,8 +639,11 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                   Stop
                 </button>
 
-                <div v-if="printer.status == 'colorchange'" class="mt-2">
-                  See LCD screen
+                <div v-if="printer.status == 'colorchange' && (printer.colorbuff==1 || printer.queue[0].file_pause==1)" class="mt-2">
+                  Ready for color change. 
+                </div>
+                <div v-else-if="printer.status=='colorchange' && printer.queue[0].file_pause==0" class="mt-2">
+                  Finishing current layer...
                 </div>
 
               </div>
