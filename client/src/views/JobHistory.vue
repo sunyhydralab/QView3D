@@ -668,13 +668,13 @@ const doDownloadCsv = async () => {
         <table class="table-striped">
             <thead>
                 <tr>
-                    <th>Ticket ID</th>
+                    <th style="width: 112px;">Ticket ID</th>
                     <th>Printer</th>
                     <th>Job Title</th>
                     <th>File</th>
                     <th>Final Status</th>
                     <th>Date Completed</th>
-                    <th>Actions</th>
+                    <th style="width: 75px;">Actions</th>
                     <th class="col-checkbox">
                         <input class="form-check-input" type="checkbox" @change="selectAllJobs"
                             v-model="selectAllCheckbox" :disabled="filteredJobs.length === 0">

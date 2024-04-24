@@ -544,27 +544,27 @@ const openGCodeModal = async (job: Job, printerName: string) => {
         <table class="table-striped">
             <thead>
                 <tr>
-                    <th>Ticket ID</th>
-                    <th>Job Title</th>
-                    <th>File</th>
-                    <th>Printer</th>
-                    <th>Issue</th>
-                    <th>Comment</th>
+                    <th style="width: 112px;">Ticket ID</th>
+                    <th style="width: 200px;">Printer</th>
+                    <th style="width: 200px;">Job Title</th>
+                    <th style="width: 200px;">File</th>
+                    <th style="width: 200px;">Issue</th>
+                    <th style="width: 333px;">Comment</th>
                     <th style="width: 75px;">Actions</th>
                 </tr>
             </thead>
             <tbody v-if="filteredJobs.length > 0">
                 <tr v-for="job in filteredJobs" :key="job.id">
-                    <td style="padding-left: 15px;">{{ job.td_id }}</td>
+                    <td>{{ job.td_id }}</td>
+                    <td>{{ job.printer }}</td>
                     <td>{{ job.name }}</td>
                     <td>{{ job.file_name_original }}</td>
-                    <td>{{ job.printer }}</td>
                     <td v-if="job.errorid != null && job.errorid != 0">
                         {{ job.error }}
                     </td>
                     <td v-else>
                     </td>
-                    <td>{{ job.comment?.slice(0, 30) }}</td>
+                    <td class="truncate">{{ job.comment }}</td>
                     <td>
                         <div class="dropdown">
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
@@ -683,6 +683,12 @@ const openGCodeModal = async (job: Job, printerName: string) => {
     margin-left: 10px;
 }
 
+.truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
 .truncate-name {
     max-width: 200px;
     /* Adjust this value as needed */
@@ -697,12 +703,6 @@ const openGCodeModal = async (job: Job, printerName: string) => {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.grid-container {
-    display: grid;
-    grid-template-columns: 1fr 2fr 1fr;
-    gap: 10px;
 }
 
 .header {
