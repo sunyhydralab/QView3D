@@ -286,7 +286,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
             <tr :id="printer.id">
               <td
                 v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
-                {{ printer.queue?.[0].id }}
+                {{ printer.queue?.[0].td_id }}
               </td>
               <td v-else><i>idle</i></td>
 
