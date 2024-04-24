@@ -33,7 +33,6 @@ class Job(db.Model):
     
     # TeamDynamics ID 
     td_id = db.Column(db.Integer, nullable=True)
-    filament = db.Column(db.String(50), nullable=True)
 
     #FK to issue 
     error_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=True)
@@ -56,14 +55,13 @@ class Job(db.Model):
 
 
     
-    def __init__(self, file, name, printer_id, status, file_name_original, favorite, td_id, filament):
+    def __init__(self, file, name, printer_id, status, file_name_original, favorite, td_id):
         self.file = file 
         self.name = name 
         self.printer_id = printer_id 
         self.status = status 
         self.file_name_original = file_name_original # original file name without PK identifier 
         self.td_id = td_id
-        self.filament = filament
         self.file_name_pk = None
         self.favorite = favorite
         self.released = 0 
@@ -123,8 +121,7 @@ class Job(db.Model):
                 "errorid": job.error_id, 
                 "error": job.error.issue if job.error else 'None', 
                 "comment": job.comments, 
-                "td_id": job.td_id,
-                "filament": job.filament
+                "td_id": job.td_id
             } for job in jobs]
 
             return jobs_data, pagination.total
@@ -174,8 +171,7 @@ class Job(db.Model):
                 "errorid": job.error_id, 
                 "error": job.error.issue if job.error else 'None', 
                 "comment": job.comments, 
-                "td_id": job.td_id,
-                "filament": job.filament
+                "td_id": job.td_id
             } for job in jobs]
             
 
@@ -185,7 +181,7 @@ class Job(db.Model):
             return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500
 
     @classmethod
-    def jobHistoryInsert(cls, name, printer_id, status, file, file_name_original, favorite, td_id, filament): 
+    def jobHistoryInsert(cls, name, printer_id, status, file, file_name_original, favorite, td_id): 
         try:
             if isinstance(file, bytes):
                 file_data = file
@@ -207,8 +203,7 @@ class Job(db.Model):
                 status=status,
                 file_name_original = file_name_original,
                 favorite = favorite, 
-                td_id = td_id,
-                filament = filament
+                td_id = td_id
             )
 
             db.session.add(job)
@@ -440,45 +435,8 @@ class Job(db.Model):
         
     @classmethod
     def downloadCSV(cls):
-        pass 
-
-    @classmethod
-    def getFilamentFromJob(cls, job_id):
-        job = cls.query.get(job_id)
-        # Get the job's file
-        file_data = job.getFile()
-        # Decompress the file
-        decompressed_data = gzip.decompress(file_data)
-        # Convert the decompressed data to a string
-        file_str = decompressed_data.decode('utf-8')
-        # Split the file into lines
-        lines = file_str.split('\n')
-        # Iterate over the lines in the file
-        for line in lines:
-            # Check if the line contains the filament used
-            if line.startswith('; filament_type = '):
-                # Extract the filament type
-                filament_type = line.split('=')[1].strip()
-                break
-            else:
-                filament_type = ""
-
-        return filament_type
-    
-    @classmethod
-    def getFilamentFromFile(cls, file_str):
-        # Split the file into lines
-        lines = file_str.split('\n')
-        # Iterate over the lines in the file
-        for line in lines:
-            # Check if the line contains the filament used
-            if line.startswith('; filament_type = '):
-                # Extract the filament type
-                filament_type = line.split('=')[1].strip()
-                break
-
-        return filament_type
-           
+        pass
+               
     def saveToFolder(self):
         file_data = self.getFile()
         decompressed_data = gzip.decompress(file_data)
@@ -520,9 +478,6 @@ class Job(db.Model):
 
     def getJobId(self):
         return self.id
-    
-    def getFilament(self):
-        return self.filament
 
     def getFilePause(self):
         return self.filePause

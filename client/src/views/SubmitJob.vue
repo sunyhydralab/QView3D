@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers } from '../model/ports'
-import { selectedPrinters, file, fileName, quantity, priority, favorite, name, tdid, filament, useAddJobToQueue, useGetFile, useAutoQueue, useGetFilament } from '../model/jobs'
+import { selectedPrinters, file, fileName, quantity, priority, favorite, name, tdid, filament, useAddJobToQueue, useGetFile, useAutoQueue } from '../model/jobs'
 import { ref, onMounted, watchEffect, computed } from 'vue'
 import { useRoute } from 'vue-router';
 import { toast } from '@/model/toast';
@@ -9,7 +9,6 @@ import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue';
 const { addJobToQueue } = useAddJobToQueue()
 const { auto } = useAutoQueue()
 const { getFile } = useGetFile();
-const { getFilament } = useGetFilament();
 
 const route = useRoute();
 
@@ -40,7 +39,7 @@ const handleFileUpload = (event: Event) => {
         name.value = fileName.value.replace('.gcode', '') || ''
 
         if (file.value) {
-            getFilamentFromFile(file.value).then(filamentType => {
+            getFilament(file.value).then(filamentType => {
                 filament.value = filamentType ? filamentType.toString() : '';
             }).catch(() => {
                 filament.value = '';
@@ -74,7 +73,15 @@ onMounted(async () => {
             file.value = await getFile(job)
             fileName.value = file.value?.name || ''
             name.value = job.name
-            filament.value = await getFilament(job) || ''
+            if (file.value) {
+                getFilament(file.value).then(filamentType => {
+                    filament.value = filamentType ? filamentType.toString() : '';
+                }).catch(() => {
+                    filament.value = '';
+                });
+            } else {
+                filament.value = '';
+            }
         }
 
         const modal = document.getElementById('gcodeImageModal');
@@ -235,10 +242,10 @@ const selectFilament = (type: string) => {
     filament.value = type
 }
 
-const getFilamentFromFile = (file: File) => {
+const getFilament = (file: File) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = function(event) {
+        reader.onload = function (event) {
             const lines = (event.target?.result as string).split('\n').reverse();
             for (let line of lines) {
                 if (line.startsWith('; filament_type = ')) {
@@ -248,7 +255,7 @@ const getFilamentFromFile = (file: File) => {
             }
             resolve(null);
         };
-        reader.onerror = function() {
+        reader.onerror = function () {
             reject(new Error("Failed to read file"));
         };
         reader.readAsText(file);

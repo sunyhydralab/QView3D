@@ -156,7 +156,6 @@ class PrinterStatusService:
                     "comments": job.comments, 
                     "extruded": job.extruded,
                     "td_id": job.td_id,
-                    "filament": job.filament,
                 }
                 printer_info['queue'].append(job_info)
             
