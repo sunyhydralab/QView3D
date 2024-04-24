@@ -761,7 +761,7 @@ const doDownloadCsv = async () => {
             </tbody>
             <tbody v-else>
                 <tr>
-                    <td colspan="8">No jobs found. Submit your first job <RouterLink to="/submit">here!</RouterLink>
+                    <td colspan="8">No jobs found. Submit your first job <RouterLink class="routerLink" to="/submit">here!</RouterLink>
                     </td>
                 </tr>
             </tbody>

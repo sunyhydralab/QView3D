@@ -209,7 +209,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
 
     <div v-if="printers.length === 0">
       No printers available. Either register a printer
-      <RouterLink to="/registration"> here </RouterLink>, or restart the server.
+      <RouterLink class="routerLink" to="/registration"> here </RouterLink>, or restart the server.
     </div>
 
     <div v-else class="accordion" id="accordionPanelsStayOpenExample">

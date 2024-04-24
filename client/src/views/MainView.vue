@@ -759,7 +759,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
       </draggable>
     </table>
     <div v-if="printers.length === 0" style="margin-top: 1rem;">
-      No printers available. Either register a printer <RouterLink to="/registration">here</RouterLink>, or restart the
+      No printers available. Either register a printer <RouterLink class="routerLink" to="/registration">here</RouterLink>, or restart the
       server.
     </div>
   </div>
