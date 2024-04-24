@@ -219,16 +219,15 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
             :data-bs-target="'#panelsStayOpen-collapse' + index" :aria-expanded="printer.isQueueExpanded"
             :aria-controls="'panelsStayOpen-collapse' + index" :class="{ collapsed: !printer.isQueueExpanded }">
             <b>{{ printer.name }}:&nbsp;
-
               <span v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0">
                 Pending Release
               </span>
               <span v-else>
-                <span class="status-text" :style="{ color: statusColor(printer.status) }">{{
-              capitalizeFirstLetter(printer.status)
-            }}
+                <span class="status-text" :style="{ color: statusColor(printer.status) }">
+                  {{ capitalizeFirstLetter(printer.status) }}
                 </span>
               </span>
+              <span style="position: absolute; right: 50px;">{{ printer.queue?.length || 0 }} jobs in queue</span>
             </b>
           </button>
         </h2>
@@ -355,7 +354,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
 
 <style scoped>
 .scrollable {
-  max-height: 260px;
+  max-height: 230px;
   overflow-y: auto;
 }
 
