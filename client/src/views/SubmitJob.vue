@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { printers } from '../model/ports'
 import { selectedPrinters, file, fileName, quantity, priority, favorite, name, tdid, filament, useAddJobToQueue, useGetFile, useAutoQueue } from '../model/jobs'
-import { ref, onMounted, watchEffect, computed } from 'vue'
+import { ref, onMounted, watchEffect, computed, watch } from 'vue'
 import { useRoute } from 'vue-router';
 import { toast } from '@/model/toast';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue';
@@ -208,15 +208,18 @@ function resetValues() {
     filament.value = '';
 }
 
+watch(selectedPrinters, () => {
+  if (quantity.value < selectedPrinters.value.length) {
+    quantity.value = selectedPrinters.value.length;
+  }
+});
+
 watchEffect(() => {
-    if (quantity.value > 1000) {
-        quantity.value = 1000
-        toast.error('Quantity cannot be greater than 1000')
-    }
-    if (quantity.value < selectedPrinters.value.length) {
-        quantity.value = selectedPrinters.value.length
-    }
-    isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0) && filament.value !== '')
+  if (quantity.value > 1000) {
+    quantity.value = 1000;
+    toast.error('Quantity cannot be greater than 1000');
+  }
+  isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0) && filament.value !== '');
 });
 
 const allSelected = computed({
