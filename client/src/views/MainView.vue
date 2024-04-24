@@ -388,9 +388,9 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                     </div>
                     <!-- job progress set to 2 decimal places -->
                     <p style="position: absolute; width: 100%; text-align: center; color: black;">{{
-                      printer.queue?.[0].progress
-                        ?
-                        `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
+              printer.queue?.[0].progress
+                ?
+                `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
                   </div>
                   <!-- </div> -->
                 </div>
@@ -432,9 +432,10 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                     </button>
                   </div>
                 </div>
-                <div v-else-if="printer.status == 'error'" class="alert alert-danger" role="alert">{{ printer?.error
-                  }}
+                <div v-else-if="printer.status == 'error'" class="alert alert-danger" role="alert">
+                  {{ printer?.error }}
                 </div>
+                <div v-else></div>
 
               </td>
 
@@ -470,7 +471,8 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                           </a>
                         </li>
                         <li v-if="printer.queue[0]">
-                          <a class="dropdown-item d-flex align-items-center" @click="getFileDownload(printer.queue[0].id)"
+                          <a class="dropdown-item d-flex align-items-center"
+                            @click="getFileDownload(printer.queue[0].id)"
                             :disabled="printer.queue[0].file_name_original.includes('.gcode:')">
                             <i class="fas fa-download"></i>
                             <span class="ms-2">Download</span>
@@ -651,9 +653,9 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                   </div>
                   <!-- job progress set to 2 decimal places -->
                   <p style="position: absolute; width: 100%; text-align: center; color: black;">{{
-                    printer.queue?.[0].progress
-                      ?
-                      `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
+              printer.queue?.[0].progress
+                ?
+                `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
                 </div>
                 <!-- </div> -->
               </div>
@@ -695,9 +697,10 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                   </button>
                 </div>
               </div>
-              <div v-else-if="printer.status == 'error'" class="alert alert-danger" role="alert">{{ printer?.error
-                }}
+              <div v-else-if="printer.status == 'error'" class="alert alert-danger" role="alert">
+                {{ printer?.error }}
               </div>
+              <div v-else></div>
 
             </td>
 
