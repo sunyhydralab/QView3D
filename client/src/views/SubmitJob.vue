@@ -16,7 +16,6 @@ const route = useRoute();
 const job = route.params.job ? JSON.parse(route.params.job as string) : null;
 const printer = route.params.printer ? JSON.parse(route.params.printer as string) : null;
 const isAsteriksVisible = ref(true)
-const isAsteriksVisible2 = ref(true)
 
 // Form reference
 const form = ref<HTMLFormElement | null>(null);
@@ -82,19 +81,17 @@ onMounted(async () => {
 
         modal?.addEventListener('hidden.bs.modal', () => {
             isGcodeImageVisible.value = false;
-
             isAsteriksVisible.value = true;
-            isAsteriksVisible2.value = true;
         });
 
         const filamentDropdown = document.getElementById('filamentDropdown');
 
         filamentDropdown?.addEventListener('shown.bs.dropdown', () => {
-            isAsteriksVisible2.value = false;
+            isAsteriksVisible.value = false;
         });
 
         filamentDropdown?.addEventListener('hidden.bs.dropdown', () => {
-            isAsteriksVisible2.value = true;
+            isAsteriksVisible.value = true;
         });
     } catch (error) {
         console.error('There has been a problem with your fetch operation:', error)
@@ -345,7 +342,7 @@ const getFilamentFromFile = (file: File) => {
                             </label>
                             <button type="button" class="btn btn-primary" data-bs-toggle="modal"
                                 data-bs-target="#gcodeImageModal"
-                                @click="() => { isGcodeImageVisible = true; isAsteriksVisible = false; isAsteriksVisible2 = false }"
+                                @click="() => { isGcodeImageVisible = true; isAsteriksVisible = false }"
                                 v-bind:disabled="!fileName">
                                 <i class="fa-regular fa-image"></i>
                             </button>
@@ -376,7 +373,7 @@ const getFilamentFromFile = (file: File) => {
 
                     <div class="mb-3">
                         <label for="quantity" class="form-label">Quantity</label>
-                        <div v-if="isAsteriksVisible2" class="text-danger tooltip">*
+                        <div v-if="isAsteriksVisible" class="text-danger tooltip">*
                             <span class="tooltiptext">Quantity cannot be greater than 1000</span>
                         </div>
                         <input v-model="quantity" class="form-control" type="number" id="quantity" name="quantity"
