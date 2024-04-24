@@ -361,6 +361,19 @@ const doDownloadCsv = async () => {
     await csv()
 }
 
+const jobInQueue = (job: Job) => {
+    for (const printer of printers.value) {
+        if (printer.queue) {
+            for (const jobQ of printer.queue) {
+                if (jobQ.id === job.id) {
+                return true;
+                }
+            } 
+        }
+    }
+    return false;
+}
+
 </script>
 
 <template>
@@ -755,7 +768,7 @@ const doDownloadCsv = async () => {
                     </td>
                     <td>
                         <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job"
-                            :disabled="job.status === 'printing'">
+                            :disabled="job.status !== 'inqueue' && jobInQueue(job)">
                     </td>
                 </tr>
             </tbody>
