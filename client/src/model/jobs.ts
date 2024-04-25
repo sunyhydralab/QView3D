@@ -18,6 +18,7 @@ export const favorite = ref<boolean>(false)
 export const name = ref<string>('')
 export const tdid = ref<number>(0)
 export const filament = ref<string>('')
+const API_ROOT = import.meta.env.VITE_API_ROOT as string;
 
 export interface Job {
   id: number
@@ -190,20 +191,20 @@ async function refetchtime(printerid: number, jobid: number) {
   }
 }
 
+export function download(action: string, body?: unknown, method: string = 'POST', headers: HeadersInit = { 'Content-Type': 'application/json' }){
+  return fetch(`${API_ROOT}/${action}`, {
+      method,
+      headers,
+      body: JSON.stringify(body)
+  });
+}
+
 export function useGetJobs() {
   return {
-    async jobhistory(
-      page: number,
-      pageSize: number,
-      printerIds?: number[],
-      oldestFirst?: boolean,
-      searchJob: string = '',
-      searchCriteria: string = '',
-      favoriteOnly?: boolean
-    ) {
+    async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean, startdate: string = '', enddate: string = '') {
       try {
         const response = await api(
-          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&favoriteOnly=${favoriteOnly}`
+          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&favoriteOnly=${favoriteOnly}&startdate=${startdate}&enddate=${enddate}`
         )
         return response
       } catch (error) {
@@ -239,19 +240,10 @@ export function useUpdateJobStatus() {
 
 export function useGetErrorJobs() {
   return {
-    async jobhistoryError(
-      page: number,
-      pageSize: number,
-      printerIds?: number[],
-      oldestFirst?: boolean,
-      searchJob: string = '',
-      searchCriteria: string = '',
-      favoriteOnly?: boolean,
-      issues?: number[]
-    ) {
+    async jobhistoryError(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean, issues?: number[], startdate: string = '', enddate: string = '') {
       try {
         const response = await api(
-          `geterrorjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&issueIds=${JSON.stringify(issues)}`
+          `geterrorjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&issueIds=${JSON.stringify(issues)}&startdate=${startdate}&enddate=${enddate}`
         )
         return response
       } catch (error) {
@@ -622,16 +614,43 @@ export function useRemoveIssue() {
 
 export function useDownloadCsv() {
   return {
-    async csv() {
+    async csv(allJobs: number, jobIds?: number[]): Promise<void> {
       try {
-        const response = await api(`downloadcsv`)
-        const file = new Blob([response.file], { type: 'text/csv' })
-        const file_name = response.file_name
-        saveAs(file, file_name)
+        const response = await download(`downloadcsv`, { allJobs, jobIds });
+
+        if (!response.ok) {
+          throw new Error("HTTP error " + response.status);
+        }
+
+        const blob = await response.blob(); // Convert the response to a blob
+        const date = new Date();
+        // Format the date as YYYY-MM-DD
+        const dateString = new Intl.DateTimeFormat('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date).replace(/\//g, '-');
+        
+        // Generate the filename
+        const filename = `jobs_${dateString}.csv`;
+
+        saveAs(blob, filename);
+
+        await deleteCSVFromServer()
+
       } catch (error) {
-        console.error(error)
-        toast.error('An error occurred while downloading the csv')
+        console.error('An error occurred while downloading the CSV:', error);
+        toast.error('An error occurred while downloading the CSV');
       }
+    },
+  };
+}
+
+
+
+export async function deleteCSVFromServer() {
+    try {
+      const response = await api(`removeCSV`)
+      console.log("DELETE RES ", response)
+      return response 
+    } catch (error) {
+      console.error(error)
+      toast.error('An error occurred while removing the issue')
     }
-  }
 }

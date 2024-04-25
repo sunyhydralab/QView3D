@@ -31,7 +31,12 @@ const selectedJob = ref<Job>()
 const selectedIssue = ref<Issue>()
 const selectedIssueId = ref<number>()
 let issuelist = ref<Array<Issue>>([])
+
 const date = ref(null as Date | null);
+let startDateString = ref<string>('');
+let endDateString = ref<string>('');
+let everyJob = ref<Array<Job>>([])
+let filterApplied = ref(0)
 
 const router = useRouter();
 
@@ -175,25 +180,23 @@ const changePage = async (newPage: any) => {
     jobs.value = []
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
-    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value)
+    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, startDateString.value, endDateString.value);
     jobs.value = joblist;
     totalJobs.value = total;
 }
 
 async function submitFilter() {
     filterDropdown.value = false;
-
-    let startDateString = null;
-    let endDateString = null;
+    filterApplied.value = 1;
 
     if (date.value && Array.isArray(date.value)) {
         const dateArray = date.value as unknown as Date[];
         if (dateArray.length >= 2) {
-            startDateString = dateArray[0]?.toISOString();
-            if (dateArray[1] != undefined) {
-                endDateString = dateArray[1]?.toISOString();
+            startDateString.value = new Date(dateArray[0].setHours(0, 0, 0, 0)).toISOString();
+            if (dateArray[1] != null) {
+                endDateString.value = new Date(dateArray[1].setHours(23, 59, 59, 999)).toISOString();
             } else {
-                endDateString = dateArray[0]?.toISOString();
+                endDateString.value = new Date(dateArray[0].setHours(23, 59, 59, 999)).toISOString();
             }
         }
     }
@@ -214,8 +217,11 @@ async function submitFilter() {
     // ***  NEED TO HANDLE IF DATE IS EMPTY/NULL ***
 
     // Get the total number of jobs first, without considering the page number
-    const [, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
+    const [alljobs, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, startDateString.value, endDateString.value);
     totalJobs.value = total;
+    everyJob.value = alljobs;
+
+    console.log("SETING JOBS ", everyJob.value)
 
     totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
     totalPages.value = Math.max(totalPages.value, 1);
@@ -225,8 +231,7 @@ async function submitFilter() {
     }
 
     // Now fetch the jobs for the current page
-    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
-    jobs.value = joblist;
+    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, startDateString.value, endDateString.value); jobs.value = joblist;
 
     selectedJobs.value = [];
     selectAllCheckbox.value = false;
@@ -251,8 +256,14 @@ function clearFilter() {
 
     date.value = null;
 
+    startDateString.value = '';
+    endDateString.value = '';
+
+    filterApplied.value = 0;
+
     submitFilter();
 }
+
 
 const ensureOneCheckboxChecked = () => {
     if (!searchByJobName.value && !searchByFileName.value) {
@@ -358,8 +369,16 @@ const closeDropdown = (evt: any) => {
 }
 
 const doDownloadCsv = async () => {
-    await csv()
+    const jobIds = everyJob.value.map(job => job.id);
+    console.log("JOB IDS ", jobIds)
+    if (filterApplied.value === 1) {
+        await csv(0, jobIds) // 0: not all jobs, just specified job IDs
+    } else {
+        await csv(1, []) // 1: all jobs in database 
+    }
+    // await csv()
 }
+
 
 </script>
 
@@ -493,6 +512,27 @@ const doDownloadCsv = async () => {
             <span><i class="fas" :class="isOffcanvasOpen ? 'fa-chevron-right' : 'fa-chevron-left'"></i></span>
             <span v-if="!isOffcanvasOpen"><i class="fas fa-star"></i></span> -->
         </button>
+    </div>
+
+    <div class="modal fade" id="csvModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
+        data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Download CSV</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Thi CSV file will only contain jobs included in the current filtration criteria. Are you sure you
+                    want to download this CSV file?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button @click="doDownloadCsv" type="button" class="btn btn-success"
+                        data-bs-dismiss="modal">Download CSV</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- modal to unfavorite a job in the off canvas -->
@@ -645,9 +685,9 @@ const doDownloadCsv = async () => {
             <div class="col-9 d-flex justify-content-center align-items-center"></div>
 
             <div class="col-2 text-end d-flex justify-content-end" style="padding-right: 0;">
-                <!-- <button @click="doDownloadCsv" class="btn btn-success me-2">
+                <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#csvModal">                    
                     <i class="fa-solid fa-file-csv"></i>
-                </button> -->
+                </button>
 
                 <button
                     @click="openModal(clearSpaceTitle, 'Are you sure you want to clear space? This action will remove the files from jobs that are older than 6 months, except for those marked as favorite jobs, and this cannot be <b>undone</b>.', 'clear')"
@@ -761,7 +801,8 @@ const doDownloadCsv = async () => {
             </tbody>
             <tbody v-else>
                 <tr>
-                    <td colspan="8">No jobs found. Submit your first job <RouterLink class="routerLink" to="/submit">here!</RouterLink>
+                    <td colspan="8">No jobs found. Submit your first job <RouterLink class="routerLink" to="/submit">
+                            here!</RouterLink>
                     </td>
                 </tr>
             </tbody>
