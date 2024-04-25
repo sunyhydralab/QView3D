@@ -264,7 +264,7 @@ class Printer(db.Model):
         try:
             ports = Printer.getConnectedPorts()
             for port in ports:
-                hwid = port.hwid # get hwid 
+                hwid = port['hwid'] # get hwid 
                 # hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
                 # hwid_without_location = '-'.join(hwid_parts[:-1])
                 if hwid == cls.query.get(printerid).hwid:
@@ -646,7 +646,11 @@ class Printer(db.Model):
             return
         except Exception as e:
             print(e)
-            self.handleVerdict("error", job)
+            self.getQueue().deleteJob(job.id, self.id)
+            self.setStatus("error")
+            self.sendStatusToJob(job, job.id, "error")
+            return 
+            # self.handleVerdict("error", job)
             
     def beginPrint(self, job): 
         while True: 

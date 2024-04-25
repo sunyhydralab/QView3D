@@ -59,7 +59,7 @@ function formatTime(milliseconds: number): string {
   const minutesStr = minutes < 10 ? '0' + minutes : minutes
   const secondsStr = seconds < 10 ? '0' + seconds : seconds
 
-  if ((hoursStr + ':' + minutesStr + ':' + secondsStr === 'NaN:NaN:NaN')) return '<i>idle</i>'
+  if ((hoursStr + ':' + minutesStr + ':' + secondsStr === 'NaN:NaN:NaN')) return '<i>Waiting...</i>'
   return hoursStr + ':' + minutesStr + ':' + secondsStr
 }
 
@@ -69,7 +69,7 @@ function formatETA(milliseconds: number): string {
 
 
   if (isNaN(date.getTime()) || timeString === "07:00 PM") {
-    return '<i>idle</i>'
+    return '<i>Waiting...</i>'
   }
 
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
@@ -90,12 +90,13 @@ const restoreExpandedState = () => {
 
 const doAssignIssue = async () => {
   if (selectedJob.value === undefined) return
+  await assignComment(selectedJob.value, jobComments.value)
   await releasePrinter(selectedJob.value, 3, selectedJob.value.printerid)
 
   if (selectedIssue.value !== undefined) {
     await assign(selectedIssue.value.id, selectedJob.value.id)
   }
-  await assignComment(selectedJob.value, jobComments.value)
+
   selectedJob.value.comment = jobComments.value
   selectedIssue.value = undefined
   selectedJob.value = undefined
@@ -148,11 +149,20 @@ const startPrint = async (printerid: number, jobid: number) => {
   await start(jobid, printerid)
 }
 
-const openPrinterInfo = (printer: Device) => {
+const openPrinterInfo = async (printer: Device) => {
+  if(printer.queue && printer.queue[0]){
+    await jobTime(printer.queue[0], printers)
+  }
+
   printer.isInfoExpanded = !printer.isInfoExpanded;
+
 }
 
 const releasePrinter = async (jobToFind: Job | undefined, key: number, printerIdToPrintTo: number) => {
+
+  let printer = printers.value.find((printer) => printer.id ===printerIdToPrintTo)
+  printer!.error=""
+
   await releaseJob(jobToFind, key, printerIdToPrintTo)
   await nextTick()
 }
@@ -286,7 +296,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
             <tr :id="printer.id">
               <td
                 v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
-                {{ printer.queue?.[0].id }}
+                {{ printer.queue?.[0].td_id }}
               </td>
               <td v-else><i>idle</i></td>
 
@@ -347,13 +357,13 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                     Start Print
                   </button>
 
-                  <button class="btn btn-success" :disabled="Boolean(printer.queue?.[0]?.extruded)"
+                  <button class="btn btn-success" :disabled="printer.queue?.[0]?.extruded==0"
                     @click="setPrinterStatus(printer, 'paused')"
                     v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0 && printer.queue?.[0]?.extruded == 1)">
                     Pause
                   </button>
 
-                  <button class="btn btn-success" :disabled="Boolean(printer.queue?.[0]?.extruded)"
+                  <button class="btn btn-success" :disabled="printer.queue?.[0]?.extruded==0"
                     @click="setPrinterStatus(printer, 'colorchange')"
                     v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0 && printer.queue?.[0]?.extruded == 1)">
                     Color&nbsp;Change
@@ -437,7 +447,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                     </button>
                   </div>
                 </div>
-                <div v-else-if="printer.status == 'error'" class="alert alert-danger" role="alert">
+                <div v-else-if="printer.status == 'error'" class="alert alert-danger truncate" role="alert">
                   {{ printer?.error }}
                 </div>
                 <div v-else></div>
@@ -466,7 +476,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                             <span class="ms-2">GCode Image</span>
                           </a>
                         </li>
-                        <li>
+                        <!-- <li>
                           <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
                             data-bs-target="#gcodeLiveViewModal" v-if="printer.queue && printer.queue.length > 0"
                             v-bind:job="printer.queue[0]"
@@ -474,7 +484,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                             <i class="fas fa-code"></i>
                             <span class="ms-2">GCode Live</span>
                           </a>
-                        </li>
+                        </li> -->
                         <li v-if="printer.queue[0]">
                           <a class="dropdown-item d-flex align-items-center"
                             @click="getFileDownload(printer.queue[0].id)"
@@ -617,13 +627,13 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                   Start Print
                 </button>
 
-                <button class="btn btn-success" :disabled="Boolean(printer.queue?.[0]?.extruded)"
+                <button class="btn btn-success" :disabled="printer.queue?.[0]?.extruded==0"
                   @click="setPrinterStatus(printer, 'paused')"
                   v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0 && printer.queue?.[0]?.extruded == 1)">
                   Pause
                 </button>
 
-                <button class="btn btn-success" :disabled="Boolean(printer.queue?.[0]?.extruded)"
+                <button class="btn btn-success" :disabled="printer.queue?.[0]?.extruded==0"
                   @click="setPrinterStatus(printer, 'colorchange')"
                   v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0 && printer.queue?.[0]?.extruded == 1)">
                   Color&nbsp;Change
@@ -639,12 +649,10 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                   Stop
                 </button>
 
-                <div
-                  v-if="printer.status == 'colorchange' && (printer.colorbuff == 1 || printer.queue[0].file_pause == 1)"
-                  class="mt-2">
-                  Ready for color change.
+                <div v-if="printer.status == 'colorchange' && (printer.colorbuff==1 || printer.queue[0].file_pause==1)" class="mt-2">
+                  Ready for color change. 
                 </div>
-                <div v-else-if="printer.status == 'colorchange' && printer.queue[0].file_pause == 0" class="mt-2">
+                <div v-else-if="printer.status=='colorchange' && printer.queue[0].file_pause==0" class="mt-2">
                   Finishing current layer...
                 </div>
 
@@ -707,7 +715,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                   </button>
                 </div>
               </div>
-              <div v-else-if="printer.status == 'error'" class="alert alert-danger" role="alert">
+              <div v-else-if="printer.status == 'error'" class="alert alert-danger truncate" role="alert" :title="printer?.error">
                 {{ printer?.error }}
               </div>
               <div v-else></div>
@@ -744,7 +752,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                           <i class="fas fa-code"></i>
                           <span class="ms-2">GCode Live</span>
                         </a>
-                      </li>
+                      </li> -->
                       <li v-if="printer.queue[0]">
                         <a class="dropdown-item d-flex align-items-center" @click="getFileDownload(printer.queue[0].id)"
                           :disabled="printer.queue[0].file_name_original.includes('.gcode:')">
