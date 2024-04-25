@@ -69,7 +69,7 @@ function formatETA(milliseconds: number): string {
 
 
   if (isNaN(date.getTime()) || timeString === "07:00 PM") {
-    return '<i>idle</i>'
+    return '<i>Waiting...</i>'
   }
 
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
