@@ -179,3 +179,7 @@ th {
 .dp__clear_icon {
   color: #484848 !important;
 }
+
+.page-item.disabled {
+  user-select: none;
+}

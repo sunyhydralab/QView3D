@@ -550,7 +550,7 @@ const doDownloadCsv = async () => {
                         @click.stop="filterDropdown = !filterDropdown">
                         Filter
                     </button>
-                    <form v-show="filterDropdown" class="card dropdown-card p-3">
+                    <form v-show="filterDropdown" class="card dropdown-card p-3 scrollable-filter">
                         <div class="mb-3">
                             <label for="pageSize" class="form-label">
                                 Jobs per page, out of {{ totalJobs }}:
@@ -631,12 +631,14 @@ const doDownloadCsv = async () => {
                                 value="favorite" v-model="favoriteOnly">
                             <label class="form-check-label" for="orderFav">Favorites</label>
                         </div>
-                        <div class="my-2 border-top"
-                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
-                        <div class="d-flex justify-content-center">
-                            <button @click.prevent="submitFilter" class="btn btn-primary me-3">Submit
-                                Filter</button>
-                            <button @click.prevent="clearFilter" class="btn btn-danger">Clear Filter</button>
+                        <div class="sticky">
+                            <div class="mb-2 border-top"
+                                style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                            <div class="d-flex justify-content-center">
+                                <button @click.prevent="submitFilter" class="btn btn-primary me-3 mb-2">Submit
+                                    Filter</button>
+                                <button @click.prevent="clearFilter" class="btn btn-danger mb-2">Clear Filter</button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -781,6 +783,20 @@ const doDownloadCsv = async () => {
     </div>
 </template>
 <style scoped>
+.scrollable-filter {
+    height: 500px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sticky {
+    position: sticky;
+    bottom: 0px;
+    background: #b9b9b9;
+    margin-right: -1rem;
+    margin-left: -1rem;
+}
+
 .truncate {
     white-space: nowrap;
     overflow: hidden;
@@ -795,6 +811,7 @@ const doDownloadCsv = async () => {
     z-index: 1000;
     background: #d8d8d8;
     border: 1px solid #484848;
+    padding-bottom: 0 !important;
 }
 
 .dropdown-submenu {
@@ -805,9 +822,7 @@ const doDownloadCsv = async () => {
 .dropdown-submenu .dropdown-menu {
     top: -9px;
     right: 100%;
-    /* Position the submenu to the left */
     max-height: 200px;
-    /* Adjust this value as needed */
     overflow-y: auto;
 }
 

@@ -408,7 +408,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                         @click.stop="filterDropdown = !filterDropdown">
                         Filter
                     </button>
-                    <form v-show="filterDropdown" class="card dropdown-card p-3">
+                    <form v-show="filterDropdown" class="card dropdown-card p-3 scrollable-filter">
                         <div class="mb-3">
                             <label for="pageSize" class="form-label">
                                 Jobs per page, out of {{ totalJobs }}:
@@ -512,14 +512,16 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                         </div>
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
-                        <label class="form-label">Date Range:</label>
-                        <VueDatePicker v-model="date" range />
-                        <div class="my-2 border-top"
-                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
-                        <div class="d-flex justify-content-center">
-                            <button @click.prevent="submitFilter" class="btn btn-primary me-3">Submit
-                                Filter</button>
-                            <button @click.prevent="clearFilter" class="btn btn-danger">Clear Filter</button>
+                        <label class="form-label ">Date Range:</label>
+                        <VueDatePicker class="mb-3" v-model="date" range />
+                        <div class="sticky">
+                            <div class="mb-2 border-top"
+                                style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                            <div class="d-flex justify-content-center">
+                                <button @click.prevent="submitFilter" class="btn btn-primary me-3 mb-2">Submit
+                                    Filter</button>
+                                <button @click.prevent="clearFilter" class="btn btn-danger mb-2">Clear Filter</button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -641,6 +643,20 @@ const openGCodeModal = async (job: Job, printerName: string) => {
     </div>
 </template>
 <style scoped>
+.scrollable-filter {
+    height: 500px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sticky {
+    position: sticky;
+    bottom: 0px;
+    background: #b9b9b9;
+    margin-right: -1rem;
+    margin-left: -1rem;
+}
+
 .dropdown-card {
     position: absolute !important;
     top: calc(100% + 2px) !important;
@@ -649,6 +665,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
     z-index: 1000;
     background: #d8d8d8;
     border: 1px solid #484848;
+    padding-bottom: 0 !important;
 }
 
 .dropdown-submenu {
