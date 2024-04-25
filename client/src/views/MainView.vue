@@ -59,7 +59,7 @@ function formatTime(milliseconds: number): string {
   const minutesStr = minutes < 10 ? '0' + minutes : minutes
   const secondsStr = seconds < 10 ? '0' + seconds : seconds
 
-  if ((hoursStr + ':' + minutesStr + ':' + secondsStr === 'NaN:NaN:NaN')) return '<i>idle</i>'
+  if ((hoursStr + ':' + minutesStr + ':' + secondsStr === 'NaN:NaN:NaN')) return '<i>Waiting...</i>'
   return hoursStr + ':' + minutesStr + ':' + secondsStr
 }
 
