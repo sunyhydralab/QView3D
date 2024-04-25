@@ -32,6 +32,7 @@ const selectedIssue = ref<Issue>()
 const selectedIssueId = ref<number>()
 let issuelist = ref<Array<Issue>>([])
 const date = ref(null as Date | null);
+const searchTicketId = ref('')
 
 const router = useRouter();
 
@@ -175,7 +176,7 @@ const changePage = async (newPage: any) => {
     jobs.value = []
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
-    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value)
+    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value)
     jobs.value = joblist;
     totalJobs.value = total;
 }
@@ -214,7 +215,7 @@ async function submitFilter() {
     // ***  NEED TO HANDLE IF DATE IS EMPTY/NULL ***
 
     // Get the total number of jobs first, without considering the page number
-    const [, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
+    const [, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value);
     totalJobs.value = total;
 
     totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
@@ -225,7 +226,7 @@ async function submitFilter() {
     }
 
     // Now fetch the jobs for the current page
-    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
+    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value);
     jobs.value = joblist;
 
     selectedJobs.value = [];
@@ -246,6 +247,7 @@ function clearFilter() {
     favoriteOnly.value = false;
 
     searchJob.value = '';
+    searchTicketId.value = '';
     searchByJobName.value = true;
     searchByFileName.value = true;
 
@@ -265,7 +267,7 @@ const confirmDelete = async () => {
     await Promise.all(deletionPromises);
 
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
+    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value);
     jobs.value = joblist;
     totalJobs.value = total;
 
@@ -601,6 +603,12 @@ const jobInQueue = (job: Job) => {
                                 </ul>
                             </div>
                         </div>
+                        <div class="my-2 border-top"
+                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                        <div class="mb-3">
+                            <label for="searchTicketId" class="form-label">Search using Ticket ID:</label>
+                            <input type="text" id="searchTicketId" class="form-control" v-model="searchTicketId">
+                        </div>                     
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <div class="mb-3">

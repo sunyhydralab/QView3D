@@ -171,11 +171,12 @@ export function useGetJobs() {
       oldestFirst?: boolean,
       searchJob: string = '',
       searchCriteria: string = '',
-      favoriteOnly?: boolean
+      searchTicketId: string = '',
+      favoriteOnly?: boolean,
     ) {
       try {
         const response = await api(
-          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&favoriteOnly=${favoriteOnly}`
+          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&searchTicketId=${encodeURIComponent(searchTicketId)}&favoriteOnly=${favoriteOnly}`
         )
         return response
       } catch (error) {

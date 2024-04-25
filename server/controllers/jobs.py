@@ -29,12 +29,14 @@ def getJobs():
 
     searchJob = request.args.get('searchJob', default='', type=str)
     searchCriteria = request.args.get('searchCriteria', default='', type=str)
+    
+    searchTicketId = request.args.get('searchTicketId', default='', type=str)
 
     favoriteOnly = request.args.get('favoriteOnly', default='false')
     favoriteOnly = favoriteOnly.lower() in ['true', '1']
     
     try:
-        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, favoriteOnly)
+        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, searchTicketId, favoriteOnly)
         return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")
