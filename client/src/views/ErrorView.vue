@@ -30,9 +30,13 @@ const selectedJobs = ref<Array<Job>>([]);
 const searchJob = ref(''); // This will hold the current search query
 const searchByJobName = ref(true);
 const searchByFileName = ref(true);
+
 const date = ref(null as Date | null);
+let startDateString = ref<string>('');
+let endDateString = ref<string>('');
 
 const router = useRouter();
+
 
 let jobs = ref<Array<Job>>([])
 let issuelist = ref<Array<Issue>>([])
@@ -117,25 +121,21 @@ const changePage = async (newPage: any) => {
     jobs.value = []
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
-    const [joblist, total] = await jobhistoryError(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value)
+    const [joblist, total] = await jobhistoryError(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value)
     jobs.value = joblist;
     totalJobs.value = total;
 }
-
 async function submitFilter() {
     filterDropdown.value = false;
-
-    let startDateString = null;
-    let endDateString = null;
 
     if (date.value && Array.isArray(date.value)) {
         const dateArray = date.value as unknown as Date[];
         if (dateArray.length >= 2) {
-            startDateString = dateArray[0]?.toISOString();
-            if (dateArray[1] != undefined) {
-                endDateString = dateArray[1]?.toISOString();
+            startDateString.value = new Date(dateArray[0].setHours(0, 0, 0, 0)).toISOString();
+            if (dateArray[1] != null) {
+                endDateString.value = new Date(dateArray[1].setHours(23, 59, 59, 999)).toISOString();
             } else {
-                endDateString = dateArray[0]?.toISOString();
+                endDateString.value = new Date(dateArray[0].setHours(23, 59, 59, 999)).toISOString();
             }
         }
     }
@@ -157,7 +157,7 @@ async function submitFilter() {
     // ***  NEED TO HANDLE IF DATE IS EMPTY/NULL ***
 
     // Get the total number of jobs first, without considering the page number
-    const [, total] = await jobhistoryError(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value);
+    const [, total] = await jobhistoryError(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
     totalJobs.value = total;
 
     totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
@@ -168,13 +168,14 @@ async function submitFilter() {
     }
 
     // Now fetch the jobs for the current page
-    const [joblist] = await jobhistoryError(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value);
+    const [joblist] = await jobhistoryError(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
     jobs.value = joblist;
 
     selectedJobs.value = [];
 
     date.value = null;
 }
+
 
 function clearFilter() {
     page.value = 1;
@@ -193,6 +194,9 @@ function clearFilter() {
     searchByFileName.value = true;
 
     date.value = null;
+
+    startDateString.value = '';
+    endDateString.value = '';
 
     submitFilter();
 }
@@ -549,6 +553,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                     <th>File</th>
                     <th>Printer</th>
                     <th>Issue</th>
+                    <th>Date errored</th>
                     <th>Comment</th>
                     <th style="width: 75px;">Actions</th>
                 </tr>
@@ -565,6 +570,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                     <td v-else>
                     </td>
                     <td>{{ job.comment?.slice(0, 30) }}</td>
+                    <td>{{job.date}}</td>
                     <td>
                         <div class="dropdown">
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
