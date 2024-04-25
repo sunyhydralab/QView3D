@@ -11,7 +11,7 @@ const isSubmitRoute = computed(() => route.path.startsWith('/submit'));
   <div style="position: sticky; top: 0;">
     <nav class="navbar navbar-expand-lg thick">
       <router-link to="/" class="navbar-brand">
-        <img class="logo" src="../assets/QView3Dlogo.png" alt="QView3D Logo">
+        <img class="logo" src="../assets/QView3D.svg" alt="QView3D Logo">
       </router-link>
 
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
@@ -51,11 +51,12 @@ const isSubmitRoute = computed(() => route.path.startsWith('/submit'));
 
 <style scoped>
 .logo {
-  height: 45px;
+  height: 100px;
   position: relative;
-  right: 20px;
-  padding-top: 5px;
-  padding-bottom: 5px;
+  right: 60px;
+  margin-bottom: -2rem;
+  margin-top: -1rem;
+  ;
 }
 
 .navbar {

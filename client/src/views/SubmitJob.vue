@@ -52,7 +52,7 @@ const handleFileUpload = (event: Event) => {
 
 // validate quantity
 const validateQuantity = () => {
-    if (quantity.value < 1) {
+    if (quantity.value < 1 && selectedPrinters.value.length > 0) {
         quantity.value = selectedPrinters.value.length
     }
     if (quantity.value < selectedPrinters.value.length) {
@@ -198,7 +198,12 @@ const handleSubmit = async () => {
 
 function resetValues() {
     selectedPrinters.value = [];
-    quantity.value = selectedPrinters.value.length;
+    // quantity.value = selectedPrinters.value.length;
+    if (selectedPrinters.value.length > 0) {
+        quantity.value = selectedPrinters.value.length;
+    } else {
+        quantity.value = 1
+    }
     priority.value = 0;
     favorite.value = false;
     name.value = "";

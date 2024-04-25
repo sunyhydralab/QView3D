@@ -183,3 +183,7 @@ th {
 .page-item.disabled {
   user-select: none;
 }
+
+.btn {
+  user-select: none;
+}

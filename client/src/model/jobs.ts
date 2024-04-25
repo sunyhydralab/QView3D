@@ -34,6 +34,9 @@ export interface Job {
 
   td_id: number //store td_id of job
 
+  max_layer_height?: number //store max layer height of job
+  current_layer_height?: number //store current layer height of job
+
   errorid?: number
   error?: string // store issue name
 

@@ -423,6 +423,18 @@ class Printer(db.Model):
                 #  Time handling
                 comment_lines = [line for line in lines if line.strip() and line.startswith(";")]
 
+                # Iterate through comment_lines in reverse order
+                for i in reversed(range(len(comment_lines))):
+                    # Check if the line contains ";LAYER_CHANGE"
+                    if ";LAYER_CHANGE" in comment_lines[i]:
+                        # Check if the next line exists
+                        if i < len(comment_lines) - 1:
+                            # Save the next line
+                            max_layer_height = comment_lines[i + 1]
+                            break
+                job.setMaxLayerHeight(max_layer_height)
+                
+
                 total_time = job.getTimeFromFile(comment_lines)
                 job.setTime(total_time, 0)
                 # job.setTime(total_time, 0)
@@ -443,6 +455,12 @@ class Printer(db.Model):
                     # print("LINE: ", line, " STATUS: ", self.status, " FILE PAUSE: ", job.getFilePause())
                     if("layer" in line.lower() and self.status=='colorchange' and job.getFilePause()==0 and self.colorbuff==0):
                         self.setColorChangeBuffer(1)
+
+                    # if line contains ";LAYER_CHANGE", do job.currentLayerHeight(the next line)
+                    if ";LAYER_CHANGE" in line:
+                        next_line = next(lines, None)
+                        if next_line is not None:
+                            job.setCurrentLayerHeight(next_line)
 
                     # remove whitespace
                     line = line.strip()

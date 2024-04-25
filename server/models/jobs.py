@@ -44,6 +44,8 @@ class Job(db.Model):
     file_name_original = db.Column(db.String(50), nullable=False)
     favorite = db.Column(db.Boolean, nullable=False)
     file_name_pk = None
+    max_layer_height = 0.0
+    current_layer_height = 0.0
     released = 0 
     filePause = 0
     progress = 0.0
@@ -604,6 +606,14 @@ class Job(db.Model):
     
     def getTdId(self): 
         return self.td_id
+    
+    def setMaxLayerHeight(self, max_layer_height):
+        self.max_layer_height = max_layer_height
+        current_app.socketio.emit('max_layer_height', {'job_id': self.id, 'max_layer_height': self.max_layer_height})
+
+    def setCurrentLayerHeight(self, current_layer_height):
+        self.current_layer_height = current_layer_height
+        current_app.socketio.emit('current_layer_height', {'job_id': self.id, 'current_layer_height': self.current_layer_height})
 
     def setPath(self, path): 
         self.path = path 

@@ -525,10 +525,10 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
             </tr>
             <tr style="background-color: #cdcdcd;">
               <td class="borderless-top">
-                <span></span>
+                <span v-html="printer.queue[0]?.current_layer_height && printer.queue[0]?.max_layer_height ? printer.queue[0]?.current_layer_height + '/' + printer.queue[0]?.max_layer_height : '<i>idle</i>'"></span>
               </td>
               <td class="borderless-top">
-                <span v-html="printer.queue[0]?.filament || '<i>idle</i>'"></span>
+                <span v-html="printer.queue[0]?.filament ? printer.queue[0]?.filament : '<i>idle</i>'"></span>
               </td>
               <td class="borderless-top">
                 <span v-html="printer?.extruder_temp ? printer.extruder_temp + '&deg;C' : '<i>idle</i>'"></span>

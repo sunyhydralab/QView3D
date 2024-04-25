@@ -2,8 +2,8 @@
 import 'bootstrap/dist/js/bootstrap.bundle'
 import { RouterView } from 'vue-router'
 import NavBar from './components/NavBar.vue'
-import ThemePanel from './components/ThemePanel.vue' // Import the ThemePanel component
-import { onMounted } from 'vue';
+import ThemePanel from './components/ThemePanel.vue'
+import { onMounted, nextTick, watch } from 'vue';
 import { setupPortRepairSocket, setupErrorSocket, setupJobStatusSocket, setupPauseFeedbackSocket, setupProgressSocket, setupQueueSocket, setupReleaseSocket, setupStatusSocket, setupTempSocket, setupGCodeViewerSocket, setupExtrusionSocket } from './model/sockets';
 import { useRetrievePrintersInfo, printers } from './model/ports';
 import { setupTimeSocket } from './model/jobs';
@@ -26,8 +26,29 @@ onMounted(async () => {
   setupReleaseSocket(printers)
   setupPortRepairSocket(printers)
   setupExtrusionSocket(printers)
+
+  nextTick(() => {
+    updateColors()
+  })
 })
 
+const updateColors = () => {
+  var primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color');
+  var successColor = getComputedStyle(document.documentElement).getPropertyValue('--bs-success-color');
+
+  var cls1Elements = document.querySelectorAll('.cls-1');
+  cls1Elements.forEach(function(element) {
+    (element as HTMLElement).style.fill = primaryColor;
+  });
+
+  var cls2Elements = document.querySelectorAll('.cls-2');
+  cls2Elements.forEach(function(element) {
+    (element as HTMLElement).style.fill = successColor;
+  });
+}
+
+watch(() => getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color'), updateColors);
+watch(() => getComputedStyle(document.documentElement).getPropertyValue('--bs-success-color'), updateColors);
 </script>
 
 <template>
@@ -37,7 +58,7 @@ onMounted(async () => {
   <div class="">
     <RouterView />
   </div>
-  <ThemePanel /> <!-- Add the ThemePanel component here -->
+  <ThemePanel />
 </template>
 
 <style scoped></style>
