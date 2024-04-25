@@ -46,7 +46,8 @@ export interface Job {
   priority?: string
   favorite?: boolean
   released?: number
-  job_server?: [number, Date, Date, Date] // this saves all of the data from the backend.Only changed if there is a pause involved.
+  job_server?: [number, Date | string, Date | string, Date | string] // this saves all of the data from the backend.Only changed if there is a pause involved.
+
   job_client?: {
     // this is frontend data CALCULATED based on the backend data
     total_time: number
@@ -56,10 +57,13 @@ export interface Job {
     remaining_time: number
   }
   timer?: NodeJS.Timeout
+  time_started?: number
+  colorbuff?: number 
 }
 
-export function jobTime(job: Job, printers: any) {
+export async function jobTime(job: Job, printers: any) {
   if (printers) {
+
     if (!job.job_client) {
       job.job_client = {
         total_time: 0,
@@ -70,14 +74,28 @@ export function jobTime(job: Job, printers: any) {
       }
     }
     if (!job.job_server) {
-      // job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
-      job.job_server = [0, new Date(0, 0, 0, 0), new Date(0, 0, 0, 0), new Date(0, 0, 0, 0)]
+      job.job_server = [0, '00:00:00', '00:00:00', '00:00:00']
+
+      for (const printer of printers.value) {
+        // let time_server = Array(4) // this saves all of the data from the backend.Only changed if there is a pause involved.
+        // Here 'printer' represents each Device object in the 'printers' array
+        if ((printer.queue && printer.queue.length != 0) && (printer.queue[0].status != 'inqueue')) {
+          let timejson = await refetchtime(printer.id!, printer.queue[0].id)
+          if (printer.queue[0].job_server) {
+            printer.queue[0].job_server![0] = (timejson.total)
+            if (job.time_started == 1) {
+              printer.queue[0].job_server![1] = Date.parse(timejson.eta)
+              printer.queue[0].job_server![2] = Date.parse(timejson.timestart)
+              printer.queue[0].job_server![3] = Date.parse(timejson.pause)
+            }
+          }
+        }
+      };
     }
 
     const printerid = job.printerid
     const printer = printers.value.find((printer: { id: number }) => printer.id === printerid)
 
-    // job.job_client!.remaining_time = NaN
 
     const updateJobTime = () => {
       if (printer.status !== 'printing') {
@@ -86,46 +104,45 @@ export function jobTime(job: Job, printers: any) {
         return
       }
 
+
       let totalTime = job.job_server![0]
       job.job_client!.total_time = totalTime * 1000
 
-      let eta =
-        job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
-      job.job_client!.eta = eta + job.job_client!.extra_time
+      let eta = job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
+      // job.job_client!.eta = eta + job.job_client!.extra_time
 
-      if (
-        printer.status === 'printing' ||
-        printer.status === 'colorchange' ||
-        printer.status === 'paused'
-      ) {
-        const now = Date.now()
-        const elapsedTime = now - new Date(job.job_server![2]).getTime()
-        job.job_client!.elapsed_time = Math.round(elapsedTime / 1000) * 1000
+      // @ts-ignore
+      job.job_client!.eta = eta
+
+      if (printer.status === 'printing' || printer.status === 'colorchange' || printer.status === 'paused') {
+        const now = Date.now();
+        const elapsedTime = now - new Date(job.job_server![2]).getTime();
+        job.job_client!.elapsed_time = Math.round(elapsedTime / 1000) * 1000;
         if (!isNaN(job.job_client!.elapsed_time)) {
           if (job.job_client!.elapsed_time <= job.job_client!.total_time) {
-            job.job_client!.remaining_time =
-              job.job_client!.total_time - job.job_client!.elapsed_time
+            job.job_client!.remaining_time = job.job_client!.total_time - job.job_client!.elapsed_time
           }
         }
       }
 
       if (job.job_client!.elapsed_time > job.job_client!.total_time) {
+        //@ts-ignore
         job.job_client!.extra_time = Date.now() - eta
       }
 
       // Update elapsed_time after the first second
       if (job.job_client!.elapsed_time === 0) {
-        job.job_client!.elapsed_time = 1
+        job.job_client!.elapsed_time = 1;
       }
     }
 
     // Call updateJobTime immediately when jobTime is called
-    updateJobTime()
+    updateJobTime();
 
     // Continue to call updateJobTime at regular intervals
     job.timer = setInterval(updateJobTime, 1000)
   } else {
-    console.error('printers is undefined')
+    console.error('printers is undefined');
   }
 }
 
@@ -145,11 +162,11 @@ export function setupTimeSocket(printers: any) {
           extra_time: 0,
           remaining_time: NaN
         }
-        // job.job_server = ['00:00:00', '00:00:00', '00:00:00', '00:00:00']
         job.job_server = [0, '00:00:00', '00:00:00', '00:00:00']
+
       }
 
-      if (typeof data.new_time === 'number') {
+      if (typeof (data.new_time) === 'number') {
         job.job_server[data.index] = data.new_time
       } else {
         job.job_server[data.index] = Date.parse(data.new_time)
@@ -157,9 +174,20 @@ export function setupTimeSocket(printers: any) {
 
       jobTime(job, printers)
     } else {
-      console.error('printers or printers.value is undefined')
+      console.error('printers or printers.value is undefined');
     }
   })
+}
+
+
+async function refetchtime(printerid: number, jobid: number) {
+  try {
+    const response = await api('refetchtimedata', { printerid, jobid })
+    return response
+  } catch (error) {
+    console.error(error)
+    toast.error('An error occurred while updating the job status')
+  }
 }
 
 export function useGetJobs() {

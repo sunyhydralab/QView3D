@@ -562,6 +562,31 @@ def repair_ports():
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
+   
+@jobs_bp.route("/refetchtimedata", methods=['POST', 'GET']) 
+def refetch_time(): 
+    try: 
+        data = request.get_json()
+        jobid = data['jobid']
+        printerid = data['printerid']
+
+        printer = findPrinterObject(printerid)
+        job = printer.getQueue().getNext()
+
+        timearray = job.job_time 
+
+        timejson = {
+            'total': timearray[0], 
+            'eta': timearray[1].isoformat(), 
+            'timestart': timearray[2].isoformat(), 
+            'pause': timearray[3].isoformat()
+        }
+
+        return jsonify(timejson) 
+
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500    
     
 def findPrinterObject(printer_id): 
     threads = printer_status_service.getThreadArray()

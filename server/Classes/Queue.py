@@ -97,7 +97,8 @@ class Queue:
                 "file_pause": job.filePause, 
                 "comments": job.comments, 
                 "extruded": job.extruded,
-                "td_id": job.td_id
+                "td_id": job.td_id, 
+                "time_started": job.time_started
             }
             queue.append(job_info)
         return queue

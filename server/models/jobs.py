@@ -48,10 +48,10 @@ class Job(db.Model):
     filePause = 0
     progress = 0.0
     sent_lines = 0
-    time_started = False
+    time_started = 0
     extruded = 0
     #total, eta, timestart, pause time 
-    job_time = job_time = [0, datetime.min, datetime.min, datetime.min]
+    job_time = [0, datetime.min, datetime.min, datetime.min]
 
 
     
@@ -68,7 +68,7 @@ class Job(db.Model):
         self.filePause = 0
         self.progress = 0.0
         self.sent_lines = 0
-        self.time_started = False
+        self.time_started = 0
         self.extruded = 0
         self.job_time = [0, datetime.min, datetime.min, datetime.min]
         self.error_id = 0
@@ -619,7 +619,9 @@ class Job(db.Model):
         current_app.socketio.emit('release_job', {'job_id': self.id, 'released': released}) 
 
     def setTimeStarted(self, time_started):
-        self.time_started = time_started
+            self.time_started = time_started
+            current_app.socketio.emit('set_time_started', {'job_id': self.id, 'started': time_started}) 
+
 
     def setTime(self, timeData, index):
         # timeData = datetime(y, m, d, h, min, s)
@@ -629,4 +631,3 @@ class Job(db.Model):
             current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData, 'index': index}) 
         else: 
             current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData.isoformat(), 'index': index}) 
-

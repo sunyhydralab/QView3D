@@ -86,6 +86,23 @@ export function setupPauseFeedbackSocket(printers: any) {
   })
 }
 
+export function setupTimeStartedSocket(printers: any) {
+  // Always set up the socket connection and event listener
+  socket.on('set_time_started', (data: any) => {
+    if (printers) {
+      const job = printers.value
+        .flatMap((printer: { queue: any }) => printer.queue)
+        .find((job: { id: any }) => job?.id === data.job_id)
+
+      if (job) {
+        job.time_started = data.time_started
+      }
+    } else {
+      console.error('printers or printers.value is undefined')
+    }
+  })
+}
+
 // function to constantly update progress of job
 export function setupProgressSocket(printers: any) {
   // Always set up the socket connection and event listener
@@ -192,7 +209,7 @@ export function setupColorChangeBuffer(printers: any) {
     if (printers) {
       const printer = printers.value.find((p: Device) => p.id === data.printerid)
       if (printer) {
-        printer.colorChangeBuffer = data.colorChangeBuffer
+        printer.colorbuff = data.colorbuff
       }
     } else {
       console.error('printers or printers.value is undefined')

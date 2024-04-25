@@ -135,6 +135,7 @@ class PrinterStatusService:
                 "error": printer.error, 
                 "canPause": printer.canPause,
                 "queue": [], # empty queue to store job objects 
+                "colorChangeBuffer": printer.colorbuff
                 # "colorChangeBuffer": printer.colorChangeBuffer
             }
             
@@ -156,6 +157,7 @@ class PrinterStatusService:
                     "comments": job.comments, 
                     "extruded": job.extruded,
                     "td_id": job.td_id,
+                    "time_started": job.time_started
                 }
                 printer_info['queue'].append(job_info)
             

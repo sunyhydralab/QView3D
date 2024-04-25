@@ -44,7 +44,7 @@ class Printer(db.Model):
     bed_temp = 0
     canPause = 0
     prevMes = ""
-    colorChangeBuffer = 0 
+    colorbuff = 0 
 
     def __init__(self, device, description, hwid, name, status=status, id=None):
         self.device = device
@@ -60,6 +60,7 @@ class Printer(db.Model):
         self.bed_temp = 0
         self.canPause = 0
         self.prevMes=""
+        self.colorbuff=0
         # self.colorChangeBuffer=0
 
         if id is not None:
@@ -173,9 +174,10 @@ class Printer(db.Model):
             }
             # supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
 
-        if (("original" in port.description.lower()) or ("prusa" in port.description.lower())) and (Printer.getPrinterByHwid(hwid_without_location) is None) :
-            printerList.append(port_info)
+            if (("original" in port.description.lower()) or ("prusa" in port.description.lower())) and (Printer.getPrinterByHwid(hwid_without_location) is None) :
+                printerList.append(port_info)
 
+                print(port_info)
         return printerList
 
     @classmethod
@@ -300,7 +302,6 @@ class Printer(db.Model):
             # logic here about time elapsed since last response
 
         response = ser.readline().decode("utf-8").strip()
-        print(response)
         if("error" in response):
             return "none"
             # if "ok" in response:
@@ -438,6 +439,11 @@ class Printer(db.Model):
                 # Replace file with the path to the file. "r" means read mode. 
                 # now instead of reading from 'g', we are reading line by line
                 for line in lines:
+
+                    # print("LINE: ", line, " STATUS: ", self.status, " FILE PAUSE: ", job.getFilePause())
+                    if("layer" in line.lower() and self.status=='colorchange' and job.getFilePause()==0 and self.colorbuff==0):
+                        self.setColorChangeBuffer(1)
+
                     # remove whitespace
                     line = line.strip()
                     # Don't send empty lines and comments. ";" is a comment in gcode.
@@ -447,13 +453,10 @@ class Printer(db.Model):
                         ].strip()  # Remove comments starting with ";"
 
                     if len(line) == 0 or line.startswith(";"):
-                        # if("layer" in line.lower() and job.getExtruded()==1): 
-                        #     print("SETTING BUFFER")
-                        #     self.setColorChangeBuffer(1)
                         continue
 
-                    if("G29 A" in line) and job.getTimeStarted()==False:
-                        job.setTimeStarted(True)
+                    if("G29 A" in line) and job.getTimeStarted()==0:
+                        job.setTimeStarted(1)
                         job.setTime(job.calculateEta(), 1)
                         job.setTime(datetime.now(), 2)
                  
@@ -465,7 +468,8 @@ class Printer(db.Model):
                         job.setTime(job.calculateColorChangeTotal(), 0)
                         job.setTime(datetime.min, 3)
                         job.setFilePause(0)
-                        # self.setColorChangeBuffer(0)
+                        if(self.getStatus()=="complete"):
+                            return "cancelled"
                         self.setStatus("printing")
                     
                     if("M600" in line):
@@ -503,7 +507,7 @@ class Printer(db.Model):
                                 break
                     
                     # software color change
-                    if (self.getStatus()=="colorchange" and job.getFilePause()==0):# and self.colorChangeBuffer==1):
+                    if (self.getStatus()=="colorchange" and job.getFilePause()==0 and self.colorbuff==1):
                         job.setTime(datetime.now(), 3)
                         # job.setTime(job.calculateTotalTime(), 0)
                         # job.setTime(job.updateEta(), 1)
@@ -513,7 +517,7 @@ class Printer(db.Model):
                         job.setTime(job.calculateColorChangeTotal(), 0)
                         job.setTime(datetime.min, 3)
                         job.setFilePause(1)
-                        # self.setColorChangeBuffer(0)
+                        self.setColorChangeBuffer(0)
                         # self.setStatus("printing")
 
                     # Increment the sent lines
@@ -623,11 +627,12 @@ class Printer(db.Model):
         #     self.sendStatusToJob(job, job.id, "error")
             return
         except Exception as e:
-            # print("exception in printNextInQueue except")
+            print(e)
             self.getQueue().deleteJob(job.id, self.id)
-            # self.setStatus("error")
+            self.setStatus("error")
             self.sendStatusToJob(job, job.id, "error")
-            self.setError(e)
+            return 
+            # self.handleVerdict("error", job)
             
     def beginPrint(self, job): 
         while True: 
@@ -765,10 +770,10 @@ class Printer(db.Model):
         except Exception as e:
             print('Error setting canPause:', e)
 
-    # def setColorChangeBuffer(self, buff): 
-    #     print(buff)
-    #     self.colorChangeBuffer = buff
-    #     current_app.socketio.emit('color_buff', {'printerid': self.id, 'colorChangeBuffer': buff})
+    def setColorChangeBuffer(self, buff): 
+        self.colorbuff = buff
+        current_app.socketio.emit('color_buff', {'printerid': self.id, 'colorChangeBuffer': buff})
+
 
             
             
