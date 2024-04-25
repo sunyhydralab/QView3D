@@ -149,8 +149,13 @@ const startPrint = async (printerid: number, jobid: number) => {
   await start(jobid, printerid)
 }
 
-const openPrinterInfo = (printer: Device) => {
+const openPrinterInfo = async (printer: Device) => {
+  if(printer.queue && printer.queue[0]){
+    await jobTime(printer.queue[0], printers)
+  }
+
   printer.isInfoExpanded = !printer.isInfoExpanded;
+
 }
 
 const releasePrinter = async (jobToFind: Job | undefined, key: number, printerIdToPrintTo: number) => {

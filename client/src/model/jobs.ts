@@ -104,6 +104,7 @@ export async function jobTime(job: Job, printers: any) {
         return
       }
 
+
       let totalTime = job.job_server![0]
       job.job_client!.total_time = totalTime * 1000
 
