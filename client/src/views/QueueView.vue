@@ -263,8 +263,9 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                   dragClass="hidden-ghost" :onEnd="handleDragEnd" v-if="printer.queue && printer.queue.length"
                   :move="isInqueue">
                   <template #item="{ element: job }">
-                    <tr :id="job.id" :class="{ printing: job.status === 'printing' }">
-                      <td class="truncate" :title="job.td_id">{{ job.td_id }}</td>
+                    <tr :id="job.id.toString()" :data-printer-id="printer.id" :data-job-id="job.id"
+                    :data-job-status="job.status" :key="job.id" :class="{ 'printing': job.status === 'printing' }">
+                    <td class="truncate" :title="job.td_id">{{ job.td_id }}</td>
                       <td class="text-center">
                         <div class="btn-group w-100">
                           <div class="btn btn-primary" @click="handleRerun(job, printer)">
