@@ -549,7 +549,6 @@ def downloadCSV():
 def repair_ports(): 
     try:
         ports = serial.tools.list_ports.comports()    
-        print("PORTS: ", ports)
         for port in ports: 
             hwid = port.hwid # get hwid 
             hwid_without_location = hwid.split(' LOCATION=')[0]

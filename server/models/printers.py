@@ -262,7 +262,7 @@ class Printer(db.Model):
         try:
             ports = Printer.getConnectedPorts()
             for port in ports:
-                hwid = port.hwid # get hwid 
+                hwid = port['hwid'] # get hwid 
                 # hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
                 # hwid_without_location = '-'.join(hwid_parts[:-1])
                 if hwid == cls.query.get(printerid).hwid:
