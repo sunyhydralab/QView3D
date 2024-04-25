@@ -447,7 +447,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                     </button>
                   </div>
                 </div>
-                <div v-else-if="printer.status == 'error'" class="alert alert-danger" role="alert">
+                <div v-else-if="printer.status == 'error'" class="alert alert-danger truncate" role="alert">
                   {{ printer?.error }}
                 </div>
                 <div v-else></div>
@@ -476,7 +476,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                             <span class="ms-2">GCode Image</span>
                           </a>
                         </li>
-                        <li>
+                        <!-- <li>
                           <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
                             data-bs-target="#gcodeLiveViewModal" v-if="printer.queue && printer.queue.length > 0"
                             v-bind:job="printer.queue[0]"
@@ -484,7 +484,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                             <i class="fas fa-code"></i>
                             <span class="ms-2">GCode Live</span>
                           </a>
-                        </li>
+                        </li> -->
                         <li v-if="printer.queue[0]">
                           <a class="dropdown-item d-flex align-items-center"
                             @click="getFileDownload(printer.queue[0].id)"
@@ -715,7 +715,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                   </button>
                 </div>
               </div>
-              <div v-else-if="printer.status == 'error'" class="alert alert-danger" role="alert">
+              <div v-else-if="printer.status == 'error'" class="alert alert-danger truncate" role="alert" :title="printer?.error">
                 {{ printer?.error }}
               </div>
               <div v-else></div>
@@ -744,7 +744,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                           <span class="ms-2">GCode Image</span>
                         </a>
                       </li>
-                      <li>
+                      <!-- <li>
                         <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
                           data-bs-target="#gcodeLiveViewModal" v-if="printer.queue && printer.queue.length > 0"
                           v-bind:job="printer.queue[0]"
@@ -752,7 +752,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                           <i class="fas fa-code"></i>
                           <span class="ms-2">GCode Live</span>
                         </a>
-                      </li>
+                      </li> -->
                       <li v-if="printer.queue[0]">
                         <a class="dropdown-item d-flex align-items-center" @click="getFileDownload(printer.queue[0].id)"
                           :disabled="printer.queue[0].file_name_original.includes('.gcode:')">
