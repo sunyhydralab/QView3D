@@ -7,7 +7,7 @@ import { saveAs } from 'file-saver'
 import { ref } from 'vue'
 
 export let pageSize = ref(10)
-
+export let isLoading = ref(false)
 // Submit form data
 export const selectedPrinters = ref<Array<Device>>([])
 export const file = ref<File>()

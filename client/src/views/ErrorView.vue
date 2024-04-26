@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { printers, type Device } from '../model/ports'
 import { type Issue, useGetIssues, useCreateIssues, useAssignIssue, useDeleteIssue } from '../model/issues'
-import { type Job, useGetErrorJobs, useAssignComment, useGetJobFile, useGetFile, useRemoveIssue } from '../model/jobs';
+import { type Job, useGetErrorJobs, useAssignComment, useGetJobFile, useGetFile, useRemoveIssue, isLoading } from '../model/jobs';
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
@@ -72,6 +72,7 @@ let filteredJobs = computed(() => {
 
 onMounted(async () => {
     try {
+        isLoading.value = true
         const retrieveissues = await issues()
         issuelist.value = retrieveissues
 
@@ -79,6 +80,8 @@ onMounted(async () => {
         const [joblist, total] = await jobhistoryError(page.value, pageSize.value, printerIds)
         jobs.value = joblist;
         totalJobs.value = total;
+
+        isLoading.value = false 
 
         totalPages.value = Math.ceil(total / pageSize.value);
         totalPages.value = Math.max(totalPages.value, 1);
@@ -111,11 +114,11 @@ watchEffect(() => {
 });
 
 const changePage = async (newPage: any) => {
+    isLoading.value = true
     if (newPage < 1 || newPage > Math.ceil(totalJobs.value / pageSize.value)) {
         return;
     }
     selectedJobs.value = [];
-
 
     page.value = newPage
     jobs.value = []
@@ -124,8 +127,10 @@ const changePage = async (newPage: any) => {
     const [joblist, total] = await jobhistoryError(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value)
     jobs.value = joblist;
     totalJobs.value = total;
+    isLoading.value = false
 }
 async function submitFilter() {
+    isLoading.value = true
     filterDropdown.value = false;
 
     if (date.value && Array.isArray(date.value)) {
@@ -153,9 +158,6 @@ async function submitFilter() {
     }
     console.log("ISSUES, " + selectedIssues.value)
 
-    // *** PASS START AND END DATE HERE, THEY ARE STRINGS ***
-    // ***  NEED TO HANDLE IF DATE IS EMPTY/NULL ***
-
     // Get the total number of jobs first, without considering the page number
     const [, total] = await jobhistoryError(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
     totalJobs.value = total;
@@ -174,6 +176,7 @@ async function submitFilter() {
     selectedJobs.value = [];
 
     date.value = null;
+    isLoading.value = false
 }
 
 
@@ -208,19 +211,23 @@ const ensureOneCheckboxChecked = () => {
 }
 
 const doCreateIssue = async () => {
+    isLoading.value = true
     await createIssue(newIssue.value)
     const newIssues = await issues()
     issuelist.value = newIssues
     newIssue.value = ''
     showText.value = false
+    isLoading.value = false
 }
 
 const doDeleteIssue = async () => {
+    isLoading.value = true  
     if (selectedIssue.value === undefined) return
     await deleteIssue(selectedIssue.value)
     const newIssues = await issues()
     issuelist.value = newIssues
     submitFilter()
+    isLoading.value = false
 }
 
 const doAssignIssue = async () => {
@@ -235,8 +242,8 @@ const doAssignIssue = async () => {
         selectedJob.value.errorid = selectedIssueObject.id
         selectedJob.value.error = selectedIssueObject.issue
     }
-    await assignComment(selectedJob.value, jobComments.value)
     selectedJob.value.comment = jobComments.value
+    await assignComment(selectedJob.value, jobComments.value)
     selectedIssueId.value = undefined
     selectedJob.value = undefined
 }
@@ -406,6 +413,10 @@ const openGCodeModal = async (job: Job, printerName: string) => {
     <div class="container">
         <div class="row w-100" style="margin-bottom: 0.5rem;">
 
+            <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            </button>
+            
             <div class="col-1 text-start" style="padding-left: 0">
                 <div style="position: relative;">
                     <button type="button" class="btn btn-primary dropdown-toggle"
