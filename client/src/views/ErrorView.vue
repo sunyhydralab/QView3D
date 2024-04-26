@@ -366,7 +366,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header d-flex align-items-end">
-                    <h5 class="modal-title mb-0" id="assignIssueLabel" style="line-height: 1;">Job #{{ selectedJob?.id
+                    <h5 class="modal-title mb-0" id="assignIssueLabel" style="line-height: 1;">Job #{{ selectedJob?.td_id
                         }}</h5>
                     <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px; line-height: 1;">{{
                         selectedJob?.date }}</h6>
@@ -567,10 +567,11 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                     <td v-if="job.errorid != null && job.errorid != 0">
                         {{ job.error }}
                     </td>
-                    <td v-else>
-                    </td>
-                    <td>{{ job.comment?.slice(0, 30) }}</td>
+                    <td v-else></td>
                     <td>{{job.date}}</td>
+                    <td>{{ job.comment?.slice(0, 30) }}</td>
+                    <!-- <td v-else>
+                    </td> -->
                     <td>
                         <div class="dropdown">
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
