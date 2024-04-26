@@ -335,7 +335,7 @@ class Printer(db.Model):
 
     def disconnect(self):
         if self.ser:
-            self.ser.write(f"M155 S0\n".encode("utf-8"))
+            # self.ser.write(f"M155 S0\n".encode("utf-8"))
             self.ser.close()
             self.setSer(None)
 
