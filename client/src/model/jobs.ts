@@ -60,6 +60,7 @@ export interface Job {
   timer?: NodeJS.Timeout
   time_started?: number
   colorbuff?: number 
+  printer_name?: string 
 }
 
 export async function jobTime(job: Job, printers: any) {

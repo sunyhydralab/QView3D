@@ -207,7 +207,7 @@ const doCloseRegisterModal = async () => {
                                                     <span class="ms-2">Restore Queue</span>
                                                 </a>
                                             </li>
-                                            <span class="tooltiptext">This returns jobs to this printer's queue that have a status of "inqueue" or "printing."</span>
+                                            <span class="tooltiptext">This returns jobs to this printer's queue that have a status of "inqueue" or "printing." This is useful if the queue is wiped during a power outage or an accidental server disconnection.</span>
                                         </div>
                                         <li>
                                             <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"

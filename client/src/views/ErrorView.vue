@@ -563,7 +563,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                     <td style="padding-left: 15px;">{{ job.td_id }}</td>
                     <td>{{ job.name }}</td>
                     <td>{{ job.file_name_original }}</td>
-                    <td>{{ job.printer }}</td>
+                    <td>{{ job.printer_name }}</td>
                     <td v-if="job.errorid != null && job.errorid != 0">
                         {{ job.error }}
                     </td>
