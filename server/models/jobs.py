@@ -534,7 +534,7 @@ class Job(db.Model):
                 jobs = db.session.query(cls, Issue).outerjoin(Issue, cls.error_id == Issue.id).all()
 
             # Specify the columns you want to include
-            column_names = ['name', 'status', 'date', 'printer_id', 'td_id', 'comments', 'file_name_original', 'issue']
+            column_names = ['td_id', 'printer', 'name','file_name_original', 'status', 'date', 'issue', 'comments']
 
             date_string = datetime.now()
             
@@ -546,7 +546,7 @@ class Job(db.Model):
                 writer = csv.writer(file)
                 writer.writerow(column_names)  # write headers
                 for job, issue in jobs:
-                    row = [getattr(job, 'name', ''), getattr(job, 'status', ''), getattr(job, 'date', ''), getattr(job, 'printer_id', ''), getattr(job, 'td_id', ''), getattr(job, 'comments', ''), getattr(job, 'file_name_original', ''), getattr(issue, 'issue', '') if issue else '']
+                    row = [getattr(job, 'td_id', ''), getattr(job, 'printer_name', ''), getattr(job, 'name', ''), getattr(job, 'file_name_original', ''), getattr(job, 'status', ''), getattr(job, 'date', ''), getattr(issue, 'issue', '') if issue else '', getattr(job, 'comments', '')]
                     writer.writerow(row)  # write data rows
             
             csv_file_path = f'./{csv_file_name}'
