@@ -551,12 +551,12 @@ const openGCodeModal = async (job: Job, printerName: string) => {
             <thead>
                 <tr>
                     <th style="width: 105px;">Ticket ID</th>
-                    <th style="width: 200px;">Printer</th>
-                    <th style="width: 232px;">Job Title</th>
-                    <th style="width: 232px;">File</th>
+                    <th style="width: 150px;">Printer</th>
+                    <th style="width: 175px;">Job Title</th>
+                    <th style="width: 175px;">File</th>
                     <th style="width: 150px;">Issue</th>
-                    <th>Date errored</th>
-                    <th style="width: 300px;">Comment</th>
+                    <th style="width: 264px">Date errored</th>
+                    <th style="width: 200px;">Comment</th>
                     <th style="width: 75px;">Actions</th>
                 </tr>
             </thead>
@@ -631,7 +631,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
             </tbody>
             <tbody v-else>
                 <tr>
-                    <td colspan="7">No jobs with errors found. </td>
+                    <td colspan="8">No jobs with errors found. </td>
                 </tr>
             </tbody>
         </table>

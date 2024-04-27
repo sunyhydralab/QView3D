@@ -508,9 +508,6 @@ const doDownloadCsv = async () => {
             <span v-if="isOffcanvasOpen"><i class="fas fa-star"></i></span>
             <span><i class="fas" :class="isOffcanvasOpen ? 'fa-chevron-right' : 'fa-chevron-left'"></i></span>
             <span v-if="!isOffcanvasOpen"><i class="fas fa-star"></i></span>
-            <!-- <span v-if="isOffcanvasOpen"><i class="fas fa-star"></i></span>
-            <span><i class="fas" :class="isOffcanvasOpen ? 'fa-chevron-right' : 'fa-chevron-left'"></i></span>
-            <span v-if="!isOffcanvasOpen"><i class="fas fa-star"></i></span> -->
         </button>
     </div>
 
@@ -730,7 +727,7 @@ const doDownloadCsv = async () => {
                     <td>
                         <div style="display: flex; justify-content: start; align-items: center;">
                             <div class="d-flex align-items-center" @click="favoriteJob(job, !job.favorite)">
-                                <i :class="job.favorite ? 'fas fa-star' : 'far fa-star'"></i>
+                                <i style="color: #1b1b1b;" :class="job.favorite ? 'fas fa-star' : 'far fa-star'"></i>
                             </div>
                             <div class="truncate" style="margin-left: 10px;" :title="job.name">
                                 {{ job.name }}
