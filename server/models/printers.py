@@ -335,7 +335,7 @@ class Printer(db.Model):
 
     def disconnect(self):
         if self.ser:
-            self.ser.write(f"M155 S0\n".encode("utf-8"))
+            # self.ser.write(f"M155 S0\n".encode("utf-8"))
             self.ser.close()
             self.setSer(None)
 
@@ -646,11 +646,19 @@ class Printer(db.Model):
             return
         except Exception as e:
             print(e)
+            self.setErrorMessage(e)
             self.getQueue().deleteJob(job.id, self.id)
             self.setStatus("error")
             self.sendStatusToJob(job, job.id, "error")
             return 
             # self.handleVerdict("error", job)
+
+    def setErrorMessage(self, error):
+        self.error = str(error)
+        self.setStatus("error")
+        current_app.socketio.emit(
+            "error_update", {"printerid": self.id, "error": self.error}
+        )
             
     def beginPrint(self, job): 
         while True: 

@@ -197,7 +197,7 @@ const doCloseRegisterModal = async () => {
                                                     <span class="ms-2">Hard Reset</span>
                                                 </a>
                                             </li>
-                                            <span class="tooltiptext">Resets the printers thread.</span>
+                                            <span class="tooltiptext">This wipes the queue and resets the printer's communication thread.</span>
                                         </div>
                                         <div class="tooltip" style="width: 100%;">
                                             <li>
@@ -207,7 +207,7 @@ const doCloseRegisterModal = async () => {
                                                     <span class="ms-2">Restore Queue</span>
                                                 </a>
                                             </li>
-                                            <span class="tooltiptext">Restores the printers queue.</span>
+                                            <span class="tooltiptext">This returns jobs to this printer's queue that have a status of "inqueue" or "printing."</span>
                                         </div>
                                         <li>
                                             <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
