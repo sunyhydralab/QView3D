@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers, type Device } from '../model/ports'
-import { type Issue, useGetIssues, useCreateIssues, useAssignIssue, useDeleteIssue } from '../model/issues'
+import { type Issue, useGetIssues, useCreateIssues, useAssignIssue, useDeleteIssue, useEditIssue } from '../model/issues'
 import { type Job, useGetErrorJobs, useAssignComment, useGetJobFile, useGetFile, useRemoveIssue } from '../model/jobs';
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
@@ -17,6 +17,7 @@ const { getFileDownload } = useGetJobFile()
 const { getFile } = useGetFile()
 const { deleteIssue } = useDeleteIssue()
 const { removeIssue } = useRemoveIssue()
+const { editIssue } = useEditIssue()
 
 const showText = ref(false)
 const newIssue = ref('')
@@ -24,6 +25,7 @@ const selectedIssue = ref<Issue>()
 const selectedIssueId = ref<number>()
 const selectedJob = ref<Job>()
 const selectedIssues = ref<Array<number>>([])
+const newName = ref('')
 
 const selectedPrinters = ref<Array<Number>>([])
 const selectedJobs = ref<Array<Job>>([]);
@@ -46,6 +48,9 @@ let oldestFirst = ref<boolean>(false)
 let order = ref<string>('newest')
 let favoriteOnly = ref<boolean>(false)
 let jobComments = ref('')
+
+let editMode = ref(false)
+let editNum = ref<number | undefined>(0)
 
 let page = ref(1)
 let pageSize = ref(10)
@@ -273,6 +278,17 @@ const openGCodeModal = async (job: Job, printerName: string) => {
     }
 }
 
+const saveIssue = async (issue: Issue) => {
+    await editIssue(issue.id, newName.value.trim())
+    issue.issue = newName.value.trim();
+
+    issuelist.value = await issues()
+
+    editMode.value = false
+    newName.value = ''
+    editNum.value = undefined
+}
+
 </script>
 
 <template>
@@ -329,7 +345,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header d-flex align-items-end">
-                    <h5 class="modal-title" id="assignIssueLabel">
+                    <h5 class="modal-title" id="deleteIssueLabel">
                         <b>Delete Issue</b>
                     </h5>
 
@@ -352,6 +368,52 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="submit" @click.prevent="doDeleteIssue" class="btn btn-danger me-2"
                         data-bs-dismiss="modal" :disabled="selectedIssue == undefined">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editissueModal" tabindex="-1" aria-labelledby="editIssueLabel" aria-hidden="true"
+        data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header d-flex align-items-end">
+                    <h5 class="modal-title" id="editIssueLabel">
+                        <b>Edit Issue</b>
+                    </h5>
+
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form @submit.prevent="">
+                        <div class="mb-3">
+                            <label for="editName" class="form-label">Select Issue</label>
+                            <div v-for="issue in issuelist" :key="issue.id">
+
+                                <div v-if="editMode && (editNum == issue.id)" class="d-flex align-items-center"
+                                style="margin-bottom: 5px;">
+                                    <input id="editName" type="text" class="form-control me-2" v-model="newName" />
+                                    <button class="btn btn-success me-2" @click="saveIssue(issue)">Save</button>
+                                    <button class="btn btn-secondary"
+                                    @click="editMode = false; editNum = undefined; newName = ''">Cancel</button>
+                                </div>
+                                <div v-else>
+                                    <p>
+                                        {{ issue.issue }}
+                                        &nbsp; &nbsp; &nbsp;
+                                        <button class="btn btn-success" 
+                                            @click="editMode = true; editNum = issue.id; newName = issue.issue || ''">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </p>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -532,6 +594,12 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                     data-bs-target="#assignissueModal">
                     <i class="fas fa-plus"></i>
                     New
+                </button>
+
+                <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal"
+                    data-bs-target="#editissueModal">
+                    <i class="fas fa-edit"></i>
+                    Edit
                 </button>
 
                 <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteissueModal">
