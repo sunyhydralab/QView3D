@@ -26,7 +26,7 @@ const filamentTypes = ['PLA', 'PETG', 'ABS', 'ASA', 'FLEX', 'HIPS', 'EDGE', 'NGE
 
 // file upload
 const handleFileUpload = (event: Event) => {
-    isLoading.value = true 
+    isLoading.value = true
     const target = event.target as HTMLInputElement;
     const uploadedFile = target.files ? target.files[0] : undefined;
     if (uploadedFile && uploadedFile.name.length > 50) {
@@ -118,6 +118,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
 
 // sends job to printer queue
 const handleSubmit = async () => {
+    isAsteriksVisible.value = false;
     isLoading.value = true
     let isFavoriteSet = false;
     let res = null
@@ -200,6 +201,7 @@ const handleSubmit = async () => {
         toast.error('Failed to add job to queue. Unexpected response.')
     }
     isLoading.value = false
+    isAsteriksVisible.value = true;
 }
 
 function resetValues() {
@@ -220,17 +222,17 @@ function resetValues() {
 }
 
 watch(selectedPrinters, () => {
-  if (quantity.value < selectedPrinters.value.length) {
-    quantity.value = selectedPrinters.value.length;
-  }
+    if (quantity.value < selectedPrinters.value.length) {
+        quantity.value = selectedPrinters.value.length;
+    }
 });
 
 watchEffect(() => {
-  if (quantity.value > 1000) {
-    quantity.value = 1000;
-    toast.error('Quantity cannot be greater than 1000');
-  }
-  isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0) && filament.value !== '');
+    if (quantity.value > 1000) {
+        quantity.value = 1000;
+        toast.error('Quantity cannot be greater than 1000');
+    }
+    isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0) && filament.value !== '');
 });
 
 const allSelected = computed({
@@ -298,14 +300,31 @@ const getFilament = (file: File) => {
         </div>
     </div>
 
+    <!-- <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
+        Loading, please do not refresh or leave the page...
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    </button> -->
+
+    <!-- loading modal -->
+    <transition name="fade">
+        <div v-if="isLoading" class="modal fade show d-block" id="loadingModal" tabindex="-1"
+            aria-labelledby="loadingModalLabel" aria-hidden="true"
+            style="background-color: rgba(0, 0, 0, 0.3); backdrop-filter: blur(2px);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body d-flex justify-content-center align-items-center" style="user-select: none;">
+                        Submitting the jobs, please do not refresh
+                        <div class="spinner-border" role="status"
+                            style="width: 2rem; height: 2rem; margin-left: 0.5rem;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </transition>
+
     <div class="container">
-        <!-- <b>Submit Job View</b> -->
-
-        <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
-            Loading, please do not refresh or leave the page...
-            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-        </button>
-
         <div class="card" style="border: 1px solid #484848; background: #d8d8d8;">
             <div class="card-body">
                 <form @submit.prevent="handleSubmit" ref="form">
@@ -385,7 +404,7 @@ const getFilament = (file: File) => {
                         <div class="input-group">
                             <div class="dropdown w-100" id="filamentDropdown">
 
-                                
+
                                 <button class="btn btn-primary dropdown-toggle w-100" type="button"
                                     id="dropdownMenuButton" data-bs-toggle="dropdown"
                                     :aria-expanded="filament ? 'false' : 'true'">
@@ -446,8 +465,8 @@ const getFilament = (file: File) => {
                     </div>
 
                     <div>
-                        <button v-if="selectedPrinters.length > 1" :disabled="isLoading || isSubmitDisabled" class="btn btn-primary"
-                            type="submit">
+                        <button v-if="selectedPrinters.length > 1" :disabled="isLoading || isSubmitDisabled"
+                            class="btn btn-primary" type="submit">
                             Add to queues
                         </button>
                         <button v-else :disabled="isLoading || isSubmitDisabled" class="btn btn-primary" type="submit">

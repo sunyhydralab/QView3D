@@ -40,6 +40,9 @@ let filterApplied = ref(0)
 
 const router = useRouter();
 
+let displayJobs = ref<Array<Job>>([])
+let fetchedJobs = ref<Array<Job>>([])
+
 let jobs = ref<Array<Job>>([])
 let filter = ref('')
 let oldestFirst = ref<boolean>(false)
@@ -75,9 +78,9 @@ let filterDropdown = ref(false)
 // computed property that returns the filtered list of jobs. 
 let filteredJobs = computed(() => {
     if (filter.value) {
-        return jobs.value.filter(job => job.printer.includes(filter.value))
+        return displayJobs.value.filter(job => job.printer.includes(filter.value))
     } else {
-        return jobs.value
+        return displayJobs.value
     }
 })
 
@@ -85,11 +88,10 @@ let offcanvasElement: HTMLElement | null = null;
 
 onMounted(async () => {
     try {
+        isLoading.value = true;
 
-        isLoading.value = true
-
-        const retrieveissues = await issues()
-        issuelist.value = retrieveissues
+        const retrieveissues = await issues();
+        issuelist.value = retrieveissues;
 
         offcanvasElement = document.getElementById('offcanvasRight');
 
@@ -99,16 +101,19 @@ onMounted(async () => {
         }
 
         const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-        const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds)
-        jobs.value = joblist;
-        totalJobs.value = total;
 
-        totalPages.value = Math.ceil(total / pageSize.value);
+        // Fetch jobs into `fetchedJobs`
+        [fetchedJobs.value, totalJobs.value] = await jobhistory(page.value, pageSize.value, printerIds);
+
+        // Update `displayJobs` with the fetched jobs
+        displayJobs.value = fetchedJobs.value;
+
+        totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
         totalPages.value = Math.max(totalPages.value, 1);
 
-        favoriteJobs.value = await getFavoriteJobs()
+        favoriteJobs.value = await getFavoriteJobs();
 
-        isLoading.value = false
+        isLoading.value = false;
 
         document.addEventListener('click', closeDropdown);
 
@@ -119,9 +124,9 @@ onMounted(async () => {
         });
 
     } catch (error) {
-        console.error(error)
+        console.error(error);
     }
-})
+});
 
 const onShownOffcanvas = () => {
     offcanvasElement?.removeAttribute('tabindex');
@@ -163,27 +168,27 @@ const handleEmptyRerun = async (job: Job) => {
 }
 
 const changePage = async (newPage: any) => {
-    isLoading.value = true
+    isLoading.value = true;
     if (newPage < 1 || newPage > Math.ceil(totalJobs.value / pageSize.value)) {
         return;
     }
     selectedJobs.value = [];
     selectAllCheckbox.value = false;
 
-    page.value = newPage
-    jobs.value = []
-    jobs.value = []
+    page.value = newPage;
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
-    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, startDateString.value, endDateString.value);
-    jobs.value = joblist;
-    totalJobs.value = total;
+    // Fetch new jobs data into `fetchedJobs`
+    [fetchedJobs.value, totalJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, startDateString.value, endDateString.value);
 
-    isLoading.value = false 
-}
+    // Update `displayJobs` with the new data
+    displayJobs.value = fetchedJobs.value;
+
+    isLoading.value = false;
+};
 
 async function submitFilter() {
-    isLoading.value = true
+    isLoading.value = true;
     filterDropdown.value = false;
     filterApplied.value = 1;
 
@@ -199,7 +204,6 @@ async function submitFilter() {
         }
     }
 
-    jobs.value = []
     oldestFirst.value = order.value === 'oldest';
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
@@ -211,15 +215,8 @@ async function submitFilter() {
         searchCriteria.value = searchJob.value;
     }
 
-    // *** PASS START AND END DATE HERE, THEY ARE STRINGS ***
-    // ***  NEED TO HANDLE IF DATE IS EMPTY/NULL ***
-
     // Get the total number of jobs first, without considering the page number
-    const [alljobs, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, startDateString.value, endDateString.value);
-    totalJobs.value = total;
-    everyJob.value = alljobs;
-
-    console.log("SETING JOBS ", everyJob.value)
+    [fetchedJobs.value, totalJobs.value] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, startDateString.value, endDateString.value);
 
     totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
     totalPages.value = Math.max(totalPages.value, 1);
@@ -229,14 +226,15 @@ async function submitFilter() {
     }
 
     // Now fetch the jobs for the current page
-    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, startDateString.value, endDateString.value); jobs.value = joblist;
+    [fetchedJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, startDateString.value, endDateString.value);
+
+    // Update `displayJobs` with the fetched jobs
+    displayJobs.value = fetchedJobs.value;
 
     selectedJobs.value = [];
     selectAllCheckbox.value = false;
 
-    date.value = null;
-
-    isLoading.value = false
+    isLoading.value = false;
 }
 
 function clearFilter() {
@@ -272,14 +270,17 @@ const ensureOneCheckboxChecked = () => {
 }
 
 const confirmDelete = async () => {
-    isLoading.value = true
+    isLoading.value = true;
     const deletionPromises = selectedJobs.value.map(job => deleteJob(job));
     await Promise.all(deletionPromises);
 
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
-    jobs.value = joblist;
-    totalJobs.value = total;
+
+    // Fetch jobs into `fetchedJobs`
+    [fetchedJobs.value, totalJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value);
+
+    // Update `displayJobs` with the fetched jobs
+    displayJobs.value = fetchedJobs.value;
 
     selectedJobs.value = [];
     selectAllCheckbox.value = false;
@@ -287,7 +288,7 @@ const confirmDelete = async () => {
     submitFilter();
 
     favoriteJobs.value = await getFavoriteJobs();
-    isLoading.value = false
+    isLoading.value = false;
 }
 
 const selectAllJobs = () => {
@@ -400,7 +401,7 @@ const doDownloadCsv = async () => {
                         selectedJob?.td_id
                     }}</h5>
                     <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px; line-height: 1;">{{
-                            selectedJob?.date }}</h6>
+                        selectedJob?.date }}</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
                         @click="selectedIssue = undefined; selectedJob = undefined;"></button>
                 </div>
@@ -584,14 +585,28 @@ const doDownloadCsv = async () => {
         </div>
     </div>
 
+    <transition name="fade">
+        <div v-if="isLoading" class="modal fade show d-block" id="loadingModal" tabindex="-1"
+            aria-labelledby="loadingModalLabel" aria-hidden="true"
+            style="background-color: rgba(0, 0, 0, 0.3); backdrop-filter: blur(2px);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body d-flex justify-content-center align-items-center" style="user-select: none;">
+                        Fetching the jobs, please do not refresh
+                        <div class="spinner-border" role="status"
+                            style="width: 2rem; height: 2rem; margin-left: 0.5rem;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </transition>
+
     <div class="container">
         <!-- <b>Job History View</b> -->
         <!-- delete jobs, filter dropdown, clear space -->
         <div class="row w-100" style="margin-bottom: 0.5rem;">
-
-            <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            </button>
 
             <div class="col-1 text-start" style="padding-left: 0">
 
@@ -833,12 +848,6 @@ const doDownloadCsv = async () => {
     </div>
 </template>
 <style scoped>
-.scrollable-filter {
-    height: 500px;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
 .sticky {
     position: sticky;
     bottom: 0px;

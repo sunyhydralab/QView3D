@@ -37,6 +37,8 @@ let endDateString = ref<string>('');
 
 const router = useRouter();
 
+let displayJobs = ref<Array<Job>>([])
+let fetchedJobs = ref<Array<Job>>([])
 
 let jobs = ref<Array<Job>>([])
 let issuelist = ref<Array<Issue>>([])
@@ -63,30 +65,33 @@ const isOnlyFileNameChecked = computed(() => !searchByJobName.value && searchByF
 // computed property that returns the filtered list of jobs. 
 let filteredJobs = computed(() => {
     if (filter.value) {
-        return jobs.value.filter(job => job.printer.includes(filter.value))
+        return displayJobs.value.filter(job => job.printer.includes(filter.value))
     } else {
-        return jobs.value
+        return displayJobs.value
     }
 })
 
-
 onMounted(async () => {
     try {
-        isLoading.value = true
-        const retrieveissues = await issues()
-        issuelist.value = retrieveissues
+        isLoading.value = true;
+
+        const retrieveissues = await issues();
+        issuelist.value = retrieveissues;
 
         const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-        const [joblist, total] = await jobhistoryError(page.value, pageSize.value, printerIds)
-        jobs.value = joblist;
-        totalJobs.value = total;
+        
+        // Fetch jobs into `fetchedJobs` and total into `totalJobs`
+        [fetchedJobs.value, totalJobs.value] = await jobhistoryError(page.value, pageSize.value, printerIds);
+        
+        // Update `displayJobs` with the fetched jobs
+        displayJobs.value = fetchedJobs.value;
 
-        isLoading.value = false 
+        isLoading.value = false;
 
-        totalPages.value = Math.ceil(total / pageSize.value);
+        totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
         totalPages.value = Math.max(totalPages.value, 1);
 
-        console.log(jobs.value)
+        console.log(displayJobs.value);
 
         document.addEventListener('click', closeDropdown);
 
@@ -97,9 +102,9 @@ onMounted(async () => {
         });
 
     } catch (error) {
-        console.error(error)
+        console.error(error);
     }
-})
+});
 
 onBeforeUnmount(() => {
     document.removeEventListener('click', closeDropdown);
@@ -121,16 +126,19 @@ const changePage = async (newPage: any) => {
     selectedJobs.value = [];
 
     page.value = newPage
-    jobs.value = []
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
-    const [joblist, total] = await jobhistoryError(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value)
-    jobs.value = joblist;
-    totalJobs.value = total;
+    // Fetch jobs into `fetchedJobs` and total into `totalJobs`
+    [fetchedJobs.value, totalJobs.value] = await jobhistoryError(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
+    
+    // Update `displayJobs` with the fetched jobs
+    displayJobs.value = fetchedJobs.value;
+
     isLoading.value = false
 }
+
 async function submitFilter() {
-    isLoading.value = true
+    isLoading.value = true;
     filterDropdown.value = false;
 
     if (date.value && Array.isArray(date.value)) {
@@ -145,7 +153,6 @@ async function submitFilter() {
         }
     }
 
-    jobs.value = []
     oldestFirst.value = order.value === 'oldest';
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
@@ -156,11 +163,9 @@ async function submitFilter() {
     } else {
         searchCriteria.value = searchJob.value;
     }
-    console.log("ISSUES, " + selectedIssues.value)
 
     // Get the total number of jobs first, without considering the page number
-    const [, total] = await jobhistoryError(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
-    totalJobs.value = total;
+    [fetchedJobs.value, totalJobs.value] = await jobhistoryError(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
 
     totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
     totalPages.value = Math.max(totalPages.value, 1);
@@ -170,13 +175,13 @@ async function submitFilter() {
     }
 
     // Now fetch the jobs for the current page
-    const [joblist] = await jobhistoryError(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
-    jobs.value = joblist;
+    [fetchedJobs.value] = await jobhistoryError(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
+
+    // Update `displayJobs` with the fetched jobs
+    displayJobs.value = fetchedJobs.value;
 
     selectedJobs.value = [];
-
-    date.value = null;
-    isLoading.value = false
+    isLoading.value = false;
 }
 
 
@@ -221,7 +226,7 @@ const doCreateIssue = async () => {
 }
 
 const doDeleteIssue = async () => {
-    isLoading.value = true  
+    isLoading.value = true
     if (selectedIssue.value === undefined) return
     await deleteIssue(selectedIssue.value)
     const newIssues = await issues()
@@ -373,7 +378,8 @@ const openGCodeModal = async (job: Job, printerName: string) => {
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header d-flex align-items-end">
-                    <h5 class="modal-title mb-0" id="assignIssueLabel" style="line-height: 1;">Job #{{ selectedJob?.td_id
+                    <h5 class="modal-title mb-0" id="assignIssueLabel" style="line-height: 1;">Job #{{
+                        selectedJob?.td_id
                         }}</h5>
                     <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px; line-height: 1;">{{
                         selectedJob?.date }}</h6>
@@ -410,13 +416,26 @@ const openGCodeModal = async (job: Job, printerName: string) => {
         </div>
     </div>
 
+    <transition name="fade">
+        <div v-if="isLoading" class="modal fade show d-block" id="loadingModal" tabindex="-1"
+            aria-labelledby="loadingModalLabel" aria-hidden="true"
+            style="background-color: rgba(0, 0, 0, 0.3); backdrop-filter: blur(2px);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body d-flex justify-content-center align-items-center" style="user-select: none;">
+                        Fetching the jobs, please do not refresh
+                        <div class="spinner-border" role="status"
+                            style="width: 2rem; height: 2rem; margin-left: 0.5rem;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </transition>
+
     <div class="container">
         <div class="row w-100" style="margin-bottom: 0.5rem;">
-
-            <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            </button>
-            
             <div class="col-1 text-start" style="padding-left: 0">
                 <div style="position: relative;">
                     <button type="button" class="btn btn-primary dropdown-toggle"
@@ -582,7 +601,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                     </td>
                     <td v-else>
                     </td>
-                    <td>{{job.date}}</td>
+                    <td>{{ job.date }}</td>
                     <td class="truncate" :title="job.comment">{{ job.comment }}</td>
                     <td>
                         <div class="dropdown">
@@ -660,12 +679,6 @@ const openGCodeModal = async (job: Job, printerName: string) => {
     </div>
 </template>
 <style scoped>
-.scrollable-filter {
-    height: 500px;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
 .sticky {
     position: sticky;
     bottom: 0px;
