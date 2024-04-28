@@ -359,13 +359,13 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
 
                   <button class="btn btn-success" :disabled="printer.queue?.[0]?.extruded==0"
                     @click="setPrinterStatus(printer, 'paused')"
-                    v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0 && printer.queue?.[0]?.extruded == 1)">
+                    v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
                     Pause
                   </button>
 
                   <button class="btn btn-success" :disabled="printer.queue?.[0]?.extruded==0"
                     @click="setPrinterStatus(printer, 'colorchange')"
-                    v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0 && printer.queue?.[0]?.extruded == 1)">
+                    v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
                     Color&nbsp;Change
                   </button>
 
@@ -629,13 +629,13 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
 
                 <button class="btn btn-success" :disabled="printer.queue?.[0]?.extruded==0"
                   @click="setPrinterStatus(printer, 'paused')"
-                  v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0 && printer.queue?.[0]?.extruded == 1)">
+                  v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
                   Pause
                 </button>
 
                 <button class="btn btn-success" :disabled="printer.queue?.[0]?.extruded==0"
                   @click="setPrinterStatus(printer, 'colorchange')"
-                  v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0 && printer.queue?.[0]?.extruded == 1)">
+                  v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
                   Color&nbsp;Change
                 </button>
 
