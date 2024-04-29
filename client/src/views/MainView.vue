@@ -744,7 +744,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
                           <span class="ms-2">GCode Image</span>
                         </a>
                       </li>
-                      <li v-if="printer.queue.length > 0 && printer.queue[0].extruded">
+                      <!-- <li v-if="printer.queue.length > 0 && printer.queue[0].extruded">
                         <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
                           data-bs-target="#gcodeLiveViewModal" v-if="printer.queue && printer.queue.length > 0"
                           v-bind:job="printer.queue[0]"

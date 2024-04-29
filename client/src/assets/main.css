@@ -121,8 +121,8 @@ th {
   visibility: hidden;
   opacity: 0;
   transition:
-  opacity 0.2s linear,
-  visibility 0.2s linear 0.2s;
+    opacity 0.2s linear,
+    visibility 0.2s linear 0.2s;
   width: 200px;
   background-color: #484848;
   color: #dbdbdb;
@@ -190,21 +190,25 @@ th {
 
 .fade-enter-active,
 .fade-leave-active {
-    transition: opacity .5s;
+  transition: opacity 0.5s;
 }
 
 .fade-enter-from,
 .fade-leave-to {
-    opacity: 0;
+  opacity: 0;
 }
 
 .fade-enter-to,
 .fade-leave-from {
-    opacity: 1;
+  opacity: 1;
 }
 
 .scrollable-filter {
   height: 550px;
   overflow-y: auto;
   overflow-x: hidden;
+}
+.page-of-pages {
+  width: 130px;
+  text-align: center;
 }

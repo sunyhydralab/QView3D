@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { printers, type Device } from '../model/ports'
 import { pageSize, useGetJobs, type Job, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useDownloadCsv, useRemoveIssue, isLoading } from '../model/jobs';
-import { computed, onMounted, onBeforeUnmount, ref, watchEffect } from 'vue';
+import { computed, onMounted, onBeforeUnmount, ref, watchEffect, onUnmounted } from 'vue';
 import { type Issue, useGetIssues, useAssignIssue } from '../model/issues'
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
@@ -113,8 +113,6 @@ onMounted(async () => {
 
         favoriteJobs.value = await getFavoriteJobs();
 
-        isLoading.value = false;
-
         document.addEventListener('click', closeDropdown);
 
         const modal = document.getElementById('gcodeImageModal');
@@ -123,9 +121,15 @@ onMounted(async () => {
             isGcodeImageVisible.value = false;
         });
 
+        isLoading.value = false;
+
     } catch (error) {
         console.error(error);
     }
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', closeDropdown);
 });
 
 const onShownOffcanvas = () => {
@@ -168,24 +172,23 @@ const handleEmptyRerun = async (job: Job) => {
 }
 
 const changePage = async (newPage: any) => {
-    isLoading.value = true;
+    isLoading.value = true
     if (newPage < 1 || newPage > Math.ceil(totalJobs.value / pageSize.value)) {
         return;
     }
     selectedJobs.value = [];
-    selectAllCheckbox.value = false;
 
-    page.value = newPage;
+    page.value = newPage
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
-    // Fetch new jobs data into `fetchedJobs`
-    [fetchedJobs.value, totalJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, startDateString.value, endDateString.value);
+    // Fetch jobs into `fetchedJobs` and total into `totalJobs`
+    [fetchedJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, startDateString.value, endDateString.value);
 
-    // Update `displayJobs` with the new data
+    // Update `displayJobs` with the fetched jobs
     displayJobs.value = fetchedJobs.value;
 
-    isLoading.value = false;
-};
+    isLoading.value = false
+}
 
 async function submitFilter() {
     isLoading.value = true;
@@ -588,15 +591,12 @@ const doDownloadCsv = async () => {
     <transition name="fade">
         <div v-if="isLoading" class="modal fade show d-block" id="loadingModal" tabindex="-1"
             aria-labelledby="loadingModalLabel" aria-hidden="true"
-            style="background-color: rgba(0, 0, 0, 0.3); backdrop-filter: blur(2px);">
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow-y: hidden;">
             <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-body d-flex justify-content-center align-items-center" style="user-select: none;">
-                        Fetching the jobs, please do not refresh
-                        <div class="spinner-border" role="status"
-                            style="width: 2rem; height: 2rem; margin-left: 0.5rem;">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
+                <div class="modal-body d-flex justify-content-center align-items-center"
+                    style="user-select: none; position: relative;">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
                     </div>
                 </div>
             </div>
@@ -604,8 +604,6 @@ const doDownloadCsv = async () => {
     </transition>
 
     <div class="container">
-        <!-- <b>Job History View</b> -->
-        <!-- delete jobs, filter dropdown, clear space -->
         <div class="row w-100" style="margin-bottom: 0.5rem;">
 
             <div class="col-1 text-start" style="padding-left: 0">
@@ -834,12 +832,14 @@ const doDownloadCsv = async () => {
                 </tr>
             </tbody>
         </table>
+
         <nav aria-label="Page navigation">
             <ul class="pagination mt-2">
                 <li class="page-item" :class="{ 'disabled': page <= 1 }">
                     <a class="page-link" href="#" @click.prevent="changePage(page - 1)">Previous</a>
                 </li>
-                <li class="page-item disabled"><a class="page-link">Page {{ page }} of {{ totalPages }}</a></li>
+                <li class="page-item disabled page-of-pages"><a class="page-link">Page {{ page }} of {{ totalPages
+                        }}</a></li>
                 <li class="page-item" :class="{ 'disabled': page >= totalPages }">
                     <a class="page-link" href="#" @click.prevent="changePage(page + 1)">Next</a>
                 </li>

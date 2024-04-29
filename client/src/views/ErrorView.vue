@@ -79,14 +79,12 @@ onMounted(async () => {
         issuelist.value = retrieveissues;
 
         const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-        
+
         // Fetch jobs into `fetchedJobs` and total into `totalJobs`
         [fetchedJobs.value, totalJobs.value] = await jobhistoryError(page.value, pageSize.value, printerIds);
-        
+
         // Update `displayJobs` with the fetched jobs
         displayJobs.value = fetchedJobs.value;
-
-        isLoading.value = false;
 
         totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
         totalPages.value = Math.max(totalPages.value, 1);
@@ -100,6 +98,8 @@ onMounted(async () => {
         imageModal?.addEventListener('hidden.bs.modal', () => {
             isGcodeImageVisible.value = false;
         });
+
+        isLoading.value = false;
 
     } catch (error) {
         console.error(error);
@@ -130,7 +130,7 @@ const changePage = async (newPage: any) => {
 
     // Fetch jobs into `fetchedJobs` and total into `totalJobs`
     [fetchedJobs.value, totalJobs.value] = await jobhistoryError(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
-    
+
     // Update `displayJobs` with the fetched jobs
     displayJobs.value = fetchedJobs.value;
 
@@ -416,24 +416,6 @@ const openGCodeModal = async (job: Job, printerName: string) => {
         </div>
     </div>
 
-    <transition name="fade">
-        <div v-if="isLoading" class="modal fade show d-block" id="loadingModal" tabindex="-1"
-            aria-labelledby="loadingModalLabel" aria-hidden="true"
-            style="background-color: rgba(0, 0, 0, 0.3); backdrop-filter: blur(2px);">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-body d-flex justify-content-center align-items-center" style="user-select: none;">
-                        Fetching the jobs, please do not refresh
-                        <div class="spinner-border" role="status"
-                            style="width: 2rem; height: 2rem; margin-left: 0.5rem;">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </transition>
-
     <div class="container">
         <div class="row w-100" style="margin-bottom: 0.5rem;">
             <div class="col-1 text-start" style="padding-left: 0">
@@ -576,101 +558,118 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                 </button>
             </div>
         </div>
-
-        <table class="table-striped">
-            <thead>
-                <tr>
-                    <th style="width: 105px;">Ticket ID</th>
-                    <th style="width: 150px;">Printer</th>
-                    <th style="width: 175px;">Job Title</th>
-                    <th style="width: 175px;">File</th>
-                    <th style="width: 150px;">Issue</th>
-                    <th style="width: 264px">Date errored</th>
-                    <th style="width: 200px;">Comment</th>
-                    <th style="width: 75px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody v-if="filteredJobs.length > 0">
-                <tr v-for="job in filteredJobs" :key="job.id">
-                    <td class="truncate" :title="job.td_id.toString()">{{ job.td_id }}</td>
-                    <td class="truncate" :title="job.printer_name">{{ job.printer_name }}</td>
-                    <td class="truncate" :title="job.name">{{ job.name }}</td>
-                    <td class="truncate" :title="job.file_name_original">{{ job.file_name_original }}</td>
-                    <td class="truncate" :title="job.error" v-if="job.errorid != null && job.errorid != 0">
-                        {{ job.error }}
-                    </td>
-                    <td v-else>
-                    </td>
-                    <td>{{ job.date }}</td>
-                    <td class="truncate" :title="job.comment">{{ job.comment }}</td>
-                    <td>
-                        <div class="dropdown">
-                            <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
-                                <button type="button" id="settingsDropdown" data-bs-toggle="dropdown"
-                                    aria-expanded="false" style="background: none; border: none;">
-                                    <i class="fa-solid fa-bars"></i>
-                                </button>
-                                <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
-                                    <li>
-                                        <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
-                                            data-bs-target="#gcodeImageModal" @click="openGCodeModal(job, job.printer)">
-                                            <i class="fa-regular fa-image"></i>
-                                            <span class="ms-2">Image Viewer</span>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
-                                            data-bs-target="#issueModal" @click="setJob(job); showText = false">
-                                            <i class="fas fa-comments"></i>
-                                            <span class="ms-2">Comments</span>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item d-flex align-items-center"
-                                            @click="getFileDownload(job.id)"
-                                            :disabled="job.file_name_original.includes('.gcode:')">
-                                            <i class="fas fa-download"></i>
-                                            <span class="ms-2">Download</span>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <hr class="dropdown-divider">
-                                    </li>
-                                    <li class="dropdown-submenu position-relative">
-                                        <a class="dropdown-item d-flex justify-content-between align-items-center"
-                                            @click="handleEmptyRerun">
-                                            <div class="d-flex align-items-center">
-                                                <i class="fa-solid fa-chevron-left"></i>
-                                                <span class="ms-2">Rerun</span>
-                                            </div>
-                                            <i class="fa-solid fa-arrow-rotate-right"></i>
-                                        </a>
-                                        <ul class="dropdown-menu dropdown-menu-end">
-                                            <li v-for="printer in printers" :key="printer.id">
-                                                <a class="dropdown-item" @click="handleRerun(job, printer)">
-                                                    {{ printer.name }}
-                                                </a>
-                                            </li>
-                                        </ul>
-                                    </li>
-                                </ul>
+        <div style="position: relative;">
+            <table class="table-striped">
+                <thead>
+                    <tr>
+                        <th style="width: 105px;">Ticket ID</th>
+                        <th style="width: 150px;">Printer</th>
+                        <th style="width: 175px;">Job Title</th>
+                        <th style="width: 175px;">File</th>
+                        <th style="width: 150px;">Issue</th>
+                        <th style="width: 264px">Date errored</th>
+                        <th style="width: 200px;">Comment</th>
+                        <th style="width: 75px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody v-if="filteredJobs.length > 0">
+                    <tr v-for="job in filteredJobs" :key="job.id">
+                        <td class="truncate" :title="job.td_id.toString()">{{ job.td_id }}</td>
+                        <td class="truncate" :title="job.printer_name">{{ job.printer_name }}</td>
+                        <td class="truncate" :title="job.name">{{ job.name }}</td>
+                        <td class="truncate" :title="job.file_name_original">{{ job.file_name_original }}</td>
+                        <td class="truncate" :title="job.error" v-if="job.errorid != null && job.errorid != 0">
+                            {{ job.error }}
+                        </td>
+                        <td v-else>
+                        </td>
+                        <td>{{ job.date }}</td>
+                        <td class="truncate" :title="job.comment">{{ job.comment }}</td>
+                        <td>
+                            <div class="dropdown">
+                                <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                                    <button type="button" id="settingsDropdown" data-bs-toggle="dropdown"
+                                        aria-expanded="false" style="background: none; border: none;">
+                                        <i class="fa-solid fa-bars"></i>
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
+                                                data-bs-target="#gcodeImageModal"
+                                                @click="openGCodeModal(job, job.printer)">
+                                                <i class="fa-regular fa-image"></i>
+                                                <span class="ms-2">Image Viewer</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
+                                                data-bs-target="#issueModal" @click="setJob(job); showText = false">
+                                                <i class="fas fa-comments"></i>
+                                                <span class="ms-2">Comments</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center"
+                                                @click="getFileDownload(job.id)"
+                                                :disabled="job.file_name_original.includes('.gcode:')">
+                                                <i class="fas fa-download"></i>
+                                                <span class="ms-2">Download</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+                                        <li class="dropdown-submenu position-relative">
+                                            <a class="dropdown-item d-flex justify-content-between align-items-center"
+                                                @click="handleEmptyRerun">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fa-solid fa-chevron-left"></i>
+                                                    <span class="ms-2">Rerun</span>
+                                                </div>
+                                                <i class="fa-solid fa-arrow-rotate-right"></i>
+                                            </a>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li v-for="printer in printers" :key="printer.id">
+                                                    <a class="dropdown-item" @click="handleRerun(job, printer)">
+                                                        {{ printer.name }}
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tbody v-else>
+                    <tr>
+                        <td colspan="8">No jobs with errors found. </td>
+                    </tr>
+                </tbody>
+            </table>
+            <transition name="fade">
+                <div v-if="isLoading" class="modal fade show d-block" id="loadingModal" tabindex="-1"
+                    aria-labelledby="loadingModalLabel" aria-hidden="true"
+                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow-y: hidden;">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-body d-flex justify-content-center align-items-center"
+                            style="user-select: none; position: relative;">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
                             </div>
                         </div>
-                    </td>
-                </tr>
-            </tbody>
-            <tbody v-else>
-                <tr>
-                    <td colspan="8">No jobs with errors found. </td>
-                </tr>
-            </tbody>
-        </table>
+                    </div>
+                </div>
+            </transition>
+        </div>
         <nav aria-label="Page navigation">
             <ul class="pagination mt-2">
                 <li class="page-item" :class="{ 'disabled': page <= 1 }">
                     <a class="page-link" href="#" @click.prevent="changePage(page - 1)">Previous</a>
                 </li>
-                <li class="page-item disabled"><a class="page-link">Page {{ page }} of {{ totalPages }}</a></li>
+                <li class="page-item disabled page-of-pages"><a class="page-link">Page {{ page }} of {{ totalPages
+                        }}</a></li>
                 <li class="page-item" :class="{ 'disabled': page >= totalPages }">
                     <a class="page-link" href="#" @click.prevent="changePage(page + 1)">Next</a>
                 </li>
