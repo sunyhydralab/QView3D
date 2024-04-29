@@ -221,6 +221,7 @@ export function setupColorChangeBuffer(printers: any) {
 export function setupMaxLayerHeightSocket(printers: any) {
   socket.on('max_layer_height', (data: any) => {
     if (printers) {
+      console.log('max_layer_height', data.max_layer_height)
       const job = printers.value
         .flatMap((printer: { queue: any }) => printer.queue)
         .find((job: { id: any }) => job?.id === data.job_id)
@@ -237,6 +238,7 @@ export function setupMaxLayerHeightSocket(printers: any) {
 export function setupCurrentLayerHeightSocket(printers: any) {
   socket.on('current_layer_height', (data: any) => {
     if (printers) {
+      console.log('current_layer_height', data.current_layer_height)
       const job = printers.value
         .flatMap((printer: { queue: any }) => printer.queue)
         .find((job: { id: any }) => job?.id === data.job_id)

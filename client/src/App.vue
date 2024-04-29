@@ -4,7 +4,7 @@ import { RouterView } from 'vue-router'
 import NavBar from './components/NavBar.vue'
 import ThemePanel from './components/ThemePanel.vue'
 import { onMounted, nextTick, watch } from 'vue';
-import { setupPortRepairSocket, setupErrorSocket, setupJobStatusSocket, setupPauseFeedbackSocket, setupProgressSocket, setupQueueSocket, setupReleaseSocket, setupStatusSocket, setupTempSocket, setupGCodeViewerSocket, setupExtrusionSocket } from './model/sockets';
+import { setupPortRepairSocket, setupErrorSocket, setupJobStatusSocket, setupPauseFeedbackSocket, setupProgressSocket, setupQueueSocket, setupReleaseSocket, setupStatusSocket, setupTempSocket, setupGCodeViewerSocket, setupExtrusionSocket, setupCurrentLayerHeightSocket, setupMaxLayerHeightSocket } from './model/sockets';
 import { useRetrievePrintersInfo, printers } from './model/ports';
 import { setupTimeSocket } from './model/jobs';
 
@@ -26,6 +26,8 @@ onMounted(async () => {
   setupReleaseSocket(printers)
   setupPortRepairSocket(printers)
   setupExtrusionSocket(printers)
+  setupMaxLayerHeightSocket(printers)
+  setupCurrentLayerHeightSocket(printers)
 
   nextTick(() => {
     updateColors()

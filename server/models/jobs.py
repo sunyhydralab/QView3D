@@ -54,6 +54,7 @@ class Job(db.Model):
     file_name_pk = None
     max_layer_height = 0.0
     current_layer_height = 0.0
+    filament = ''
     released = 0 
     filePause = 0
     progress = 0.0
@@ -82,7 +83,10 @@ class Job(db.Model):
         self.extruded = 0
         self.job_time = [0, datetime.min, datetime.min, datetime.min]
         self.error_id = 0
-        self.printer_name = printer_name 
+        self.printer_name = printer_name
+        self.max_layer_height = 0.0
+        self.current_layer_height = 0.0
+        self.filament = ''
 
     def __repr__(self):
         return f"Job(id={self.id}, name={self.name}, printer_id={self.printer_id}, status={self.status})"
@@ -258,8 +262,10 @@ class Job(db.Model):
                     "extruded": job.extruded,
                     "td_id": job.td_id,
                     "printer": job.printer.name if job.printer else "None",
-                    "printer_name": job.printer_name
-
+                    "printer_name": job.printer_name,
+                    "max_layer_height": job.max_layer_height,
+                    "current_layer_height": job.current_layer_height,
+                    "filament": job.filament,
                 }
                 for job in jobs
             ]
@@ -733,9 +739,13 @@ class Job(db.Model):
         current_app.socketio.emit('max_layer_height', {'job_id': self.id, 'max_layer_height': self.max_layer_height})
 
     def setCurrentLayerHeight(self, current_layer_height):
+        print("Current Layer Height: ", current_layer_height)
         self.current_layer_height = current_layer_height
         current_app.socketio.emit('current_layer_height', {'job_id': self.id, 'current_layer_height': self.current_layer_height})
 
+    def setFilament(self, filament):
+        self.filament = filament
+    
     def setPath(self, path): 
         self.path = path 
 

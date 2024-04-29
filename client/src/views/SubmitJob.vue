@@ -21,6 +21,7 @@ const form = ref<HTMLFormElement | null>(null);
 let isSubmitDisabled = false;
 
 const isGcodeImageVisible = ref(false)
+const isImageVisible = ref(true)
 
 const filamentTypes = ['PLA', 'PETG', 'ABS', 'ASA', 'FLEX', 'HIPS', 'EDGE', 'NGEN', 'PA', 'PVA', 'PCTG', 'PP', 'PC', 'CPE', 'PEBA', 'PVB', 'PLA TOUGH', 'METAL', 'PET']
 
@@ -283,17 +284,21 @@ const getFilament = (file: File) => {
 <template>
     <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div :class="['modal-dialog', isImageVisible ? '' : 'modal-xl', 'modal-dialog-centered']">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="gcodeImageModalLabel">
-                        <b>{{ fileName }}</b>
+                        <b>{{ fileName }}</b> <br>
+                        <div class="form-check form-switch">
+                            <label class="form-check-label" for="switchView">{{ isImageVisible ? 'Image' : 'Viewer' }}</label>
+                            <input class="form-check-input" type="checkbox" id="switchView" v-model="isImageVisible">
+                        </div>
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
-                        <GCode3DImageViewer v-if="isGcodeImageVisible" :file="file" />
+                        <GCode3DImageViewer v-if="isGcodeImageVisible" :file="file" :isImageVisible="isImageVisible" />
                     </div>
                 </div>
             </div>
