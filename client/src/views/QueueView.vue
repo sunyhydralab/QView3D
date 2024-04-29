@@ -6,6 +6,7 @@ import draggable from 'vuedraggable'
 import { toast } from '@/model/toast'
 import { useRouter } from 'vue-router'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
+import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
@@ -18,6 +19,7 @@ const selectAllCheckboxMap = ref<Record<string, boolean>>({})
 
 let currentJob = ref<Job | null>(null)
 let isGcodeImageVisible = ref(false)
+const isImageVisible = ref(true)
 let selectAllCheckbox = ref(false)
 
 const primaryColor = ref('');
@@ -39,6 +41,7 @@ onMounted(() => {
 
   modal?.addEventListener('hidden.bs.modal', () => {
     isGcodeImageVisible.value = false
+    isImageVisible.value = true
   });
   isLoading.value = false
 });
@@ -153,23 +156,30 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
 </script>
 
 <template>
-  <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
+  <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel"
+  aria-hidden="true">
+  <div :class="['modal-dialog', isImageVisible ? '' : 'modal-xl', 'modal-dialog-centered']">
       <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="gcodeImageModalLabel">
-            <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="row">
-            <GCode3DImageViewer v-if="isGcodeImageVisible" :job="currentJob!" />
+          <div class="modal-header">
+              <h5 class="modal-title" id="gcodeImageModalLabel">
+                  <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
+                  <div class="form-check form-switch">
+                      <label class="form-check-label" for="switchView">{{ isImageVisible ? 'Image' : 'Viewer'
+                          }}</label>
+                      <input class="form-check-input" type="checkbox" id="switchView" v-model="isImageVisible">
+                  </div>
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-        </div>
+          <div class="modal-body">
+              <div class="row">
+                  <GCode3DImageViewer v-if="isGcodeImageVisible && !isImageVisible" :job="currentJob!" />
+                  <GCodeThumbnail v-else-if="isGcodeImageVisible && isImageVisible" :job="currentJob!" />
+              </div>
+          </div>
       </div>
-    </div>
   </div>
+</div>
 
   <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
     data-bs-backdrop="static">

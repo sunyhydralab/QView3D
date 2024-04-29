@@ -5,6 +5,7 @@ import { computed, onMounted, onBeforeUnmount, ref, watchEffect, onUnmounted } f
 import { type Issue, useGetIssues, useAssignIssue } from '../model/issues'
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
+import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 
@@ -51,6 +52,7 @@ let favoriteOnly = ref<boolean>(false)
 
 let currentJob = ref<Job | null>(null);
 let isGcodeImageVisible = ref(false);
+const isImageVisible = ref(true)
 
 let page = ref(1)
 let totalJobs = ref(0)
@@ -119,6 +121,7 @@ onMounted(async () => {
 
         modal?.addEventListener('hidden.bs.modal', () => {
             isGcodeImageVisible.value = false;
+            isImageVisible.value = true;
         });
 
         isLoading.value = false;
@@ -446,17 +449,23 @@ const doDownloadCsv = async () => {
     <!-- gcode image viewer modal -->
     <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div :class="['modal-dialog', isImageVisible ? '' : 'modal-xl', 'modal-dialog-centered']">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="gcodeImageModalLabel">
                         <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
+                        <div class="form-check form-switch">
+                            <label class="form-check-label" for="switchView">{{ isImageVisible ? 'Image' : 'Viewer'
+                                }}</label>
+                            <input class="form-check-input" type="checkbox" id="switchView" v-model="isImageVisible">
+                        </div>
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
-                        <GCode3DImageViewer v-if="isGcodeImageVisible" :job="currentJob!" />
+                        <GCode3DImageViewer v-if="isGcodeImageVisible && !isImageVisible" :job="currentJob!" />
+                        <GCodeThumbnail v-else-if="isGcodeImageVisible && isImageVisible" :job="currentJob!" />
                     </div>
                 </div>
             </div>

@@ -5,6 +5,7 @@ import { ref, onMounted, watchEffect, computed, watch } from 'vue'
 import { useRoute } from 'vue-router';
 import { toast } from '@/model/toast';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue';
+import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 
 const { addJobToQueue } = useAddJobToQueue()
 const { auto } = useAutoQueue()
@@ -93,6 +94,7 @@ onMounted(async () => {
 
         modal?.addEventListener('hidden.bs.modal', () => {
             isGcodeImageVisible.value = false;
+            isImageVisible.value = true;
             isAsteriksVisible.value = true;
         });
 
@@ -298,7 +300,8 @@ const getFilament = (file: File) => {
                 </div>
                 <div class="modal-body">
                     <div class="row">
-                        <GCode3DImageViewer v-if="isGcodeImageVisible" :file="file" :isImageVisible="isImageVisible" />
+                        <GCode3DImageViewer v-if="isGcodeImageVisible && !isImageVisible" :file="file" />
+                        <GCodeThumbnail v-else-if="isGcodeImageVisible && isImageVisible" :file="file" />
                     </div>
                 </div>
             </div>

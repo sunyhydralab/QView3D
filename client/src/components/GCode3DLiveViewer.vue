@@ -11,7 +11,7 @@ const props = defineProps({
 
 const job = toRef(props, 'job');
 
-const thumbnailSrc = ref<string | null>(null);
+const modal = document.getElementById('gcodeLiveViewModal');
 
 // Create a ref for the canvas
 const canvas = ref<HTMLCanvasElement | null>(null);
@@ -19,7 +19,6 @@ let preview: GCodePreview.WebGLPreview | null = null;
 let layers: string[][] = [];
 
 onMounted(async () => {
-    const modal = document.getElementById('gcodeLiveViewModal');
     if (!modal) {
         console.error('Modal element is not available');
         return;
@@ -42,18 +41,6 @@ onMounted(async () => {
         }
         return layers;
     }, [[]]);
-
-    modal.addEventListener('shown.bs.modal', async () => {
-        // Initialize the GCodePreview and show the GCode when the modal is shown
-        if (canvas.value) {
-            preview = GCodePreview.init({
-                canvas: canvas.value,
-                extrusionColor: getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9',
-                backgroundColor: 'black',
-                buildVolume: { x: 250, y: 210, z: 220, r: 0, i: 0, j: 0 },
-            });
-        }
-    });
 
     watchEffect(() => {
         if (job.value?.current_layer_height && preview) {
@@ -91,20 +78,17 @@ onMounted(async () => {
                         preview.clear();
                         const gcode = layers.slice(0, currentLayerIndex + 1).flat();
                         preview.processGCode(gcode);
-
-                        // Extract the thumbnail from the metadata
-                        const { metadata } = preview.parser.parseGCode(gcode.join('\n'));
-                        console.log('metadata:', metadata);
-                        if (metadata.thumbnails && metadata.thumbnails['640x480']) {
-                            const thumbnailData = metadata.thumbnails['640x480'];
-                            thumbnailSrc.value = thumbnailData.src;
-                        }
                     }
                 } catch (error) {
                     console.error('Failed to process GCode:', error);
                 }
             }
         }
+    });
+
+    modal.addEventListener('hidden.bs.modal', () => {
+        // Clean up when the modal is hidden
+        preview?.clear();
     });
 });
 
@@ -129,19 +113,12 @@ const fileToString = (file: File | undefined) => {
 
 <template>
     <canvas ref="canvas"></canvas>
-    <img v-if="thumbnailSrc" :src="thumbnailSrc" alt="GCode Thumbnail" />
 </template>
 
 <style scoped>
 canvas {
     width: 100%;
     height: 100%;
-    display: block;
-}
-
-img {
-    width: 100%;
-    height: auto;
     display: block;
 }
 </style>

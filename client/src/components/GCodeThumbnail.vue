@@ -23,8 +23,10 @@ const file = () => {
 const modal = document.getElementById('gcodeImageModal');
 
 // Create a ref for the canvas
-const canvas = ref<HTMLCanvasElement | null>(null);
+const canvas = ref<HTMLCanvasElement | undefined>(undefined);
 let preview: GCodePreview.WebGLPreview | null = null;
+
+const thumbnailSrc = ref<string | null>(null);
 
 onMounted(async () => {
     if (!modal) {
@@ -32,35 +34,29 @@ onMounted(async () => {
         return;
     }
 
-    if (canvas.value) {
-        preview = GCodePreview.init({
-            canvas: canvas.value,
-            extrusionColor: getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9',
-            backgroundColor: 'black',
-            buildVolume: { x: 250, y: 210, z: 220, r: 0, i: 0, j: 0 },
-        });
+    preview = GCodePreview.init({
+        canvas: canvas.value,
+    });
 
-        preview.camera.position.set(0, 410, 365);
-        preview.camera.lookAt(0, 0, 0);
-
-        if (canvas.value) {
-            // job.file to string
-            const fileValue = await file();
-            if (fileValue) {
-                const gcode = await fileToString(fileValue);
-
-                try {
-                    preview?.processGCode(gcode); // MAIN LINE
-                } catch (error) {
-                    console.error('Failed to process GCode:', error);
-                }
+    const fileValue = await file();
+    if (fileValue) {
+        const gcode = await fileToString(fileValue);
+        try {
+            // Extract the thumbnail from the metadata
+            const { metadata } = preview.parser.parseGCode(gcode);
+            console.log('metadata:', metadata);
+            if (metadata.thumbnails && metadata.thumbnails['640x480']) {
+                const thumbnailData = metadata.thumbnails['640x480'];
+                thumbnailSrc.value = thumbnailData.src;
             }
+        } catch (error) {
+            console.error('Failed to process GCode:', error);
         }
     }
 
     modal.addEventListener('hidden.bs.modal', () => {
         // Clean up when the modal is hidden
-        preview?.clear();
+        thumbnailSrc.value = null;
     });
 });
 
@@ -84,13 +80,16 @@ const fileToString = (file: File | undefined) => {
 </script>
 
 <template>
-    <canvas ref="canvas"></canvas>
+    <canvas v-show="false" style="display: hidden" ref="canvas"></canvas>
+    <img v-if="thumbnailSrc" :src="thumbnailSrc" alt="GCode Thumbnail" />
+    <div v-else>This file doesn't have a thumbnail attached, you can check the viewer instead!</div>
 </template>
 
 <style scoped>
-canvas {
-    width: 100%;
-    height: 100%;
+img {
+    max-width: 500px;
+    max-height: 500px;
     display: block;
+    margin: auto;
 }
 </style>

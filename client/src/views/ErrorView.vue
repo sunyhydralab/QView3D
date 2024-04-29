@@ -5,6 +5,7 @@ import { type Job, useGetErrorJobs, useAssignComment, useGetJobFile, useGetFile,
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
+import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 
@@ -45,6 +46,7 @@ let issuelist = ref<Array<Issue>>([])
 
 let currentJob = ref<Job>()
 let isGcodeImageVisible = ref(false)
+const isImageVisible = ref(true)
 
 let filter = ref('')
 let filterDropdown = ref(false)
@@ -97,6 +99,7 @@ onMounted(async () => {
 
         imageModal?.addEventListener('hidden.bs.modal', () => {
             isGcodeImageVisible.value = false;
+            isImageVisible.value = true
         });
 
         isLoading.value = false;
@@ -295,17 +298,23 @@ const openGCodeModal = async (job: Job, printerName: string) => {
     <!-- gcode image viewer modal -->
     <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div :class="['modal-dialog', isImageVisible ? '' : 'modal-xl', 'modal-dialog-centered']">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="gcodeImageModalLabel">
                         <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
+                        <div class="form-check form-switch">
+                            <label class="form-check-label" for="switchView">{{ isImageVisible ? 'Image' : 'Viewer'
+                                }}</label>
+                            <input class="form-check-input" type="checkbox" id="switchView" v-model="isImageVisible">
+                        </div>
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
-                        <GCode3DImageViewer v-if="isGcodeImageVisible" :job="currentJob!" />
+                        <GCode3DImageViewer v-if="isGcodeImageVisible && !isImageVisible" :job="currentJob" />
+                        <GCodeThumbnail v-else-if="isGcodeImageVisible && isImageVisible" :job="currentJob" />
                     </div>
                 </div>
             </div>
@@ -380,7 +389,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
                 <div class="modal-header d-flex align-items-end">
                     <h5 class="modal-title mb-0" id="assignIssueLabel" style="line-height: 1;">Job #{{
                         selectedJob?.td_id
-                        }}</h5>
+                    }}</h5>
                     <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px; line-height: 1;">{{
                         selectedJob?.date }}</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
