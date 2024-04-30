@@ -98,6 +98,7 @@ class Job(db.Model):
         oldestFirst=False,
         searchJob="",
         searchCriteria="",
+        searchTicketId=None,
         favoriteOnly=False,
         startDate=None,
         endDate=None,
@@ -122,6 +123,10 @@ class Job(db.Model):
             elif "searchByFileName" in searchCriteria:
                 searchByFileName = f"%{searchJob}%"
                 query = query.filter(cls.file_name_original.ilike(searchByFileName))
+                
+            if searchTicketId:
+                searchTicketId = int(searchTicketId)
+                query = query.filter(cls.td_id == searchTicketId)
 
             if favoriteOnly:
                 query = query.filter(cls.favorite == True)
@@ -187,6 +192,7 @@ class Job(db.Model):
         oldestFirst=False,
         searchJob="",
         searchCriteria="",
+        searchTicketId=None,
         issueIds=None,
         startDate=None,
         endDate=None,
@@ -214,6 +220,10 @@ class Job(db.Model):
             elif "searchByFileName" in searchCriteria:
                 searchByFileName = f"%{searchJob}%"
                 query = query.filter(cls.file_name_original.ilike(searchByFileName))
+                
+            if searchTicketId:
+                searchTicketId = int(searchTicketId)
+                query = query.filter(cls.td_id == searchTicketId)
 
             if oldestFirst:
                 query = query.order_by(cls.date.asc())

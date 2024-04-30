@@ -29,6 +29,8 @@ def getJobs():
 
     searchJob = request.args.get('searchJob', default='', type=str)
     searchCriteria = request.args.get('searchCriteria', default='', type=str)
+    
+    searchTicketId = request.args.get('searchTicketId', default='', type=str)
 
     favoriteOnly = request.args.get('favoriteOnly', default='false')
     favoriteOnly = favoriteOnly.lower() in ['true', '1']
@@ -39,7 +41,7 @@ def getJobs():
     # print("start: ", startdate)
     
     try:
-        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, favoriteOnly, startdate, enddate)
+        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, searchTicketId, favoriteOnly, startdate, enddate)
         return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -58,11 +60,13 @@ def getErrorJobs():
 
     searchCriteria = request.args.get('searchCriteria', default='', type=str)
     
+    searchTicketId = request.args.get('searchTicketId', default='', type=str)
+    
     startdate = request.args.get('startdate', default='', type=str)
     enddate = request.args.get('enddate', default='', type=str)
     
     try:
-        res = Job.get_job_error_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, issueIds, startdate, enddate)
+        res = Job.get_job_error_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, searchTicketId, issueIds, startdate, enddate)
         return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")
