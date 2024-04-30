@@ -41,7 +41,7 @@ def getJobs():
     # print("start: ", startdate)
     
     try:
-        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, favoriteOnly, searchTicketId, startdate, enddate)
+        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, searchTicketId, favoriteOnly, startdate, enddate)
         return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")

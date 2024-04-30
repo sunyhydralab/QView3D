@@ -232,7 +232,8 @@ async function submitFilter() {
     }
 
     // Now fetch the jobs for the current page
-    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, startDateString.value, endDateString.value); jobs.value = joblist;
+    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, startDateString.value, endDateString.value); 
+    jobs.value = joblist;
 
     selectedJobs.value = [];
     selectAllCheckbox.value = false;
@@ -265,7 +266,6 @@ function clearFilter() {
 
     submitFilter();
 }
-
 
 const ensureOneCheckboxChecked = () => {
     if (!searchByJobName.value && !searchByFileName.value) {

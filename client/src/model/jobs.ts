@@ -210,8 +210,9 @@ export function useGetJobs() {
       searchCriteria: string = '',
       searchTicketId: string = '',
       favoriteOnly?: boolean,
+      startdate: string = '',
+      enddate: string = ''
     ) {
-    async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean, startdate: string = '', enddate: string = '') {
       try {
         const response = await api(
           `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&searchTicketId=${encodeURIComponent(searchTicketId)}&favoriteOnly=${favoriteOnly}&startdate=${startdate}&enddate=${enddate}`
