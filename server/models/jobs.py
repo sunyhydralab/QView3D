@@ -16,6 +16,9 @@ from io import BytesIO
 from werkzeug.datastructures import FileStorage
 import time
 import gzip
+import csv
+from flask import send_file
+
 from app import printer_status_service
 # model for job history table
 
@@ -48,10 +51,10 @@ class Job(db.Model):
     filePause = 0
     progress = 0.0
     sent_lines = 0
-    time_started = False
+    time_started = 0
     extruded = 0
     #total, eta, timestart, pause time 
-    job_time = job_time = [0, datetime.min, datetime.min, datetime.min]
+    job_time = [0, datetime.min, datetime.min, datetime.min]
 
 
     
@@ -68,7 +71,7 @@ class Job(db.Model):
         self.filePause = 0
         self.progress = 0.0
         self.sent_lines = 0
-        self.time_started = False
+        self.time_started = 0
         self.extruded = 0
         self.job_time = [0, datetime.min, datetime.min, datetime.min]
         self.error_id = 0
@@ -81,20 +84,37 @@ class Job(db.Model):
 
 
     @classmethod
-    def get_job_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob='', searchCriteria='', searchTicketId=None, favoriteOnly=False):
+    def get_job_history(
+        cls,
+        page,
+        pageSize,
+        printerIds=None,
+        oldestFirst=False,
+        searchJob="",
+        searchCriteria="",
+        searchTicketId=None,
+        favoriteOnly=False,
+        startDate=None,
+        endDate=None,
+    ):
         try:
             query = cls.query
             if printerIds:
                 query = query.filter(cls.printer_id.in_(printerIds))
-                
+
             if searchJob:
                 searchJob = f"%{searchJob}%"
-                query = query.filter(or_(cls.name.ilike(searchJob), cls.file_name_original.ilike(searchJob)))
-            
-            if 'searchByJobName' in searchCriteria:
+                query = query.filter(
+                    or_(
+                        cls.name.ilike(searchJob),
+                        cls.file_name_original.ilike(searchJob),
+                    )
+                )
+
+            if "searchByJobName" in searchCriteria:
                 searchByJobName = f"%{searchJob}%"
                 query = query.filter(cls.name.ilike(searchByJobName))
-            elif 'searchByFileName' in searchCriteria:
+            elif "searchByFileName" in searchCriteria:
                 searchByFileName = f"%{searchJob}%"
                 query = query.filter(cls.file_name_original.ilike(searchByFileName))
                 
@@ -106,78 +126,138 @@ class Job(db.Model):
                 query = query.filter(cls.favorite == True)
 
             if oldestFirst:
-                query = query.order_by(cls.date.asc())    
-            else: 
+                query = query.order_by(cls.date.asc())
+            else:
                 query = query.order_by(cls.date.desc())  # Change this line
 
-            pagination = query.paginate(
-                page=page, per_page=pageSize, error_out=False)
+            
+            if startDate!='' or endDate!='':
+                if(endDate==''):
+                    cls.date.between(
+                        datetime.fromisoformat(startDate),
+                        datetime.fromisoformat(startDate),
+                    )
+                    
+                query = query.filter(
+                    cls.date.between(
+                        datetime.fromisoformat(startDate),
+                        datetime.fromisoformat(endDate),
+                    )
+                )
+
+            pagination = query.paginate(page=page, per_page=pageSize, error_out=False)
             jobs = pagination.items
 
-            jobs_data = [{
-                "id": job.id,
-                "name": job.name, 
-                "status": job.status, 
-                "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",  
-                "printer": job.printer.name if job.printer else 'None', 
-                "file_name_original": job.file_name_original,
-                "favorite": job.favorite, 
-                "errorid": job.error_id, 
-                "error": job.error.issue if job.error else 'None', 
-                "comment": job.comments, 
-                "td_id": job.td_id
-            } for job in jobs]
-
+            jobs_data = [
+                {
+                    "id": job.id,
+                    "name": job.name,
+                    "status": job.status,
+                    "date": job.date.strftime("%a, %d %b %Y %H:%M:%S"),
+                    "printerid": job.printer_id,
+                    "errorid": job.error_id,
+                    "file_name_original": job.file_name_original,
+                    "progress": job.progress,
+                    "sent_lines": job.sent_lines,
+                    "favorite": job.favorite,
+                    "released": job.released,
+                    "file_pause": job.filePause,
+                    "comments": job.comments,
+                    "extruded": job.extruded,
+                    "td_id": job.td_id,
+                    "printer": job.printer.name if job.printer else "None",
+                    "error": job.error.issue if job.error else 'None', 
+                }
+                for job in jobs
+            ]
+            
             return jobs_data, pagination.total
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500
-        
 
     @classmethod
-    def get_job_error_history(cls, page, pageSize, printerIds=None, oldestFirst=False, searchJob='', searchCriteria='', issueIds=None):
+    def get_job_error_history(
+        cls,
+        page,
+        pageSize,
+        printerIds=None,
+        oldestFirst=False,
+        searchJob="",
+        searchCriteria="",
+        issueIds=None,
+        startDate=None,
+        endDate=None,
+    ):
         try:
-            query = cls.query.filter_by(status='error')
+            query = cls.query.filter_by(status="error")
             if printerIds:
                 query = query.filter(cls.printer_id.in_(printerIds))
 
-            if issueIds: 
+            if issueIds:
                 query = query.filter(cls.error_id.in_(issueIds))
 
             if searchJob:
                 searchJob = f"%{searchJob}%"
-                query = query.filter(or_(cls.name.ilike(searchJob), cls.file_name_original.ilike(searchJob)))
+                query = query.filter(
+                    or_(
+                        cls.name.ilike(searchJob),
+                        cls.file_name_original.ilike(searchJob),
+                    )
+                )
 
-            if 'searchByJobName' in searchCriteria:
+            if "searchByJobName" in searchCriteria:
                 searchByJobName = f"%{searchJob}%"
                 query = query.filter(cls.name.ilike(searchByJobName))
-            elif 'searchByFileName' in searchCriteria:
+            elif "searchByFileName" in searchCriteria:
                 searchByFileName = f"%{searchJob}%"
                 query = query.filter(cls.file_name_original.ilike(searchByFileName))
 
             if oldestFirst:
-                query = query.order_by(cls.date.asc())    
-            else: 
+                query = query.order_by(cls.date.asc())
+            else:
                 query = query.order_by(cls.date.desc())  # Change this line
 
-            pagination = query.paginate(
-                page=page, per_page=pageSize, error_out=False)
+            if startDate!='' or endDate!='':
+                if(endDate==''):
+                    cls.date.between(
+                        datetime.fromisoformat(startDate),
+                        datetime.fromisoformat(startDate),
+                    )
+                    
+                query = query.filter(
+                    cls.date.between(
+                        datetime.fromisoformat(startDate),
+                        datetime.fromisoformat(endDate),
+                    )
+                )
+                
+            pagination = query.paginate(page=page, per_page=pageSize, error_out=False)
             jobs = pagination.items
-            
 
-            jobs_data = [{
-                "id": job.id,
-                "name": job.name, 
-                "status": job.status, 
-                "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",  
-                "printer": job.printer.name if job.printer else 'None', 
-                "file_name_original": job.file_name_original,
-                "errorid": job.error_id, 
-                "error": job.error.issue if job.error else 'None', 
-                "comment": job.comments, 
-                "td_id": job.td_id
-            } for job in jobs]
-            
+            jobs_data = [
+                {
+                    "id": job.id,
+                    "name": job.name,
+                    "status": job.status,
+                    "date": job.date.strftime("%a, %d %b %Y %H:%M:%S"),
+                    "printerid": job.printer_id,
+                    "errorid": job.error_id,
+                    "error": job.error.issue if job.error else 'None', 
+                    "file_name_original": job.file_name_original,
+                    "progress": job.progress,
+                    "sent_lines": job.sent_lines,
+                    "favorite": job.favorite,
+                    "released": job.released,
+                    "file_pause": job.filePause,
+                    "comments": job.comments,
+                    "extruded": job.extruded,
+                    "td_id": job.td_id,
+                    "printer": job.printer.name if job.printer else "None",
+
+                }
+                for job in jobs
+            ]
 
             return jobs_data, pagination.total
         except SQLAlchemyError as e:
@@ -438,8 +518,39 @@ class Job(db.Model):
             return None
         
     @classmethod
-    def downloadCSV(cls):
-        pass
+    def downloadCSV(cls, alljobs, jobids=None):
+        try: 
+            if(jobids!=None): 
+                # Join Job and Issue on error_id and filter by jobids
+                jobs = db.session.query(cls, Issue).outerjoin(Issue, cls.error_id == Issue.id).filter(cls.id.in_(jobids)).all()
+            else: 
+                # Join Job and Issue on error_id
+                jobs = db.session.query(cls, Issue).outerjoin(Issue, cls.error_id == Issue.id).all()
+
+            # Specify the columns you want to include
+            column_names = ['name', 'status', 'date', 'printer_id', 'td_id', 'comments', 'file_name_original', 'issue']
+
+            date_string = datetime.now()
+            
+            csv_file_name = f'../tempcsv/jobs_{date_string}.csv'
+            
+            # Write to CSV
+
+            with open(csv_file_name, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(column_names)  # write headers
+                for job, issue in jobs:
+                    row = [getattr(job, 'name', ''), getattr(job, 'status', ''), getattr(job, 'date', ''), getattr(job, 'printer_id', ''), getattr(job, 'td_id', ''), getattr(job, 'comments', ''), getattr(job, 'file_name_original', ''), getattr(issue, 'issue', '') if issue else '']
+                    writer.writerow(row)  # write data rows
+            
+            csv_file_path = f'./{csv_file_name}'
+        
+            return send_file(csv_file_path, as_attachment=True)
+        
+        
+        except Exception as e:
+            print(f"Error downloading CSV: {e}")
+            return {"status": "error", "message": f"Error downloading CSV: {e}"}
                
     def saveToFolder(self):
         file_data = self.getFile()
@@ -623,7 +734,9 @@ class Job(db.Model):
         current_app.socketio.emit('release_job', {'job_id': self.id, 'released': released}) 
 
     def setTimeStarted(self, time_started):
-        self.time_started = time_started
+            self.time_started = time_started
+            current_app.socketio.emit('set_time_started', {'job_id': self.id, 'started': time_started}) 
+
 
     def setTime(self, timeData, index):
         # timeData = datetime(y, m, d, h, min, s)
@@ -633,4 +746,3 @@ class Job(db.Model):
             current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData, 'index': index}) 
         else: 
             current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData.isoformat(), 'index': index}) 
-

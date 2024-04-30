@@ -35,8 +35,13 @@ def getJobs():
     favoriteOnly = request.args.get('favoriteOnly', default='false')
     favoriteOnly = favoriteOnly.lower() in ['true', '1']
     
+    startdate = request.args.get('startdate', default='', type=str)
+    enddate = request.args.get('enddate', default='', type=str)
+    
+    # print("start: ", startdate)
+    
     try:
-        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, searchTicketId, favoriteOnly)
+        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, favoriteOnly, searchTicketId, startdate, enddate)
         return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -55,8 +60,11 @@ def getErrorJobs():
 
     searchCriteria = request.args.get('searchCriteria', default='', type=str)
     
+    startdate = request.args.get('startdate', default='', type=str)
+    enddate = request.args.get('enddate', default='', type=str)
+    
     try:
-        res = Job.get_job_error_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, issueIds)
+        res = Job.get_job_error_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, issueIds, startdate, enddate)
         return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -538,11 +546,44 @@ def saveComment():
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
     
-@jobs_bp.route('/downloadcsv', methods=["GET"])
+@jobs_bp.route('/downloadcsv', methods=["GET", "POST"])
 def downloadCSV():
     try:
-        res = Job.downloadCSV()
-        return res
+        data = request.get_json()
+        alljobsselected = data.get('allJobs')
+        jobids = data.get('jobIds')
+
+        if alljobsselected == 1:
+            # Call the model method to get the CSV content
+            res = Job.downloadCSV(1)
+        else:
+            # Call the model method to get the CSV content
+            res = Job.downloadCSV(0, jobids)
+
+        print(res)
+        return res 
+
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+    
+
+@jobs_bp.route('/removeCSV', methods=["GET", "POST"])
+def removeCSV():
+    try:
+        # Create in-memory uploads folder 
+        csv_folder = os.path.join('../tempcsv')
+        if os.path.exists(csv_folder):
+            shutil.rmtree(csv_folder)
+            os.makedirs(csv_folder)
+            print("TempCSV folder recreated as an empty directory.")
+        else:
+            # Create the uploads folder if it doesn't exist
+            os.makedirs(csv_folder)
+            print("TempCSV folder created successfully.")  
+        
+        return jsonify({"success": True, "message": "CSV file removed successfully."}), 200
+
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -551,7 +592,6 @@ def downloadCSV():
 def repair_ports(): 
     try:
         ports = serial.tools.list_ports.comports()    
-        print("PORTS: ", ports)
         for port in ports: 
             hwid = port.hwid # get hwid 
             hwid_without_location = hwid.split(' LOCATION=')[0]
@@ -565,6 +605,31 @@ def repair_ports():
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
+   
+@jobs_bp.route("/refetchtimedata", methods=['POST', 'GET']) 
+def refetch_time(): 
+    try: 
+        data = request.get_json()
+        jobid = data['jobid']
+        printerid = data['printerid']
+
+        printer = findPrinterObject(printerid)
+        job = printer.getQueue().getNext()
+
+        timearray = job.job_time 
+
+        timejson = {
+            'total': timearray[0], 
+            'eta': timearray[1].isoformat(), 
+            'timestart': timearray[2].isoformat(), 
+            'pause': timearray[3].isoformat()
+        }
+
+        return jsonify(timejson) 
+
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500    
     
 def findPrinterObject(printer_id): 
     threads = printer_status_service.getThreadArray()
