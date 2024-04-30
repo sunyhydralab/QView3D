@@ -251,10 +251,10 @@ export function useUpdateJobStatus() {
 
 export function useGetErrorJobs() {
   return {
-    async jobhistoryError(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean, issues?: number[], startdate: string = '', enddate: string = '') {
+    async jobhistoryError(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', searchTicketId: string = '', favoriteOnly?: boolean, issues?: number[], startdate: string = '', enddate: string = '') {
       try {
         const response = await api(
-          `geterrorjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&issueIds=${JSON.stringify(issues)}&startdate=${startdate}&enddate=${enddate}`
+          `geterrorjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&searchTicketId=${encodeURIComponent(searchTicketId)}&issueIds=${JSON.stringify(issues)}&startdate=${startdate}&enddate=${enddate}`
         )
         return response
       } catch (error) {

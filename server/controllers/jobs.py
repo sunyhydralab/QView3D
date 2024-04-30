@@ -60,11 +60,13 @@ def getErrorJobs():
 
     searchCriteria = request.args.get('searchCriteria', default='', type=str)
     
+    searchTicketId = request.args.get('searchTicketId', default='', type=str)
+    
     startdate = request.args.get('startdate', default='', type=str)
     enddate = request.args.get('enddate', default='', type=str)
     
     try:
-        res = Job.get_job_error_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, issueIds, startdate, enddate)
+        res = Job.get_job_error_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, searchTicketId, issueIds, startdate, enddate)
         return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")
