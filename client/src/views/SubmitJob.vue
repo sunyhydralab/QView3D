@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers } from '../model/ports'
-import { selectedPrinters, file, fileName, quantity, priority, favorite, name, tdid, filament, useAddJobToQueue, useGetFile, useAutoQueue } from '../model/jobs'
+import { selectedPrinters, file, fileName, quantity, priority, favorite, name, tdid, filament, useAddJobToQueue, useGetFile, useAutoQueue, isLoading } from '../model/jobs'
 import { ref, onMounted, watchEffect, computed } from 'vue'
 import { useRoute } from 'vue-router';
 import { toast } from '@/model/toast';
@@ -26,6 +26,7 @@ const filamentTypes = ['PLA', 'PETG', 'ABS', 'ASA', 'FLEX', 'HIPS', 'EDGE', 'NGE
 
 // file upload
 const handleFileUpload = (event: Event) => {
+    isLoading.value = true 
     const target = event.target as HTMLInputElement;
     const uploadedFile = target.files ? target.files[0] : undefined;
     if (uploadedFile && uploadedFile.name.length > 50) {
@@ -48,6 +49,7 @@ const handleFileUpload = (event: Event) => {
             filament.value = '';
         }
     }
+    isLoading.value = false
 }
 
 // validate quantity
@@ -65,6 +67,7 @@ const validateQuantity = () => {
 // fills printers array with printers that have threads from the database
 onMounted(async () => {
     try {
+        isLoading.value = true
         if (printer && !selectedPrinters.value.some(selectedPrinter => selectedPrinter.id === printer.id)) {
             selectedPrinters.value.push(printer)
         }
@@ -83,6 +86,7 @@ onMounted(async () => {
                 filament.value = '';
             }
         }
+        isLoading.value = false
 
         const modal = document.getElementById('gcodeImageModal');
 
@@ -114,6 +118,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
 
 // sends job to printer queue
 const handleSubmit = async () => {
+    isLoading.value = true
     let isFavoriteSet = false;
     let res = null
     if (selectedPrinters.value.length == 0) {
@@ -194,6 +199,7 @@ const handleSubmit = async () => {
     } else {
         toast.error('Failed to add job to queue. Unexpected response.')
     }
+    isLoading.value = false
 }
 
 function resetValues() {
@@ -242,6 +248,7 @@ const selectFilament = (type: string) => {
     filament.value = type
 }
 
+
 const getFilament = (file: File) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -286,12 +293,17 @@ const getFilament = (file: File) => {
     <div class="container">
         <!-- <b>Submit Job View</b> -->
 
+        <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
+            Loading, please do not refresh or leave the page...
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        </button>
+
         <div class="card" style="border: 1px solid #484848; background: #d8d8d8;">
             <div class="card-body">
                 <form @submit.prevent="handleSubmit" ref="form">
 
                     <div class="mb-3">
-                        <label for="printer" class="form-label">Select Printer {{ isGcodeImageVisible }}</label>
+                        <label for="printer" class="form-label">Select Printer</label>
                         <div class="card"
                             style="max-height: 120px; overflow-y: auto; background-color: #f4f4f4 !important; border-color: #484848 !important;">
                             <ul class="list-unstyled card-body m-0" style="padding-top: .5rem; padding-bottom: .5rem;">
@@ -364,11 +376,14 @@ const getFilament = (file: File) => {
                         </div>
                         <div class="input-group">
                             <div class="dropdown w-100" id="filamentDropdown">
+
+                                
                                 <button class="btn btn-primary dropdown-toggle w-100" type="button"
                                     id="dropdownMenuButton" data-bs-toggle="dropdown"
                                     :aria-expanded="filament ? 'false' : 'true'">
                                     {{ filament || 'Select Filament' }}
                                 </button>
+
                                 <ul class="dropdown-menu dropdown-menu-scrollable w-100"
                                     aria-labelledby="dropdownMenuButton">
                                     <li><a class="dropdown-item" v-for="type in filamentTypes" :key="type"
@@ -423,11 +438,11 @@ const getFilament = (file: File) => {
                     </div>
 
                     <div>
-                        <button v-if="selectedPrinters.length > 1" :disabled="isSubmitDisabled" class="btn btn-primary"
+                        <button v-if="selectedPrinters.length > 1" :disabled="isLoading || isSubmitDisabled" class="btn btn-primary"
                             type="submit">
                             Add to queues
                         </button>
-                        <button v-else :disabled="isSubmitDisabled" class="btn btn-primary" type="submit">
+                        <button v-else :disabled="isLoading || isSubmitDisabled" class="btn btn-primary" type="submit">
                             Add to queue
                         </button>
                     </div>

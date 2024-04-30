@@ -7,7 +7,7 @@ import { saveAs } from 'file-saver'
 import { ref } from 'vue'
 
 export let pageSize = ref(10)
-
+export let isLoading = ref(false)
 // Submit form data
 export const selectedPrinters = ref<Array<Device>>([])
 export const file = ref<File>()
@@ -60,6 +60,7 @@ export interface Job {
   timer?: NodeJS.Timeout
   time_started?: number
   colorbuff?: number 
+  printer_name?: string 
 }
 
 export async function jobTime(job: Job, printers: any) {

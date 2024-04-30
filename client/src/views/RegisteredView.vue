@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters } from '../model/ports'
+import { isLoading } from '../model/jobs'
+
 import { ref, onMounted } from 'vue';
 import { toast } from '../model/toast'
 import RegisterModal from '../components/RegisterModal.vue'
@@ -32,19 +34,26 @@ const selectedPrinter = ref<Device | null>(null);
 
 // fetch list of connected ports from backend and automatically load them into the form dropdown 
 onMounted(async () => {
+    isLoading.value = true
     const allPrinters = await retrieve(); // load all registered printers
     registered.value = allPrinters
+    isLoading.value = false
 });
 
 const doHardReset = async (printer: Device) => {
+    isLoading.value = true
     await hardReset(printer.id)
+    isLoading.value = false
 }
 
 const doQueueRestore = async (printer: Device) => {
+    isLoading.value = true
     await queueRestore(printer.id)
+    isLoading.value = false
 }
 
 const doDelete = async (printer: Device) => {
+    isLoading.value = true
     if(printer.status=="printing"){
         toast.error("Cannot deregister printer while status is printing. Please wait for the printer to finish")
     }
@@ -57,7 +66,6 @@ const doDelete = async (printer: Device) => {
     }
 
     printers.value = printers.value.filter(p => p.id !== printer.id)
-
 
     await nullifyJobs(printer.id)
 
@@ -79,15 +87,18 @@ const doDelete = async (printer: Device) => {
 
     printers.value = await retrieveInfo();
     registered.value = await retrieve();
+    isLoading.value = false
     // await removeThread(printer.id)
 }
 
 const saveName = async (printer: Device) => {
+    isLoading.value = true
     await editThread(printer.id, newName.value.trim())
     await editName(printer.id, newName.value.trim())
     printer.name = newName.value.trim();
 
     printers.value = await retrieveInfo();
+    isLoading.value = false
 
     editMode.value = false
     newName.value = ''
@@ -95,17 +106,20 @@ const saveName = async (printer: Device) => {
 }
 
 const doRepair = async () => {
+    isLoading.value = true
     await repair()
     router.go(0)
-
+    isLoading.value = false
 }
 
 const doDiagnose = async (printer: Device) => {
+    isLoading.value = true
     message.value = `Diagnosing <b>${printer.name}</b>:<br/><br/>This printer is registered under port <b>${printer.device}</b>.`
     showMessage.value = true
     let str = await diagnose(printer.device)
     let resstr = str.diagnoseString
     message.value += "<br><br>" + resstr
+    isLoading.value = false
 }
 
 const clearMessage = () => {
@@ -159,6 +173,10 @@ const doCloseRegisterModal = async () => {
     </div>
 
     <div class="container">
+        <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        </button>
+
         <!-- <b>Registered View</b> -->
         <!-- register modal opens with a button-->
         <button type="button" class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#registerModal">
@@ -207,7 +225,7 @@ const doCloseRegisterModal = async () => {
                                                     <span class="ms-2">Restore Queue</span>
                                                 </a>
                                             </li>
-                                            <span class="tooltiptext">This returns jobs to this printer's queue that have a status of "inqueue" or "printing."</span>
+                                            <span class="tooltiptext">This returns jobs to this printer's queue that have a status of "inqueue" or "printing." This is useful if the queue is wiped during a power outage or an accidental server disconnection.</span>
                                         </div>
                                         <li>
                                             <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
