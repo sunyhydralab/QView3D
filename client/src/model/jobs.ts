@@ -201,10 +201,21 @@ export function download(action: string, body?: unknown, method: string = 'POST'
 
 export function useGetJobs() {
   return {
-    async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean, startdate: string = '', enddate: string = '') {
+    async jobhistory(
+      page: number,
+      pageSize: number,
+      printerIds?: number[],
+      oldestFirst?: boolean,
+      searchJob: string = '',
+      searchCriteria: string = '',
+      searchTicketId: string = '',
+      favoriteOnly?: boolean,
+      startdate: string = '',
+      enddate: string = ''
+    ) {
       try {
         const response = await api(
-          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&favoriteOnly=${favoriteOnly}&startdate=${startdate}&enddate=${enddate}`
+          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&searchTicketId=${encodeURIComponent(searchTicketId)}&favoriteOnly=${favoriteOnly}&startdate=${startdate}&enddate=${enddate}`
         )
         return response
       } catch (error) {
@@ -240,10 +251,10 @@ export function useUpdateJobStatus() {
 
 export function useGetErrorJobs() {
   return {
-    async jobhistoryError(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean, issues?: number[], startdate: string = '', enddate: string = '') {
+    async jobhistoryError(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', searchTicketId: string = '', favoriteOnly?: boolean, issues?: number[], startdate: string = '', enddate: string = '') {
       try {
         const response = await api(
-          `geterrorjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&issueIds=${JSON.stringify(issues)}&startdate=${startdate}&enddate=${enddate}`
+          `geterrorjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&searchTicketId=${encodeURIComponent(searchTicketId)}&issueIds=${JSON.stringify(issues)}&startdate=${startdate}&enddate=${enddate}`
         )
         return response
       } catch (error) {

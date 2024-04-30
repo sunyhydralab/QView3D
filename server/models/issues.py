@@ -74,3 +74,16 @@ class Issue(db.Model):
                 500,
             )
     
+    @classmethod
+    def edit_issue(cls, issue_id, issueNew):
+        try:
+            issueToEdit = cls.query.get(issue_id)
+            issueToEdit.issue = issueNew
+            db.session.commit()
+            return {"success": True, "message": "Issue successfully edited"}
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return (
+                jsonify({"error": "Failed to edit issue. Database error"}),
+                500,
+            )
