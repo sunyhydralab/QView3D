@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters } from '../model/ports'
+import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters } from '../model/ports'
 import { ref, onMounted } from 'vue';
 import { toast } from '../model/toast'
 import RegisterModal from '../components/RegisterModal.vue'
@@ -8,7 +8,6 @@ import router from '@/router';
 const { retrieve } = useRetrievePrinters();
 const { retrieveInfo } = useRetrievePrintersInfo();
 const { hardReset } = useHardReset();
-const { queueRestore } = useQueueRestore();
 const { deletePrinter } = useDeletePrinter();
 const { nullifyJobs } = useNullifyJobs();
 const { editName } = useEditName();
@@ -38,10 +37,6 @@ onMounted(async () => {
 
 const doHardReset = async (printer: Device) => {
     await hardReset(printer.id)
-}
-
-const doQueueRestore = async (printer: Device) => {
-    await queueRestore(printer.id)
 }
 
 const doDelete = async (printer: Device) => {
@@ -198,16 +193,6 @@ const doCloseRegisterModal = async () => {
                                                 </a>
                                             </li>
                                             <span class="tooltiptext">This wipes the queue and resets the printer's communication thread.</span>
-                                        </div>
-                                        <div class="tooltip" style="width: 100%;">
-                                            <li>
-                                                <a class="dropdown-item d-flex align-items-center"
-                                                    style="font-size: 1rem;" @click=" doQueueRestore(printer)">
-                                                    <i class="fas fa-undo"></i>
-                                                    <span class="ms-2">Restore Queue</span>
-                                                </a>
-                                            </li>
-                                            <span class="tooltiptext">This returns jobs to this printer's queue that have a status of "inqueue" or "printing."</span>
                                         </div>
                                         <li>
                                             <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"

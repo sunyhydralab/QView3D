@@ -681,6 +681,9 @@ class Printer(db.Model):
 
     def getHwid(self):
         return self.hwid
+    
+    def setQueue(self, queue): 
+        self.queue = queue
 
     # def removeJobFromQueue(self, job_id):
     #     self.queue.removeJob(job_id)
@@ -713,9 +716,10 @@ class Printer(db.Model):
     def setStatus(self, newStatus):
         try:
             print("SETTING STATUS TO:", newStatus)
+            if(self.status == "error" and newStatus!="error"): 
+                Printer.hardReset(self.id)
+            
             self.status = newStatus
-            # print(self.status)
-            # Emit a 'status_update' event with the new status
             current_app.socketio.emit(
                 "status_update", {"printer_id": self.id, "status": newStatus}
             )
@@ -752,13 +756,22 @@ class Printer(db.Model):
             print(f"Failed to send status to job: {e}")
 
     @classmethod 
-    def repairPorts(self):
+    def repairPorts(cls):
         try:
             base_url = os.getenv('BASE_URL')
             response = requests.post(f"{base_url}/repairports")
 
         except requests.exceptions.RequestException as e:
             print(f"Failed to repair ports: {e}")
+            
+    @classmethod 
+    def hardReset(cls, printerid):
+        try:
+            base_url = os.getenv('BASE_URL')
+            response = requests.post(f"{base_url}/hardreset", json={'printerid': printerid, 'restore': 1})
+
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to repair ports: {e}")   
 
     def setTemps(self, extruder_temp, bed_temp):
         self.extruder_temp = extruder_temp

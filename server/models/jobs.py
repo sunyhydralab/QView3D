@@ -279,35 +279,6 @@ class Job(db.Model):
         return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer
 
     @classmethod
-    def queueRestore(cls, printer_id):
-        try:
-            jobs = cls.query.filter_by(
-                printer_id=printer_id, status='inqueue').all()
-            printingJob = cls.query.filter_by(
-                printer_id=printer_id, status='printing').all()
-            for job in printingJob:
-                cls.update_job_status(job.id, 'inqueue')
-                jobs.append(job)
-
-            for job in jobs:
-                if (job.file != None):
-                    base_name, extension = os.path.splitext(
-                        job.file_name_original)
-                    # Append the ID to the base name
-                    file_name_pk = f"{base_name}_{job.id}{extension}"
-                    job.setFileName(file_name_pk)  # set unique file name
-
-                    print(file_name_pk)
-                    # print(type(job.file))
-                    queue = cls.findPrinterObject(printer_id).getQueue()
-                    if not queue.jobExists(job.id) and job.file is not None:
-                        queue.addToBack(job, printer_id)
-            return {"success": True, "message": "Queue restored successfully."}
-        except SQLAlchemyError as e:
-            print(f"Database error: {e}")
-            return jsonify({"error": "Failed to restore queue. Database error"}), 500
-
-    @classmethod
     def removeFileFromPath(cls, file_path):
         # file_path = self.generatePath()  # Get the file path
         if os.path.exists(file_path):    # Check if the file exists

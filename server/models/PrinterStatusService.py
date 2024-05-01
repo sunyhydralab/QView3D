@@ -4,6 +4,7 @@ import serial
 import serial.tools.list_ports
 import time
 import requests
+from Classes.Queue import Queue
 from flask import jsonify 
 
 class PrinterThread(Thread):
@@ -24,7 +25,7 @@ class PrinterStatusService:
         thread.start()
         return thread
 
-    def create_printer_threads(self, printers_data):
+    def create_printer_threads(self, printers_data, queue=Queue()):
         # all printer statuses initialized to be 'online.' Instantly changes to 'ready' on initialization -- test with 'reset printer' command.
         for printer_info in printers_data:
             printer = Printer(
@@ -33,8 +34,10 @@ class PrinterStatusService:
                 description=printer_info["description"],
                 hwid=printer_info["hwid"],
                 name=printer_info["name"],
-                status='configuring'
+                status='configuring',
             )
+            queue.setToInQueue()
+            printer.setQueue(queue)
             printer_thread = self.start_printer_thread(
                 printer
             )  # creating a thread for each printer object
@@ -55,14 +58,7 @@ class PrinterStatusService:
                 if (status == "ready" and queueSize > 0):
                     time.sleep(2) # wait for 2 seconds to allow the printer to process the queue
                     if status != "offline": 
-                    # ports = serial.tools.list_ports.comports()
-                    # printerport = printer.getDevice() 
-                    # printerhwid = printer.getHwid()
-                    # for port in ports: 
-                    #     if port.device==printerport and port.hwid == printerhwid: 
                         printer.printNextInQueue()
-                    # else: 
-                        # printer.setError("The port this printer is registered under is not the same as the port it is connected to, or it is not connected. Click the Diagnose Printer button under Registered Printers to troubleshoot.")
 
     def resetThread(self, printer_id):
         try: 
@@ -74,11 +70,10 @@ class PrinterStatusService:
                         "device": printer.device,
                         "description": printer.description,
                         "hwid": printer.hwid,
-                        "name": printer.name
-                        
+                        "name": printer.name, 
                     }
                     self.printer_threads.remove(thread)
-                    self.create_printer_threads([thread_data])
+                    self.create_printer_threads([thread_data], printer.getQueue())
                     break
             return jsonify({"success": True, "message": "Printer thread reset successfully"})
         except Exception as e:
@@ -164,15 +159,6 @@ class PrinterStatusService:
             printer_info_list.append(printer_info)
             
         return printer_info_list
-
-    def pingForStatus(self):
-        """_summary_ pseudo code
-        for printer in threads:
-            status = printer.getStatus()
-            if status == printing:
-                GCODE for print status
-        """
-        pass
 
     def getThreadArray(self):
         return self.printer_threads
