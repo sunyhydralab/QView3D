@@ -61,6 +61,9 @@ let jobComments = ref('')
 let editMode = ref(false)
 let editNum = ref<number | undefined>(0)
 
+let deleteMode = ref(false)
+let deleteNum = ref<number | undefined>(0)
+
 let page = ref(1)
 let pageSize = ref(10)
 let totalJobs = ref(0)
@@ -106,6 +109,12 @@ onMounted(async () => {
         imageModal?.addEventListener('hidden.bs.modal', () => {
             isGcodeImageVisible.value = false;
             isImageVisible.value = true
+        });
+
+        const issueModal = document.getElementById('issueModal');
+
+        issueModal?.addEventListener('hidden.bs.modal', () => {
+            resetIssueValues()
         });
 
         isLoading.value = false;
@@ -175,7 +184,7 @@ async function submitFilter() {
 
     // Get the total number of jobs first, without considering the page number
     [fetchedJobs.value, totalJobs.value] = await jobhistoryError(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
-    
+
     totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
     totalPages.value = Math.max(totalPages.value, 1);
 
@@ -230,18 +239,18 @@ const doCreateIssue = async () => {
     await createIssue(newIssue.value)
     const newIssues = await issues()
     issuelist.value = newIssues
-    newIssue.value = ''
-    showText.value = false
+    resetIssueValues()
     isLoading.value = false
 }
 
-const doDeleteIssue = async () => {
+const doDeleteIssue = async (issue: Issue) => {
     isLoading.value = true
-    if (selectedIssue.value === undefined) return
-    await deleteIssue(selectedIssue.value)
+    if (issue === undefined) return
+    await deleteIssue(issue)
     const newIssues = await issues()
     issuelist.value = newIssues
     submitFilter()
+    resetIssueValues()
     isLoading.value = false
 }
 
@@ -304,10 +313,17 @@ const saveIssue = async (issue: Issue) => {
     issue.issue = newName.value.trim();
 
     issuelist.value = await issues()
+    resetIssueValues()
+}
 
-    editMode.value = false
+const resetIssueValues = () => {
+    showText.value = false
+    newIssue.value = ''
     newName.value = ''
+    editMode.value = false
     editNum.value = undefined
+    deleteMode.value = false
+    deleteNum.value = undefined
 }
 
 </script>
@@ -340,40 +356,13 @@ const saveIssue = async (issue: Issue) => {
     </div>
 
 
-    <div class="modal fade" id="assignissueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
+    <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="issueModal" aria-hidden="true"
         data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header d-flex align-items-end">
-                    <h5 class="modal-title" id="assignIssueLabel">
-                        <b>Create New Issue</b>
-                    </h5>
-
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="newIssue" class="form-label">Enter Issue</label>
-                        <input id="newIssue" type="text" placeholder="Enter Issue" v-model="newIssue"
-                            class="form-control" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" @click.prevent="doCreateIssue" class="btn btn-primary me-2"
-                        v-bind:disabled="!newIssue" data-bs-dismiss="modal">Create Issue</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="deleteissueModal" tabindex="-1" aria-labelledby="deleteIssueLabel" aria-hidden="true"
-        data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header d-flex align-items-end">
-                    <h5 class="modal-title" id="deleteIssueLabel">
-                        <b>Delete Issue</b>
+                    <h5 class="modal-title" id="issueModal">
+                        <b>Issues</b>
                     </h5>
 
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -381,62 +370,72 @@ const saveIssue = async (issue: Issue) => {
                 <div class="modal-body">
                     <form @submit.prevent="">
                         <div class="mb-3">
-                            <label for="issue" class="form-label">Select Issue</label>
-                            <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
-                                <option disabled value="undefined">Select Issue</option>
-                                <option v-for="issue in issuelist" :key="issue.id" :value="issue">
-                                    {{ issue.issue }}
-                                </option>
-                            </select>
+                            <label for="newIssue" class="form-label">Create New Issue</label>
+                            <input id="newIssue" type="text" placeholder="Enter Issue" v-model="newIssue"
+                                class="form-control" required>
+                            <button class="btn btn-primary mt-2" :class="{ 'disabled': newIssue.trim() === '' }"
+                                @click="doCreateIssue">Create Issue</button>
                         </div>
                     </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" @click.prevent="doDeleteIssue" class="btn btn-danger me-2"
-                        data-bs-dismiss="modal" :disabled="selectedIssue == undefined">Delete</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="editissueModal" tabindex="-1" aria-labelledby="editIssueLabel" aria-hidden="true"
-        data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header d-flex align-items-end">
-                    <h5 class="modal-title" id="editIssueLabel">
-                        <b>Edit Issue</b>
-                    </h5>
-
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
+                    <div class="my-2 border-top" style="border-width: 1px; margin-left: -16px; margin-right: -16px;">
+                    </div>
                     <form @submit.prevent="">
                         <div class="mb-3">
-                            <label for="editName" class="form-label">Select Issue</label>
-                            <div v-for="issue in issuelist" :key="issue.id">
-
-                                <div v-if="editMode && (editNum == issue.id)" class="d-flex align-items-center"
-                                style="margin-bottom: 5px;">
-                                    <input id="editName" type="text" class="form-control me-2" v-model="newName" />
-                                    <button class="btn btn-success me-2" @click="saveIssue(issue)">Save</button>
-                                    <button class="btn btn-secondary"
-                                    @click="editMode = false; editNum = undefined; newName = ''">Cancel</button>
+                            <label class="form-label">Delete Issue</label>
+                            <ul class="list-group" style="max-height: 100px; overflow-y: auto;">
+                                <li v-for="issue in issuelist" :key="issue.id"
+                                    class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ issue.issue }}</span>
+                                    <div>
+                                        <div v-if="deleteMode && (deleteNum == issue.id)">
+                                            <button class="btn btn-danger me-2"
+                                                @click="doDeleteIssue(issue)">Delete</button>
+                                            <button class="btn btn-secondary"
+                                                @click="deleteMode = false; deleteNum = undefined">Cancel</button>
+                                        </div>
+                                        <div v-else>
+                                            <button class="btn btn-danger"
+                                                @click="deleteMode = true; deleteNum = issue.id">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li v-if="issuelist.length === 0" class="list-group-item">
+                                    There are no issues to delete, please create one.
+                                </li>
+                            </ul>
+                        </div>
+                    </form>
+                    <div class="my-2 border-top" style="border-width: 1px; margin-left: -16px; margin-right: -16px;">
+                    </div>
+                    <form @submit.prevent="">
+                        <label class="form-label">Rename Issue</label>
+                        <ul class="list-group" style="max-height: 100px; overflow-y: auto;">
+                            <li v-for="issue in issuelist" :key="issue.id"
+                                class="list-group-item d-flex justify-content-between align-items-center">
+                                <span v-if="!editMode">{{ issue.issue }}</span>
+                                <div v-if="editMode && (editNum == issue.id)"
+                                    class="d-flex justify-content-between w-100">
+                                    <input id="editName" type="text" class="form-control me-2 flex-grow-1"
+                                        v-model="newName" />
+                                    <div class="d-flex">
+                                        <button class="btn btn-success me-2" @click="saveIssue(issue)">Save</button>
+                                        <button class="btn btn-secondary"
+                                            @click="editMode = false; editNum = undefined; newName = ''">Cancel</button>
+                                    </div>
                                 </div>
                                 <div v-else>
-                                    <p>
-                                        {{ issue.issue }}
-                                        &nbsp; &nbsp; &nbsp;
-                                        <button class="btn btn-success" 
-                                            @click="editMode = true; editNum = issue.id; newName = issue.issue || ''">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                    </p>
-                                    
+                                    <button class="btn btn-success"
+                                        @click="editMode = true; editNum = issue.id; newName = issue.issue || ''">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
                                 </div>
-                            </div>
-                        </div>
+                            </li>
+                            <li v-if="issuelist.length === 0" class="list-group-item">
+                                There are no issues to rename, please create one.
+                            </li>
+                        </ul>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -453,7 +452,7 @@ const saveIssue = async (issue: Issue) => {
                 <div class="modal-header d-flex align-items-end">
                     <h5 class="modal-title mb-0" id="assignIssueLabel" style="line-height: 1;">Job #{{
                         selectedJob?.td_id
-                    }}</h5>
+                        }}</h5>
                     <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px; line-height: 1;">{{
                         selectedJob?.date }}</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
@@ -586,7 +585,7 @@ const saveIssue = async (issue: Issue) => {
                         <div class="mb-3">
                             <label for="searchTicketId" class="form-label">Search using Ticket ID:</label>
                             <input type="text" id="searchTicketId" class="form-control" v-model="searchTicketId">
-                        </div>                
+                        </div>
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <div class="mb-3">
@@ -639,21 +638,8 @@ const saveIssue = async (issue: Issue) => {
             <div class="col-7 text-center"></div>
 
             <div class="col-4 text-end" style="padding-right: 0">
-                <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal"
-                    data-bs-target="#assignissueModal">
-                    <i class="fas fa-plus"></i>
-                    New
-                </button>
-
-                <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal"
-                    data-bs-target="#editissueModal">
-                    <i class="fas fa-edit"></i>
-                    Edit
-                </button>
-
-                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteissueModal">
-                    <i class="fas fa-trash-alt"></i>
-                    Delete
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#issueModal">
+                    Issues
                 </button>
             </div>
         </div>
@@ -760,6 +746,11 @@ const saveIssue = async (issue: Issue) => {
     </div>
 </template>
 <style scoped>
+.list-group-item {
+    background-color: #d8d8d8 !important;
+    border-color: #484848 !important;
+}
+
 .sticky {
     position: sticky;
     bottom: 0px;
