@@ -289,9 +289,9 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                             aria-expanded="false"></div>
                           <div class="dropdown-menu">
                             <div class="dropdown-item"
-                              v-for="otherPrinter in printers.filter((p) => p.id !== printer.id)" :key="otherPrinter.id"
-                              @click="handleRerun(job, otherPrinter)">
-                              {{ otherPrinter.name }}
+                              v-for="printer in printers" :key="printer.id"
+                              @click="handleRerun(job, printer)">
+                              {{ printer.name }}
                             </div>
                           </div>
                         </div>

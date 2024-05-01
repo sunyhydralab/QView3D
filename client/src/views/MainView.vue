@@ -247,30 +247,29 @@ const handleDragEnd = async () => {
   </div>
 
   <!-- bootstrap 'gcodeImageModal' -->
-  <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel"
-  aria-hidden="true">
-  <div :class="['modal-dialog', isImageVisible ? '' : 'modal-xl', 'modal-dialog-centered']">
+  <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true">
+    <div :class="['modal-dialog', isImageVisible ? '' : 'modal-xl', 'modal-dialog-centered']">
       <div class="modal-content">
-          <div class="modal-header">
-              <h5 class="modal-title" id="gcodeImageModalLabel">
-                  <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
-                  <div class="form-check form-switch">
-                      <label class="form-check-label" for="switchView">{{ isImageVisible ? 'Image' : 'Viewer'
-                          }}</label>
-                      <input class="form-check-input" type="checkbox" id="switchView" v-model="isImageVisible">
-                  </div>
-              </h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-header">
+          <h5 class="modal-title" id="gcodeImageModalLabel">
+            <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
+            <div class="form-check form-switch">
+              <label class="form-check-label" for="switchView">{{ isImageVisible ? 'Image' : 'Viewer'
+                }}</label>
+              <input class="form-check-input" type="checkbox" id="switchView" v-model="isImageVisible">
+            </div>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <GCode3DImageViewer v-if="isGcodeImageVisible && !isImageVisible" :job="currentJob" />
+            <GCodeThumbnail v-else-if="isGcodeImageVisible && isImageVisible" :job="currentJob" />
           </div>
-          <div class="modal-body">
-              <div class="row">
-                  <GCode3DImageViewer v-if="isGcodeImageVisible && !isImageVisible" :job="currentJob" />
-                  <GCodeThumbnail v-else-if="isGcodeImageVisible && isImageVisible" :job="currentJob" />
-              </div>
-          </div>
+        </div>
       </div>
+    </div>
   </div>
-</div>
 
   <!-- bootstrap 'gcodeModal' -->
   <div class="modal fade" id="gcodeModal" tabindex="-1" aria-labelledby="gcodeModalLabel" aria-hidden="true">
@@ -312,7 +311,8 @@ const handleDragEnd = async () => {
         <th style="width: 58px">Move</th>
       </tr>
       <draggable v-model="printers" tag="tbody" :animation="300" item-key="printer.id" handle=".handle"
-        dragClass="hidden-ghost" :onEnd="handleDragEnd" v-if="printers.length > 0" @start="collapseAll" @end="restoreExpandedState">
+        dragClass="hidden-ghost" :onEnd="handleDragEnd" v-if="printers.length > 0" @start="collapseAll"
+        @end="restoreExpandedState">
         <template #item="{ element: printer }">
           <div v-if="printer.isInfoExpanded" class="expanded-info">
             <tr :id="printer.id">
@@ -557,8 +557,9 @@ const handleDragEnd = async () => {
             </tr>
             <tr style="background-color: #cdcdcd;">
               <td class="borderless-top">
-                <span v-if="printer.queue[0] && printer.queue[0]?.current_layer_height != null && printer.queue[0]?.max_layer_height != null && printer.queue[0]?.max_layer_height !== 0">
-                  {{printer.queue[0]?.current_layer_height + '/' + printer.queue[0]?.max_layer_height}}
+                <span
+                  v-if="printer.queue[0] && printer.queue[0]?.current_layer_height != null && printer.queue[0]?.max_layer_height != null && printer.queue[0]?.max_layer_height !== 0">
+                  {{ printer.queue[0]?.current_layer_height + '/' + printer.queue[0]?.max_layer_height }}
                 </span>
                 <span v-else>
                   <i>idle</i>
@@ -578,8 +579,9 @@ const handleDragEnd = async () => {
                   v-html="printer?.status === 'colorchange' ? 'Waiting...' : formatTime(printer.queue[0]?.job_client?.elapsed_time)"></span>
               </td>
               <td class="borderless-top">
-                <span
+                <span v-if="printer.queue[0]?.job_client?.remaining_time !== 0"
                   v-html="printer?.status === 'colorchange' ? 'Waiting...' : formatTime(printer.queue[0]?.job_client?.remaining_time)"></span>
+                <span v-else v-html="'00:00:00'"></span>
               </td>
               <td class="borderless-top">
                 <span
@@ -676,7 +678,8 @@ const handleDragEnd = async () => {
                   Stop
                 </button>
 
-                <div v-if="printer.status == 'colorchange' && (printer.colorbuff == 1 || printer.queue[0].file_pause == 1)"
+                <div
+                  v-if="printer.status == 'colorchange' && (printer.colorbuff == 1 || printer.queue[0].file_pause == 1)"
                   class="mt-2">
                   Ready for color change.
                 </div>

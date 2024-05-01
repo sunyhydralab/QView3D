@@ -60,13 +60,16 @@ onMounted(async () => {
 
     modal.addEventListener('hidden.bs.modal', () => {
         // Clean up when the modal is hidden
+        preview?.processGCode('');
         preview?.clear();
+        preview = null;
     });
 });
 
 onUnmounted(() => {
-    preview?.clear();
     preview?.processGCode('');
+    preview?.clear();
+    preview = null;
 });
 
 const fileToString = (file: File | undefined) => {
