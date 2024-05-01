@@ -17,11 +17,7 @@ import requests
 from dotenv import load_dotenv
 
 load_dotenv()
-
-
 # model for Printer table
-
-
 class Printer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     device = db.Column(db.String(50), nullable=False)
@@ -745,8 +741,8 @@ class Printer(db.Model):
                 "jobid": job_id,
                 "status": status,  # Assuming status is accessible here
             }
-            base_url = os.getenv("BASE_URL", "http://localhost:8000")
-
+            
+            base_url = os.getenv('BASE_URL')
             response = requests.post(f"{base_url}/updatejobstatus", json=data)
             if response.status_code == 200:
                 print("Status sent successfully")
@@ -758,7 +754,7 @@ class Printer(db.Model):
     @classmethod 
     def repairPorts(self):
         try:
-            base_url = os.getenv("BASE_URL", "http://localhost:8000")
+            base_url = os.getenv('BASE_URL')
             response = requests.post(f"{base_url}/repairports")
 
         except requests.exceptions.RequestException as e:
