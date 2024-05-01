@@ -413,7 +413,7 @@ const resetIssueValues = () => {
                         <ul class="list-group" style="max-height: 100px; overflow-y: auto;">
                             <li v-for="issue in issuelist" :key="issue.id"
                                 class="list-group-item d-flex justify-content-between align-items-center">
-                                <span v-if="!editMode">{{ issue.issue }}</span>
+                                <span v-if="!editMode || (editNum != issue.id)">{{ issue.issue }}</span>
                                 <div v-if="editMode && (editNum == issue.id)"
                                     class="d-flex justify-content-between w-100">
                                     <input id="editName" type="text" class="form-control me-2 flex-grow-1"
@@ -444,15 +444,15 @@ const resetIssueValues = () => {
         </div>
     </div>
 
-    <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
+    <div class="modal fade" id="commentModal" tabindex="-1" aria-labelledby="commentModalLabel" aria-hidden="true"
         data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header d-flex align-items-end">
-                    <h5 class="modal-title mb-0" id="assignIssueLabel" style="line-height: 1;">Job #{{
+                    <h5 class="modal-title mb-0" id="commentModalLabel" style="line-height: 1;">Job #{{
                         selectedJob?.td_id
                         }}</h5>
-                    <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px; line-height: 1;">{{
+                    <h6 class="modal-title" id="commentModalLabel" style="padding-left:10px; line-height: 1;">{{
                         selectedJob?.date }}</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
                         @click="selectedIssue = undefined; selectedJob = undefined;"></button>
@@ -670,7 +670,7 @@ const resetIssueValues = () => {
                                     </li>
                                     <li>
                                         <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
-                                            data-bs-target="#issueModal" @click="setJob(job); showText = false">
+                                            data-bs-target="#commentModal" @click="setJob(job); showText = false">
                                             <i class="fas fa-comments"></i>
                                             <span class="ms-2">Comments</span>
                                         </a>

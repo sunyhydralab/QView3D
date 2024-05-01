@@ -432,7 +432,7 @@ const getFilament = (file: File) => {
                     </div>
 
                     <div class="mb-3">
-                        <label for="quantity" class="form-label">TeamDynamix ID</label>
+                        <label for="quantity" class="form-label">Ticket ID</label>
                         <input v-model="tdid" class="form-control" type="number" id="tdid" name="tdid"
                             @keydown="onlyNumber($event)">
                     </div>
