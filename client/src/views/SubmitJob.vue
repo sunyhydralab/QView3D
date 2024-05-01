@@ -307,13 +307,7 @@ const getFilament = (file: File) => {
             </div>
         </div>
     </div>
-
-    <!-- <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
-        Loading, please do not refresh or leave the page...
-        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-    </button> -->
-
-    <!-- loading modal -->
+    
     <transition name="fade">
         <div v-if="isLoading" class="modal fade show d-block" id="loadingModal" tabindex="-1"
             aria-labelledby="loadingModalLabel" aria-hidden="true"
