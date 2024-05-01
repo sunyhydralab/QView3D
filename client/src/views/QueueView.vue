@@ -207,13 +207,22 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
     </div>
   </div>
 
-  <div class="container">
-    <!-- <b>Queue View</b> -->
+  <transition name="fade">
+    <div v-if="isLoading" class="modal fade show d-block" id="loadingModal" tabindex="-1"
+        aria-labelledby="loadingModalLabel" aria-hidden="true"
+        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow-y: hidden;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-body d-flex justify-content-center align-items-center"
+                style="user-select: none; position: relative;">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</transition>
 
-    <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
-            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-      </button>
-        
+  <div class="container">        
     <div class="row w-100" style="margin-bottom: 0.5rem">
       <div class="col-2 text-start" style="padding-left: 0">
 
