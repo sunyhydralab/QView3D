@@ -180,4 +180,15 @@ class PrinterStatusService:
 
     def getThreadArray(self):
         return self.printer_threads
+    
+    def movePrinterList(self, printer_ids):
+        # printer_ids is a list of printer ids in the order they should be displayed
+        new_thread_list = []
+        for id in printer_ids:
+            for thread in self.printer_threads:
+                if thread.printer.id == id:
+                    new_thread_list.append(thread)
+                    break
+        self.printer_threads = new_thread_list
+        return jsonify({"success": True, "message": "Printer list reordered successfully"})
 

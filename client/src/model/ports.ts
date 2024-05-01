@@ -25,7 +25,7 @@ export interface Device {
   isInfoExpanded?: boolean
   extruder_temp?: number
   bed_temp?: number
-  colorChangeBuffer?: number 
+  colorChangeBuffer?: number
 }
 
 export let printers = ref<Device[]>([])
@@ -330,11 +330,11 @@ export function useRepair() {
   }
 }
 
-export function useMoveHead(){
+export function useMoveHead() {
   return {
-    async move(port: string){
+    async move(port: string) {
       try {
-        const response = await api('movehead', {port})
+        const response = await api('movehead', { port })
         if (response) {
           if (response.success == false) {
             toast.error(response.message)
@@ -354,5 +354,19 @@ export function useMoveHead(){
       }
     }
   }
+}
 
+export function useMovePrinterList() {
+  return {
+    async movePrinterList(printers: Device[]) {
+      try {
+        // make new array of printer id's in the order they are in the printers array
+        const printersIds = printers.map((printer) => printer.id)
+        const response = await api('moveprinterlist', { printersIds })
+        return response
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
 }

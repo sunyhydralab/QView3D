@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref, watchEffect } from 'vue';
-import { printers, useSetStatus, type Device } from '@/model/ports';
+import { printers, useSetStatus, useMovePrinterList, type Device } from '@/model/ports';
 import draggable from 'vuedraggable'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
@@ -17,6 +17,7 @@ const { getFile } = useGetFile()
 const { setStatus } = useSetStatus();
 const { start } = useStartJob()
 const { getFileDownload } = useGetJobFile()
+const { movePrinterList } = useMovePrinterList()
 
 const router = useRouter()
 
@@ -176,6 +177,10 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
   await nextTick()
 }
 
+const handleDragEnd = async () => {
+  await movePrinterList(printers.value)
+}
+
 </script>
 
 <template>
@@ -307,7 +312,7 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
         <th style="width: 58px">Move</th>
       </tr>
       <draggable v-model="printers" tag="tbody" :animation="300" item-key="printer.id" handle=".handle"
-        dragClass="hidden-ghost" v-if="printers.length > 0" @start="collapseAll" @end="restoreExpandedState">
+        dragClass="hidden-ghost" :onEnd="handleDragEnd" v-if="printers.length > 0" @start="collapseAll" @end="restoreExpandedState">
         <template #item="{ element: printer }">
           <div v-if="printer.isInfoExpanded" class="expanded-info">
             <tr :id="printer.id">
