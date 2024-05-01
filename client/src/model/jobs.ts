@@ -18,7 +18,7 @@ export const favorite = ref<boolean>(false)
 export const name = ref<string>('')
 export const tdid = ref<number>(0)
 export const filament = ref<string>('')
-const API_ROOT = import.meta.env.VITE_API_ROOT as string;
+const API_ROOT = import.meta.env.VITE_API_ROOT as string
 
 export interface Job {
   id: number
@@ -62,13 +62,12 @@ export interface Job {
   }
   timer?: NodeJS.Timeout
   time_started?: number
-  colorbuff?: number 
-  printer_name?: string 
+  colorbuff?: number
+  printer_name?: string
 }
 
 export async function jobTime(job: Job, printers: any) {
   if (printers) {
-
     if (!job.job_client) {
       job.job_client = {
         total_time: 0,
@@ -84,10 +83,10 @@ export async function jobTime(job: Job, printers: any) {
       for (const printer of printers.value) {
         // let time_server = Array(4) // this saves all of the data from the backend.Only changed if there is a pause involved.
         // Here 'printer' represents each Device object in the 'printers' array
-        if ((printer.queue && printer.queue.length != 0) && (printer.queue[0].status != 'inqueue')) {
+        if (printer.queue && printer.queue.length != 0 && printer.queue[0].status != 'inqueue') {
           let timejson = await refetchtime(printer.id!, printer.queue[0].id)
           if (printer.queue[0].job_server) {
-            printer.queue[0].job_server![0] = (timejson.total)
+            printer.queue[0].job_server![0] = timejson.total
             if (job.time_started == 1) {
               printer.queue[0].job_server![1] = Date.parse(timejson.eta)
               printer.queue[0].job_server![2] = Date.parse(timejson.timestart)
@@ -95,12 +94,11 @@ export async function jobTime(job: Job, printers: any) {
             }
           }
         }
-      };
+      }
     }
 
     const printerid = job.printerid
     const printer = printers.value.find((printer: { id: number }) => printer.id === printerid)
-
 
     const updateJobTime = () => {
       if (printer.status !== 'printing') {
@@ -109,23 +107,28 @@ export async function jobTime(job: Job, printers: any) {
         return
       }
 
-
       let totalTime = job.job_server![0]
       job.job_client!.total_time = totalTime * 1000
 
-      let eta = job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
+      let eta =
+        job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
       // job.job_client!.eta = eta + job.job_client!.extra_time
 
       // @ts-ignore
       job.job_client!.eta = eta
 
-      if (printer.status === 'printing' || printer.status === 'colorchange' || printer.status === 'paused') {
-        const now = Date.now();
-        const elapsedTime = now - new Date(job.job_server![2]).getTime();
-        job.job_client!.elapsed_time = Math.round(elapsedTime / 1000) * 1000;
+      if (
+        printer.status === 'printing' ||
+        printer.status === 'colorchange' ||
+        printer.status === 'paused'
+      ) {
+        const now = Date.now()
+        const elapsedTime = now - new Date(job.job_server![2]).getTime()
+        job.job_client!.elapsed_time = Math.round(elapsedTime / 1000) * 1000
         if (!isNaN(job.job_client!.elapsed_time)) {
           if (job.job_client!.elapsed_time <= job.job_client!.total_time) {
-            job.job_client!.remaining_time = job.job_client!.total_time - job.job_client!.elapsed_time
+            job.job_client!.remaining_time =
+              job.job_client!.total_time - job.job_client!.elapsed_time
           }
         }
       }
@@ -137,17 +140,17 @@ export async function jobTime(job: Job, printers: any) {
 
       // Update elapsed_time after the first second
       if (job.job_client!.elapsed_time === 0) {
-        job.job_client!.elapsed_time = 1;
+        job.job_client!.elapsed_time = 1
       }
     }
 
     // Call updateJobTime immediately when jobTime is called
-    updateJobTime();
+    updateJobTime()
 
     // Continue to call updateJobTime at regular intervals
     job.timer = setInterval(updateJobTime, 1000)
   } else {
-    console.error('printers is undefined');
+    console.error('printers is undefined')
   }
 }
 
@@ -168,10 +171,9 @@ export function setupTimeSocket(printers: any) {
           remaining_time: NaN
         }
         job.job_server = [0, '00:00:00', '00:00:00', '00:00:00']
-
       }
 
-      if (typeof (data.new_time) === 'number') {
+      if (typeof data.new_time === 'number') {
         job.job_server[data.index] = data.new_time
       } else {
         job.job_server[data.index] = Date.parse(data.new_time)
@@ -179,11 +181,10 @@ export function setupTimeSocket(printers: any) {
 
       jobTime(job, printers)
     } else {
-      console.error('printers or printers.value is undefined');
+      console.error('printers or printers.value is undefined')
     }
   })
 }
-
 
 async function refetchtime(printerid: number, jobid: number) {
   try {
@@ -195,20 +196,36 @@ async function refetchtime(printerid: number, jobid: number) {
   }
 }
 
-export function download(action: string, body?: unknown, method: string = 'POST', headers: HeadersInit = { 'Content-Type': 'application/json' }){
+export function download(
+  action: string,
+  body?: unknown,
+  method: string = 'POST',
+  headers: HeadersInit = { 'Content-Type': 'application/json' }
+) {
   return fetch(`${API_ROOT}/${action}`, {
-      method,
-      headers,
-      body: JSON.stringify(body)
-  });
+    method,
+    headers,
+    body: JSON.stringify(body)
+  })
 }
 
 export function useGetJobs() {
   return {
-    async jobhistory(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean, startdate: string = '', enddate: string = '') {
+    async jobhistory(
+      page: number,
+      pageSize: number,
+      printerIds?: number[],
+      oldestFirst?: boolean,
+      searchJob: string = '',
+      searchCriteria: string = '',
+      searchTicketId: string = '',
+      favoriteOnly?: boolean,
+      startdate: string = '',
+      enddate: string = ''
+    ) {
       try {
         const response = await api(
-          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&favoriteOnly=${favoriteOnly}&startdate=${startdate}&enddate=${enddate}`
+          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&searchTicketId=${encodeURIComponent(searchTicketId)}&favoriteOnly=${favoriteOnly}&startdate=${startdate}&enddate=${enddate}`
         )
         return response
       } catch (error) {
@@ -244,10 +261,22 @@ export function useUpdateJobStatus() {
 
 export function useGetErrorJobs() {
   return {
-    async jobhistoryError(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', favoriteOnly?: boolean, issues?: number[], startdate: string = '', enddate: string = '') {
+    async jobhistoryError(
+      page: number,
+      pageSize: number,
+      printerIds?: number[],
+      oldestFirst?: boolean,
+      searchJob: string = '',
+      searchCriteria: string = '',
+      searchTicketId: string = '',
+      favoriteOnly?: boolean,
+      issues?: number[],
+      startdate: string = '',
+      enddate: string = ''
+    ) {
       try {
         const response = await api(
-          `geterrorjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&issueIds=${JSON.stringify(issues)}&startdate=${startdate}&enddate=${enddate}`
+          `geterrorjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&searchTicketId=${encodeURIComponent(searchTicketId)}&issueIds=${JSON.stringify(issues)}&startdate=${startdate}&enddate=${enddate}`
         )
         return response
       } catch (error) {
@@ -620,41 +649,44 @@ export function useDownloadCsv() {
   return {
     async csv(allJobs: number, jobIds?: number[]): Promise<void> {
       try {
-        const response = await download(`downloadcsv`, { allJobs, jobIds });
+        const response = await download(`downloadcsv`, { allJobs, jobIds })
 
         if (!response.ok) {
-          throw new Error("HTTP error " + response.status);
+          throw new Error('HTTP error ' + response.status)
         }
 
-        const blob = await response.blob(); // Convert the response to a blob
-        const date = new Date();
+        const blob = await response.blob() // Convert the response to a blob
+        const date = new Date()
         // Format the date as YYYY-MM-DD
-        const dateString = new Intl.DateTimeFormat('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date).replace(/\//g, '-');
-        
-        // Generate the filename
-        const filename = `jobs_${dateString}.csv`;
+        const dateString = new Intl.DateTimeFormat('en-GB', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        })
+          .format(date)
+          .replace(/\//g, '-')
 
-        saveAs(blob, filename);
+        // Generate the filename
+        const filename = `jobs_${dateString}.csv`
+
+        saveAs(blob, filename)
 
         await deleteCSVFromServer()
-
       } catch (error) {
-        console.error('An error occurred while downloading the CSV:', error);
-        toast.error('An error occurred while downloading the CSV');
+        console.error('An error occurred while downloading the CSV:', error)
+        toast.error('An error occurred while downloading the CSV')
       }
-    },
-  };
+    }
+  }
 }
 
-
-
 export async function deleteCSVFromServer() {
-    try {
-      const response = await api(`removeCSV`)
-      console.log("DELETE RES ", response)
-      return response 
-    } catch (error) {
-      console.error(error)
-      toast.error('An error occurred while removing the issue')
-    }
+  try {
+    const response = await api(`removeCSV`)
+    console.log('DELETE RES ', response)
+    return response
+  } catch (error) {
+    console.error(error)
+    toast.error('An error occurred while removing the issue')
+  }
 }

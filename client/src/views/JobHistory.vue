@@ -34,6 +34,7 @@ const selectedIssueId = ref<number>()
 let issuelist = ref<Array<Issue>>([])
 
 const date = ref(null as Date | null);
+const searchTicketId = ref('')
 let startDateString = ref<string>('');
 let endDateString = ref<string>('');
 let everyJob = ref<Array<Job>>([])
@@ -255,6 +256,7 @@ function clearFilter() {
     favoriteOnly.value = false;
 
     searchJob.value = '';
+    searchTicketId.value = '';
     searchByJobName.value = true;
     searchByFileName.value = true;
 
@@ -267,7 +269,6 @@ function clearFilter() {
 
     submitFilter();
 }
-
 
 const ensureOneCheckboxChecked = () => {
     if (!searchByJobName.value && !searchByFileName.value) {
@@ -393,6 +394,18 @@ const doDownloadCsv = async () => {
     isLoading.value = false
 }
 
+const jobInQueue = (job: Job) => {
+    for (const printer of printers.value) {
+        if (printer.queue) {
+            for (const jobQ of printer.queue) {
+                if (jobQ.id === job.id) {
+                return true;
+                }
+            } 
+        }
+    }
+    return false;
+}
 
 </script>
 
@@ -407,7 +420,7 @@ const doDownloadCsv = async () => {
                         selectedJob?.td_id
                     }}</h5>
                     <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px; line-height: 1;">{{
-                        selectedJob?.date }}</h6>
+                            selectedJob?.date }}</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
                         @click="selectedIssue = undefined; selectedJob = undefined;"></button>
                 </div>
@@ -615,6 +628,10 @@ const doDownloadCsv = async () => {
     <div class="container">
         <div class="row w-100" style="margin-bottom: 0.5rem;">
 
+            <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            </button>
+
             <div class="col-1 text-start" style="padding-left: 0">
 
                 <div style="position: relative;">
@@ -660,6 +677,12 @@ const doDownloadCsv = async () => {
                                 </ul>
                             </div>
                         </div>
+                        <div class="my-2 border-top"
+                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                        <div class="mb-3">
+                            <label for="searchTicketId" class="form-label">Search using Ticket ID:</label>
+                            <input type="text" id="searchTicketId" class="form-control" v-model="searchTicketId">
+                        </div>                     
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <div class="mb-3">
@@ -829,7 +852,7 @@ const doDownloadCsv = async () => {
                     </td>
                     <td>
                         <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job"
-                            :disabled="job.status === 'printing'">
+                            :disabled="job.status !== 'inqueue' && jobInQueue(job)">
                     </td>
                 </tr>
             </tbody>
