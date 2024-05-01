@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onUnmounted, ref, computed, watchEffect, onMounted } from 'vue'
 import { printers, type Device } from '../model/ports'
-import { useRerunJob, useRemoveJob, type Job, useMoveJob, useGetFile, useGetJobFile } from '../model/jobs'
+import { useRerunJob, useRemoveJob, type Job, useMoveJob, useGetFile, useGetJobFile, isLoading } from '../model/jobs'
 import draggable from 'vuedraggable'
 import { toast } from '@/model/toast'
 import { useRouter } from 'vue-router'
@@ -26,6 +26,7 @@ const successColorActive = ref('');
 let observer: MutationObserver;
 
 onMounted(() => {
+  isLoading.value = true 
   observer = new MutationObserver(() => {
     primaryColor.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9';
     primaryColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color-active').trim() || '#51457C';
@@ -39,6 +40,7 @@ onMounted(() => {
   modal?.addEventListener('hidden.bs.modal', () => {
     isGcodeImageVisible.value = false
   });
+  isLoading.value = false
 });
 
 
@@ -60,6 +62,7 @@ const handleRerun = async (job: Job, printer: Device) => {
 }
 
 const deleteSelectedJobs = async () => {
+  isLoading.value = true
   let response = null
   // Loop through the selected jobs and remove them from the printer's queue
   const selectedJobIds = computed(() => selectedJobs.value.map(job => job.id));
@@ -76,9 +79,11 @@ const deleteSelectedJobs = async () => {
   // Clear the selected jobs array
   selectedJobs.value = []
   selectAllCheckbox.value = false
+  isLoading.value = false
 }
 
 const selectAllJobs = (printer: Device) => {
+  isLoading.value = true
   if (printer !== undefined && printer.queue !== undefined) {
     // Toggle the "Select All" checkbox state for the current printer
     selectAllCheckboxMap.value[printer.id!] = !selectAllCheckboxMap.value[printer.id!]
@@ -96,6 +101,7 @@ const selectAllJobs = (printer: Device) => {
       selectedJobs.value = selectedJobs.value.filter((job) => job.printerid !== printer.id)
     }
   }
+  isLoading.value = false 
 }
 
 function capitalizeFirstLetter(string: string | undefined) {
@@ -194,6 +200,10 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
   <div class="container">
     <!-- <b>Queue View</b> -->
 
+    <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      </button>
+        
     <div class="row w-100" style="margin-bottom: 0.5rem">
       <div class="col-2 text-start" style="padding-left: 0">
 
@@ -298,7 +308,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                       <td v-else>{{ job.status }}</td>
 
                       <td class="text-center">
-                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job" />
+                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job" :disabled="job.status !== 'inqueue'"/>
                       </td>
 
                       <td style="width:">

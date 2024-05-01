@@ -173,7 +173,7 @@ class Printer(db.Model):
             if (("original" in port.description.lower()) or ("prusa" in port.description.lower())) and (Printer.getPrinterByHwid(hwid_without_location) is None) :
                 printerList.append(port_info)
 
-                print(port_info)
+                # print(port_info)
         return printerList
 
     @classmethod
@@ -350,7 +350,6 @@ class Printer(db.Model):
             while True:
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
-                
                 if response == "": 
                     if self.prevMes == "M602":
                         self.responseCount = 0
@@ -360,6 +359,7 @@ class Printer(db.Model):
                         if(self.responseCount>=10):
                             self.setError("No response from printer")
                             raise Exception("No response from printer")
+
                 elif "error" in response.lower():
                     self.setError(response)
                     break

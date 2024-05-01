@@ -102,7 +102,8 @@ class Queue:
                 "comments": job.comments, 
                 "extruded": job.extruded,
                 "td_id": job.td_id, 
-                "time_started": job.time_started
+                "time_started": job.time_started, 
+                "printer_name": job.printer_name
             }
             queue.append(job_info)
         return queue

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers, type Device } from '../model/ports'
-import { pageSize, useGetJobs, type Job, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useDownloadCsv, useRemoveIssue } from '../model/jobs';
+import { pageSize, useGetJobs, type Job, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useDownloadCsv, useRemoveIssue, isLoading } from '../model/jobs';
 import { computed, onMounted, onBeforeUnmount, ref, watchEffect } from 'vue';
 import { type Issue, useGetIssues, useAssignIssue } from '../model/issues'
 import { useRouter } from 'vue-router';
@@ -73,6 +73,7 @@ const showText = ref(false)
 
 let filterDropdown = ref(false)
 
+
 // computed property that returns the filtered list of jobs. 
 let filteredJobs = computed(() => {
     if (filter.value) {
@@ -86,6 +87,9 @@ let offcanvasElement: HTMLElement | null = null;
 
 onMounted(async () => {
     try {
+
+        isLoading.value = true
+
         const retrieveissues = await issues()
         issuelist.value = retrieveissues
 
@@ -106,17 +110,7 @@ onMounted(async () => {
 
         favoriteJobs.value = await getFavoriteJobs()
 
-        // make 10 dummy printers
-        // for (let i = 2; i < 12; i++) {
-        //     printers.value.push({
-        //         id: i, 
-        //         name: `Printer ${i}`,
-        //         device: '',
-        //         description: '',
-        //         hwid: '',
-        //         queue: []
-        //     })
-        // }
+        isLoading.value = false
 
         document.addEventListener('click', closeDropdown);
 
@@ -171,6 +165,7 @@ const handleEmptyRerun = async (job: Job) => {
 }
 
 const changePage = async (newPage: any) => {
+    isLoading.value = true
     if (newPage < 1 || newPage > Math.ceil(totalJobs.value / pageSize.value)) {
         return;
     }
@@ -185,9 +180,12 @@ const changePage = async (newPage: any) => {
     const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
     jobs.value = joblist;
     totalJobs.value = total;
+
+    isLoading.value = false 
 }
 
 async function submitFilter() {
+    isLoading.value = true
     filterDropdown.value = false;
     filterApplied.value = 1;
 
@@ -237,6 +235,8 @@ async function submitFilter() {
     selectAllCheckbox.value = false;
 
     date.value = null;
+
+    isLoading.value = false
 }
 
 function clearFilter() {
@@ -274,6 +274,7 @@ const ensureOneCheckboxChecked = () => {
 }
 
 const confirmDelete = async () => {
+    isLoading.value = true
     const deletionPromises = selectedJobs.value.map(job => deleteJob(job));
     await Promise.all(deletionPromises);
 
@@ -288,20 +289,25 @@ const confirmDelete = async () => {
     submitFilter();
 
     favoriteJobs.value = await getFavoriteJobs();
+    isLoading.value = false
 }
 
 const selectAllJobs = () => {
+    isLoading.value = true
     if (selectAllCheckbox.value) {
         const newSelectedJobs = filteredJobs.value.filter(job => !selectedJobs.value.includes(job) && job.status !== 'printing');
         selectedJobs.value = [...selectedJobs.value, ...newSelectedJobs];
     } else {
         selectedJobs.value = selectedJobs.value.filter(job => !filteredJobs.value.includes(job));
     }
+    isLoading.value = false
 }
 
 async function clear() {
+    isLoading.value = true
     await clearSpace()
     submitFilter()
+    isLoading.value = false
 }
 
 const openModal = (title: any, message: any, action: any) => {
@@ -371,6 +377,7 @@ const closeDropdown = (evt: any) => {
 }
 
 const doDownloadCsv = async () => {
+    isLoading.value = true
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
     const [alljobs, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value,  selectedIssues.value, startDateString.value, endDateString.value);
     everyJob.value = alljobs;
@@ -380,6 +387,7 @@ const doDownloadCsv = async () => {
     } else {
         await csv(1, []) // 1: all jobs in database 
     }
+    isLoading.value = false
 }
 
 const jobInQueue = (job: Job) => {
@@ -600,12 +608,18 @@ const jobInQueue = (job: Job) => {
         <!-- delete jobs, filter dropdown, clear space -->
         <div class="row w-100" style="margin-bottom: 0.5rem;">
 
+            <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            </button>
+
             <div class="col-1 text-start" style="padding-left: 0">
+
                 <div style="position: relative;">
                     <button type="button" class="btn btn-primary dropdown-toggle"
                         @click.stop="filterDropdown = !filterDropdown">
                         Filter
                     </button>
+
                     <form v-show="filterDropdown" class="card dropdown-card p-3">
                         <div class="mb-3">
                             <label for="pageSize" class="form-label">
@@ -775,7 +789,7 @@ const jobInQueue = (job: Job) => {
             <tbody v-if="filteredJobs.length > 0">
                 <tr v-for="job in filteredJobs" :key="job.id">
                     <td>{{ job.td_id }}</td>
-                    <td>{{ job.printer }}</td>
+                    <td>{{ job.printer_name }}</td>
                     <td>
                         <div style="display: flex; justify-content: start; align-items: center;">
                             <div class="d-flex align-items-center" @click="favoriteJob(job, !job.favorite)">
