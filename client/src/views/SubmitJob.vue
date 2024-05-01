@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers } from '../model/ports'
-import { selectedPrinters, file, fileName, quantity, priority, favorite, name, tdid, filament, useAddJobToQueue, useGetFile, useAutoQueue, isLoading } from '../model/jobs'
+import { selectedPrinters, file, fileName, quantity, priority, favorite, name, tdid, filament, useAddJobToQueue, useGetFile, useAutoQueue, isLoading, isSubmitting } from '../model/jobs'
 import { ref, onMounted, watchEffect, computed, watch } from 'vue'
 import { useRoute } from 'vue-router';
 import { toast } from '@/model/toast';
@@ -122,7 +122,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
 // sends job to printer queue
 const handleSubmit = async () => {
     isAsteriksVisible.value = false;
-    isLoading.value = true
+    isSubmitting.value = true
     let isFavoriteSet = false;
     let res = null
     if (selectedPrinters.value.length == 0) {
@@ -203,7 +203,7 @@ const handleSubmit = async () => {
     } else {
         toast.error('Failed to add job to queue. Unexpected response.')
     }
-    isLoading.value = false
+    isSubmitting.value = false
     isAsteriksVisible.value = true;
 }
 
@@ -309,7 +309,7 @@ const getFilament = (file: File) => {
     </div>
     
     <transition name="fade">
-        <div v-if="isLoading" class="modal fade show d-block" id="loadingModal" tabindex="-1"
+        <div v-if="isSubmitting" class="modal fade show d-block" id="loadingModal" tabindex="-1"
             aria-labelledby="loadingModalLabel" aria-hidden="true"
             style="background-color: rgba(0, 0, 0, 0.3); backdrop-filter: blur(2px);">
             <div class="modal-dialog modal-dialog-centered">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onActivated, onDeactivated, ref, toRef } from 'vue';
+import { nextTick, onMounted, onActivated, onDeactivated, ref, toRef, onUnmounted } from 'vue';
 import { useGetFile, type Job } from '@/model/jobs';
 import * as GCodePreview from 'gcode-preview';
 
@@ -44,7 +44,6 @@ onMounted(async () => {
         try {
             // Extract the thumbnail from the metadata
             const { metadata } = preview.parser.parseGCode(gcode);
-            console.log('metadata:', metadata);
             if (metadata.thumbnails && metadata.thumbnails['640x480']) {
                 const thumbnailData = metadata.thumbnails['640x480'];
                 thumbnailSrc.value = thumbnailData.src;
@@ -58,6 +57,12 @@ onMounted(async () => {
         // Clean up when the modal is hidden
         thumbnailSrc.value = null;
     });
+});
+
+onUnmounted(() => {
+    preview?.clear();
+    preview?.processGCode('');
+    thumbnailSrc.value = null;
 });
 
 const fileToString = (file: File | undefined) => {

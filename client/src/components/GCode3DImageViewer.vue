@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onActivated, onDeactivated, ref, toRef } from 'vue';
+import { nextTick, onMounted, onActivated, onDeactivated, ref, toRef, onUnmounted } from 'vue';
 import { useGetFile, type Job } from '@/model/jobs';
 import * as GCodePreview from 'gcode-preview';
 
@@ -62,6 +62,11 @@ onMounted(async () => {
         // Clean up when the modal is hidden
         preview?.clear();
     });
+});
+
+onUnmounted(() => {
+    preview?.clear();
+    preview?.processGCode('');
 });
 
 const fileToString = (file: File | undefined) => {

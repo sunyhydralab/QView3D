@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers, type Device } from '../model/ports'
-import { type Job, useGetErrorJobs, useAssignComment, useGetJobFile, useGetFile, useRemoveIssue, isLoading } from '../model/jobs';
+import { pageSize, type Job, useGetErrorJobs, useAssignComment, useGetJobFile, useGetFile, useRemoveIssue, isLoading } from '../model/jobs';
 import { type Issue, useGetIssues, useCreateIssues, useAssignIssue, useDeleteIssue, useEditIssue } from '../model/issues'
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
@@ -65,7 +65,6 @@ let deleteMode = ref(false)
 let deleteNum = ref<number | undefined>(0)
 
 let page = ref(1)
-let pageSize = ref(10)
 let totalJobs = ref(0)
 let totalPages = ref(1)
 
@@ -487,21 +486,6 @@ const resetIssueValues = () => {
             </div>
         </div>
     </div>
-
-    <transition name="fade">
-        <div v-if="isLoading" class="modal fade show d-block" id="loadingModal" tabindex="-1"
-            aria-labelledby="loadingModalLabel" aria-hidden="true"
-            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow-y: hidden;">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-body d-flex justify-content-center align-items-center"
-                    style="user-select: none; position: relative;">
-                    <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </transition>
 
     <div class="container">
         <div class="row w-100" style="margin-bottom: 0.5rem;">
