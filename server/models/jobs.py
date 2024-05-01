@@ -93,15 +93,27 @@ class Job(db.Model):
         searchJob="",
         searchCriteria="",
         searchTicketId=None,
-        favoriteOnly=False,
+        favoriteOnly=False, 
+        issueIds = None, 
         startDate=None,
         endDate=None,
+        fromError = None, 
+        countOnly = None 
     ):
         try:
             query = cls.query
+            
+            print("fromError: ", fromError)
+            if(fromError==1):
+                print("here")
+                query = cls.query.filter_by(status="error")
+            
             if printerIds:
                 query = query.filter(cls.printer_id.in_(printerIds))
 
+            if issueIds:
+                query = query.filter(cls.error_id.in_(issueIds))
+                
             if searchJob:
                 searchJob = f"%{searchJob}%"
                 query = query.filter(
@@ -157,114 +169,18 @@ class Job(db.Model):
                     "printerid": job.printer_id,
                     "errorid": job.error_id,
                     "file_name_original": job.file_name_original,
-                    "progress": job.progress,
-                    "sent_lines": job.sent_lines,
-                    "favorite": job.favorite,
-                    "released": job.released,
-                    "file_pause": job.filePause,
                     "comments": job.comments,
-                    "extruded": job.extruded,
                     "td_id": job.td_id,
                     "printer": job.printer.name if job.printer else "None",
                     "error": job.error.issue if job.error else 'None', 
                 }
                 for job in jobs
             ]
+            if(countOnly == 0): 
+                return jobs_data, pagination.total
+            else: 
+                return pagination.total
             
-            return jobs_data, pagination.total
-        except SQLAlchemyError as e:
-            print(f"Database error: {e}")
-            return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500
-
-    @classmethod
-    def get_job_error_history(
-        cls,
-        page,
-        pageSize,
-        printerIds=None,
-        oldestFirst=False,
-        searchJob="",
-        searchCriteria="",
-        searchTicketId=None,
-        issueIds=None,
-        startDate=None,
-        endDate=None,
-    ):
-        try:
-            query = cls.query.filter_by(status="error")
-            if printerIds:
-                query = query.filter(cls.printer_id.in_(printerIds))
-
-            if issueIds:
-                query = query.filter(cls.error_id.in_(issueIds))
-
-            if searchJob:
-                searchJob = f"%{searchJob}%"
-                query = query.filter(
-                    or_(
-                        cls.name.ilike(searchJob),
-                        cls.file_name_original.ilike(searchJob),
-                    )
-                )
-
-            if "searchByJobName" in searchCriteria:
-                searchByJobName = f"%{searchJob}%"
-                query = query.filter(cls.name.ilike(searchByJobName))
-            elif "searchByFileName" in searchCriteria:
-                searchByFileName = f"%{searchJob}%"
-                query = query.filter(cls.file_name_original.ilike(searchByFileName))
-                
-            if searchTicketId:
-                searchTicketId = int(searchTicketId)
-                query = query.filter(cls.td_id == searchTicketId)
-
-            if oldestFirst:
-                query = query.order_by(cls.date.asc())
-            else:
-                query = query.order_by(cls.date.desc())  # Change this line
-
-            if startDate!='' or endDate!='':
-                if(endDate==''):
-                    cls.date.between(
-                        datetime.fromisoformat(startDate),
-                        datetime.fromisoformat(startDate),
-                    )
-                    
-                query = query.filter(
-                    cls.date.between(
-                        datetime.fromisoformat(startDate),
-                        datetime.fromisoformat(endDate),
-                    )
-                )
-                
-            pagination = query.paginate(page=page, per_page=pageSize, error_out=False)
-            jobs = pagination.items
-
-            jobs_data = [
-                {
-                    "id": job.id,
-                    "name": job.name,
-                    "status": job.status,
-                    "date": job.date.strftime("%a, %d %b %Y %H:%M:%S"),
-                    "printerid": job.printer_id,
-                    "errorid": job.error_id,
-                    "error": job.error.issue if job.error else 'None', 
-                    "file_name_original": job.file_name_original,
-                    "progress": job.progress,
-                    "sent_lines": job.sent_lines,
-                    "favorite": job.favorite,
-                    "released": job.released,
-                    "file_pause": job.filePause,
-                    "comments": job.comments,
-                    "extruded": job.extruded,
-                    "td_id": job.td_id,
-                    "printer": job.printer.name if job.printer else "None",
-
-                }
-                for job in jobs
-            ]
-
-            return jobs_data, pagination.total
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500

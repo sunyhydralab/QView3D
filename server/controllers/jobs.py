@@ -35,38 +35,19 @@ def getJobs():
     favoriteOnly = request.args.get('favoriteOnly', default='false')
     favoriteOnly = favoriteOnly.lower() in ['true', '1']
     
-    startdate = request.args.get('startdate', default='', type=str)
-    enddate = request.args.get('enddate', default='', type=str)
-    
-    # print("start: ", startdate)
-    
-    try:
-        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, searchTicketId, favoriteOnly, startdate, enddate)
-        return jsonify(res)
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-    
-@jobs_bp.route('/geterrorjobs', methods=["GET"])
-def getErrorJobs():
-    page = request.args.get('page', default=1, type=int)
-    pageSize = request.args.get('pageSize', default=10, type=int)
-    printerIds = request.args.get('printerIds', type=json.loads)
-    searchJob = request.args.get('searchJob', default='', type=str)
     issueIds = request.args.get('issueIds', type=json.loads)
     
-    oldestFirst = request.args.get('oldestFirst', default='false')
-    oldestFirst = oldestFirst.lower() in ['true', '1']
-
-    searchCriteria = request.args.get('searchCriteria', default='', type=str)
-    
-    searchTicketId = request.args.get('searchTicketId', default='', type=str)
-    
     startdate = request.args.get('startdate', default='', type=str)
     enddate = request.args.get('enddate', default='', type=str)
     
+    fromError = request.args.get('fromError', default=0, type=int)
+    
+    countOnly = request.args.get('countOnly', default=0, type=int)
+    
+    print(fromError)
+
     try:
-        res = Job.get_job_error_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, searchTicketId, issueIds, startdate, enddate)
+        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, searchTicketId, favoriteOnly, issueIds, startdate, enddate, fromError, countOnly)
         return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")
