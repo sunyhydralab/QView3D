@@ -64,38 +64,38 @@ def add_job_to_queue():
         printer_id = int(request.form['printerid'])
         favorite = request.form['favorite']
         # favorite = 1 if _favorite == 'true' else 0
-        quantity = request.form['quantity']
+        # quantity = request.form['quantity']
         td_id = int(request.form['td_id'])
         favoriteOne = False 
 
-        for i in range(int(quantity)):
-            if(favorite == 'true' and not favoriteOne):
-                favorite = 1
-                favoriteOne = True
-            else: 
-                favorite = 0
-                
-            status = 'inqueue' # set status 
-            res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite, td_id) # insert into DB 
+        # for i in range(int(quantity)):
+        if(favorite == 'true' and not favoriteOne):
+            favorite = 1
+            favoriteOne = True
+        else: 
+            favorite = 0
             
-            # retrieve job from DB
-            id = res['id']
-            
-            job = Job.query.get(id)
-            
-            base_name, extension = os.path.splitext(file_name_original)
+        status = 'inqueue' # set status 
+        res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite, td_id) # insert into DB 
+        
+        # retrieve job from DB
+        id = res['id']
+        
+        job = Job.query.get(id)
+        
+        base_name, extension = os.path.splitext(file_name_original)
 
-            # Append the ID to the base name
-            file_name_pk = f"{base_name}_{id}{extension}"
-            
-            job.setFileName(file_name_pk) # set unique in-memory file name 
+        # Append the ID to the base name
+        file_name_pk = f"{base_name}_{id}{extension}"
+        
+        job.setFileName(file_name_pk) # set unique in-memory file name 
 
-            priority = request.form['priority']
-            # if priotiry is '1' then add to front of queue, else add to back
-            if priority == 'true':
-                findPrinterObject(printer_id).getQueue().addToFront(job, printer_id)
-            else:
-                findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
+        priority = request.form['priority']
+        # if priotiry is '1' then add to front of queue, else add to back
+        if priority == 'true':
+            findPrinterObject(printer_id).getQueue().addToFront(job, printer_id)
+        else:
+            findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
                         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     
@@ -109,37 +109,37 @@ def auto_queue():
         file = request.files['file']  # Access file directly from request.files
         file_name_original = file.filename
         name = request.form['name']  # Access other form fields from request.form
-        quantity = request.form['quantity']
+        # quantity = request.form['quantity']
 
         favorite = request.form['favorite']
         td_id = request.form['td_id']
 
         favoriteOne = False 
-        for i in range(int(quantity)):
-            status = 'inqueue' # set status 
-            printer_id = getSmallestQueue()
-            
-            if(favorite == 'true' and not favoriteOne):
-                favorite = 1
-                favoriteOne = True
-            else: 
-                favorite = 0
-            # favorite = 1 if _favorite == 'true' else 0
-            
-            res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite, td_id) # insert into DB 
-            
-            id = res['id']
-            
-            job = Job.query.get(id)
-            
-            base_name, extension = os.path.splitext(file_name_original)
+        # for i in range(int(quantity)):
+        status = 'inqueue' # set status 
+        printer_id = getSmallestQueue()
+        
+        if(favorite == 'true' and not favoriteOne):
+            favorite = 1
+            favoriteOne = True
+        else: 
+            favorite = 0
+        # favorite = 1 if _favorite == 'true' else 0
+        
+        res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite, td_id) # insert into DB 
+        
+        id = res['id']
+        
+        job = Job.query.get(id)
+        
+        base_name, extension = os.path.splitext(file_name_original)
 
-            # Append the ID to the base name
-            file_name_pk = f"{base_name}_{id}{extension}"
-            
-            job.setFileName(file_name_pk) # set unique in-memory file name 
+        # Append the ID to the base name
+        file_name_pk = f"{base_name}_{id}{extension}"
+        
+        job.setFileName(file_name_pk) # set unique in-memory file name 
 
-            findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)  
+        findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)  
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     

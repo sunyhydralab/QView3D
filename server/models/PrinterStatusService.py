@@ -65,6 +65,7 @@ class PrinterStatusService:
             for thread in self.printer_threads:
                 if thread.printer.id == printer_id:    
                     printer = thread.printer
+                    printer.terminated = 1 
                     thread_data = {
                         "id": printer.id, 
                         "device": printer.device,

@@ -26,7 +26,7 @@ const filamentTypes = ['PLA', 'PETG', 'ABS', 'ASA', 'FLEX', 'HIPS', 'EDGE', 'NGE
 
 // file upload
 const handleFileUpload = (event: Event) => {
-    isLoading.value = true 
+    isLoading.value = true
     const target = event.target as HTMLInputElement;
     const uploadedFile = target.files ? target.files[0] : undefined;
     if (uploadedFile && uploadedFile.name.length > 50) {
@@ -122,31 +122,31 @@ const handleSubmit = async () => {
     let isFavoriteSet = false;
     let res = null
     if (selectedPrinters.value.length == 0) {
-        // let numPrints = quantity.value
-        // for (let i = 0; i < numPrints; i++) {
-        const formData = new FormData() // create FormData object
-        formData.append('file', file.value as File) // append form data
-        formData.append('name', name.value as string)
-        formData.append('priority', priority.value.toString())
-        formData.append('td_id', tdid.value.toString())
-        formData.append('filament', filament.value as string)
-        // If favorite is true and it's not set yet, set it for the first job only
-        if (favorite.value && !isFavoriteSet) {
-            formData.append('favorite', 'true')
-            isFavoriteSet = true;
-        } else {
-            formData.append('favorite', 'false')
-        }
-        try {
-            formData.append("quantity", quantity.value.toString())
-            res = await auto(formData)
-            if (form.value) {
-                form.value.reset()
+        let numPrints = quantity.value
+        for (let i = 0; i < numPrints; i++) {
+            const formData = new FormData() // create FormData object
+            formData.append('file', file.value as File) // append form data
+            formData.append('name', name.value as string)
+            formData.append('priority', priority.value.toString())
+            formData.append('td_id', tdid.value.toString())
+            formData.append('filament', filament.value as string)
+            // If favorite is true and it's not set yet, set it for the first job only
+            if (favorite.value && !isFavoriteSet) {
+                formData.append('favorite', 'true')
+                isFavoriteSet = true;
+            } else {
+                formData.append('favorite', 'false')
             }
-        } catch (error) {
-            console.error('There has been a problem with your fetch operation:', error)
+            try {
+                // formData.append("quantity", quantity.value.toString())
+                res = await auto(formData)
+                // if (form.value) {
+                //     form.value.reset()
+                // }
+            } catch (error) {
+                console.error('There has been a problem with your fetch operation:', error)
+            }
         }
-        // }
         resetValues()
     } else {
         let sub = validateQuantity()
@@ -159,35 +159,35 @@ const handleSubmit = async () => {
                     numPrints += 1
                     remainder -= 1
                 }
-                // for (let i = 0; i < numPrints; i++) {
-                const formData = new FormData() // create FormData object
-                formData.append('file', file.value as File) // append form data
-                formData.append('name', name.value as string)
-                formData.append('printerid', printer?.id?.toString() || '');
-                formData.append('priority', priority.value.toString())
-                formData.append('quantity', numPrints.toString())
-                formData.append('td_id', tdid.value.toString())
-                formData.append('filament', filament.value as string)
+                for (let i = 0; i < numPrints; i++) {
+                    const formData = new FormData() // create FormData object
+                    formData.append('file', file.value as File) // append form data
+                    formData.append('name', name.value as string)
+                    formData.append('printerid', printer?.id?.toString() || '');
+                    formData.append('priority', priority.value.toString())
+                    formData.append('quantity', numPrints.toString())
+                    formData.append('td_id', tdid.value.toString())
+                    formData.append('filament', filament.value as string)
 
-                // If favorite is true and it's not set yet, set it for the first job only
-                if (favorite.value && !isFavoriteSet) {
-                    formData.append('favorite', 'true')
-                    isFavoriteSet = true;
-                } else {
-                    formData.append('favorite', 'false')
-                }
-
-                try {
-                    res = await addJobToQueue(formData)
-                    // reset form
-                    if (form.value) {
-                        form.value.reset()
+                    // If favorite is true and it's not set yet, set it for the first job only
+                    if (favorite.value && !isFavoriteSet) {
+                        formData.append('favorite', 'true')
+                        isFavoriteSet = true;
+                    } else {
+                        formData.append('favorite', 'false')
                     }
-                    // reset Vue refs
-                } catch (error) {
-                    console.error('There has been a problem with your fetch operation:', error)
+
+                    try {
+                        res = await addJobToQueue(formData)
+                        // reset form
+                        // if (form.value) {
+                        //     form.value.reset()
+                        // }
+                        // reset Vue refs
+                    } catch (error) {
+                        console.error('There has been a problem with your fetch operation:', error)
+                    }
                 }
-                // }
             }
             resetValues()
         }
@@ -377,7 +377,7 @@ const getFilament = (file: File) => {
                         <div class="input-group">
                             <div class="dropdown w-100" id="filamentDropdown">
 
-                                
+
                                 <button class="btn btn-primary dropdown-toggle w-100" type="button"
                                     id="dropdownMenuButton" data-bs-toggle="dropdown"
                                     :aria-expanded="filament ? 'false' : 'true'">
@@ -438,8 +438,8 @@ const getFilament = (file: File) => {
                     </div>
 
                     <div>
-                        <button v-if="selectedPrinters.length > 1" :disabled="isLoading || isSubmitDisabled" class="btn btn-primary"
-                            type="submit">
+                        <button v-if="selectedPrinters.length > 1" :disabled="isLoading || isSubmitDisabled"
+                            class="btn btn-primary" type="submit">
                             Add to queues
                         </button>
                         <button v-else :disabled="isLoading || isSubmitDisabled" class="btn btn-primary" type="submit">
