@@ -135,32 +135,6 @@ export function useHardReset() {
   }
 }
 
-export function useQueueRestore() {
-  return {
-    async queueRestore(printerid: number | undefined) {
-      try {
-        const response = await api('queuerestore', { printerid })
-        if (response) {
-          if (response.success == false) {
-            toast.error(response.message)
-          } else if (response.success === true) {
-            toast.success(response.message)
-          } else {
-            console.error('Unexpected response:', response)
-            toast.error('Failed to restore queue. Unexpected response.')
-          }
-        } else {
-          console.error('Response is undefined or null')
-          toast.error('Failed to restore queue. Unexpected response')
-        }
-        return response
-      } catch (error) {
-        console.error(error)
-      }
-    }
-  }
-}
-
 export function useNullifyJobs() {
   return {
     async nullifyJobs(printerid: number | undefined) {

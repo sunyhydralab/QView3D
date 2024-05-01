@@ -19,6 +19,7 @@ const { assign } = useAssignIssue()
 const { assignComment } = useAssignComment()
 const { removeIssue } = useRemoveIssue()
 const { csv } = useDownloadCsv()
+const selectedIssues = ref<Array<number>>([])
 
 const selectedPrinters = ref<Array<Number>>([])
 const selectedJobs = ref<Array<Job>>([]);
@@ -176,7 +177,7 @@ const changePage = async (newPage: any) => {
     jobs.value = []
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
-    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, startDateString.value, endDateString.value);
+    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
     jobs.value = joblist;
     totalJobs.value = total;
 
@@ -216,11 +217,8 @@ async function submitFilter() {
     // ***  NEED TO HANDLE IF DATE IS EMPTY/NULL ***
 
     // Get the total number of jobs first, without considering the page number
-    const [alljobs, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, startDateString.value, endDateString.value);
+    const total = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value,  selectedIssues.value, startDateString.value, endDateString.value, 1);
     totalJobs.value = total;
-    everyJob.value = alljobs;
-
-    console.log("SETING JOBS ", everyJob.value)
 
     totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
     totalPages.value = Math.max(totalPages.value, 1);
@@ -230,7 +228,7 @@ async function submitFilter() {
     }
 
     // Now fetch the jobs for the current page
-    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, startDateString.value, endDateString.value); 
+    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value,  selectedIssues.value, startDateString.value, endDateString.value);
     jobs.value = joblist;
 
     selectedJobs.value = [];
@@ -257,6 +255,8 @@ function clearFilter() {
     searchByJobName.value = true;
     searchByFileName.value = true;
 
+    selectedIssues.value = [];
+
     date.value = null;
 
     startDateString.value = '';
@@ -279,7 +279,7 @@ const confirmDelete = async () => {
     await Promise.all(deletionPromises);
 
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value);
+    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value);
     jobs.value = joblist;
     totalJobs.value = total;
 
@@ -378,8 +378,10 @@ const closeDropdown = (evt: any) => {
 
 const doDownloadCsv = async () => {
     isLoading.value = true
+    const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
+    const [alljobs, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value,  selectedIssues.value, startDateString.value, endDateString.value);
+    everyJob.value = alljobs;
     const jobIds = everyJob.value.map(job => job.id);
-    console.log("JOB IDS ", jobIds)
     if (filterApplied.value === 1) {
         await csv(0, jobIds) // 0: not all jobs, just specified job IDs
     } else {
@@ -393,9 +395,9 @@ const jobInQueue = (job: Job) => {
         if (printer.queue) {
             for (const jobQ of printer.queue) {
                 if (jobQ.id === job.id) {
-                return true;
+                    return true;
                 }
-            } 
+            }
         }
     }
     return false;
@@ -659,9 +661,38 @@ const jobInQueue = (job: Job) => {
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <div class="mb-3">
+                            <label class="form-label">Issue:</label>
+                            <div class="card"
+                                style="max-height: 120px; overflow-y: auto; background-color: #f4f4f4 !important; border-color: #484848 !important;">
+                                <ul class="list-unstyled card-body m-0"
+                                    style="padding-top: .5rem; padding-bottom: .5rem;">
+                                    <li v-for="issue in issuelist" :key="issue.id">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" :value="issue.id"
+                                                v-model="selectedIssues" :id="'issue-' + issue.id">
+                                            <label class="form-check-label" :for="'issue-' + issue.id">
+                                                {{ issue.issue }}
+                                            </label>
+                                        </div>
+                                    </li>
+                                    <div class="border-top"
+                                        style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                                    <li>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="0"
+                                                v-model="selectedIssues" id="issue-0">
+                                            <label class="form-check-label" for="issue-0">
+                                                None
+                                            </label>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="mb-3">
                             <label for="searchTicketId" class="form-label">Search using Ticket ID:</label>
                             <input type="text" id="searchTicketId" class="form-control" v-model="searchTicketId">
-                        </div>                     
+                        </div>
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <div class="mb-3">

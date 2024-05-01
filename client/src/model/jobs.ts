@@ -192,11 +192,11 @@ async function refetchtime(printerid: number, jobid: number) {
   }
 }
 
-export function download(action: string, body?: unknown, method: string = 'POST', headers: HeadersInit = { 'Content-Type': 'application/json' }){
+export function download(action: string, body?: unknown, method: string = 'POST', headers: HeadersInit = { 'Content-Type': 'application/json' }) {
   return fetch(`${API_ROOT}/${action}`, {
-      method,
-      headers,
-      body: JSON.stringify(body)
+    method,
+    headers,
+    body: JSON.stringify(body)
   });
 }
 
@@ -206,17 +206,20 @@ export function useGetJobs() {
       page: number,
       pageSize: number,
       printerIds?: number[],
+      fromError?: number, 
       oldestFirst?: boolean,
       searchJob: string = '',
       searchCriteria: string = '',
       searchTicketId: string = '',
       favoriteOnly?: boolean,
+      issues?: number[],
       startdate: string = '',
-      enddate: string = ''
+      enddate: string = '', 
+      countOnly?: number 
     ) {
       try {
         const response = await api(
-          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&searchTicketId=${encodeURIComponent(searchTicketId)}&favoriteOnly=${favoriteOnly}&startdate=${startdate}&enddate=${enddate}`
+          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&searchTicketId=${encodeURIComponent(searchTicketId)}&favoriteOnly=${favoriteOnly}&issueIds=${JSON.stringify(issues)}&startdate=${startdate}&enddate=${enddate}&fromError=${fromError}&countOnly=${countOnly}`
         )
         return response
       } catch (error) {
@@ -250,21 +253,6 @@ export function useUpdateJobStatus() {
   }
 }
 
-export function useGetErrorJobs() {
-  return {
-    async jobhistoryError(page: number, pageSize: number, printerIds?: number[], oldestFirst?: boolean, searchJob: string = '', searchCriteria: string = '', searchTicketId: string = '', favoriteOnly?: boolean, issues?: number[], startdate: string = '', enddate: string = '') {
-      try {
-        const response = await api(
-          `geterrorjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&searchTicketId=${encodeURIComponent(searchTicketId)}&issueIds=${JSON.stringify(issues)}&startdate=${startdate}&enddate=${enddate}`
-        )
-        return response
-      } catch (error) {
-        console.error(error)
-        toast.error('An error occurred while retrieving the jobs')
-      }
-    }
-  }
-}
 
 export function useAddJobToQueue() {
   return {
@@ -638,7 +626,7 @@ export function useDownloadCsv() {
         const date = new Date();
         // Format the date as YYYY-MM-DD
         const dateString = new Intl.DateTimeFormat('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date).replace(/\//g, '-');
-        
+
         // Generate the filename
         const filename = `jobs_${dateString}.csv`;
 
@@ -657,12 +645,12 @@ export function useDownloadCsv() {
 
 
 export async function deleteCSVFromServer() {
-    try {
-      const response = await api(`removeCSV`)
-      console.log("DELETE RES ", response)
-      return response 
-    } catch (error) {
-      console.error(error)
-      toast.error('An error occurred while removing the issue')
-    }
+  try {
+    const response = await api(`removeCSV`)
+    console.log("DELETE RES ", response)
+    return response
+  } catch (error) {
+    console.error(error)
+    toast.error('An error occurred while removing the issue')
+  }
 }

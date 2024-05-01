@@ -10,7 +10,6 @@ import router from '@/router';
 const { retrieve } = useRetrievePrinters();
 const { retrieveInfo } = useRetrievePrintersInfo();
 const { hardReset } = useHardReset();
-const { queueRestore } = useQueueRestore();
 const { deletePrinter } = useDeletePrinter();
 const { nullifyJobs } = useNullifyJobs();
 const { editName } = useEditName();
@@ -43,12 +42,6 @@ onMounted(async () => {
 const doHardReset = async (printer: Device) => {
     isLoading.value = true
     await hardReset(printer.id)
-    isLoading.value = false
-}
-
-const doQueueRestore = async (printer: Device) => {
-    isLoading.value = true
-    await queueRestore(printer.id)
     isLoading.value = false
 }
 
@@ -216,16 +209,6 @@ const doCloseRegisterModal = async () => {
                                                 </a>
                                             </li>
                                             <span class="tooltiptext">This wipes the queue and resets the printer's communication thread.</span>
-                                        </div>
-                                        <div class="tooltip" style="width: 100%;">
-                                            <li>
-                                                <a class="dropdown-item d-flex align-items-center"
-                                                    style="font-size: 1rem;" @click=" doQueueRestore(printer)">
-                                                    <i class="fas fa-undo"></i>
-                                                    <span class="ms-2">Restore Queue</span>
-                                                </a>
-                                            </li>
-                                            <span class="tooltiptext">This returns jobs to this printer's queue that have a status of "inqueue" or "printing." This is useful if the queue is wiped during a power outage or an accidental server disconnection.</span>
                                         </div>
                                         <li>
                                             <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
