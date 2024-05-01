@@ -291,7 +291,7 @@ const getFilament = (file: File) => {
                 <form @submit.prevent="handleSubmit" ref="form">
 
                     <div class="mb-3">
-                        <label for="printer" class="form-label">Select Printer {{ isGcodeImageVisible }}</label>
+                        <label for="printer" class="form-label">Select Printer</label>
                         <div class="card"
                             style="max-height: 120px; overflow-y: auto; background-color: #f4f4f4 !important; border-color: #484848 !important;">
                             <ul class="list-unstyled card-body m-0" style="padding-top: .5rem; padding-bottom: .5rem;">
