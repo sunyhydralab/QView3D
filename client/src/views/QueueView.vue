@@ -308,7 +308,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                       <td v-else>{{ job.status }}</td>
 
                       <td class="text-center">
-                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job" />
+                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job" :disabled="job.status !== 'inqueue'"/>
                       </td>
 
                       <td style="width:">
