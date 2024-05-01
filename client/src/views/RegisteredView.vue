@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters } from '../model/ports'
 import { isLoading } from '../model/jobs'
-
+import { useRouter } from 'vue-router'
 import { ref, onMounted } from 'vue';
 import { toast } from '../model/toast'
 import RegisterModal from '../components/RegisterModal.vue'
@@ -43,6 +43,7 @@ onMounted(async () => {
 const doHardReset = async (printer: Device) => {
     isLoading.value = true
     await hardReset(printer.id)
+    router.go(0)
     isLoading.value = false
 }
 

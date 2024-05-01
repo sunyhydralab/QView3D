@@ -45,6 +45,7 @@ class Printer(db.Model):
     canPause = 0
     prevMes = ""
     colorbuff = 0 
+    terminated = 0 
 
     def __init__(self, device, description, hwid, name, status=status, id=None):
         self.device = device
@@ -61,6 +62,7 @@ class Printer(db.Model):
         self.canPause = 0
         self.prevMes=""
         self.colorbuff=0
+        self.terminated = 0 
         # self.colorChangeBuffer=0
 
         if id is not None:
@@ -308,22 +310,6 @@ class Printer(db.Model):
             #     break
         ser.close()
         return 
-    
-    # @classmethod 
-    # def repairPorts(cls): 
-    #     try:
-    #         ports = serial.tools.list_ports.comports()    
-    #         for port in ports: 
-    #             hwid = port.hwid # get hwid 
-    #             hwid_without_location = hwid.split(' LOCATION=')[0]
-    #             printer = Printer.getPrinterByHwid(hwid_without_location)
-    #             if printer is not None: 
-    #                 if(printer.getDevice()!=port.device): 
-    #                     printer.editPort(printer.getId(), port.device)
-    #         return {"success": True, "message": "Printer port(s) successfully updated."}
-    #     except Exception as e:
-    #         print(f"Unexpected error: {e}")
-    #         return jsonify({"error": "Unexpected error occurred"}), 500
         
     def connect(self):
         try:
@@ -352,6 +338,8 @@ class Printer(db.Model):
             # time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
             while True:
+                if(self.terminated==1): 
+                    return 
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
                 if response == "": 
@@ -390,6 +378,8 @@ class Printer(db.Model):
             self.ser.write(f"{message}\n".encode("utf-8"))
             # Save and print out the response from the printer. We can use this for error handling and status updates.
             while True:
+                if(self.terminated==1): 
+                    return 
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
 
@@ -417,7 +407,9 @@ class Printer(db.Model):
         try:
             with open(path, "r") as g:
                 # Read the file and store the lines in a list
-
+                if(self.terminated==1): 
+                    return 
+                
                 lines = g.readlines()
 
                 #  Time handling
@@ -439,7 +431,9 @@ class Printer(db.Model):
                 # Replace file with the path to the file. "r" means read mode. 
                 # now instead of reading from 'g', we are reading line by line
                 for line in lines:
-
+                    if(self.terminated==1): 
+                        return 
+                    
                     # print("LINE: ", line, " STATUS: ", self.status, " FILE PAUSE: ", job.getFilePause())
                     if("layer" in line.lower() and self.status=='colorchange' and job.getFilePause()==0 and self.colorbuff==0):
                         self.setColorChangeBuffer(1)
@@ -667,7 +661,6 @@ class Printer(db.Model):
             self.endingSequence(job)
             self.sendStatusToJob(job, job.id, "cancelled")
             self.disconnect()
-            
         elif verdict== "misprint": 
             self.sendStatusToJob(job, job.id, "cancelled")            
         return 
