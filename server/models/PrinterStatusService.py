@@ -162,4 +162,13 @@ class PrinterStatusService:
 
     def getThreadArray(self):
         return self.printer_threads
+    
+    def pingForStatus(self):
+        """_summary_ pseudo code
+        for printer in threads:
+            status = printer.getStatus()
+            if status == printing:
+                GCODE for print status
+        """
+        pass
 

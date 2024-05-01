@@ -59,7 +59,7 @@ function formatTime(milliseconds: number): string {
   const minutesStr = minutes < 10 ? '0' + minutes : minutes
   const secondsStr = seconds < 10 ? '0' + seconds : seconds
 
-  if ((hoursStr + ':' + minutesStr + ':' + secondsStr === 'NaN:NaN:NaN')) return '<i>Waiting...</i>'
+  if ((hoursStr + ':' + minutesStr + ':' + secondsStr === 'NaN:NaN:NaN' || hoursStr + ':' + minutesStr + ':' + secondsStr === '00:00:00')) return '<i>Waiting...</i>'
   return hoursStr + ':' + minutesStr + ':' + secondsStr
 }
 
@@ -67,8 +67,7 @@ function formatETA(milliseconds: number): string {
   const date = new Date(milliseconds)
   const timeString = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
 
-
-  if (isNaN(date.getTime()) || timeString === "07:00 PM") {
+  if (isNaN(milliseconds) || isNaN(date.getTime()) || timeString === "07:00 PM" || timeString === "07:00:00 PM") {
     return '<i>Waiting...</i>'
   }
 
