@@ -408,6 +408,13 @@ const jobInQueue = (job: Job) => {
     return false;
 }
 
+const onlyNumber = ($event: KeyboardEvent) => {
+    let keyCode = $event.keyCode;
+    if ((keyCode < 48 || keyCode > 57) && (keyCode < 96 || keyCode > 105) && keyCode !== 8) { // 48-57 are the keycodes for 0-9, 96-105 are for the numpad 0-9, 8 is for backspace
+        $event.preventDefault();
+    }
+}
+
 </script>
 
 <template>
@@ -625,7 +632,8 @@ const jobInQueue = (job: Job) => {
                             <label for="pageSize" class="form-label">
                                 Jobs per page, out of {{ totalJobs }}:
                             </label>
-                            <input id="pageSize" type="number" v-model.number="pageSize" min="1" class="form-control">
+                            <input id="pageSize" type="number" v-model.number="pageSize" min="1" class="form-control"
+                            @keydown="onlyNumber($event)">
                         </div>
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
@@ -689,6 +697,8 @@ const jobInQueue = (job: Job) => {
                                 </ul>
                             </div>
                         </div>
+                        <div class="my-2 border-top"
+                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <div class="mb-3">
                             <label for="searchTicketId" class="form-label">Search using Ticket ID:</label>
                             <input type="text" id="searchTicketId" class="form-control" v-model="searchTicketId">

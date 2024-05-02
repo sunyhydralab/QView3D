@@ -342,6 +342,13 @@ const doDownloadCsv = async () => {
     // await csv()
 }
 
+const onlyNumber = ($event: KeyboardEvent) => {
+    let keyCode = $event.keyCode;
+    if ((keyCode < 48 || keyCode > 57) && (keyCode < 96 || keyCode > 105) && keyCode !== 8) { // 48-57 are the keycodes for 0-9, 96-105 are for the numpad 0-9, 8 is for backspace
+        $event.preventDefault();
+    }
+}
+
 </script>
 
 <template>
@@ -516,7 +523,8 @@ const doDownloadCsv = async () => {
                             <label for="pageSize" class="form-label">
                                 Jobs per page, out of {{ totalJobs }}:
                             </label>
-                            <input id="pageSize" type="number" v-model.number="pageSize" min="1" class="form-control">
+                            <input id="pageSize" type="number" v-model.number="pageSize" min="1" class="form-control"
+                            @keydown="onlyNumber($event)">
                         </div>
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
@@ -629,10 +637,14 @@ const doDownloadCsv = async () => {
                                 value="favorite" v-model="favoriteOnly">
                             <label class="form-check-label" for="orderFav">Favorites</label>
                         </div>
-                        <div class="d-flex justify-content-center">
-                            <button @click.prevent="submitFilter" class="btn btn-primary me-3">Submit
-                                Filter</button>
-                            <button @click.prevent="clearFilter" class="btn btn-danger">Clear Filter</button>
+                        <div class="sticky">
+                            <div class="mb-2 border-top"
+                                style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                            <div class="d-flex justify-content-center">
+                                <button @click.prevent="submitFilter" class="btn btn-primary me-3 mb-2">Submit
+                                    Filter</button>
+                                <button @click.prevent="clearFilter" class="btn btn-danger mb-2">Clear Filter</button>
+                            </div>
                         </div>
                     </form>
                 </div>
