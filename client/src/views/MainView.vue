@@ -270,31 +270,6 @@ const handleDragEnd = async () => {
     </div>
   </div>
 
-  <!-- bootstrap 'gcodeModal' -->
-  <div class="modal fade" id="gcodeModal" tabindex="-1" aria-labelledby="gcodeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="gcodeModalLabel"><b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class=" row">
-            <div class="col-sm-12">
-              <div class="card bg-light mb-3">
-                <div class="card-body">
-                  <h5 class="card-title">
-                    <pre> .GCODE VIEWER </pre>
-                  </h5>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <div class="container">
     <table ref="table">
       <tr>
@@ -522,7 +497,6 @@ const handleDragEnd = async () => {
 
               <td class="text-center handle"
                 :class="{ 'not-draggable': printers.length <= 1 || printer.isInfoExpanded }"
-                :rowspan="printer.isInfoExpanded ? 3 : 1"
                 :style="{ 'vertical-align': printer.isInfoExpanded ? 'middle' : '' }">
                 <i class="fas fa-grip-vertical"
                   :class="{ 'icon-disabled': printers.length <= 1 || printer.isInfoExpanded }"></i>
@@ -550,7 +524,7 @@ const handleDragEnd = async () => {
               <td class="borderless-bottom">
                 <b>Total:</b>
               </td>
-              <td class="borderless-bottom border-extended">
+              <td class="borderless-bottom" colspan="2">
                 <b>ETA:</b>
               </td>
             </tr>
@@ -586,7 +560,7 @@ const handleDragEnd = async () => {
                 <span
                   v-html="printer?.status === 'colorchange' ? 'Waiting...' : formatTime(printer.queue[0]?.job_client?.total_time)"></span>
               </td>
-              <td class="borderless-top border-extended">
+              <td class="borderless-top" colspan="2">
                 <span
                   v-html="printer?.status === 'colorchange' ? 'Waiting...' : (printer.queue[0]?.extruded ? formatETA(printer.queue[0]?.job_client?.eta) : '<i>Waiting...</i>')"></span>
               </td>
@@ -798,7 +772,6 @@ const handleDragEnd = async () => {
             </td>
 
             <td class="text-center handle" :class="{ 'not-draggable': printers.length <= 1 || printer.isInfoExpanded }"
-              :rowspan="printer.isInfoExpanded ? 3 : 1"
               :style="{ 'vertical-align': printer.isInfoExpanded ? 'middle' : '' }">
               <i class="fas fa-grip-vertical"
                 :class="{ 'icon-disabled': printers.length <= 1 || printer.isInfoExpanded }"></i>
@@ -827,28 +800,9 @@ const handleDragEnd = async () => {
   line-height: 10px;
 }
 
-.border-extended {
-  position: relative;
-}
-
 .sortable-chosen {
   opacity: 0.5;
   background-color: #f2f2f2;
-}
-
-.hidden-ghost {
-  opacity: 0;
-}
-
-.border-extended::after {
-  content: "";
-  position: absolute;
-  right: 0px;
-  top: -0.5px;
-  bottom: 0;
-  width: 1px;
-  background: #929292;
-  height: calc(100% + 1.5px);
 }
 
 table {
@@ -861,21 +815,6 @@ th {
 
 .expanded-info {
   display: contents;
-}
-
-.border-extended {
-  position: relative;
-}
-
-.border-extended::after {
-  content: "";
-  position: absolute;
-  right: 0px;
-  top: -0.5px;
-  bottom: 0;
-  width: 1px;
-  background: #929292;
-  height: calc(100% + 1.5px);
 }
 
 .truncate {
