@@ -35,38 +35,19 @@ def getJobs():
     favoriteOnly = request.args.get('favoriteOnly', default='false')
     favoriteOnly = favoriteOnly.lower() in ['true', '1']
     
-    startdate = request.args.get('startdate', default='', type=str)
-    enddate = request.args.get('enddate', default='', type=str)
-    
-    # print("start: ", startdate)
-    
-    try:
-        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, searchTicketId, favoriteOnly, startdate, enddate)
-        return jsonify(res)
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-    
-@jobs_bp.route('/geterrorjobs', methods=["GET"])
-def getErrorJobs():
-    page = request.args.get('page', default=1, type=int)
-    pageSize = request.args.get('pageSize', default=10, type=int)
-    printerIds = request.args.get('printerIds', type=json.loads)
-    searchJob = request.args.get('searchJob', default='', type=str)
     issueIds = request.args.get('issueIds', type=json.loads)
     
-    oldestFirst = request.args.get('oldestFirst', default='false')
-    oldestFirst = oldestFirst.lower() in ['true', '1']
-
-    searchCriteria = request.args.get('searchCriteria', default='', type=str)
-    
-    searchTicketId = request.args.get('searchTicketId', default='', type=str)
-    
     startdate = request.args.get('startdate', default='', type=str)
     enddate = request.args.get('enddate', default='', type=str)
     
+    fromError = request.args.get('fromError', default=0, type=int)
+    
+    countOnly = request.args.get('countOnly', default=0, type=int)
+    
+    print(fromError)
+
     try:
-        res = Job.get_job_error_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, searchTicketId, issueIds, startdate, enddate)
+        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, searchTicketId, favoriteOnly, issueIds, startdate, enddate, fromError, countOnly)
         return jsonify(res)
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -83,41 +64,41 @@ def add_job_to_queue():
         printer_id = int(request.form['printerid'])
         favorite = request.form['favorite']
         # favorite = 1 if _favorite == 'true' else 0
-        quantity = request.form['quantity']
+        # quantity = request.form['quantity']
         td_id = int(request.form['td_id'])
         filament = request.form['filament']
         favoriteOne = False 
 
-        for i in range(int(quantity)):
-            if(favorite == 'true' and not favoriteOne):
-                favorite = 1
-                favoriteOne = True
-            else: 
-                favorite = 0
-                
-            status = 'inqueue' # set status 
-            res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite, td_id) # insert into DB 
+        # for i in range(int(quantity)):
+        if(favorite == 'true' and not favoriteOne):
+            favorite = 1
+            favoriteOne = True
+        else: 
+            favorite = 0
             
-            # retrieve job from DB
-            id = res['id']
-            
-            job = Job.query.get(id)
-            
-            base_name, extension = os.path.splitext(file_name_original)
+        status = 'inqueue' # set status 
+        res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite, td_id) # insert into DB 
+        
+        # retrieve job from DB
+        id = res['id']
+        
+        job = Job.query.get(id)
+        
+        base_name, extension = os.path.splitext(file_name_original)
 
-            # Append the ID to the base name
-            file_name_pk = f"{base_name}_{id}{extension}"
-            
-            job.setFileName(file_name_pk) # set unique in-memory file name 
+        # Append the ID to the base name
+        file_name_pk = f"{base_name}_{id}{extension}"
+        
+        job.setFileName(file_name_pk) # set unique in-memory file name 
 
-            job.setFilament(filament) # set filament type
+        job.setFilament(filament) # set filament type
 
-            priority = request.form['priority']
-            # if priotiry is '1' then add to front of queue, else add to back
-            if priority == 'true':
-                findPrinterObject(printer_id).getQueue().addToFront(job, printer_id)
-            else:
-                findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
+        priority = request.form['priority']
+        # if priotiry is '1' then add to front of queue, else add to back
+        if priority == 'true':
+            findPrinterObject(printer_id).getQueue().addToFront(job, printer_id)
+        else:
+            findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
                         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     
@@ -131,40 +112,40 @@ def auto_queue():
         file = request.files['file']  # Access file directly from request.files
         file_name_original = file.filename
         name = request.form['name']  # Access other form fields from request.form
-        quantity = request.form['quantity']
+        # quantity = request.form['quantity']
 
         favorite = request.form['favorite']
         td_id = request.form['td_id']
         filament = request.form['filament']
 
         favoriteOne = False 
-        for i in range(int(quantity)):
-            status = 'inqueue' # set status 
-            printer_id = getSmallestQueue()
-            
-            if(favorite == 'true' and not favoriteOne):
-                favorite = 1
-                favoriteOne = True
-            else: 
-                favorite = 0
-            # favorite = 1 if _favorite == 'true' else 0
-            
-            res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite, td_id) # insert into DB 
-            
-            id = res['id']
-            
-            job = Job.query.get(id)
-            
-            base_name, extension = os.path.splitext(file_name_original)
+        # for i in range(int(quantity)):
+        status = 'inqueue' # set status 
+        printer_id = getSmallestQueue()
+        
+        if(favorite == 'true' and not favoriteOne):
+            favorite = 1
+            favoriteOne = True
+        else: 
+            favorite = 0
+        # favorite = 1 if _favorite == 'true' else 0
+        
+        res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite, td_id) # insert into DB 
+        
+        id = res['id']
+        
+        job = Job.query.get(id)
+        
+        base_name, extension = os.path.splitext(file_name_original)
 
-            # Append the ID to the base name
-            file_name_pk = f"{base_name}_{id}{extension}"
-            
-            job.setFileName(file_name_pk) # set unique in-memory file name 
+        # Append the ID to the base name
+        file_name_pk = f"{base_name}_{id}{extension}"
+        
+        job.setFileName(file_name_pk) # set unique in-memory file name 
 
-            job.setFilament(filament) # set filament type
+        job.setFilament(filament) # set filament type
 
-            findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)  
+        findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)  
         
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     

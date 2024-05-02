@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useQueueRestore, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters } from '../model/ports'
+import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters } from '../model/ports'
 import { isLoading } from '../model/jobs'
-
+import { useRouter } from 'vue-router'
 import { ref, onMounted } from 'vue';
 import { toast } from '../model/toast'
 import RegisterModal from '../components/RegisterModal.vue'
@@ -10,7 +10,6 @@ import router from '@/router';
 const { retrieve } = useRetrievePrinters();
 const { retrieveInfo } = useRetrievePrintersInfo();
 const { hardReset } = useHardReset();
-const { queueRestore } = useQueueRestore();
 const { deletePrinter } = useDeletePrinter();
 const { nullifyJobs } = useNullifyJobs();
 const { editName } = useEditName();
@@ -43,24 +42,19 @@ onMounted(async () => {
 const doHardReset = async (printer: Device) => {
     isLoading.value = true
     await hardReset(printer.id)
-    isLoading.value = false
-}
-
-const doQueueRestore = async (printer: Device) => {
-    isLoading.value = true
-    await queueRestore(printer.id)
+    router.go(0)
     isLoading.value = false
 }
 
 const doDelete = async (printer: Device) => {
     isLoading.value = true
-    if(printer.status=="printing"){
+    if (printer.status == "printing") {
         toast.error("Cannot deregister printer while status is printing. Please wait for the printer to finish")
     }
     const printerId = printer.id;
     const foundPrinter = printers.value.find(p => p.id === printerId);    // code to find printer where printer.id is equal to the printer.id in the printers array
-    
-    if(foundPrinter?.status === "printing"){
+
+    if (foundPrinter?.status === "printing") {
         toast.error("Cannot deregister printer while status is printing. Please turn offline or wait for the printer to finish printing.")
         return
     }
@@ -209,17 +203,8 @@ const doCloseRegisterModal = async () => {
                                                     <span class="ms-2">Hard Reset</span>
                                                 </a>
                                             </li>
-                                            <span class="tooltiptext">This wipes the queue and resets the printer's communication thread.</span>
-                                        </div>
-                                        <div class="tooltip" style="width: 100%;">
-                                            <li>
-                                                <a class="dropdown-item d-flex align-items-center"
-                                                    style="font-size: 1rem;" @click=" doQueueRestore(printer)">
-                                                    <i class="fas fa-undo"></i>
-                                                    <span class="ms-2">Restore Queue</span>
-                                                </a>
-                                            </li>
-                                            <span class="tooltiptext">This returns jobs to this printer's queue that have a status of "inqueue" or "printing." This is useful if the queue is wiped during a power outage or an accidental server disconnection.</span>
+                                            <span class="tooltiptext">This wipes the queue and resets the printer's
+                                                communication thread.</span>
                                         </div>
                                         <li>
                                             <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
@@ -234,7 +219,7 @@ const doCloseRegisterModal = async () => {
                                                 @click="toggleMessage(printer)">
                                                 <i class="fas fa-stethoscope"></i>
                                                 <span class="ms-2">{{ messageId == printer.id && showMessage ?
-                                                    'Clear Message' : 'Diagnose Printer' }}</span>
+                        'Clear Message' : 'Diagnose Printer' }}</span>
                                             </a>
                                         </li>
                                     </ul>

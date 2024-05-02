@@ -17,11 +17,7 @@ import requests
 from dotenv import load_dotenv
 
 load_dotenv()
-
-
 # model for Printer table
-
-
 class Printer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     device = db.Column(db.String(50), nullable=False)
@@ -45,6 +41,7 @@ class Printer(db.Model):
     canPause = 0
     prevMes = ""
     colorbuff = 0 
+    terminated = 0 
 
     def __init__(self, device, description, hwid, name, status=status, id=None):
         self.device = device
@@ -61,6 +58,7 @@ class Printer(db.Model):
         self.canPause = 0
         self.prevMes=""
         self.colorbuff=0
+        self.terminated = 0 
         # self.colorChangeBuffer=0
 
         if id is not None:
@@ -308,22 +306,6 @@ class Printer(db.Model):
             #     break
         ser.close()
         return 
-    
-    # @classmethod 
-    # def repairPorts(cls): 
-    #     try:
-    #         ports = serial.tools.list_ports.comports()    
-    #         for port in ports: 
-    #             hwid = port.hwid # get hwid 
-    #             hwid_without_location = hwid.split(' LOCATION=')[0]
-    #             printer = Printer.getPrinterByHwid(hwid_without_location)
-    #             if printer is not None: 
-    #                 if(printer.getDevice()!=port.device): 
-    #                     printer.editPort(printer.getId(), port.device)
-    #         return {"success": True, "message": "Printer port(s) successfully updated."}
-    #     except Exception as e:
-    #         print(f"Unexpected error: {e}")
-    #         return jsonify({"error": "Unexpected error occurred"}), 500
         
     def connect(self):
         try:
@@ -352,6 +334,8 @@ class Printer(db.Model):
             # time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
             while True:
+                if(self.terminated==1): 
+                    return 
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
                 if response == "": 
@@ -390,6 +374,8 @@ class Printer(db.Model):
             self.ser.write(f"{message}\n".encode("utf-8"))
             # Save and print out the response from the printer. We can use this for error handling and status updates.
             while True:
+                if(self.terminated==1): 
+                    return 
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
 
@@ -417,7 +403,9 @@ class Printer(db.Model):
         try:
             with open(path, "r") as g:
                 # Read the file and store the lines in a list
-
+                if(self.terminated==1): 
+                    return 
+                
                 lines = g.readlines()
 
                 #  Time handling
@@ -457,7 +445,9 @@ class Printer(db.Model):
                 # Replace file with the path to the file. "r" means read mode. 
                 # now instead of reading from 'g', we are reading line by line
                 for line in lines:
-
+                    if(self.terminated==1): 
+                        return 
+                    
                     # print("LINE: ", line, " STATUS: ", self.status, " FILE PAUSE: ", job.getFilePause())
                     if("layer" in line.lower() and self.status=='colorchange' and job.getFilePause()==0 and self.colorbuff==0):
                         self.setColorChangeBuffer(1)
@@ -693,7 +683,6 @@ class Printer(db.Model):
             self.endingSequence(job)
             self.sendStatusToJob(job, job.id, "cancelled")
             self.disconnect()
-            
         elif verdict== "misprint": 
             self.sendStatusToJob(job, job.id, "cancelled")            
         return 
@@ -711,6 +700,9 @@ class Printer(db.Model):
 
     def getHwid(self):
         return self.hwid
+    
+    def setQueue(self, queue): 
+        self.queue = queue
 
     # def removeJobFromQueue(self, job_id):
     #     self.queue.removeJob(job_id)
@@ -743,9 +735,10 @@ class Printer(db.Model):
     def setStatus(self, newStatus):
         try:
             print("SETTING STATUS TO:", newStatus)
+            if(self.status == "error" and newStatus!="error"): 
+                Printer.hardReset(self.id)
+            
             self.status = newStatus
-            # print(self.status)
-            # Emit a 'status_update' event with the new status
             current_app.socketio.emit(
                 "status_update", {"printer_id": self.id, "status": newStatus}
             )
@@ -771,8 +764,8 @@ class Printer(db.Model):
                 "jobid": job_id,
                 "status": status,  # Assuming status is accessible here
             }
-            base_url = os.getenv("BASE_URL", "http://localhost:8000")
-
+            
+            base_url = os.getenv('BASE_URL')
             response = requests.post(f"{base_url}/updatejobstatus", json=data)
             if response.status_code == 200:
                 print("Status sent successfully")
@@ -782,13 +775,22 @@ class Printer(db.Model):
             print(f"Failed to send status to job: {e}")
 
     @classmethod 
-    def repairPorts(self):
+    def repairPorts(cls):
         try:
-            base_url = os.getenv("BASE_URL", "http://localhost:8000")
+            base_url = os.getenv('BASE_URL')
             response = requests.post(f"{base_url}/repairports")
 
         except requests.exceptions.RequestException as e:
             print(f"Failed to repair ports: {e}")
+            
+    @classmethod 
+    def hardReset(cls, printerid):
+        try:
+            base_url = os.getenv('BASE_URL')
+            response = requests.post(f"{base_url}/hardreset", json={'printerid': printerid, 'restore': 1})
+
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to repair ports: {e}")   
 
     def setTemps(self, extruder_temp, bed_temp):
         self.extruder_temp = extruder_temp

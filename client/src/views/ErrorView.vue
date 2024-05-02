@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { printers, type Device } from '../model/ports'
-import { pageSize, type Job, useGetErrorJobs, useAssignComment, useGetJobFile, useGetFile, useRemoveIssue, isLoading } from '../model/jobs';
 import { type Issue, useGetIssues, useCreateIssues, useAssignIssue, useDeleteIssue, useEditIssue } from '../model/issues'
+import { pageSize, useGetJobs, type Job, useAssignComment, useGetJobFile, useGetFile, useRemoveIssue, useDownloadCsv, isLoading } from '../model/jobs';
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
@@ -9,7 +9,7 @@ import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 
-const { jobhistoryError } = useGetErrorJobs()
+const { jobhistory, getFavoriteJobs } = useGetJobs()
 const { issues } = useGetIssues()
 const { createIssue } = useCreateIssues()
 const { assign } = useAssignIssue()
@@ -19,7 +19,8 @@ const { getFile } = useGetFile()
 const { deleteIssue } = useDeleteIssue()
 const { removeIssue } = useRemoveIssue()
 const { editIssue } = useEditIssue()
-
+const { csv } = useDownloadCsv()
+let everyJob = ref<Array<Job>>([])
 const showText = ref(false)
 const newIssue = ref('')
 const selectedIssue = ref<Issue>()
@@ -28,6 +29,7 @@ const selectedJob = ref<Job>()
 const selectedIssues = ref<Array<number>>([])
 const newName = ref('')
 const searchTicketId = ref('')
+let filterApplied = ref(0)
 
 const selectedPrinters = ref<Array<Number>>([])
 const selectedJobs = ref<Array<Job>>([]);
@@ -91,7 +93,7 @@ onMounted(async () => {
         const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
         // Fetch jobs into `fetchedJobs` and total into `totalJobs`
-        [fetchedJobs.value, totalJobs.value] = await jobhistoryError(page.value, pageSize.value, printerIds);
+        [fetchedJobs.value, totalJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, 1);
 
         // Update `displayJobs` with the fetched jobs
         displayJobs.value = fetchedJobs.value;
@@ -146,7 +148,7 @@ const changePage = async (newPage: any) => {
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
     // Fetch jobs into `fetchedJobs` and total into `totalJobs`
-    [fetchedJobs.value, totalJobs.value] = await jobhistoryError(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value)
+    [fetchedJobs.value, totalJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, 1, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value)
 
     // Update `displayJobs` with the fetched jobs
     displayJobs.value = fetchedJobs.value;
@@ -155,7 +157,8 @@ const changePage = async (newPage: any) => {
 }
 
 async function submitFilter() {
-    isLoading.value = true;
+    filterApplied.value = 1;
+    isLoading.value = true
     filterDropdown.value = false;
 
     if (date.value && Array.isArray(date.value)) {
@@ -182,7 +185,7 @@ async function submitFilter() {
     }
 
     // Get the total number of jobs first, without considering the page number
-    [fetchedJobs.value, totalJobs.value] = await jobhistoryError(1, Number.MAX_SAFE_INTEGER, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
+    [fetchedJobs.value, totalJobs.value] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 1, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
 
     totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
     totalPages.value = Math.max(totalPages.value, 1);
@@ -192,7 +195,7 @@ async function submitFilter() {
     }
 
     // Now fetch the jobs for the current page
-    [fetchedJobs.value] = await jobhistoryError(page.value, pageSize.value, printerIds, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value)
+    [fetchedJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, 1, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
 
     // Update `displayJobs` with the fetched jobs
     displayJobs.value = fetchedJobs.value;
@@ -325,6 +328,20 @@ const resetIssueValues = () => {
     deleteNum.value = undefined
 }
 
+const doDownloadCsv = async () => {
+    const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
+    const [alljobs, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 1, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
+    everyJob.value = alljobs;
+    console.log("everyJob", everyJob.value)
+    const jobIds = everyJob.value.map(job => job.id);
+    // if (filterApplied.value === 1) {
+    await csv(0, jobIds) // 0: not all jobs, just specified job IDs
+    // } else {
+    //     await csv(1, []) // 1: all jobs in database 
+    // }
+    // await csv()
+}
+
 </script>
 
 <template>
@@ -353,7 +370,6 @@ const resetIssueValues = () => {
             </div>
         </div>
     </div>
-
 
     <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="issueModal" aria-hidden="true"
         data-bs-backdrop="static">
@@ -450,10 +466,10 @@ const resetIssueValues = () => {
             <div class="modal-content">
                 <div class="modal-header d-flex align-items-end">
                     <h5 class="modal-title mb-0" id="commentModalLabel" style="line-height: 1;">Job #{{
-                        selectedJob?.td_id
-                        }}</h5>
+            selectedJob?.td_id
+        }}</h5>
                     <h6 class="modal-title" id="commentModalLabel" style="padding-left:10px; line-height: 1;">{{
-                        selectedJob?.date }}</h6>
+                selectedJob?.date }}</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
                         @click="selectedIssue = undefined; selectedJob = undefined;"></button>
                 </div>
@@ -604,16 +620,19 @@ const resetIssueValues = () => {
                         </div>
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
-                        <label class="form-label ">Date Range:</label>
-                        <VueDatePicker class="mb-3" v-model="date" range />
-                        <div class="sticky">
-                            <div class="mb-2 border-top"
-                                style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
-                            <div class="d-flex justify-content-center">
-                                <button @click.prevent="submitFilter" class="btn btn-primary me-3 mb-2">Submit
-                                    Filter</button>
-                                <button @click.prevent="clearFilter" class="btn btn-danger mb-2">Clear Filter</button>
-                            </div>
+                        <label class="form-label">Date Range:</label>
+                        <VueDatePicker v-model="date" range />
+                        <div class="my-2 border-top"
+                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="favorite" id="orderFav"
+                                value="favorite" v-model="favoriteOnly">
+                            <label class="form-check-label" for="orderFav">Favorites</label>
+                        </div>
+                        <div class="d-flex justify-content-center">
+                            <button @click.prevent="submitFilter" class="btn btn-primary me-3">Submit
+                                Filter</button>
+                            <button @click.prevent="clearFilter" class="btn btn-danger">Clear Filter</button>
                         </div>
                     </form>
                 </div>
@@ -622,6 +641,9 @@ const resetIssueValues = () => {
             <div class="col-7 text-center"></div>
 
             <div class="col-4 text-end" style="padding-right: 0">
+                <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#csvModal">
+                    <i class="fa-solid fa-file-csv"></i>
+                </button>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#issueModal">
                     Issues
                 </button>

@@ -28,19 +28,11 @@ def hardreset():
     try: 
         data = request.get_json() # get json data 
         id = data['printerid']
+        restore = data.get('restore', 0)  # default value is False
+        
+        print("RESTORE: ", restore)
+        print("ID: ", id)
         res = printer_status_service.resetThread(id)
-        return res 
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-
-    
-@status_bp.route("/queuerestore", methods=["POST"])
-def queueRestore():
-    try:
-        data = request.get_json() # get json data
-        printerid = data['printerid']
-        res = Job.queueRestore(printerid)
         return res 
     except Exception as e:
         print(f"Unexpected error: {e}")

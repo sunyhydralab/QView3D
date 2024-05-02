@@ -216,17 +216,20 @@ export function useGetJobs() {
       page: number,
       pageSize: number,
       printerIds?: number[],
+      fromError?: number,
       oldestFirst?: boolean,
       searchJob: string = '',
       searchCriteria: string = '',
       searchTicketId: string = '',
       favoriteOnly?: boolean,
+      issues?: number[],
       startdate: string = '',
-      enddate: string = ''
+      enddate: string = '',
+      countOnly?: number
     ) {
       try {
         const response = await api(
-          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&searchTicketId=${encodeURIComponent(searchTicketId)}&favoriteOnly=${favoriteOnly}&startdate=${startdate}&enddate=${enddate}`
+          `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&searchTicketId=${encodeURIComponent(searchTicketId)}&favoriteOnly=${favoriteOnly}&issueIds=${JSON.stringify(issues)}&startdate=${startdate}&enddate=${enddate}&fromError=${fromError}&countOnly=${countOnly}`
         )
         return response
       } catch (error) {
@@ -255,34 +258,6 @@ export function useUpdateJobStatus() {
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while updating the job status')
-      }
-    }
-  }
-}
-
-export function useGetErrorJobs() {
-  return {
-    async jobhistoryError(
-      page: number,
-      pageSize: number,
-      printerIds?: number[],
-      oldestFirst?: boolean,
-      searchJob: string = '',
-      searchCriteria: string = '',
-      searchTicketId: string = '',
-      favoriteOnly?: boolean,
-      issues?: number[],
-      startdate: string = '',
-      enddate: string = ''
-    ) {
-      try {
-        const response = await api(
-          `geterrorjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&searchTicketId=${encodeURIComponent(searchTicketId)}&issueIds=${JSON.stringify(issues)}&startdate=${startdate}&enddate=${enddate}`
-        )
-        return response
-      } catch (error) {
-        console.error(error)
-        toast.error('An error occurred while retrieving the jobs')
       }
     }
   }

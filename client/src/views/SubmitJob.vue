@@ -126,31 +126,31 @@ const handleSubmit = async () => {
     let isFavoriteSet = false;
     let res = null
     if (selectedPrinters.value.length == 0) {
-        // let numPrints = quantity.value
-        // for (let i = 0; i < numPrints; i++) {
-        const formData = new FormData() // create FormData object
-        formData.append('file', file.value as File) // append form data
-        formData.append('name', name.value as string)
-        formData.append('priority', priority.value.toString())
-        formData.append('td_id', tdid.value.toString())
-        formData.append('filament', filament.value as string)
-        // If favorite is true and it's not set yet, set it for the first job only
-        if (favorite.value && !isFavoriteSet) {
-            formData.append('favorite', 'true')
-            isFavoriteSet = true;
-        } else {
-            formData.append('favorite', 'false')
-        }
-        try {
-            formData.append("quantity", quantity.value.toString())
-            res = await auto(formData)
-            if (form.value) {
-                form.value.reset()
+        let numPrints = quantity.value
+        for (let i = 0; i < numPrints; i++) {
+            const formData = new FormData() // create FormData object
+            formData.append('file', file.value as File) // append form data
+            formData.append('name', name.value as string)
+            formData.append('priority', priority.value.toString())
+            formData.append('td_id', tdid.value.toString())
+            formData.append('filament', filament.value as string)
+            // If favorite is true and it's not set yet, set it for the first job only
+            if (favorite.value && !isFavoriteSet) {
+                formData.append('favorite', 'true')
+                isFavoriteSet = true;
+            } else {
+                formData.append('favorite', 'false')
             }
-        } catch (error) {
-            console.error('There has been a problem with your fetch operation:', error)
+            try {
+                // formData.append("quantity", quantity.value.toString())
+                res = await auto(formData)
+                // if (form.value) {
+                //     form.value.reset()
+                // }
+            } catch (error) {
+                console.error('There has been a problem with your fetch operation:', error)
+            }
         }
-        // }
         resetValues()
     } else {
         let sub = validateQuantity()
@@ -163,35 +163,35 @@ const handleSubmit = async () => {
                     numPrints += 1
                     remainder -= 1
                 }
-                // for (let i = 0; i < numPrints; i++) {
-                const formData = new FormData() // create FormData object
-                formData.append('file', file.value as File) // append form data
-                formData.append('name', name.value as string)
-                formData.append('printerid', printer?.id?.toString() || '');
-                formData.append('priority', priority.value.toString())
-                formData.append('quantity', numPrints.toString())
-                formData.append('td_id', tdid.value.toString())
-                formData.append('filament', filament.value as string)
+                for (let i = 0; i < numPrints; i++) {
+                    const formData = new FormData() // create FormData object
+                    formData.append('file', file.value as File) // append form data
+                    formData.append('name', name.value as string)
+                    formData.append('printerid', printer?.id?.toString() || '');
+                    formData.append('priority', priority.value.toString())
+                    formData.append('quantity', numPrints.toString())
+                    formData.append('td_id', tdid.value.toString())
+                    formData.append('filament', filament.value as string)
 
-                // If favorite is true and it's not set yet, set it for the first job only
-                if (favorite.value && !isFavoriteSet) {
-                    formData.append('favorite', 'true')
-                    isFavoriteSet = true;
-                } else {
-                    formData.append('favorite', 'false')
-                }
-
-                try {
-                    res = await addJobToQueue(formData)
-                    // reset form
-                    if (form.value) {
-                        form.value.reset()
+                    // If favorite is true and it's not set yet, set it for the first job only
+                    if (favorite.value && !isFavoriteSet) {
+                        formData.append('favorite', 'true')
+                        isFavoriteSet = true;
+                    } else {
+                        formData.append('favorite', 'false')
                     }
-                    // reset Vue refs
-                } catch (error) {
-                    console.error('There has been a problem with your fetch operation:', error)
+
+                    try {
+                        res = await addJobToQueue(formData)
+                        // reset form
+                        // if (form.value) {
+                        //     form.value.reset()
+                        // }
+                        // reset Vue refs
+                    } catch (error) {
+                        console.error('There has been a problem with your fetch operation:', error)
+                    }
                 }
-                // }
             }
             resetValues()
         }
@@ -292,7 +292,8 @@ const getFilament = (file: File) => {
                     <h5 class="modal-title" id="gcodeImageModalLabel">
                         <b>{{ fileName }}</b> <br>
                         <div class="form-check form-switch">
-                            <label class="form-check-label" for="switchView">{{ isImageVisible ? 'Image' : 'Viewer' }}</label>
+                            <label class="form-check-label" for="switchView">{{ isImageVisible ? 'Image' : 'Viewer'
+                                }}</label>
                             <input class="form-check-input" type="checkbox" id="switchView" v-model="isImageVisible">
                         </div>
                     </h5>
@@ -307,7 +308,7 @@ const getFilament = (file: File) => {
             </div>
         </div>
     </div>
-    
+
     <transition name="fade">
         <div v-if="isSubmitting" class="modal fade show d-block" id="loadingModal" tabindex="-1"
             aria-labelledby="loadingModalLabel" aria-hidden="true"
