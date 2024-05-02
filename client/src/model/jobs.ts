@@ -60,7 +60,8 @@ export interface Job {
   timer?: NodeJS.Timeout
   time_started?: number
   colorbuff?: number 
-  printer_name?: string 
+  printer_name?: string
+  queue_selected?: boolean
 }
 
 export async function jobTime(job: Job, printers: any) {
