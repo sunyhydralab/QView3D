@@ -15,6 +15,7 @@ const { getFileDownload } = useGetJobFile()
 
 const selectedJobs = ref<Array<Job>>([])
 const selectAllCheckboxMap = ref<Record<string, boolean>>({})
+const selectAllJobsMap = {}
 
 let currentJob = ref<Job | null>(null)
 let isGcodeImageVisible = ref(false)
@@ -82,27 +83,64 @@ const deleteSelectedJobs = async () => {
   isLoading.value = false
 }
 
-const selectAllJobs = (printer: Device) => {
-  isLoading.value = true
-  if (printer !== undefined && printer.queue !== undefined) {
-    // Toggle the "Select All" checkbox state for the current printer
-    selectAllCheckboxMap.value[printer.id!] = !selectAllCheckboxMap.value[printer.id!]
+// const selectAllJobs = (printer: Device) => {
+//   isLoading.value = true
+//   if (printer !== undefined && printer.queue !== undefined) {
+//     // Toggle the "Select All" checkbox state for the current printer
+//     selectAllCheckboxMap.value[printer.id!] = !selectAllCheckboxMap.value[printer.id!]
 
-    if (selectAllCheckboxMap.value[printer.id!]) {
-      // If the "Select All" checkbox for the current printer is checked,
-      // add all jobs from the current printer to the selectedJobs array
-      // but only if the job's status is 'inqueue'
-      selectedJobs.value = [
-        ...selectedJobs.value,
-        ...printer.queue.filter(job => job.status === 'inqueue')
-      ];
+//     if (selectAllCheckboxMap.value[printer.id!]) {
+//       // If the "Select All" checkbox for the current printer is checked,
+//       // add all jobs from the current printer to the selectedJobs array
+//       // but only if the job's status is 'inqueue'
+//       selectedJobs.value = [
+//         ...selectedJobs.value,
+//         ...printer.queue.filter(job => job.status === 'inqueue')
+//       ];
+//     } else {
+//       // Otherwise, remove all jobs from the current printer from the selectedJobs array
+//       selectedJobs.value = selectedJobs.value.filter((job) => job.printerid !== printer.id)
+//     }
+//   }
+//   isLoading.value = false 
+// }
+
+
+// const selectAllJobs = (printer: Device) => computed({
+//   get: () => selectedJobs.value.length > 0 && selectedJobs.value.length === printer?.queue?.length,
+//   set: (value) => {
+//     console.log('value', value)
+//     if (printer !== undefined && printer.queue !== undefined) {
+//       // Toggle the "Select All" checkbox state for the current printer
+//       selectAllCheckboxMap.value[printer.id!] = value;
+
+//       if (value) {
+//         // If the "Select All" checkbox for the current printer is checked,
+//         // add all jobs from the current printer to the selectedJobs array
+//         // but only if the job's status is 'inqueue'
+//         selectedJobs.value = [
+//           ...selectedJobs.value,
+//           ...printer.queue.filter(job => job.status === 'inqueue')
+//         ];
+//       } else {
+//         // If the "Select All" checkbox for the current printer is unchecked,
+//         // remove all jobs from the current printer from the selectedJobs array
+//         selectedJobs.value = selectedJobs.value.filter(job => job.printerid !== printer.id);
+//       }
+//     }
+//   }
+// });
+
+const selectAllJobs = (printer: Device) => computed({
+  get: () => selectedJobs.value.length > 0 && selectedJobs.value.length === (printer?.queue?.length || 0),
+  set: (value) => {
+    if (value) {
+      selectedJobs.value = printer?.queue?.slice() || [];
     } else {
-      // Otherwise, remove all jobs from the current printer from the selectedJobs array
-      selectedJobs.value = selectedJobs.value.filter((job) => job.printerid !== printer.id)
+      selectedJobs.value = [];
     }
   }
-  isLoading.value = false 
-}
+});
 
 function capitalizeFirstLetter(string: string | undefined) {
   return string ? string.charAt(0).toUpperCase() + string.slice(1) : ''
@@ -258,10 +296,12 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                     <th>Date Added</th>
                     <th class="col-1">Job Status</th>
                     <th class="col-checkbox">
+
                       <div class="checkbox-container">
-                        <input class="form-check-input" type="checkbox" @change="() => selectAllJobs(printer)"
+                        <input class="form-check-input" type="checkbox" @change="() => selectAllJobs(printer)" 
                           :disabled="printer.queue!.length === 0" v-model="selectAllCheckbox" />
                       </div>
+                      
                     </th>
                     <th>Actions</th>
                     <th style="width: 0">Move</th>
