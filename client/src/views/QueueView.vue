@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onUnmounted, ref, computed, watchEffect, onMounted } from 'vue'
+import { onUnmounted, ref, computed, watchEffect, onMounted, watch } from 'vue'
 import { printers, type Device } from '../model/ports'
 import { useRerunJob, useRemoveJob, type Job, useMoveJob, useGetFile, useGetJobFile, isLoading } from '../model/jobs'
 import draggable from 'vuedraggable'
@@ -15,12 +15,10 @@ const { getFile } = useGetFile()
 const { getFileDownload } = useGetJobFile()
 
 const selectedJobs = ref<Array<Job>>([])
-const selectAllCheckboxMap = ref<Record<string, boolean>>({})
 
 let currentJob = ref<Job | null>(null)
 let isGcodeImageVisible = ref(false)
 const isImageVisible = ref(true)
-let selectAllCheckbox = ref(false)
 
 const primaryColor = ref('');
 const primaryColorActive = ref('');
@@ -67,9 +65,7 @@ const handleRerun = async (job: Job, printer: Device) => {
 const deleteSelectedJobs = async () => {
   isLoading.value = true
   let response = null
-  // Loop through the selected jobs and remove them from the printer's queue
   const selectedJobIds = computed(() => selectedJobs.value.map(job => job.id));
-
   response = await removeJob(selectedJobIds.value);
   if (response.success == false) {
     toast.error(response.message)
@@ -79,33 +75,33 @@ const deleteSelectedJobs = async () => {
     console.error('Unexpected response:', response)
     toast.error('Failed to remove job. Unexpected response.')
   }
-  // Clear the selected jobs array
-  selectedJobs.value = []
-  selectAllCheckbox.value = false
-  isLoading.value = false
-}
 
-const selectAllJobs = (printer: Device) => {
-  isLoading.value = true
-  if (printer !== undefined && printer.queue !== undefined) {
-    // Toggle the "Select All" checkbox state for the current printer
-    selectAllCheckboxMap.value[printer.id!] = !selectAllCheckboxMap.value[printer.id!]
-
-    if (selectAllCheckboxMap.value[printer.id!]) {
-      // If the "Select All" checkbox for the current printer is checked,
-      // add all jobs from the current printer to the selectedJobs array
-      // but only if the job's status is 'inqueue'
-      selectedJobs.value = [
-        ...selectedJobs.value,
-        ...printer.queue.filter(job => job.status === 'inqueue')
-      ];
-    } else {
-      // Otherwise, remove all jobs from the current printer from the selectedJobs array
-      selectedJobs.value = selectedJobs.value.filter((job) => job.printerid !== printer.id)
-    }
+  for (const printer of printers.value) {
+    printer.queue?.forEach((job) => job.queue_selected = false)
   }
+
   isLoading.value = false
 }
+
+const selectAllJobs = (printer: Device) => computed({
+  get: () => {
+    isLoading.value = true
+    if (printer.queue?.length === 0) {
+      return false;
+    }
+    return printer.queue?.every((job: Job) => job.queue_selected);
+    isLoading.value = false
+  },
+  set: (value) => {
+    isLoading.value = true
+    printer.queue?.forEach((job: Job) => job.queue_selected = value);
+    isLoading.value = false
+  }
+});
+
+watch(printers, (printers) => {
+  selectedJobs.value = printers.flatMap((printer) => printer.queue?.filter((job) => job.queue_selected) || [])
+}, { deep: true })
 
 function capitalizeFirstLetter(string: string | undefined) {
   return string ? string.charAt(0).toUpperCase() + string.slice(1) : ''
@@ -265,9 +261,10 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                     <th style="width: 75px;">Actions</th>
                     <th style="width: 48px;">
                       <div class="checkbox-container">
-                        <input class="form-check-input" type="checkbox" @change="() => selectAllJobs(printer)"
-                          :disabled="printer.queue!.length === 0" v-model="selectAllCheckbox" />
+                        <input class="form-check-input" type="checkbox" :disabled="printer.queue!.length === 0"
+                          v-model="selectAllJobs(printer).value" />
                       </div>
+
                     </th>
                     <th style="width: 58px">Move</th>
                   </tr>
@@ -344,7 +341,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                       </td>
 
                       <td class="text-center">
-                        <input class="form-check-input" type="checkbox" v-model="selectedJobs" :value="job"
+                        <input class="form-check-input" type="checkbox" v-model="job.queue_selected" :value="job"
                           :disabled="job.status !== 'inqueue'" />
                       </td>
 

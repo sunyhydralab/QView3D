@@ -62,8 +62,9 @@ export interface Job {
   }
   timer?: NodeJS.Timeout
   time_started?: number
-  colorbuff?: number
+  colorbuff?: number 
   printer_name?: string
+  queue_selected?: boolean
 }
 
 export async function jobTime(job: Job, printers: any) {
@@ -633,14 +634,8 @@ export function useDownloadCsv() {
         const blob = await response.blob() // Convert the response to a blob
         const date = new Date()
         // Format the date as YYYY-MM-DD
-        const dateString = new Intl.DateTimeFormat('en-GB', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
-        })
-          .format(date)
-          .replace(/\//g, '-')
-
+        const dateString = ('0' + (date.getMonth() + 1)).slice(-2) + ('0' + date.getDate()).slice(-2) + date.getFullYear();
+        
         // Generate the filename
         const filename = `jobs_${dateString}.csv`
 

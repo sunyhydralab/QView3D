@@ -438,8 +438,8 @@ class Job(db.Model):
             # Specify the columns you want to include
             column_names = ['td_id', 'printer', 'name','file_name_original', 'status', 'date', 'issue', 'comments']
 
-            date_string = datetime.now()
-            
+            date_string = datetime.now().strftime("%m%d%Y")        
+                
             csv_file_name = f'../tempcsv/jobs_{date_string}.csv'
             
             # Write to CSV
