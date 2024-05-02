@@ -32,20 +32,20 @@ onMounted(async () => {
 </script>
 
 <template>
-<transition name="fade">
-  <div v-if="isLoading" class="modal fade show d-block" id="loadingModal" tabindex="-1"
+  <transition name="fade">
+    <div v-if="isLoading" class="modal fade show d-block" id="loadingModal" tabindex="-1"
       aria-labelledby="loadingModalLabel" aria-hidden="true"
-      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow-y: hidden;">
+      style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; overflow-y: hidden;">
       <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-body d-flex justify-content-center align-items-center"
-              style="user-select: none; position: relative;">
-              <div class="spinner-border" role="status">
-                  <span class="visually-hidden">Loading...</span>
-              </div>
+        <div class="modal-body d-flex justify-content-center align-items-center"
+          style="user-select: none; position: relative;">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
           </div>
+        </div>
       </div>
-  </div>
-</transition>
+    </div>
+  </transition>
 
   <nav style="padding-bottom: 2.5rem;">
     <NavBar />
