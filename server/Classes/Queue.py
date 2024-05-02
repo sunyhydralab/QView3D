@@ -10,12 +10,15 @@ class Queue:
     def __iter__(self):  # iterate over queue
         return iter(self.__queue)
     
-    def setToInQueue(self): 
-        for job in self.__queue: 
-            job.status = "inqueue"
+    # def setToInQueue(self): 
+    #     for job in self.__queue: 
+    #         job.status = "inqueue"
 
     # if no priority add to end of queue. If priority add to front of queue.
     def addToBack(self, job, printerid):
+        print("Adding job to back of queue ", job.id)
+        print("Adding job to back of queue ", printerid)
+
         if self.__queue.count(job) > 0:
             raise Exception("Job ID already in queue.")
         self.__queue.append(

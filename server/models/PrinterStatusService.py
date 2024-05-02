@@ -36,8 +36,8 @@ class PrinterStatusService:
                 name=printer_info["name"],
                 status='configuring',
             )
-            queue.setToInQueue()
-            printer.setQueue(queue)
+            # queue.setToInQueue()
+            # printer.setQueue(queue)
             printer_thread = self.start_printer_thread(
                 printer
             )  # creating a thread for each printer object
@@ -134,8 +134,8 @@ class PrinterStatusService:
                 "colorChangeBuffer": printer.colorbuff
                 # "colorChangeBuffer": printer.colorChangeBuffer
             }
-            
             queue = printer.getQueue()
+            print("QUEUE: ", queue.getSize())
             for job in queue: 
                 job_info = {
                     "id": job.id,
