@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers } from '../model/ports'
-import { selectedPrinters, file, fileName, quantity, priority, favorite, name, tdid, filament, useAddJobToQueue, useGetFile, useAutoQueue, isLoading, isSubmitting } from '../model/jobs'
+import { selectedPrinters, file, fileName, quantity, priority, favorite, name, tdid, filament, useAddJobToQueue, useGetFile, useAutoQueue, isLoading } from '../model/jobs'
 import { ref, onMounted, watchEffect, computed, watch } from 'vue'
 import { useRoute } from 'vue-router';
 import { toast } from '@/model/toast';
@@ -121,8 +121,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
 
 // sends job to printer queue
 const handleSubmit = async () => {
-    isAsteriksVisible.value = false;
-    isSubmitting.value = true
+    isLoading.value = true
     let isFavoriteSet = false;
     let res = null
     if (selectedPrinters.value.length == 0) {
@@ -203,7 +202,7 @@ const handleSubmit = async () => {
     } else {
         toast.error('Failed to add job to queue. Unexpected response.')
     }
-    isSubmitting.value = false
+    isLoading.value = false
     isAsteriksVisible.value = true;
 }
 
@@ -308,24 +307,6 @@ const getFilament = (file: File) => {
             </div>
         </div>
     </div>
-
-    <transition name="fade">
-        <div v-if="isSubmitting" class="modal fade show d-block" id="loadingModal" tabindex="-1"
-            aria-labelledby="loadingModalLabel" aria-hidden="true"
-            style="background-color: rgba(0, 0, 0, 0.3); backdrop-filter: blur(2px);">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-body d-flex justify-content-center align-items-center" style="user-select: none;">
-                        Submitting the jobs, please do not refresh
-                        <div class="spinner-border" role="status"
-                            style="width: 2rem; height: 2rem; margin-left: 0.5rem;">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </transition>
 
     <div class="container">
         <div class="card" style="border: 1px solid #484848; background: #d8d8d8;">

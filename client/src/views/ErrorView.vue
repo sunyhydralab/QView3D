@@ -332,14 +332,8 @@ const doDownloadCsv = async () => {
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
     const [alljobs, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 1, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
     everyJob.value = alljobs;
-    console.log("everyJob", everyJob.value)
     const jobIds = everyJob.value.map(job => job.id);
-    // if (filterApplied.value === 1) {
-    await csv(0, jobIds) // 0: not all jobs, just specified job IDs
-    // } else {
-    //     await csv(1, []) // 1: all jobs in database 
-    // }
-    // await csv()
+    await csv(0, jobIds)
 }
 
 const onlyNumber = ($event: KeyboardEvent) => {
@@ -373,6 +367,27 @@ const onlyNumber = ($event: KeyboardEvent) => {
                         <GCode3DImageViewer v-if="isGcodeImageVisible && !isImageVisible" :job="currentJob" />
                         <GCodeThumbnail v-else-if="isGcodeImageVisible && isImageVisible" :job="currentJob" />
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="csvModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
+        data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Download CSV</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Thi CSV file will only contain jobs included in the current filtration criteria. Are you sure you
+                    want to download this CSV file?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button @click="doDownloadCsv" type="button" class="btn btn-success"
+                        data-bs-dismiss="modal">Download CSV</button>
                 </div>
             </div>
         </div>
