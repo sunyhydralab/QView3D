@@ -85,17 +85,13 @@ const deleteSelectedJobs = async () => {
 
 const selectAllJobs = (printer: Device) => computed({
   get: () => {
-    isLoading.value = true
     if (printer.queue?.length === 0) {
       return false;
     }
     return printer.queue?.every((job: Job) => job.queue_selected);
-    isLoading.value = false
   },
   set: (value) => {
-    isLoading.value = true
     printer.queue?.forEach((job: Job) => job.queue_selected = value);
-    isLoading.value = false
   }
 });
 
