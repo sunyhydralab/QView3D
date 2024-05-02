@@ -215,5 +215,36 @@ export function setupColorChangeBuffer(printers: any) {
       console.error('printers or printers.value is undefined')
     }
   })
-  console.log('color change buffer socket set up')
+}
+
+export function setupMaxLayerHeightSocket(printers: any) {
+  socket.on('max_layer_height', (data: any) => {
+    if (printers) {
+      const job = printers.value
+        .flatMap((printer: { queue: any }) => printer.queue)
+        .find((job: { id: any }) => job?.id === data.job_id)
+
+      if (job) {
+        job.max_layer_height = data.max_layer_height
+      }
+    } else {
+      console.error('printers or printers.value is undefined')
+    }
+  })
+}
+
+export function setupCurrentLayerHeightSocket(printers: any) {
+  socket.on('current_layer_height', (data: any) => {
+    if (printers) {
+      const job = printers.value
+        .flatMap((printer: { queue: any }) => printer.queue)
+        .find((job: { id: any }) => job?.id === data.job_id)
+
+      if (job) {
+        job.current_layer_height = data.current_layer_height
+      }
+    } else {
+      console.error('printers or printers.value is undefined')
+    }
+  })
 }

@@ -66,6 +66,7 @@ def add_job_to_queue():
         # favorite = 1 if _favorite == 'true' else 0
         # quantity = request.form['quantity']
         td_id = int(request.form['td_id'])
+        filament = request.form['filament']
         favoriteOne = False 
 
         # for i in range(int(quantity)):
@@ -90,6 +91,8 @@ def add_job_to_queue():
         
         job.setFileName(file_name_pk) # set unique in-memory file name 
 
+        job.setFilament(filament) # set filament type
+
         priority = request.form['priority']
         # if priotiry is '1' then add to front of queue, else add to back
         if priority == 'true':
@@ -113,6 +116,7 @@ def auto_queue():
 
         favorite = request.form['favorite']
         td_id = request.form['td_id']
+        filament = request.form['filament']
 
         favoriteOne = False 
         # for i in range(int(quantity)):
@@ -138,6 +142,8 @@ def auto_queue():
         file_name_pk = f"{base_name}_{id}{extension}"
         
         job.setFileName(file_name_pk) # set unique in-memory file name 
+
+        job.setFilament(filament) # set filament type
 
         findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)  
         

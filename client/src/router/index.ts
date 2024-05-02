@@ -5,6 +5,7 @@ import RegisteredViewVue from '@/views/RegisteredView.vue'
 import SubmitJobVue from '@/views/SubmitJob.vue'
 import JobHistoryVue from '@/views/JobHistory.vue'
 import ErrorView from '@/views/ErrorView.vue'
+import { isLoading } from '@/model/jobs'
 
 const routes = [
   {

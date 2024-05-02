@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { printers, type Device } from '../model/ports'
 import { pageSize, useGetJobs, type Job, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useDownloadCsv, useRemoveIssue, isLoading } from '../model/jobs';
-import { computed, onMounted, onBeforeUnmount, ref, watchEffect } from 'vue';
+import { computed, onMounted, onBeforeUnmount, ref, watchEffect, onUnmounted } from 'vue';
 import { type Issue, useGetIssues, useAssignIssue } from '../model/issues'
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
+import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 
@@ -42,6 +43,9 @@ let filterApplied = ref(0)
 
 const router = useRouter();
 
+let displayJobs = ref<Array<Job>>([])
+let fetchedJobs = ref<Array<Job>>([])
+
 let jobs = ref<Array<Job>>([])
 let filter = ref('')
 let oldestFirst = ref<boolean>(false)
@@ -50,6 +54,7 @@ let favoriteOnly = ref<boolean>(false)
 
 let currentJob = ref<Job | null>(null);
 let isGcodeImageVisible = ref(false);
+const isImageVisible = ref(true)
 
 let page = ref(1)
 let totalJobs = ref(0)
@@ -77,9 +82,9 @@ let filterDropdown = ref(false)
 // computed property that returns the filtered list of jobs. 
 let filteredJobs = computed(() => {
     if (filter.value) {
-        return jobs.value.filter(job => job.printer.includes(filter.value))
+        return displayJobs.value.filter(job => job.printer.includes(filter.value))
     } else {
-        return jobs.value
+        return displayJobs.value
     }
 })
 
@@ -87,11 +92,10 @@ let offcanvasElement: HTMLElement | null = null;
 
 onMounted(async () => {
     try {
+        isLoading.value = true;
 
-        isLoading.value = true
-
-        const retrieveissues = await issues()
-        issuelist.value = retrieveissues
+        const retrieveissues = await issues();
+        issuelist.value = retrieveissues;
 
         offcanvasElement = document.getElementById('offcanvasRight');
 
@@ -101,16 +105,17 @@ onMounted(async () => {
         }
 
         const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-        const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds)
-        jobs.value = joblist;
-        totalJobs.value = total;
 
-        totalPages.value = Math.ceil(total / pageSize.value);
+        // Fetch jobs into `fetchedJobs`
+        [fetchedJobs.value, totalJobs.value] = await jobhistory(page.value, pageSize.value, printerIds);
+
+        // Update `displayJobs` with the fetched jobs
+        displayJobs.value = fetchedJobs.value;
+
+        totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
         totalPages.value = Math.max(totalPages.value, 1);
 
-        favoriteJobs.value = await getFavoriteJobs()
-
-        isLoading.value = false
+        favoriteJobs.value = await getFavoriteJobs();
 
         document.addEventListener('click', closeDropdown);
 
@@ -118,12 +123,19 @@ onMounted(async () => {
 
         modal?.addEventListener('hidden.bs.modal', () => {
             isGcodeImageVisible.value = false;
+            isImageVisible.value = true;
         });
 
+        isLoading.value = false;
+
     } catch (error) {
-        console.error(error)
+        console.error(error);
     }
-})
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', closeDropdown);
+});
 
 const onShownOffcanvas = () => {
     offcanvasElement?.removeAttribute('tabindex');
@@ -170,22 +182,20 @@ const changePage = async (newPage: any) => {
         return;
     }
     selectedJobs.value = [];
-    // selectAllCheckbox.value = false;
 
     page.value = newPage
-    jobs.value = []
-    jobs.value = []
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
-    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
-    jobs.value = joblist;
-    totalJobs.value = total;
+    // Fetch jobs into `fetchedJobs` and total into `totalJobs`
+    [fetchedJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
+    // Update `displayJobs` with the fetched jobs
+    displayJobs.value = fetchedJobs.value;
 
-    isLoading.value = false 
+    isLoading.value = false
 }
 
 async function submitFilter() {
-    isLoading.value = true
+    isLoading.value = true;
     filterDropdown.value = false;
     filterApplied.value = 1;
 
@@ -201,7 +211,6 @@ async function submitFilter() {
         }
     }
 
-    jobs.value = []
     oldestFirst.value = order.value === 'oldest';
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
@@ -213,12 +222,8 @@ async function submitFilter() {
         searchCriteria.value = searchJob.value;
     }
 
-    // *** PASS START AND END DATE HERE, THEY ARE STRINGS ***
-    // ***  NEED TO HANDLE IF DATE IS EMPTY/NULL ***
-
     // Get the total number of jobs first, without considering the page number
-    const total = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value,  selectedIssues.value, startDateString.value, endDateString.value, 1);
-    totalJobs.value = total;
+    [fetchedJobs.value, totalJobs.value] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value, 1);
 
     totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
     totalPages.value = Math.max(totalPages.value, 1);
@@ -228,15 +233,13 @@ async function submitFilter() {
     }
 
     // Now fetch the jobs for the current page
-    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value,  selectedIssues.value, startDateString.value, endDateString.value);
+    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
     jobs.value = joblist;
 
     selectedJobs.value = [];
     // selectAllCheckbox.value = false;
 
-    date.value = null;
-
-    isLoading.value = false
+    isLoading.value = false;
 }
 
 function clearFilter() {
@@ -274,14 +277,16 @@ const ensureOneCheckboxChecked = () => {
 }
 
 const confirmDelete = async () => {
-    isLoading.value = true
+    isLoading.value = true;
     const deletionPromises = selectedJobs.value.map(job => deleteJob(job));
     await Promise.all(deletionPromises);
 
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value);
-    jobs.value = joblist;
-    totalJobs.value = total;
+
+    // Fetch jobs into `fetchedJobs`
+    [fetchedJobs.value, totalJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value);
+
+    displayJobs.value = fetchedJobs.value;
 
     selectedJobs.value = [];
     // selectAllCheckbox.value = false;
@@ -289,7 +294,7 @@ const confirmDelete = async () => {
     submitFilter();
 
     favoriteJobs.value = await getFavoriteJobs();
-    isLoading.value = false
+    isLoading.value = false;
 }
 
 // const selectAllJobs = () => {
@@ -391,7 +396,7 @@ const closeDropdown = (evt: any) => {
 const doDownloadCsv = async () => {
     isLoading.value = true
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-    const [alljobs, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value,  selectedIssues.value, startDateString.value, endDateString.value);
+    const [alljobs, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
     everyJob.value = alljobs;
     const jobIds = everyJob.value.map(job => job.id);
     if (filterApplied.value === 1) {
@@ -413,6 +418,13 @@ const jobInQueue = (job: Job) => {
         }
     }
     return false;
+}
+
+const onlyNumber = ($event: KeyboardEvent) => {
+    let keyCode = $event.keyCode;
+    if ((keyCode < 48 || keyCode > 57) && (keyCode < 96 || keyCode > 105) && keyCode !== 8) { // 48-57 are the keycodes for 0-9, 96-105 are for the numpad 0-9, 8 is for backspace
+        $event.preventDefault();
+    }
 }
 
 </script>
@@ -470,17 +482,23 @@ const jobInQueue = (job: Job) => {
     <!-- gcode image viewer modal -->
     <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div :class="['modal-dialog', isImageVisible ? '' : 'modal-xl', 'modal-dialog-centered']">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="gcodeImageModalLabel">
                         <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
+                        <div class="form-check form-switch">
+                            <label class="form-check-label" for="switchView">{{ isImageVisible ? 'Image' : 'Viewer'
+                                }}</label>
+                            <input class="form-check-input" type="checkbox" id="switchView" v-model="isImageVisible">
+                        </div>
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
-                        <GCode3DImageViewer v-if="isGcodeImageVisible" :job="currentJob!" />
+                        <GCode3DImageViewer v-if="isGcodeImageVisible && !isImageVisible" :job="currentJob!" />
+                        <GCodeThumbnail v-else-if="isGcodeImageVisible && isImageVisible" :job="currentJob!" />
                     </div>
                 </div>
             </div>
@@ -544,9 +562,6 @@ const jobInQueue = (job: Job) => {
             <span v-if="isOffcanvasOpen"><i class="fas fa-star"></i></span>
             <span><i class="fas" :class="isOffcanvasOpen ? 'fa-chevron-right' : 'fa-chevron-left'"></i></span>
             <span v-if="!isOffcanvasOpen"><i class="fas fa-star"></i></span>
-            <!-- <span v-if="isOffcanvasOpen"><i class="fas fa-star"></i></span>
-            <span><i class="fas" :class="isOffcanvasOpen ? 'fa-chevron-right' : 'fa-chevron-left'"></i></span>
-            <span v-if="!isOffcanvasOpen"><i class="fas fa-star"></i></span> -->
         </button>
     </div>
 
@@ -616,14 +631,7 @@ const jobInQueue = (job: Job) => {
     </div>
 
     <div class="container">
-        <!-- <b>Job History View</b> -->
-        <!-- delete jobs, filter dropdown, clear space -->
         <div class="row w-100" style="margin-bottom: 0.5rem;">
-
-            <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            </button>
-
             <div class="col-1 text-start" style="padding-left: 0">
 
                 <div style="position: relative;">
@@ -631,13 +639,13 @@ const jobInQueue = (job: Job) => {
                         @click.stop="filterDropdown = !filterDropdown">
                         Filter
                     </button>
-
-                    <form v-show="filterDropdown" class="card dropdown-card p-3">
+                    <form v-show="filterDropdown" class="card dropdown-card p-3 scrollable-filter">
                         <div class="mb-3">
                             <label for="pageSize" class="form-label">
                                 Jobs per page, out of {{ totalJobs }}:
                             </label>
-                            <input id="pageSize" type="number" v-model.number="pageSize" min="1" class="form-control">
+                            <input id="pageSize" type="number" v-model.number="pageSize" min="1" class="form-control"
+                            @keydown="onlyNumber($event)">
                         </div>
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
@@ -701,6 +709,8 @@ const jobInQueue = (job: Job) => {
                                 </ul>
                             </div>
                         </div>
+                        <div class="my-2 border-top"
+                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                         <div class="mb-3">
                             <label for="searchTicketId" class="form-label">Search using Ticket ID:</label>
                             <input type="text" id="searchTicketId" class="form-control" v-model="searchTicketId">
@@ -748,12 +758,14 @@ const jobInQueue = (job: Job) => {
                                 value="favorite" v-model="favoriteOnly">
                             <label class="form-check-label" for="orderFav">Favorites</label>
                         </div>
-                        <div class="my-2 border-top"
-                            style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
-                        <div class="d-flex justify-content-center">
-                            <button @click.prevent="submitFilter" class="btn btn-primary me-3">Submit
-                                Filter</button>
-                            <button @click.prevent="clearFilter" class="btn btn-danger">Clear Filter</button>
+                        <div class="sticky">
+                            <div class="mb-2 border-top"
+                                style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                            <div class="d-flex justify-content-center">
+                                <button @click.prevent="submitFilter" class="btn btn-primary me-3 mb-2">Submit
+                                    Filter</button>
+                                <button @click.prevent="clearFilter" class="btn btn-danger mb-2">Clear Filter</button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -785,14 +797,14 @@ const jobInQueue = (job: Job) => {
         <table class="table-striped">
             <thead>
                 <tr>
-                    <th>Ticket ID</th>
-                    <th>Printer</th>
-                    <th>Job Title</th>
-                    <th>File</th>
-                    <th>Final Status</th>
-                    <th>Date Completed</th>
-                    <th>Actions</th>
-                    <th class="col-checkbox">
+                    <th style="width: 105px;">Ticket ID</th>
+                    <th style="width: 200px;">Printer</th>
+                    <th style="width: 232px;">Job Title</th>
+                    <th style="width: 232px;">File</th>
+                    <th style="width: 145px;">Final Status</th>
+                    <th style="width: 257px;">Date Completed</th>
+                    <th style="width: 75px;">Actions</th>
+                    <th style="width: 48px;" class="col-checkbox">
                         <input class="form-check-input" type="checkbox"
                             v-model="selectAllJobs" :disabled="filteredJobs.length === 0">
                     </th>
@@ -800,21 +812,21 @@ const jobInQueue = (job: Job) => {
             </thead>
             <tbody v-if="filteredJobs.length > 0">
                 <tr v-for="job in filteredJobs" :key="job.id">
-                    <td>{{ job.td_id }}</td>
-                    <td>{{ job.printer_name }}</td>
+                    <td class="truncate" :title="job.td_id.toString()">{{ job.td_id }}</td>
+                    <td class="truncate" :title="job.printer_name">{{ job.printer_name }}</td>
                     <td>
                         <div style="display: flex; justify-content: start; align-items: center;">
                             <div class="d-flex align-items-center" @click="favoriteJob(job, !job.favorite)">
-                                <i :class="job.favorite ? 'fas fa-star' : 'far fa-star'"></i>
+                                <i style="color: #1b1b1b;" :class="job.favorite ? 'fas fa-star' : 'far fa-star'"></i>
                             </div>
-                            <div style="margin-left: 10px;">
+                            <div class="truncate" style="margin-left: 10px;" :title="job.name">
                                 {{ job.name }}
                             </div>
                         </div>
                     </td>
-                    <td>{{ job.file_name_original }}</td>
-                    <td>{{ job.status }}</td>
-                    <td>{{ job.date }}</td>
+                    <td class="truncate" :title="job.file_name_original">{{ job.file_name_original }}</td>
+                    <td class="truncate" :title="job.status">{{ job.status }}</td>
+                    <td class="truncate" :title="job.date?.toString()">{{ job.date }}</td>
                     <td>
                         <div class="dropdown">
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
@@ -884,12 +896,14 @@ const jobInQueue = (job: Job) => {
                 </tr>
             </tbody>
         </table>
+
         <nav aria-label="Page navigation">
             <ul class="pagination mt-2">
                 <li class="page-item" :class="{ 'disabled': page <= 1 }">
                     <a class="page-link" href="#" @click.prevent="changePage(page - 1)">Previous</a>
                 </li>
-                <li class="page-item disabled"><a class="page-link">Page {{ page }} of {{ totalPages }}</a></li>
+                <li class="page-item disabled page-of-pages"><a class="page-link">Page {{ page }} of {{ totalPages
+                        }}</a></li>
                 <li class="page-item" :class="{ 'disabled': page >= totalPages }">
                     <a class="page-link" href="#" @click.prevent="changePage(page + 1)">Next</a>
                 </li>
@@ -898,6 +912,20 @@ const jobInQueue = (job: Job) => {
     </div>
 </template>
 <style scoped>
+.sticky {
+    position: sticky;
+    bottom: 0px;
+    background: #b9b9b9;
+    margin-right: -1rem;
+    margin-left: -1rem;
+}
+
+.truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .dropdown-card {
     position: absolute !important;
     top: calc(100% + 2px) !important;
@@ -906,6 +934,7 @@ const jobInQueue = (job: Job) => {
     z-index: 1000;
     background: #d8d8d8;
     border: 1px solid #484848;
+    padding-bottom: 0 !important;
 }
 
 .dropdown-submenu {
@@ -916,9 +945,7 @@ const jobInQueue = (job: Job) => {
 .dropdown-submenu .dropdown-menu {
     top: -9px;
     right: 100%;
-    /* Position the submenu to the left */
     max-height: 200px;
-    /* Adjust this value as needed */
     overflow-y: auto;
 }
 
@@ -983,7 +1010,9 @@ const jobInQueue = (job: Job) => {
 }
 
 table {
+    width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 ul.dropdown-menu.w-100.show li {

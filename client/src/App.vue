@@ -2,11 +2,11 @@
 import 'bootstrap/dist/js/bootstrap.bundle'
 import { RouterView } from 'vue-router'
 import NavBar from './components/NavBar.vue'
-import ThemePanel from './components/ThemePanel.vue' // Import the ThemePanel component
-import { onMounted } from 'vue';
-import { setupPortRepairSocket, setupErrorSocket, setupJobStatusSocket, setupPauseFeedbackSocket, setupProgressSocket, setupQueueSocket, setupReleaseSocket, setupStatusSocket, setupTempSocket, setupGCodeViewerSocket, setupExtrusionSocket } from './model/sockets';
+import ThemePanel from './components/ThemePanel.vue'
+import { onMounted, nextTick, watch } from 'vue';
+import { setupPortRepairSocket, setupErrorSocket, setupJobStatusSocket, setupPauseFeedbackSocket, setupProgressSocket, setupQueueSocket, setupReleaseSocket, setupStatusSocket, setupTempSocket, setupGCodeViewerSocket, setupExtrusionSocket, setupCurrentLayerHeightSocket, setupMaxLayerHeightSocket } from './model/sockets';
 import { useRetrievePrintersInfo, printers } from './model/ports';
-import { setupTimeSocket } from './model/jobs';
+import { setupTimeSocket, isLoading } from './model/jobs';
 
 const { retrieveInfo } = useRetrievePrintersInfo();
 
@@ -26,18 +26,34 @@ onMounted(async () => {
   setupReleaseSocket(printers)
   setupPortRepairSocket(printers)
   setupExtrusionSocket(printers)
+  setupMaxLayerHeightSocket(printers)
+  setupCurrentLayerHeightSocket(printers)
 })
-
 </script>
 
 <template>
+<transition name="fade">
+  <div v-if="isLoading" class="modal fade show d-block" id="loadingModal" tabindex="-1"
+      aria-labelledby="loadingModalLabel" aria-hidden="true"
+      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow-y: hidden;">
+      <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-body d-flex justify-content-center align-items-center"
+              style="user-select: none; position: relative;">
+              <div class="spinner-border" role="status">
+                  <span class="visually-hidden">Loading...</span>
+              </div>
+          </div>
+      </div>
+  </div>
+</transition>
+
   <nav style="padding-bottom: 2.5rem;">
     <NavBar />
   </nav>
   <div class="">
     <RouterView />
   </div>
-  <ThemePanel /> <!-- Add the ThemePanel component here -->
+  <ThemePanel />
 </template>
 
 <style scoped></style>

@@ -106,7 +106,10 @@ class Queue:
                 "extruded": job.extruded,
                 "td_id": job.td_id, 
                 "time_started": job.time_started, 
-                "printer_name": job.printer_name
+                "printer_name": job.printer_name,
+                "max_layer_height": job.max_layer_height,
+                "current_layer_height": job.current_layer_height,
+                "filament": job.filament,
             }
             queue.append(job_info)
         return queue

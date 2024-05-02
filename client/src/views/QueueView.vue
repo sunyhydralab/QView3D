@@ -6,6 +6,7 @@ import draggable from 'vuedraggable'
 import { toast } from '@/model/toast'
 import { useRouter } from 'vue-router'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
+import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
@@ -17,6 +18,7 @@ const selectedJobs = ref<Array<Job>>([])
 
 let currentJob = ref<Job | null>(null)
 let isGcodeImageVisible = ref(false)
+const isImageVisible = ref(true)
 
 const primaryColor = ref('');
 const primaryColorActive = ref('');
@@ -37,6 +39,7 @@ onMounted(() => {
 
   modal?.addEventListener('hidden.bs.modal', () => {
     isGcodeImageVisible.value = false
+    isImageVisible.value = true
   });
   isLoading.value = false
 });
@@ -146,17 +149,23 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
 
 <template>
   <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div :class="['modal-dialog', isImageVisible ? '' : 'modal-xl', 'modal-dialog-centered']">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="gcodeImageModalLabel">
             <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
+            <div class="form-check form-switch">
+              <label class="form-check-label" for="switchView">{{ isImageVisible ? 'Image' : 'Viewer'
+                }}</label>
+              <input class="form-check-input" type="checkbox" id="switchView" v-model="isImageVisible">
+            </div>
           </h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
           <div class="row">
-            <GCode3DImageViewer v-if="isGcodeImageVisible" :job="currentJob!" />
+            <GCode3DImageViewer v-if="isGcodeImageVisible && !isImageVisible" :job="currentJob!" />
+            <GCodeThumbnail v-else-if="isGcodeImageVisible && isImageVisible" :job="currentJob!" />
           </div>
         </div>
       </div>
@@ -190,12 +199,6 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
   </div>
 
   <div class="container">
-    <!-- <b>Queue View</b> -->
-
-    <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
-      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-    </button>
-
     <div class="row w-100" style="margin-bottom: 0.5rem">
       <div class="col-2 text-start" style="padding-left: 0">
 
@@ -230,9 +233,9 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                 </span>
               </span>
               <span v-if="printer.queue?.length != 1" style="position: absolute; right: 50px;">{{ printer.queue?.length
-              || 0 }} jobs in queue</span>
+      || 0 }} jobs in queue</span>
               <span v-if="printer.queue?.length == 1" style="position: absolute; right: 50px;">{{ printer.queue?.length
-              || 0 }} job in queue</span>
+      || 0 }} job in queue</span>
             </b>
           </button>
         </h2>
@@ -244,23 +247,22 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
               <table class="table-striped">
                 <thead>
                   <tr style="position: sticky; top: 0; z-index: 100; background-color: white;">
-                    <th class="col-1">Ticket ID</th>
-                    <th class="col-2">Rerun Job</th>
-                    <th class="col-1">Position</th>
-                    <th>Job Title</th>
-                    <th>File</th>
-                    <th>Date Added</th>
-                    <th class="col-1">Job Status</th>
-                    <th class="col-checkbox">
-
+                    <th style="width: 102px;">Ticket ID</th>
+                    <th style="width: 143px;">Rerun Job</th>
+                    <th style="width: 76px;">Position</th>
+                    <th style="width: 215px;">Job Title</th>
+                    <th style="width: 215px;">File</th>
+                    <th style="width: 220px;">Date Added</th>
+                    <th style="width: 96px;">Job Status</th>
+                    <th style="width: 75px;">Actions</th>
+                    <th style="width: 48px;">
                       <div class="checkbox-container">
                         <input class="form-check-input" type="checkbox" :disabled="printer.queue!.length === 0"
                           v-model="selectAllJobs(printer).value" />
                       </div>
 
                     </th>
-                    <th>Actions</th>
-                    <th style="width: 0">Move</th>
+                    <th style="width: 58px">Move</th>
                   </tr>
                 </thead>
                 <draggable v-model="printer.queue" tag="tbody" :animation="300" itemKey="job.id" handle=".handle"
@@ -268,9 +270,8 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                   :move="isInqueue">
                   <template #item="{ element: job }">
                     <tr :id="job.id.toString()" :data-printer-id="printer.id" :data-job-id="job.id"
-                      :data-job-status="job.status" :key="job.id" :class="{ printing: job.status === 'printing' }">
-                      <td>{{ job.td_id }}</td>
-
+                      :data-job-status="job.status" :key="job.id" :class="{ 'printing': job.status === 'printing' }">
+                      <td class="truncate" :title="job.td_id">{{ job.td_id }}</td>
                       <td class="text-center">
                         <div class="btn-group w-100">
                           <div class="btn btn-primary" @click="handleRerun(job, printer)">
@@ -279,10 +280,9 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                           <div class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"
                             aria-expanded="false"></div>
                           <div class="dropdown-menu">
-                            <div class="dropdown-item"
-                              v-for="otherPrinter in printers.filter((p) => p.id !== printer.id)" :key="otherPrinter.id"
-                              @click="handleRerun(job, otherPrinter)">
-                              {{ otherPrinter.name }}
+                            <div class="dropdown-item" v-for="printer in printers" :key="printer.id"
+                              @click="handleRerun(job, printer)">
+                              {{ printer.name }}
                             </div>
                           </div>
                         </div>
@@ -293,20 +293,15 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                           {{ printer.queue ? printer.queue.findIndex((j) => j === job) + 1 : '' }}
                         </b>
                       </td>
-                      <td>
+                      <td class="truncate" :title="job.name">
                         <b>{{ job.name }}</b>
                       </td>
-                      <td>{{ job.file_name_original }}</td>
-                      <td>{{ job.date }}</td>
-                      <td
+                      <td class="truncate" :title="job.file_name_original">{{ job.file_name_original }}</td>
+                      <td class="truncate" :title="job.date">{{ job.date }}</td>
+                      <td class="truncate" :title="job.status"
                         v-if="printer.queue && printer.status == 'printing' && printer.queue?.[0].released == 0 && job.status == 'printing'">
-                        Pending release</td>
+                        pending release</td>
                       <td v-else>{{ job.status }}</td>
-
-                      <td class="text-center">
-                        <input class="form-check-input" type="checkbox" v-model="job.queue_selected" :value="job"
-                          :disabled="job.status !== 'inqueue'" />
-                      </td>
 
                       <td style="width:">
                         <div class="dropdown">
@@ -341,6 +336,11 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
                         </div>
                       </td>
 
+                      <td class="text-center">
+                        <input class="form-check-input" type="checkbox" v-model="job.queue_selected" :value="job"
+                          :disabled="job.status !== 'inqueue'" />
+                      </td>
+
                       <td class="text-center handle" :class="{ 'not-draggable': job.status !== 'inqueue' }">
                         <i class="fas fa-grip-vertical" :class="{ 'icon-disabled': job.status !== 'inqueue' }"></i>
                       </td>
@@ -361,6 +361,12 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
 </template>
 
 <style scoped>
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .scrollable {
   max-height: 230px;
   overflow-y: auto;
@@ -371,6 +377,7 @@ table {
   background-color: #d8d8d8;
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 td,

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { printers } from '../model/ports'
 import { selectedPrinters, file, fileName, quantity, priority, favorite, name, tdid, filament, useAddJobToQueue, useGetFile, useAutoQueue, isLoading } from '../model/jobs'
-import { ref, onMounted, watchEffect, computed } from 'vue'
+import { ref, onMounted, watchEffect, computed, watch } from 'vue'
 import { useRoute } from 'vue-router';
 import { toast } from '@/model/toast';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue';
+import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 
 const { addJobToQueue } = useAddJobToQueue()
 const { auto } = useAutoQueue()
@@ -21,6 +22,7 @@ const form = ref<HTMLFormElement | null>(null);
 let isSubmitDisabled = false;
 
 const isGcodeImageVisible = ref(false)
+const isImageVisible = ref(true)
 
 const filamentTypes = ['PLA', 'PETG', 'ABS', 'ASA', 'FLEX', 'HIPS', 'EDGE', 'NGEN', 'PA', 'PVA', 'PCTG', 'PP', 'PC', 'CPE', 'PEBA', 'PVB', 'PLA TOUGH', 'METAL', 'PET']
 
@@ -54,7 +56,7 @@ const handleFileUpload = (event: Event) => {
 
 // validate quantity
 const validateQuantity = () => {
-    if (quantity.value < 1) {
+    if (quantity.value < 1 && selectedPrinters.value.length > 0) {
         quantity.value = selectedPrinters.value.length
     }
     if (quantity.value < selectedPrinters.value.length) {
@@ -92,6 +94,7 @@ onMounted(async () => {
 
         modal?.addEventListener('hidden.bs.modal', () => {
             isGcodeImageVisible.value = false;
+            isImageVisible.value = true;
             isAsteriksVisible.value = true;
         });
 
@@ -200,11 +203,17 @@ const handleSubmit = async () => {
         toast.error('Failed to add job to queue. Unexpected response.')
     }
     isLoading.value = false
+    isAsteriksVisible.value = true;
 }
 
 function resetValues() {
     selectedPrinters.value = [];
-    quantity.value = selectedPrinters.value.length;
+    // quantity.value = selectedPrinters.value.length;
+    if (selectedPrinters.value.length > 0) {
+        quantity.value = selectedPrinters.value.length;
+    } else {
+        quantity.value = 1
+    }
     priority.value = 0;
     favorite.value = false;
     name.value = "";
@@ -214,15 +223,18 @@ function resetValues() {
     filament.value = '';
 }
 
+watch(selectedPrinters, () => {
+    if (quantity.value < selectedPrinters.value.length) {
+        quantity.value = selectedPrinters.value.length;
+    }
+});
+
 watchEffect(() => {
     if (quantity.value > 1000) {
-        quantity.value = 1000
-        toast.error('Quantity cannot be greater than 1000')
+        quantity.value = 1000;
+        toast.error('Quantity cannot be greater than 1000');
     }
-    if (quantity.value < selectedPrinters.value.length) {
-        quantity.value = selectedPrinters.value.length
-    }
-    isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0) && filament.value !== '')
+    isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0) && filament.value !== '');
 });
 
 const allSelected = computed({
@@ -273,17 +285,23 @@ const getFilament = (file: File) => {
 <template>
     <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div :class="['modal-dialog', isImageVisible ? '' : 'modal-xl', 'modal-dialog-centered']">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="gcodeImageModalLabel">
-                        <b>{{ fileName }}</b>
+                        <b>{{ fileName }}</b> <br>
+                        <div class="form-check form-switch">
+                            <label class="form-check-label" for="switchView">{{ isImageVisible ? 'Image' : 'Viewer'
+                                }}</label>
+                            <input class="form-check-input" type="checkbox" id="switchView" v-model="isImageVisible">
+                        </div>
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
-                        <GCode3DImageViewer v-if="isGcodeImageVisible" :file="file" />
+                        <GCode3DImageViewer v-if="isGcodeImageVisible && !isImageVisible" :file="file" />
+                        <GCodeThumbnail v-else-if="isGcodeImageVisible && isImageVisible" :file="file" />
                     </div>
                 </div>
             </div>
@@ -291,13 +309,6 @@ const getFilament = (file: File) => {
     </div>
 
     <div class="container">
-        <!-- <b>Submit Job View</b> -->
-
-        <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
-            Loading, please do not refresh or leave the page...
-            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-        </button>
-
         <div class="card" style="border: 1px solid #484848; background: #d8d8d8;">
             <div class="card-body">
                 <form @submit.prevent="handleSubmit" ref="form">
@@ -403,7 +414,7 @@ const getFilament = (file: File) => {
                     </div>
 
                     <div class="mb-3">
-                        <label for="quantity" class="form-label">TeamDynamix ID</label>
+                        <label for="quantity" class="form-label">Ticket ID</label>
                         <input v-model="tdid" class="form-control" type="number" id="tdid" name="tdid"
                             @keydown="onlyNumber($event)">
                     </div>

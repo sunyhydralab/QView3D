@@ -136,3 +136,19 @@ def moveHead():
 # def findPrinterObject(printer_id): 
 #     threads = printer_status_service.getThreadArray()
 #     return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer  
+
+@ports_bp.route("/moveprinterlist", methods=["POST"])
+def movePrinterList():
+    try:
+        from app import printer_status_service
+        data = request.get_json()
+        printersIds = data['printersIds']
+        # change the order of the printers threads
+        res = printer_status_service.movePrinterList(printersIds) 
+        if res == "none": 
+            return {"success": False, "message": "Printer list not updated."}
+               
+        return jsonify({"success": True, "message": "Printer list successfully updated."})
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500

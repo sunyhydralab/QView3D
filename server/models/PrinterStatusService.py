@@ -154,7 +154,10 @@ class PrinterStatusService:
                     "extruded": job.extruded,
                     "td_id": job.td_id,
                     "time_started": job.time_started,
-                    "printer_name": job.printer_name
+                    "printer_name": job.printer_name,
+                    "max_layer_height": job.max_layer_height,
+                    "current_layer_height": job.current_layer_height,
+                    "filament": job.filament,
                 }
                 printer_info['queue'].append(job_info)
             
@@ -173,4 +176,18 @@ class PrinterStatusService:
                 GCODE for print status
         """
         pass
+
+    def getThreadArray(self):
+        return self.printer_threads
+    
+    def movePrinterList(self, printer_ids):
+        # printer_ids is a list of printer ids in the order they should be displayed
+        new_thread_list = []
+        for id in printer_ids:
+            for thread in self.printer_threads:
+                if thread.printer.id == id:
+                    new_thread_list.append(thread)
+                    break
+        self.printer_threads = new_thread_list
+        return jsonify({"success": True, "message": "Printer list reordered successfully"})
 

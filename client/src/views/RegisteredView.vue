@@ -48,13 +48,13 @@ const doHardReset = async (printer: Device) => {
 
 const doDelete = async (printer: Device) => {
     isLoading.value = true
-    if(printer.status=="printing"){
+    if (printer.status == "printing") {
         toast.error("Cannot deregister printer while status is printing. Please wait for the printer to finish")
     }
     const printerId = printer.id;
     const foundPrinter = printers.value.find(p => p.id === printerId);    // code to find printer where printer.id is equal to the printer.id in the printers array
-    
-    if(foundPrinter?.status === "printing"){
+
+    if (foundPrinter?.status === "printing") {
         toast.error("Cannot deregister printer while status is printing. Please turn offline or wait for the printer to finish printing.")
         return
     }
@@ -167,12 +167,6 @@ const doCloseRegisterModal = async () => {
     </div>
 
     <div class="container">
-        <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
-            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-        </button>
-
-        <!-- <b>Registered View</b> -->
-        <!-- register modal opens with a button-->
         <button type="button" class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#registerModal">
             Register Printer
         </button>
@@ -209,7 +203,8 @@ const doCloseRegisterModal = async () => {
                                                     <span class="ms-2">Hard Reset</span>
                                                 </a>
                                             </li>
-                                            <span class="tooltiptext">This wipes the queue and resets the printer's communication thread.</span>
+                                            <span class="tooltiptext">This wipes the queue and resets the printer's
+                                                communication thread.</span>
                                         </div>
                                         <li>
                                             <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
@@ -224,7 +219,7 @@ const doCloseRegisterModal = async () => {
                                                 @click="toggleMessage(printer)">
                                                 <i class="fas fa-stethoscope"></i>
                                                 <span class="ms-2">{{ messageId == printer.id && showMessage ?
-                                                    'Clear Message' : 'Diagnose Printer' }}</span>
+                        'Clear Message' : 'Diagnose Printer' }}</span>
                                             </a>
                                         </li>
                                     </ul>

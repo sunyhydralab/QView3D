@@ -411,6 +411,22 @@ class Printer(db.Model):
                 #  Time handling
                 comment_lines = [line for line in lines if line.strip() and line.startswith(";")]
 
+                for i in reversed(range(len(comment_lines))):
+                    # Check if the line contains ";LAYER_CHANGE"
+                    if ";LAYER_CHANGE" in comment_lines[i]:
+                        # Check if the next line exists
+                        if i < len(comment_lines) - 1:
+                            # Save the next line
+                            line = comment_lines[i + 1]
+                            # Use regex to find the numerical value after ";Z:"
+                            match = re.search(r";Z:(\d+\.?\d*)", line)
+                            if match:
+                                max_layer_height = float(match.group(1))
+                                break
+
+                job.setMaxLayerHeight(max_layer_height)
+                
+
                 total_time = job.getTimeFromFile(comment_lines)
                 job.setTime(total_time, 0)
                 # job.setTime(total_time, 0)
@@ -424,6 +440,8 @@ class Printer(db.Model):
                 total_lines = len(command_lines)
                 # set the sent lines to 0
                 sent_lines = 0
+                # previous line to check for layer height
+                prev_line = ""
                 # Replace file with the path to the file. "r" means read mode. 
                 # now instead of reading from 'g', we are reading line by line
                 for line in lines:
@@ -433,6 +451,14 @@ class Printer(db.Model):
                     # print("LINE: ", line, " STATUS: ", self.status, " FILE PAUSE: ", job.getFilePause())
                     if("layer" in line.lower() and self.status=='colorchange' and job.getFilePause()==0 and self.colorbuff==0):
                         self.setColorChangeBuffer(1)
+
+                    # if line contains ";LAYER_CHANGE", do job.currentLayerHeight(the next line)
+                    if prev_line and ";LAYER_CHANGE" in prev_line:
+                        match = re.search(r";Z:(\d+\.?\d*)", line)
+                        if match:
+                            current_layer_height = float(match.group(1))
+                            job.setCurrentLayerHeight(current_layer_height)
+                    prev_line = line
 
                     # remove whitespace
                     line = line.strip()
@@ -445,7 +471,7 @@ class Printer(db.Model):
                     if len(line) == 0 or line.startswith(";"):
                         continue
 
-                    if("G29 A" in line) and job.getTimeStarted()==0:
+                    if("M569" in line) and job.getTimeStarted()==0:
                         job.setTimeStarted(1)
                         job.setTime(job.calculateEta(), 1)
                         job.setTime(datetime.now(), 2)

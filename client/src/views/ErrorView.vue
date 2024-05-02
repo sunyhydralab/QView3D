@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { printers, type Device } from '../model/ports'
 import { type Issue, useGetIssues, useCreateIssues, useAssignIssue, useDeleteIssue, useEditIssue } from '../model/issues'
-import { useGetJobs, type Job, useAssignComment, useGetJobFile, useGetFile, useRemoveIssue, useDownloadCsv, isLoading } from '../model/jobs';
+import { pageSize, useGetJobs, type Job, useAssignComment, useGetJobFile, useGetFile, useRemoveIssue, useDownloadCsv, isLoading } from '../model/jobs';
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
+import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 
@@ -42,12 +43,15 @@ let endDateString = ref<string>('');
 
 const router = useRouter();
 
+let displayJobs = ref<Array<Job>>([])
+let fetchedJobs = ref<Array<Job>>([])
 
 let jobs = ref<Array<Job>>([])
 let issuelist = ref<Array<Issue>>([])
 
 let currentJob = ref<Job>()
 let isGcodeImageVisible = ref(false)
+const isImageVisible = ref(true)
 
 let filter = ref('')
 let filterDropdown = ref(false)
@@ -59,8 +63,10 @@ let jobComments = ref('')
 let editMode = ref(false)
 let editNum = ref<number | undefined>(0)
 
+let deleteMode = ref(false)
+let deleteNum = ref<number | undefined>(0)
+
 let page = ref(1)
-let pageSize = ref(10)
 let totalJobs = ref(0)
 let totalPages = ref(1)
 
@@ -71,30 +77,31 @@ const isOnlyFileNameChecked = computed(() => !searchByJobName.value && searchByF
 // computed property that returns the filtered list of jobs. 
 let filteredJobs = computed(() => {
     if (filter.value) {
-        return jobs.value.filter(job => job.printer.includes(filter.value))
+        return displayJobs.value.filter(job => job.printer.includes(filter.value))
     } else {
-        return jobs.value
+        return displayJobs.value
     }
 })
 
-
 onMounted(async () => {
     try {
-        isLoading.value = true
-        const retrieveissues = await issues()
-        issuelist.value = retrieveissues
+        isLoading.value = true;
+
+        const retrieveissues = await issues();
+        issuelist.value = retrieveissues;
 
         const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-        const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, 1)
-        jobs.value = joblist;
-        totalJobs.value = total;
 
-        isLoading.value = false 
+        // Fetch jobs into `fetchedJobs` and total into `totalJobs`
+        [fetchedJobs.value, totalJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, 1);
 
-        totalPages.value = Math.ceil(total / pageSize.value);
+        // Update `displayJobs` with the fetched jobs
+        displayJobs.value = fetchedJobs.value;
+
+        totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
         totalPages.value = Math.max(totalPages.value, 1);
 
-        console.log(jobs.value)
+        console.log(displayJobs.value);
 
         document.addEventListener('click', closeDropdown);
 
@@ -102,12 +109,21 @@ onMounted(async () => {
 
         imageModal?.addEventListener('hidden.bs.modal', () => {
             isGcodeImageVisible.value = false;
+            isImageVisible.value = true
         });
 
+        const issueModal = document.getElementById('issueModal');
+
+        issueModal?.addEventListener('hidden.bs.modal', () => {
+            resetIssueValues()
+        });
+
+        isLoading.value = false;
+
     } catch (error) {
-        console.error(error)
+        console.error(error);
     }
-})
+});
 
 onBeforeUnmount(() => {
     document.removeEventListener('click', closeDropdown);
@@ -129,14 +145,17 @@ const changePage = async (newPage: any) => {
     selectedJobs.value = [];
 
     page.value = newPage
-    jobs.value = []
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
-    const [joblist, total] = await jobhistory(page.value, pageSize.value, printerIds, 1, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value)
-    jobs.value = joblist;
-    totalJobs.value = total;
+    // Fetch jobs into `fetchedJobs` and total into `totalJobs`
+    [fetchedJobs.value, totalJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, 1, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value)
+
+    // Update `displayJobs` with the fetched jobs
+    displayJobs.value = fetchedJobs.value;
+
     isLoading.value = false
 }
+
 async function submitFilter() {
     filterApplied.value = 1;
     isLoading.value = true
@@ -154,7 +173,6 @@ async function submitFilter() {
         }
     }
 
-    jobs.value = []
     oldestFirst.value = order.value === 'oldest';
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
@@ -165,11 +183,9 @@ async function submitFilter() {
     } else {
         searchCriteria.value = searchJob.value;
     }
-    console.log("ISSUES, " + selectedIssues.value)
 
     // Get the total number of jobs first, without considering the page number
-    const [, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 1, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
-    totalJobs.value = total;
+    [fetchedJobs.value, totalJobs.value] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 1, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
 
     totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
     totalPages.value = Math.max(totalPages.value, 1);
@@ -179,13 +195,13 @@ async function submitFilter() {
     }
 
     // Now fetch the jobs for the current page
-    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, 1, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
-    jobs.value = joblist;
+    [fetchedJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, 1, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
+
+    // Update `displayJobs` with the fetched jobs
+    displayJobs.value = fetchedJobs.value;
 
     selectedJobs.value = [];
-
-    date.value = null;
-    isLoading.value = false
+    isLoading.value = false;
 }
 
 
@@ -225,18 +241,18 @@ const doCreateIssue = async () => {
     await createIssue(newIssue.value)
     const newIssues = await issues()
     issuelist.value = newIssues
-    newIssue.value = ''
-    showText.value = false
+    resetIssueValues()
     isLoading.value = false
 }
 
-const doDeleteIssue = async () => {
-    isLoading.value = true  
-    if (selectedIssue.value === undefined) return
-    await deleteIssue(selectedIssue.value)
+const doDeleteIssue = async (issue: Issue) => {
+    isLoading.value = true
+    if (issue === undefined) return
+    await deleteIssue(issue)
     const newIssues = await issues()
     issuelist.value = newIssues
     submitFilter()
+    resetIssueValues()
     isLoading.value = false
 }
 
@@ -299,24 +315,32 @@ const saveIssue = async (issue: Issue) => {
     issue.issue = newName.value.trim();
 
     issuelist.value = await issues()
+    resetIssueValues()
+}
 
-    editMode.value = false
+const resetIssueValues = () => {
+    showText.value = false
+    newIssue.value = ''
     newName.value = ''
+    editMode.value = false
     editNum.value = undefined
+    deleteMode.value = false
+    deleteNum.value = undefined
 }
 
 const doDownloadCsv = async () => {
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-    const [alljobs, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 1, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value,  selectedIssues.value, startDateString.value, endDateString.value);
+    const [alljobs, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 1, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
     everyJob.value = alljobs;
-    console.log("everyJob", everyJob.value)
     const jobIds = everyJob.value.map(job => job.id);
-    // if (filterApplied.value === 1) {
-    await csv(0, jobIds) // 0: not all jobs, just specified job IDs
-    // } else {
-    //     await csv(1, []) // 1: all jobs in database 
-    // }
-    // await csv()
+    await csv(0, jobIds)
+}
+
+const onlyNumber = ($event: KeyboardEvent) => {
+    let keyCode = $event.keyCode;
+    if ((keyCode < 48 || keyCode > 57) && (keyCode < 96 || keyCode > 105) && keyCode !== 8) { // 48-57 are the keycodes for 0-9, 96-105 are for the numpad 0-9, 8 is for backspace
+        $event.preventDefault();
+    }
 }
 
 </script>
@@ -325,45 +349,24 @@ const doDownloadCsv = async () => {
     <!-- gcode image viewer modal -->
     <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div :class="['modal-dialog', isImageVisible ? '' : 'modal-xl', 'modal-dialog-centered']">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="gcodeImageModalLabel">
                         <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
+                        <div class="form-check form-switch">
+                            <label class="form-check-label" for="switchView">{{ isImageVisible ? 'Image' : 'Viewer'
+                                }}</label>
+                            <input class="form-check-input" type="checkbox" id="switchView" v-model="isImageVisible">
+                        </div>
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
-                        <GCode3DImageViewer v-if="isGcodeImageVisible" :job="currentJob!" />
+                        <GCode3DImageViewer v-if="isGcodeImageVisible && !isImageVisible" :job="currentJob" />
+                        <GCodeThumbnail v-else-if="isGcodeImageVisible && isImageVisible" :job="currentJob" />
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="assignissueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
-        data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header d-flex align-items-end">
-                    <h5 class="modal-title" id="assignIssueLabel">
-                        <b>Create New Issue</b>
-                    </h5>
-
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="newIssue" class="form-label">Enter Issue</label>
-                        <input id="newIssue" type="text" placeholder="Enter Issue" v-model="newIssue"
-                            class="form-control" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" @click.prevent="doCreateIssue" class="btn btn-primary me-2"
-                        v-bind:disabled="!newIssue" data-bs-dismiss="modal">Create Issue</button>
                 </div>
             </div>
         </div>
@@ -390,14 +393,13 @@ const doDownloadCsv = async () => {
         </div>
     </div>
 
-
-    <div class="modal fade" id="deleteissueModal" tabindex="-1" aria-labelledby="deleteIssueLabel" aria-hidden="true"
+    <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="issueModal" aria-hidden="true"
         data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header d-flex align-items-end">
-                    <h5 class="modal-title" id="deleteIssueLabel">
-                        <b>Delete Issue</b>
+                    <h5 class="modal-title" id="issueModal">
+                        <b>Issues</b>
                     </h5>
 
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -405,62 +407,72 @@ const doDownloadCsv = async () => {
                 <div class="modal-body">
                     <form @submit.prevent="">
                         <div class="mb-3">
-                            <label for="issue" class="form-label">Select Issue</label>
-                            <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
-                                <option disabled value="undefined">Select Issue</option>
-                                <option v-for="issue in issuelist" :key="issue.id" :value="issue">
-                                    {{ issue.issue }}
-                                </option>
-                            </select>
+                            <label for="newIssue" class="form-label">Create New Issue</label>
+                            <input id="newIssue" type="text" placeholder="Enter Issue" v-model="newIssue"
+                                class="form-control" required>
+                            <button class="btn btn-primary mt-2" :class="{ 'disabled': newIssue.trim() === '' }"
+                                @click="doCreateIssue">Create Issue</button>
                         </div>
                     </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" @click.prevent="doDeleteIssue" class="btn btn-danger me-2"
-                        data-bs-dismiss="modal" :disabled="selectedIssue == undefined">Delete</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="editissueModal" tabindex="-1" aria-labelledby="editIssueLabel" aria-hidden="true"
-        data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header d-flex align-items-end">
-                    <h5 class="modal-title" id="editIssueLabel">
-                        <b>Edit Issue</b>
-                    </h5>
-
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
+                    <div class="my-2 border-top" style="border-width: 1px; margin-left: -16px; margin-right: -16px;">
+                    </div>
                     <form @submit.prevent="">
                         <div class="mb-3">
-                            <label for="editName" class="form-label">Select Issue</label>
-                            <div v-for="issue in issuelist" :key="issue.id">
-
-                                <div v-if="editMode && (editNum == issue.id)" class="d-flex align-items-center"
-                                    style="margin-bottom: 5px;">
-                                    <input id="editName" type="text" class="form-control me-2" v-model="newName" />
-                                    <button class="btn btn-success me-2" @click="saveIssue(issue)">Save</button>
-                                    <button class="btn btn-secondary"
-                                        @click="editMode = false; editNum = undefined; newName = ''">Cancel</button>
+                            <label class="form-label">Delete Issue</label>
+                            <ul class="list-group" style="max-height: 100px; overflow-y: auto;">
+                                <li v-for="issue in issuelist" :key="issue.id"
+                                    class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ issue.issue }}</span>
+                                    <div>
+                                        <div v-if="deleteMode && (deleteNum == issue.id)">
+                                            <button class="btn btn-danger me-2"
+                                                @click="doDeleteIssue(issue)">Delete</button>
+                                            <button class="btn btn-secondary"
+                                                @click="deleteMode = false; deleteNum = undefined">Cancel</button>
+                                        </div>
+                                        <div v-else>
+                                            <button class="btn btn-danger"
+                                                @click="deleteMode = true; deleteNum = issue.id">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li v-if="issuelist.length === 0" class="list-group-item">
+                                    There are no issues to delete, please create one.
+                                </li>
+                            </ul>
+                        </div>
+                    </form>
+                    <div class="my-2 border-top" style="border-width: 1px; margin-left: -16px; margin-right: -16px;">
+                    </div>
+                    <form @submit.prevent="">
+                        <label class="form-label">Rename Issue</label>
+                        <ul class="list-group" style="max-height: 100px; overflow-y: auto;">
+                            <li v-for="issue in issuelist" :key="issue.id"
+                                class="list-group-item d-flex justify-content-between align-items-center">
+                                <span v-if="!editMode || (editNum != issue.id)">{{ issue.issue }}</span>
+                                <div v-if="editMode && (editNum == issue.id)"
+                                    class="d-flex justify-content-between w-100">
+                                    <input id="editName" type="text" class="form-control me-2 flex-grow-1"
+                                        v-model="newName" />
+                                    <div class="d-flex">
+                                        <button class="btn btn-success me-2" @click="saveIssue(issue)">Save</button>
+                                        <button class="btn btn-secondary"
+                                            @click="editMode = false; editNum = undefined; newName = ''">Cancel</button>
+                                    </div>
                                 </div>
                                 <div v-else>
-                                    <p>
-                                        {{ issue.issue }}
-                                        &nbsp; &nbsp; &nbsp;
-                                        <button class="btn btn-success"
-                                            @click="editMode = true; editNum = issue.id; newName = issue.issue || ''">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                    </p>
-
+                                    <button class="btn btn-success"
+                                        @click="editMode = true; editNum = issue.id; newName = issue.issue || ''">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
                                 </div>
-                            </div>
-                        </div>
+                            </li>
+                            <li v-if="issuelist.length === 0" class="list-group-item">
+                                There are no issues to rename, please create one.
+                            </li>
+                        </ul>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -470,16 +482,16 @@ const doDownloadCsv = async () => {
         </div>
     </div>
 
-    <div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="assignIssueLabel" aria-hidden="true"
+    <div class="modal fade" id="commentModal" tabindex="-1" aria-labelledby="commentModalLabel" aria-hidden="true"
         data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header d-flex align-items-end">
-                    <h5 class="modal-title mb-0" id="assignIssueLabel" style="line-height: 1;">Job #{{
-                            selectedJob?.td_id
-                        }}</h5>
-                    <h6 class="modal-title" id="assignIssueLabel" style="padding-left:10px; line-height: 1;">{{
-                                selectedJob?.date }}</h6>
+                    <h5 class="modal-title mb-0" id="commentModalLabel" style="line-height: 1;">Job #{{
+            selectedJob?.td_id
+        }}</h5>
+                    <h6 class="modal-title" id="commentModalLabel" style="padding-left:10px; line-height: 1;">{{
+                selectedJob?.date }}</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
                         @click="selectedIssue = undefined; selectedJob = undefined;"></button>
                 </div>
@@ -515,23 +527,19 @@ const doDownloadCsv = async () => {
 
     <div class="container">
         <div class="row w-100" style="margin-bottom: 0.5rem;">
-
-            <button v-if="isLoading" class="btn btn-primary w-100" type="button" disabled>
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            </button>
-            
             <div class="col-1 text-start" style="padding-left: 0">
                 <div style="position: relative;">
                     <button type="button" class="btn btn-primary dropdown-toggle"
                         @click.stop="filterDropdown = !filterDropdown">
                         Filter
                     </button>
-                    <form v-show="filterDropdown" class="card dropdown-card p-3">
+                    <form v-show="filterDropdown" class="card dropdown-card p-3 scrollable-filter">
                         <div class="mb-3">
                             <label for="pageSize" class="form-label">
                                 Jobs per page, out of {{ totalJobs }}:
                             </label>
-                            <input id="pageSize" type="number" v-model.number="pageSize" min="1" class="form-control">
+                            <input id="pageSize" type="number" v-model.number="pageSize" min="1" class="form-control"
+                            @keydown="onlyNumber($event)">
                         </div>
                         <div class="my-2 border-top"
                             style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
@@ -644,10 +652,14 @@ const doDownloadCsv = async () => {
                                 value="favorite" v-model="favoriteOnly">
                             <label class="form-check-label" for="orderFav">Favorites</label>
                         </div>
-                        <div class="d-flex justify-content-center">
-                            <button @click.prevent="submitFilter" class="btn btn-primary me-3">Submit
-                                Filter</button>
-                            <button @click.prevent="clearFilter" class="btn btn-danger">Clear Filter</button>
+                        <div class="sticky">
+                            <div class="mb-2 border-top"
+                                style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
+                            <div class="d-flex justify-content-center">
+                                <button @click.prevent="submitFilter" class="btn btn-primary me-3 mb-2">Submit
+                                    Filter</button>
+                                <button @click.prevent="clearFilter" class="btn btn-danger mb-2">Clear Filter</button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -659,53 +671,37 @@ const doDownloadCsv = async () => {
                 <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#csvModal">
                     <i class="fa-solid fa-file-csv"></i>
                 </button>
-                
-                <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal"
-                    data-bs-target="#assignissueModal">
-                    <i class="fas fa-plus"></i>
-                    New
-                </button>
-
-                <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal"
-                    data-bs-target="#editissueModal">
-                    <i class="fas fa-edit"></i>
-                    Edit
-                </button>
-
-                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteissueModal">
-                    <i class="fas fa-trash-alt"></i>
-                    Delete
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#issueModal">
+                    Issues
                 </button>
             </div>
         </div>
-
         <table class="table-striped">
             <thead>
                 <tr>
-                    <th>Ticket ID</th>
-                    <th>Job Title</th>
-                    <th>File</th>
-                    <th>Printer</th>
-                    <th>Issue</th>
-                    <th>Date errored</th>
-                    <th>Comment</th>
+                    <th style="width: 105px;">Ticket ID</th>
+                    <th style="width: 150px;">Printer</th>
+                    <th style="width: 175px;">Job Title</th>
+                    <th style="width: 175px;">File</th>
+                    <th style="width: 150px;">Issue</th>
+                    <th style="width: 264px">Date errored</th>
+                    <th style="width: 200px;">Comment</th>
                     <th style="width: 75px;">Actions</th>
                 </tr>
             </thead>
             <tbody v-if="filteredJobs.length > 0">
                 <tr v-for="job in filteredJobs" :key="job.id">
-                    <td style="padding-left: 15px;">{{ job.td_id }}</td>
-                    <td>{{ job.name }}</td>
-                    <td>{{ job.file_name_original }}</td>
-                    <td>{{ job.printer_name }}</td>
-                    <td v-if="job.errorid != null && job.errorid != 0">
+                    <td class="truncate" :title="job.td_id.toString()">{{ job.td_id }}</td>
+                    <td class="truncate" :title="job.printer_name">{{ job.printer_name }}</td>
+                    <td class="truncate" :title="job.name">{{ job.name }}</td>
+                    <td class="truncate" :title="job.file_name_original">{{ job.file_name_original }}</td>
+                    <td class="truncate" :title="job.error" v-if="job.errorid != null && job.errorid != 0">
                         {{ job.error }}
                     </td>
-                    <td v-else></td>
-                    <td>{{ job.date }}</td>
-                    <td>{{ job.comment?.slice(0, 30) }}</td>
-                    <!-- <td v-else>
-                    </td> -->
+                    <td v-else>
+                    </td>
+                    <td class="truncate">{{ job.date }}</td>
+                    <td class="truncate" :title="job.comment">{{ job.comment }}</td>
                     <td>
                         <div class="dropdown">
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
@@ -723,7 +719,7 @@ const doDownloadCsv = async () => {
                                     </li>
                                     <li>
                                         <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
-                                            data-bs-target="#issueModal" @click="setJob(job); showText = false">
+                                            data-bs-target="#commentModal" @click="setJob(job); showText = false">
                                             <i class="fas fa-comments"></i>
                                             <span class="ms-2">Comments</span>
                                         </a>
@@ -764,7 +760,7 @@ const doDownloadCsv = async () => {
             </tbody>
             <tbody v-else>
                 <tr>
-                    <td colspan="7">No jobs with errors found. </td>
+                    <td colspan="8">No jobs with errors found. </td>
                 </tr>
             </tbody>
         </table>
@@ -773,7 +769,8 @@ const doDownloadCsv = async () => {
                 <li class="page-item" :class="{ 'disabled': page <= 1 }">
                     <a class="page-link" href="#" @click.prevent="changePage(page - 1)">Previous</a>
                 </li>
-                <li class="page-item disabled"><a class="page-link">Page {{ page }} of {{ totalPages }}</a></li>
+                <li class="page-item disabled page-of-pages"><a class="page-link">Page {{ page }} of {{ totalPages
+                        }}</a></li>
                 <li class="page-item" :class="{ 'disabled': page >= totalPages }">
                     <a class="page-link" href="#" @click.prevent="changePage(page + 1)">Next</a>
                 </li>
@@ -782,6 +779,19 @@ const doDownloadCsv = async () => {
     </div>
 </template>
 <style scoped>
+.list-group-item {
+    background-color: #d8d8d8 !important;
+    border-color: #484848 !important;
+}
+
+.sticky {
+    position: sticky;
+    bottom: 0px;
+    background: #b9b9b9;
+    margin-right: -1rem;
+    margin-left: -1rem;
+}
+
 .dropdown-card {
     position: absolute !important;
     top: calc(100% + 2px) !important;
@@ -790,6 +800,7 @@ const doDownloadCsv = async () => {
     z-index: 1000;
     background: #d8d8d8;
     border: 1px solid #484848;
+    padding-bottom: 0 !important;
 }
 
 .dropdown-submenu {
@@ -824,6 +835,12 @@ const doDownloadCsv = async () => {
     margin-left: 10px;
 }
 
+.truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .truncate-name {
     max-width: 200px;
     /* Adjust this value as needed */
@@ -838,12 +855,6 @@ const doDownloadCsv = async () => {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.grid-container {
-    display: grid;
-    grid-template-columns: 1fr 2fr 1fr;
-    gap: 10px;
 }
 
 .header {
@@ -884,6 +895,7 @@ const doDownloadCsv = async () => {
 table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 
