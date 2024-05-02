@@ -54,7 +54,7 @@ let isGcodeImageVisible = ref(false);
 let page = ref(1)
 let totalJobs = ref(0)
 let totalPages = ref(1)
-let selectAllCheckbox = ref(false);
+// let selectAllCheckbox = ref(false);
 
 let modalTitle = ref('');
 let modalMessage = ref('');
@@ -170,7 +170,7 @@ const changePage = async (newPage: any) => {
         return;
     }
     selectedJobs.value = [];
-    selectAllCheckbox.value = false;
+    // selectAllCheckbox.value = false;
 
     page.value = newPage
     jobs.value = []
@@ -232,7 +232,7 @@ async function submitFilter() {
     jobs.value = joblist;
 
     selectedJobs.value = [];
-    selectAllCheckbox.value = false;
+    // selectAllCheckbox.value = false;
 
     date.value = null;
 
@@ -284,7 +284,7 @@ const confirmDelete = async () => {
     totalJobs.value = total;
 
     selectedJobs.value = [];
-    selectAllCheckbox.value = false;
+    // selectAllCheckbox.value = false;
 
     submitFilter();
 
@@ -292,16 +292,28 @@ const confirmDelete = async () => {
     isLoading.value = false
 }
 
-const selectAllJobs = () => {
-    isLoading.value = true
-    if (selectAllCheckbox.value) {
-        const newSelectedJobs = filteredJobs.value.filter(job => !selectedJobs.value.includes(job) && job.status !== 'printing');
-        selectedJobs.value = [...selectedJobs.value, ...newSelectedJobs];
-    } else {
-        selectedJobs.value = selectedJobs.value.filter(job => !filteredJobs.value.includes(job));
+// const selectAllJobs = () => {
+//     isLoading.value = true
+//     if (selectAllCheckbox.value) {
+//         const newSelectedJobs = filteredJobs.value.filter(job => !selectedJobs.value.includes(job) && job.status !== 'printing');
+//         selectedJobs.value = [...selectedJobs.value, ...newSelectedJobs];
+//     } else {
+//         selectedJobs.value = selectedJobs.value.filter(job => !filteredJobs.value.includes(job));
+//     }
+//     isLoading.value = false
+// }
+
+const selectAllJobs = computed({
+    get: () => selectedJobs.value.length > 0 && selectedJobs.value.length === filteredJobs.value.length,
+    set: (value) => {
+        if (value) {
+            // selectedJobs.value = jobs.value.filter(job => !jobInQueue(job));
+            selectedJobs.value = filteredJobs.value.slice();
+        } else {
+            selectedJobs.value = [];
+        }
     }
-    isLoading.value = false
-}
+})
 
 async function clear() {
     isLoading.value = true
@@ -781,8 +793,8 @@ const jobInQueue = (job: Job) => {
                     <th>Date Completed</th>
                     <th>Actions</th>
                     <th class="col-checkbox">
-                        <input class="form-check-input" type="checkbox" @change="selectAllJobs"
-                            v-model="selectAllCheckbox" :disabled="filteredJobs.length === 0">
+                        <input class="form-check-input" type="checkbox"
+                            v-model="selectAllJobs" :disabled="filteredJobs.length === 0">
                     </th>
                 </tr>
             </thead>
