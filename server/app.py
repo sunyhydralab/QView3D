@@ -69,11 +69,17 @@ with app.app_context():
         
         # Create in-memory uploads folder 
         uploads_folder = os.path.join('../uploads')
+        tempcsv = os.path.join('../tempcsv')
+
         if os.path.exists(uploads_folder):
             # Remove the uploads folder and all its contents
             shutil.rmtree(uploads_folder)
+            shutil.rmtree(tempcsv)
+
             # Recreate it as an empty directory
             os.makedirs(uploads_folder)
+            os.makedirs(tempcsv)
+
             print("Uploads folder recreated as an empty directory.")
         else:
             # Create the uploads folder if it doesn't exist
