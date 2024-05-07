@@ -195,7 +195,7 @@ const changePage = async (newPage: any) => {
 }
 
 async function submitFilter() {
-    isLoading.value = true;
+    isLoading.value = true
     filterDropdown.value = false;
     filterApplied.value = 1;
 
@@ -222,8 +222,7 @@ async function submitFilter() {
         searchCriteria.value = searchJob.value;
     }
 
-    // Get the total number of jobs first, without considering the page number
-    [fetchedJobs.value, totalJobs.value] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value, 1);
+    [fetchedJobs.value, totalJobs.value] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
 
     totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
     totalPages.value = Math.max(totalPages.value, 1);
@@ -233,12 +232,12 @@ async function submitFilter() {
     }
 
     // Now fetch the jobs for the current page
-    const [joblist] = await jobhistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
-    jobs.value = joblist;
+    [fetchedJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
+
+    // Update `displayJobs` with the fetched jobs
+    displayJobs.value = fetchedJobs.value;
 
     selectedJobs.value = [];
-    // selectAllCheckbox.value = false;
-
     isLoading.value = false;
 }
 
