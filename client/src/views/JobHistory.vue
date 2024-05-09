@@ -842,7 +842,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
                                                 Viewer</span>
                                         </a>
                                     </li>
-                                    <li>
+                                    <li v-if="job.status == 'inqueue' || !jobInQueue(job)">
                                         <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
                                             data-bs-target="#issueModal" @click="setJob(job); showText = false">
                                             <i class="fas fa-comments"></i>
