@@ -25,7 +25,7 @@ class PrinterStatusService:
         thread.start()
         return thread
 
-    def create_printer_threads(self, printers_data, queue=Queue()):
+    def create_printer_threads(self, printers_data):
         # all printer statuses initialized to be 'online.' Instantly changes to 'ready' on initialization -- test with 'reset printer' command.
         for printer_info in printers_data:
             printer = Printer(
@@ -36,8 +36,6 @@ class PrinterStatusService:
                 name=printer_info["name"],
                 status='configuring',
             )
-            # queue.setToInQueue()
-            # printer.setQueue(queue)
             printer_thread = self.start_printer_thread(
                 printer
             )  # creating a thread for each printer object
@@ -45,6 +43,28 @@ class PrinterStatusService:
 
         # creating separate thread to loop through all of the printer threads to ping them for print status
         self.ping_thread = Thread(target=self.pingForStatus)
+
+    
+    def queue_restore(self, printers_data, status, queue):
+        # all printer statuses initialized to be 'online.' Instantly changes to 'ready' on initialization -- test with 'reset printer' command.
+        for printer_info in printers_data:
+            printer = Printer(
+                id=printer_info["id"],
+                device=printer_info["device"],
+                description=printer_info["description"],
+                hwid=printer_info["hwid"],
+                name=printer_info["name"],
+            )
+            for job in queue: 
+                if(job.status!='inqueue'):
+                    job.setStatus('inqueue')
+                    job.setDBstatus('inqueue')
+            printer.setQueue(queue)
+            printer.setStatus(status)
+            printer_thread = self.start_printer_thread(
+                printer
+            )  # creating a thread for each printer object
+            self.printer_threads.append(printer_thread)
 
     # passing app here to access the app context
     def update_thread(self, printer, app):
@@ -74,7 +94,29 @@ class PrinterStatusService:
                         "name": printer.name, 
                     }
                     self.printer_threads.remove(thread)
-                    self.create_printer_threads([thread_data], printer.getQueue())
+                    self.create_printer_threads([thread_data])
+                    break
+            return jsonify({"success": True, "message": "Printer thread reset successfully"})
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return jsonify({"success": False, "error": "Unexpected error occurred"}), 500
+        
+    
+    def queueRestore(self, printer_id, status):
+        try: 
+            for thread in self.printer_threads:
+                if thread.printer.id == printer_id:    
+                    printer = thread.printer
+                    printer.terminated = 1 
+                    thread_data = {
+                        "id": printer.id, 
+                        "device": printer.device,
+                        "description": printer.description,
+                        "hwid": printer.hwid,
+                        "name": printer.name, 
+                    }
+                    self.printer_threads.remove(thread)
+                    self.queue_restore([thread_data], status, printer.getQueue())
                     break
             return jsonify({"success": True, "message": "Printer thread reset successfully"})
         except Exception as e:
@@ -102,7 +144,6 @@ class PrinterStatusService:
         
     def editName(self, printer_id, name):
         try: 
-            print("in thread")
             for thread in self.printer_threads:
                 if thread.printer.id == printer_id:    
                     printer = thread.printer
@@ -135,7 +176,6 @@ class PrinterStatusService:
                 # "colorChangeBuffer": printer.colorChangeBuffer
             }
             queue = printer.getQueue()
-            print("QUEUE: ", queue.getSize())
             for job in queue: 
                 job_info = {
                     "id": job.id,

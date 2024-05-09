@@ -737,9 +737,11 @@ class Printer(db.Model):
         try:
             print("SETTING STATUS TO:", newStatus)
             if(self.status == "error" and newStatus!="error"): 
-                Printer.hardReset(self.id)
-            
-            self.status = newStatus
+                print("HARD RESET")
+                Printer.hardReset(self.id, newStatus)
+            else: 
+                self.status = newStatus
+
             current_app.socketio.emit(
                 "status_update", {"printer_id": self.id, "status": newStatus}
             )
@@ -785,10 +787,10 @@ class Printer(db.Model):
             print(f"Failed to repair ports: {e}")
             
     @classmethod 
-    def hardReset(cls, printerid):
+    def hardReset(cls, printerid, status):
         try:
             base_url = os.getenv('BASE_URL')
-            response = requests.post(f"{base_url}/hardreset", json={'printerid': printerid, 'restore': 1})
+            response = requests.post(f"{base_url}/queuerestore", json={'printerid': printerid, 'status': status})
 
         except requests.exceptions.RequestException as e:
             print(f"Failed to repair ports: {e}")   
