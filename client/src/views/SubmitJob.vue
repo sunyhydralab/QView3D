@@ -24,8 +24,6 @@ let isSubmitDisabled = false;
 const isGcodeImageVisible = ref(false)
 const isImageVisible = ref(true)
 
-const filamentTypes = ['PLA', 'PETG', 'ABS', 'ASA', 'FLEX', 'HIPS', 'EDGE', 'NGEN', 'PA', 'PVA', 'PCTG', 'PP', 'PC', 'CPE', 'PEBA', 'PVB', 'PLA TOUGH', 'METAL', 'PET']
-
 // file upload
 const handleFileUpload = (event: Event) => {
     isLoading.value = true
@@ -234,7 +232,7 @@ watchEffect(() => {
         quantity.value = 1000;
         toast.error('Quantity cannot be greater than 1000');
     }
-    isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0) && filament.value !== '');
+    isSubmitDisabled = !(file.value !== undefined && name.value.trim() !== '' && quantity.value > 0 && (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0));
 });
 
 const allSelected = computed({
@@ -255,11 +253,6 @@ const triggerFileInput = () => {
     const fileInput = document.getElementById('file') as HTMLInputElement;
     fileInput.click();
 }
-
-const selectFilament = (type: string) => {
-    filament.value = type
-}
-
 
 const getFilament = (file: File) => {
     return new Promise((resolve, reject) => {
@@ -380,28 +373,7 @@ const getFilament = (file: File) => {
                     </div>
 
                     <div class="mb-3">
-                        <label for="filament" class="form-label">Filament</label>
-                        <div class="tooltip">
-                            <span v-if="isAsteriksVisible" class="text-danger">*</span>
-                            <span class="tooltiptext">The filament needs to be selected if not prefilled.</span>
-                        </div>
-                        <div class="input-group">
-                            <div class="dropdown w-100" id="filamentDropdown">
-
-
-                                <button class="btn btn-primary dropdown-toggle w-100" type="button"
-                                    id="dropdownMenuButton" data-bs-toggle="dropdown"
-                                    :aria-expanded="filament ? 'false' : 'true'">
-                                    {{ filament || 'Select Filament' }}
-                                </button>
-
-                                <ul class="dropdown-menu dropdown-menu-scrollable w-100"
-                                    aria-labelledby="dropdownMenuButton">
-                                    <li><a class="dropdown-item" v-for="type in filamentTypes" :key="type"
-                                            @click="selectFilament(type)">{{ type }}</a></li>
-                                </ul>
-                            </div>
-                        </div>
+                        <label for="filament" class="form-label">Filament: <b>{{ filament || 'No filament detected' }}</b></label>
                     </div>
 
                     <div class="mb-3">
