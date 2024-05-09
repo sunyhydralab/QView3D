@@ -135,7 +135,6 @@ class PrinterStatusService:
                 # "colorChangeBuffer": printer.colorChangeBuffer
             }
             queue = printer.getQueue()
-            print("QUEUE: ", queue.getSize())
             for job in queue: 
                 job_info = {
                     "id": job.id,
