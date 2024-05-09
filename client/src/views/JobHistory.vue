@@ -312,7 +312,7 @@ const selectAllJobs = computed({
     set: (value) => {
         if (value) {
             // selectedJobs.value = jobs.value.filter(job => !jobInQueue(job));
-            selectedJobs.value = filteredJobs.value.slice();
+            selectedJobs.value = filteredJobs.value.filter(job => job.status == 'inqueue' || !jobInQueue(job));
         } else {
             selectedJobs.value = [];
         }
