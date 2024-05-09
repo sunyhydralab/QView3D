@@ -411,6 +411,7 @@ class Printer(db.Model):
                 #  Time handling
                 comment_lines = [line for line in lines if line.strip() and line.startswith(";")]
 
+                max_layer_height = 0
                 for i in reversed(range(len(comment_lines))):
                     # Check if the line contains ";LAYER_CHANGE"
                     if ";LAYER_CHANGE" in comment_lines[i]:
@@ -422,9 +423,9 @@ class Printer(db.Model):
                             match = re.search(r";Z:(\d+\.?\d*)", line)
                             if match:
                                 max_layer_height = float(match.group(1))
-                                break
-
-                job.setMaxLayerHeight(max_layer_height)
+                                break       
+                if max_layer_height != 0:
+                    job.setMaxLayerHeight(max_layer_height)
                 
 
                 total_time = job.getTimeFromFile(comment_lines)
