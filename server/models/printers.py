@@ -737,7 +737,6 @@ class Printer(db.Model):
         try:
             print("SETTING STATUS TO:", newStatus)
             if(self.status == "error" and newStatus!="error"): 
-                print("HARD RESET")
                 Printer.hardReset(self.id, newStatus)
             else: 
                 self.status = newStatus

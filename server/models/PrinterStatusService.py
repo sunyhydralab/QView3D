@@ -58,7 +58,7 @@ class PrinterStatusService:
             for job in queue: 
                 if(job.status!='inqueue'):
                     job.setStatus('inqueue')
-                    job.setDBstatus('inqueue')
+                    job.setDBstatus(job.id, 'inqueue')
             printer.setQueue(queue)
             printer.setStatus(status)
             printer_thread = self.start_printer_thread(
