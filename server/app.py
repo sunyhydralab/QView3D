@@ -84,6 +84,7 @@ with app.app_context():
         else:
             # Create the uploads folder if it doesn't exist
             os.makedirs(uploads_folder)
+            os.makedirs(tempcsv)
             print("Uploads folder created successfully.")  
     except Exception as e:
         print(f"Unexpected error: {e}")

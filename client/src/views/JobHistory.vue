@@ -364,7 +364,7 @@ const openGCodeModal = async (job: Job, printerName: string) => {
 }
 
 const setJob = async (job: Job) => {
-    jobComments.value = job.comment || '';
+    jobComments.value = job.comments || '';
     selectedJob.value = job;
 }
 
@@ -381,7 +381,7 @@ const doAssignIssue = async () => {
         selectedJob.value.error = selectedIssueObject.issue
     }
     await assignComment(selectedJob.value, jobComments.value)
-    selectedJob.value.comment = jobComments.value
+    selectedJob.value.comments = jobComments.value
     selectedIssueId.value = undefined
     selectedJob.value = undefined
 }

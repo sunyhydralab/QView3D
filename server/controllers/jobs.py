@@ -525,10 +525,10 @@ def saveComment():
     try: 
         data = request.get_json()
         jobid = data['jobid']
-        comment = data['comment']
+        comments = data['comments']
         
         # job = Job.findJob(jobid)
-        res = Job.setComment(jobid, comment)
+        res = Job.setComment(jobid, comments)
         return res 
     
     except Exception as e:

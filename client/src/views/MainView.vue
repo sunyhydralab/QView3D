@@ -101,7 +101,7 @@ const doAssignIssue = async () => {
     await assign(selectedIssue.value.id, selectedJob.value.id)
   }
 
-  selectedJob.value.comment = jobComments.value
+  selectedJob.value.comments = jobComments.value
   selectedIssue.value = undefined
   selectedJob.value = undefined
 
@@ -127,7 +127,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
 }
 
 const setJob = async (job: Job) => {
-  jobComments.value = job.comment || '';
+  jobComments.value = job.comments || '';
   selectedJob.value = job;
 }
 

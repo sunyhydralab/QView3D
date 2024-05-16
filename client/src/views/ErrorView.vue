@@ -268,14 +268,14 @@ const doAssignIssue = async () => {
         selectedJob.value.errorid = selectedIssueObject.id
         selectedJob.value.error = selectedIssueObject.issue
     }
-    selectedJob.value.comment = jobComments.value
+    selectedJob.value.comments = jobComments.value
     await assignComment(selectedJob.value, jobComments.value)
     selectedIssueId.value = undefined
     selectedJob.value = undefined
 }
 
 const setJob = async (job: Job) => {
-    jobComments.value = job.comment || '';
+    jobComments.value = job.comments || '';
     selectedJob.value = job;
 }
 
@@ -695,13 +695,11 @@ const onlyNumber = ($event: KeyboardEvent) => {
                     <td class="truncate" :title="job.printer_name">{{ job.printer_name }}</td>
                     <td class="truncate" :title="job.name">{{ job.name }}</td>
                     <td class="truncate" :title="job.file_name_original">{{ job.file_name_original }}</td>
-                    <td class="truncate" :title="job.error" v-if="job.errorid != null && job.errorid != 0">
+                    <td class="truncate" :title="job.error" v-if="job.error">
                         {{ job.error }}
                     </td>
-                    <td v-else>
-                    </td>
-                    <td class="truncate">{{ job.date }}</td>
-                    <td class="truncate" :title="job.comment">{{ job.comment }}</td>
+                    <td class="truncate" :title="job.date?.toString()">{{ job.date }}</td>
+                    <td class="truncate" :title="job.comments">{{ job.comments }}</td>
                     <td>
                         <div class="dropdown">
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
