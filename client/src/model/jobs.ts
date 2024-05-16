@@ -41,7 +41,7 @@ export interface Job {
   errorid?: number
   error?: string // store issue name
 
-  comment?: string // store comments
+  comments?: string // store comments
 
   extruded?: number
   filament?: string
@@ -567,10 +567,10 @@ export function useStartJob() {
 
 export function useAssignComment() {
   return {
-    async assignComment(job: Job, comment: string) {
+    async assignComment(job: Job, comments: string) {
       let jobid = job?.id
       try {
-        const response = await api(`savecomment`, { jobid, comment })
+        const response = await api(`savecomment`, { jobid, comments })
         if (response) {
           if (response.success == false) {
             toast.error(response.message)

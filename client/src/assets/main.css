@@ -219,3 +219,9 @@ th {
 .page-of-pages {
   text-align: center;
 }
+
+.form-check-input:focus,
+.form-control:focus {
+    outline: none;
+    box-shadow: none;
+}
