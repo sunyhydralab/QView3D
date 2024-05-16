@@ -905,13 +905,6 @@ ul.dropdown-menu.w-100.show li.divider {
     margin-left: 0;
 }
 
-.form-check-input:focus,
-.form-control:focus {
-    outline: none;
-    box-shadow: none;
-    border-color: #dee2e6;
-}
-
 label.form-check-label {
     cursor: pointer;
 }
