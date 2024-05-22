@@ -1,2 +1,227 @@
-@import url('bootstrap/dist/css/bootstrap.min.css'); 
+@import url('bootstrap/dist/css/bootstrap.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 
+body {
+  background-color: #b9b9b9;
+}
+
+input[type='checkbox'],
+input[type='radio'],
+input[type='text'],
+input[type='number'],
+input[type='name'],
+.border-top {
+  background-color: #f4f4f4 !important;
+  border-color: #484848 !important;
+}
+
+table {
+  color: #1b1b1b;
+  background-color: #d8d8d8;
+  border: 1px solid #929292;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table td,
+.table th {
+  border-left: none !important;
+  border-right: none !important;
+}
+
+th {
+  background-color: #b9b9b9 !important;
+  border-left: none !important;
+  border-right: none !important;
+}
+
+td,
+th {
+  border-top: 1px solid #929292;
+  border-bottom: 1px solid #929292 !important;
+  border-left: none !important;
+  border-right: none !important;
+  text-align: center !important;
+  padding: 8px;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.accordion-button,
+.accordion-button:not(.collapsed) {
+  background-color: #d8d8d8;
+}
+
+.accordion-item {
+  border: 1px solid #484848;
+}
+
+.dropdown-menu.show,
+.dropdown-menu .dropdown-menu {
+  background-color: #d8d8d8;
+  border: 1px solid #484848;
+}
+
+.dropdown-menu li a:hover,
+.dropdown-item:hover,
+.dropdown-submenu .dropdown-item:hover {
+  background-color: #c0c0c0;
+}
+
+.dropdown {
+  cursor: pointer;
+}
+
+.form-check-label {
+  user-select: none;
+}
+
+.modal-content {
+  background-color: #b9b9b9;
+  border: 1px solid #484848;
+}
+
+.modal-header {
+  background-color: #9f9f9f;
+  border-bottom: 1px solid #484848;
+}
+
+.modal-footer {
+  background-color: #9f9f9f;
+  border-top: 1px solid #484848;
+}
+
+.modal-body .card-body {
+  background-color: #cdcdcd;
+  /* border radius */
+  border-radius: 5px;
+}
+
+.modal-body .card {
+  border: 1px solid #484848;
+}
+
+.tooltip {
+  position: relative;
+  display: inline-block;
+  opacity: 1;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity 0.2s linear,
+    visibility 0.2s linear 0.2s;
+  width: 200px;
+  background-color: #484848;
+  color: #dbdbdb;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 10;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -100px;
+}
+
+.tooltip .tooltiptext::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #484848 transparent transparent transparent;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.2s linear;
+}
+
+.tooltip .tooltiptext:hover {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.dp__input,
+.dp__input:focus,
+.dp__input:hover {
+  background-color: #f4f4f4 !important;
+  border-color: #484848 !important;
+}
+
+.dp__theme_light {
+  background-color: none !important;
+  border-color: #484848 !important;
+  --dp-range-between-dates-background-color: #dddddd !important;
+  --dp-range-between-border-color: #dddddd !important;
+  --dp-hover-color: #c0c0c0 !important;
+  --dp-background-color: #f4f4f4 !important;
+}
+
+.dp__arrow_bottom {
+  background-color: #f4f4f4 !important;
+  border-color: #484848 !important;
+  --dp-range-between-dates-background-color: #dddddd !important;
+  --dp-range-between-border-color: #dddddd !important;
+  --dp-hover-color: #c0c0c0 !important;
+  --dp-background-color: #f4f4f4 !important;
+}
+
+.dp__input_icon,
+.dp__clear_icon {
+  color: #484848 !important;
+}
+
+.page-item.disabled {
+  user-select: none;
+}
+
+.btn {
+  user-select: none;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.fade-enter-to,
+.fade-leave-from {
+  opacity: 1;
+}
+
+.scrollable-filter {
+  height: 550px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.page-of-pages {
+  text-align: center;
+}
+
+.form-check-input:focus,
+.form-control:focus {
+    outline: none;
+    box-shadow: none;
+}
