@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Add the execute permission to the script.
+chmod +x run.sh
+
 # Change directory to the server
 cd server
 
