@@ -48,13 +48,13 @@ git clone https://github.com/sunyhyralab/QView3D.git
 Install:
 
 ```bash
-install.sh
+./install.sh
 ```
 
 Run:
 
 ```bash
-run.sh
+./run.sh
 ```
 
 ## Pull Requests
