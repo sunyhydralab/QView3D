@@ -4,15 +4,12 @@
 cd server
 
 # Start the Flask server in the background. Log the errors.
-flask run >> server.log 2>&1 &
+flask run 
 
 # Change directory to the client.
 cd ../client
 
-# Set the NODE_ENV environment variable to production
-export NODE_ENV=production
+# Start the Vue.js frontend in development mode
+npm run dev 
 
-# Start the Vue.js frontend in production mode
-npm run start >> server.log 2>&1
 
-# Start the flask server & run the node frontend. 
