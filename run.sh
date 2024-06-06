@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Load nvm
+source ~/.nvm/nvm.sh
+
 # Add the execute permission to the script.
 chmod +x run.sh
 
@@ -7,12 +10,11 @@ chmod +x run.sh
 cd server
 
 # Start the Flask server in the background. Log the errors.
-flask run 
+flask run &
 
 # Change directory to the client.
 cd ../client
 
 # Start the Vue.js frontend in development mode
-npm run dev 
-
+npm run dev
 
