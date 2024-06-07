@@ -1,27 +1,37 @@
 #!/bin/bash
 
-# Change directory to the server 
-cd server
+# Add the execute permission to the script.
+chmod +x install.sh
+
+# Install the required packages.
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash
+
+# Source your bash profile to load changes made by nvm
+source ~/.bashrc
+
+# Install Node.js.
+nvm install node
 
 # Install Python dependencies. Requirements was created with pipreqs.
-pip install -r requirements.txt >> install.log 2>&1
+pip install -r requirements.txt 
 
-# Initialize the database. Log the errors.
-flask db init >> install.log 2>&1
+# Change directory to the server.
+cd server
 
-# Generate a migration script. Log the errors.
-flask db migrate >> install.log 2>&1
+# Initialize the database. 
+flask db init 
 
-# Apply the migration. Log the errors. 
-flask db upgrade >> install.log 2>&1
+# Generate a migration script. 
+flask db migrate 
+
+# Apply the migration. 
+flask db upgrade 
 
 # Change directory to the client.
 cd ../client
 
-# Install Node.js dependencies. Log the errors.
-npm install >> install.log 2>&1
+# Install Node.js dependencies.
+npm install
 
-
-# Script to install all the python requirements. 
-# Install and start the flask database.
-# Install node.
+# Install npm-run-all as a dev dependency
+npm install --save-dev npm-run-all

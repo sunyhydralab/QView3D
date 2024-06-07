@@ -1,7 +1,5 @@
 /.vscode
 
-### dotenv ###
-.env
 
 *.pyc
 __pycache__/
