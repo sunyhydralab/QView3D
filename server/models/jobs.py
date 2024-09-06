@@ -283,8 +283,8 @@ class Job(db.Model):
     @classmethod
     def findJob(cls, job_id):
         try:
-            job = cls.query.filter_by(id=job_id).first()
-            return job
+            # no need to set job var, just return the query
+            return cls.query.filter_by(id=job_id).first()
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve job. Database error"}), 500
@@ -352,8 +352,8 @@ class Job(db.Model):
     def getFavoriteJobs(cls):
         try:
             jobs = cls.query.filter_by(favorite=True).all()
-
-            jobs_data = [{
+            # no need to assign jobs_data to a variable, just return the list comprehension
+            return [{
                 "id": job.id,
                 "name": job.name,
                 "status": job.status,
@@ -363,7 +363,6 @@ class Job(db.Model):
                 "favorite": job.favorite
             } for job in jobs]
 
-            return jobs_data
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to retrieve favorite jobs. Database error"}), 500
@@ -450,12 +449,10 @@ class Job(db.Model):
                 for job, issue in jobs:
                     row = [getattr(job, 'td_id', ''), getattr(job, 'printer_name', ''), getattr(job, 'name', ''), getattr(job, 'file_name_original', ''), getattr(job, 'status', ''), getattr(job, 'date', ''), getattr(issue, 'issue', '') if issue else '', getattr(job, 'comments', '')]
                     writer.writerow(row)  # write data rows
-            
-            csv_file_path = f'./{csv_file_name}'
-        
-            return send_file(csv_file_path, as_attachment=True)
-        
-        
+
+            # no need to assign csv_file_path to a variable, just return the file path
+            return send_file(f'./{csv_file_name}', as_attachment=True)
+
         except Exception as e:
             print(f"Error downloading CSV: {e}")
             return {"status": "error", "message": f"Error downloading CSV: {e}"}
@@ -581,8 +578,8 @@ class Job(db.Model):
 
     def calculateEta(self):
         now = datetime.now()
-        eta = timedelta(seconds=self.job_time[0]) + now
-        return eta
+        # no need to assign eta to a variable, just return the value
+        return timedelta(seconds=self.job_time[0]) + now
 
     def updateEta(self):
         now = datetime.now()
@@ -590,8 +587,8 @@ class Job(db.Model):
 
         duration = now - pause_time
 
-        new_eta = self.getJobTime()[1] + timedelta(seconds=1)
-        return new_eta
+        # no need to assign new_eta to a variable, just return the value
+        return self.getJobTime()[1] + timedelta(seconds=1)
     
     def colorEta(self):
         print("before ETA: ", self.getJobTime()[1])
@@ -599,15 +596,18 @@ class Job(db.Model):
         now = datetime.now()
         pause_time = self.getJobTime()[3]
         duration = now - pause_time
-        eta = self.getJobTime()[1] + duration
-        return eta 
+        # no need to assign eta to a variable, just return the value
+        return self.getJobTime()[1] + duration
 
     def calculateTotalTime(self):
-        total_time = self.getJobTime()[0]
+        # this can all be done in one line
+        return self.getJobTime()[0] + 1
 
-        # Add one second to total_time
-        total_time+=1
-        return total_time
+        #total_time = self.getJobTime()[0]
+
+        ## Add one second to total_time
+        #total_time+=1
+        #return total_time
     
     def calculateColorChangeTotal(self):
         print("before Total Time: ", self.getJobTime()[0])
@@ -616,8 +616,8 @@ class Job(db.Model):
         pause_time = self.getJobTime()[3]
         duration = now - pause_time
         duration_in_seconds = duration.total_seconds()
-        total_time = self.getJobTime()[0] + duration_in_seconds
-        return total_time
+        # no need to assign total_time to a variable, just return the value
+        return self.getJobTime()[0] + duration_in_seconds
     
     def getJobTime(self):
         return self.job_time

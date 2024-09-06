@@ -1,7 +1,8 @@
 from flask import Blueprint, jsonify
-from app import printer_status_service  # import the instance from app.py
+from server.app import printer_status_service  # import the instance from app.py
 from flask import Blueprint, jsonify, request
-from models.jobs import Job 
+from server.models.jobs import Job
+from server.models.printers import Printer
 
 status_bp = Blueprint("status", __name__)
 
@@ -16,9 +17,9 @@ def getOpenThreads():
 # this is the route that will be called by the UI to get the printers that have threads information
 @status_bp.route('/getprinterinfo', methods=["GET"])
 def getPrinterInfo():
-    try: 
-        printer_info = printer_status_service.retrieve_printer_info()  # call the method on the instance
-        return jsonify(printer_info)
+    try:
+        # no need to assign to a variable, just return the result
+        return jsonify(printer_status_service.retrieve_printer_info())  # call the method on the instance
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -28,8 +29,8 @@ def hardreset():
     try: 
         data = request.get_json() # get json data 
         id = data['printerid']
-        res = printer_status_service.resetThread(id)
-        return res 
+        # no need to assign to a variable, just return the result
+        return printer_status_service.resetThread(id)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -40,8 +41,8 @@ def queueRestore():
         data = request.get_json() # get json data 
         id = data['printerid']
         status = data['status']
-        res = printer_status_service.queueRestore(id, status)
-        return res 
+        # no need to assign to a variable, just return the result
+        return printer_status_service.queueRestore(id, status)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -51,8 +52,8 @@ def removeThread():
     try:
         data = request.get_json() # get json data
         printerid = data['printerid']
-        res = printer_status_service.deleteThread(printerid)
-        return res 
+        # no need to assign to a variable, just return the result
+        return printer_status_service.deleteThread(printerid)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -63,8 +64,8 @@ def editName():
         data = request.get_json() 
         printerid = data['printerid']
         name = data['newname']
-        res = printer_status_service.editName(printerid, name)
-        return res 
+        # no need to assign to a variable, just return the result
+        return printer_status_service.editName(printerid, name)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500

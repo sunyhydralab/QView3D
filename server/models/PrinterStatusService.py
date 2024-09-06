@@ -1,10 +1,10 @@
 from threading import Thread
-from models.printers import Printer
+from server.models.printers import Printer
 import serial
 import serial.tools.list_ports
 import time
 import requests
-from Classes.Queue import Queue
+from server.Classes.Queue import Queue
 from flask import jsonify 
 
 class PrinterThread(Thread):

@@ -47,8 +47,8 @@ def getJobs():
     print(fromError)
 
     try:
-        res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, searchTicketId, favoriteOnly, issueIds, startdate, enddate, fromError, countOnly)
-        return jsonify(res)
+        # no need to assign to a variable, just return the result
+        return jsonify(Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, searchTicketId, favoriteOnly, issueIds, startdate, enddate, fromError, countOnly))
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -439,17 +439,17 @@ def nullifyJobs():
     try: 
         data = request.get_json()
         printerid = data['printerid']
-        res = Job.nullifyPrinterId(printerid)
-        return res 
+        # no need to assign to a variable, just return the result
+        return Job.nullifyPrinterId(printerid)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
     
 @jobs_bp.route('/clearspace', methods=["GET"])
 def clearSpace(): 
-    try: 
-        res = Job.clearSpace()
-        return res 
+    try:
+        # no need to assign to a variable, just return the result
+        return Job.clearSpace()
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -457,8 +457,8 @@ def clearSpace():
 @jobs_bp.route('/getfavoritejobs', methods=["GET"])
 def getFavoriteJobs():
     try:
-        res = Job.getFavoriteJobs()
-        return jsonify(res)
+        # no need to assign to a variable, just return the result
+        return jsonify(Job.getFavoriteJobs())
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -470,8 +470,8 @@ def favoriteJob():
         jobid = data['jobid']
         favorite = data['favorite']
         job = Job.findJob(jobid)
-        res = job.setFileFavorite(favorite)
-        return res
+        # no need to assign to a variable, just return the result
+        return job.setFileFavorite(favorite)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -484,8 +484,8 @@ def assignIssue():
         issueid = data['issueid']
         job = Job.findJob(jobid)
         jobid = job.getJobId()
-        res = job.setIssue(jobid, issueid)
-        return res
+        # no need to assign to a variable, just return the result
+        return job.setIssue(jobid, issueid)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -497,8 +497,8 @@ def removeIssue():
         jobid = data['jobid']
         job = Job.findJob(jobid)
         jobid = job.getJobId()
-        res = job.unsetIssue(jobid)
-        return res
+        # no need to assign to a variable, just return the result
+        return job.unsetIssue(jobid)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -528,8 +528,8 @@ def saveComment():
         comments = data['comments']
         
         # job = Job.findJob(jobid)
-        res = Job.setComment(jobid, comments)
-        return res 
+        # no need to assign to a variable, just return the result
+        return Job.setComment(jobid, comments)
     
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -605,16 +605,15 @@ def refetch_time():
         printer = findPrinterObject(printerid)
         job = printer.getQueue().getNext()
 
-        timearray = job.job_time 
+        timearray = job.job_time
 
-        timejson = {
+        # no need to assign to a variable, just return the result
+        return jsonify( {
             'total': timearray[0], 
             'eta': timearray[1].isoformat(), 
             'timestart': timearray[2].isoformat(), 
             'pause': timearray[3].isoformat()
-        }
-
-        return jsonify(timejson) 
+        })
 
     except Exception as e:
         print(f"Unexpected error: {e}")

@@ -15,15 +15,15 @@ ports_bp = Blueprint("ports", __name__)
 
 @ports_bp.route("/getports",  methods=["GET"])
 def getPorts():
-    printerList = Printer.getConnectedPorts()
-    return jsonify(printerList)
+    # no need to assign to a variable, just return the result
+    return jsonify(Printer.getConnectedPorts())
 
 # method to get printers already registered with the system 
 @ports_bp.route("/getprinters", methods=["GET"])
 def getRegisteredPrinters():  
-    try: 
-        res = Printer.get_registered_printers()
-        return res
+    try:
+        # no need to assign to a variable, just return the result
+        return Printer.get_registered_printers()
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -67,8 +67,8 @@ def delete_printer():
         data = request.get_json()
         printerid = data['printerid']
         # res = printer_status_service.deleteThread(printerid)
-        res = Printer.deletePrinter(printerid)
-        return res 
+        # no need to assign to a variable, just return the result
+        return Printer.deletePrinter(printerid)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -79,8 +79,8 @@ def edit_name():
         data = request.get_json() 
         printerid = data['printerid']
         name = data['name']
-        res = Printer.editName(printerid, name)
-        return res 
+        # no need to assign to a variable, just return the result
+        return Printer.editName(printerid, name)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -90,8 +90,8 @@ def diagnose_printer():
     try:
         data = request.get_json() 
         device = data['device']
-        res = Printer.diagnosePrinter(device)
-        return res
+        # no need to assign to a variable, just return the result
+        return Printer.diagnosePrinter(device)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500

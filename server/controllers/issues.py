@@ -7,8 +7,8 @@ issue_bp = Blueprint("issues", __name__)
 @issue_bp.route('/getissues', methods=["GET"])
 def getIssues():
     try:
-        res = Issue.get_issues()
-        return jsonify(res)
+        # no need to assign to a variable, just return the result
+        return jsonify(Issue.get_issues())
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -18,8 +18,8 @@ def createIssue():
     try:
         data = request.get_json()
         issue = data['issue']
-        res = Issue.create_issue(issue)
-        return res
+        # no need to assign to a variable, just return the result
+        return Issue.create_issue(issue)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -30,8 +30,8 @@ def deleteIssue():
         data = request.get_json()
         issue_id = data['issueid']
         # print(issueid)
-        res = Issue.delete_issue(issue_id)
-        return res
+        # no need to assign to a variable, just return the result
+        return Issue.delete_issue(issue_id)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -42,8 +42,8 @@ def editIssue():
         data = request.get_json()
         issue_id = data['issueid']
         issue_new = data['issuenew']
-        res = Issue.edit_issue(issue_id, issue_new)
-        return res
+        # no need to assign to a variable, just return the result
+        return Issue.edit_issue(issue_id, issue_new)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500

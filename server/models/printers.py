@@ -208,8 +208,8 @@ class Printer(db.Model):
     @classmethod
     def findPrinter(cls, id):
         try:
-            printer = cls.query.get(id)
-            return printer
+            # no need to assign to a variable, just return the result
+            return cls.query.get(id)
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return (
