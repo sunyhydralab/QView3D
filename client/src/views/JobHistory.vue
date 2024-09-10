@@ -9,7 +9,7 @@ import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 
-const { jobhistory, getFavoriteJobs } = useGetJobs()
+const { jobHistory, getFavoriteJobs } = useGetJobs()
 const { getFileDownload } = useGetJobFile()
 const { getFile } = useGetFile()
 const { deleteJob } = useDeleteJob()
@@ -107,7 +107,7 @@ onMounted(async () => {
         const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
         // Fetch jobs into `fetchedJobs`
-        [fetchedJobs.value, totalJobs.value] = await jobhistory(page.value, pageSize.value, printerIds);
+        [fetchedJobs.value, totalJobs.value] = await jobHistory(page.value, pageSize.value, printerIds);
 
         // Update `displayJobs` with the fetched jobs
         displayJobs.value = fetchedJobs.value;
@@ -187,7 +187,7 @@ const changePage = async (newPage: any) => {
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
     // Fetch jobs into `fetchedJobs` and total into `totalJobs`
-    [fetchedJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
+    [fetchedJobs.value] = await jobHistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
     // Update `displayJobs` with the fetched jobs
     displayJobs.value = fetchedJobs.value;
 
@@ -222,7 +222,7 @@ async function submitFilter() {
         searchCriteria.value = searchJob.value;
     }
 
-    [fetchedJobs.value, totalJobs.value] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
+    [fetchedJobs.value, totalJobs.value] = await jobHistory(1, Number.MAX_SAFE_INTEGER, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
 
     totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
     totalPages.value = Math.max(totalPages.value, 1);
@@ -232,7 +232,7 @@ async function submitFilter() {
     }
 
     // Now fetch the jobs for the current page
-    [fetchedJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
+    [fetchedJobs.value] = await jobHistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
 
     // Update `displayJobs` with the fetched jobs
     displayJobs.value = fetchedJobs.value;
@@ -283,7 +283,7 @@ const confirmDelete = async () => {
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
     // Fetch jobs into `fetchedJobs`
-    [fetchedJobs.value, totalJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value);
+    [fetchedJobs.value, totalJobs.value] = await jobHistory(page.value, pageSize.value, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value);
 
     displayJobs.value = fetchedJobs.value;
 
@@ -395,7 +395,7 @@ const closeDropdown = (evt: any) => {
 const doDownloadCsv = async () => {
     isLoading.value = true
     const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
-    const [alljobs, total] = await jobhistory(1, Number.MAX_SAFE_INTEGER, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
+    const [alljobs, total] = await jobHistory(1, Number.MAX_SAFE_INTEGER, printerIds, 0, oldestFirst.value, searchJob.value, searchCriteria.value, searchTicketId.value, favoriteOnly.value, selectedIssues.value, startDateString.value, endDateString.value);
     everyJob.value = alljobs;
     const jobIds = everyJob.value.map(job => job.id);
     if (filterApplied.value === 1) {

@@ -9,15 +9,14 @@ const { retrieveInfo } = useRetrievePrintersInfo();
 const { register } = useRegisterPrinter();
 const { move } = useMoveHead();
 
-let customname = ref('') // Stores the user input name of printer
-let selectedDevice = ref<Device | null>(null)
-let devices = ref<Array<Device>>([]) // Stores the list of devices
+const customname = ref('') // Stores the user input name of printer
+const selectedDevice = ref<Device | null>(null)
+const devices = ref<Array<Device>>([]) // Stores the list of devices
 
 const emit = defineEmits(['close', 'submit-form'])
 
 onMounted(async () => {
-    const allDevices = await ports();  // load all ports
-    devices.value = allDevices
+    devices.value = await ports();  // load all ports
 
     const modalElement = document.getElementById('registerModal')
     if (modalElement) {
@@ -32,8 +31,7 @@ onMounted(async () => {
 })
 
 const doGetPorts = async () => {
-    const allDevices = await ports();
-    devices.value = allDevices;
+    devices.value = await ports();
 }
 
 const doRegister = async () => {

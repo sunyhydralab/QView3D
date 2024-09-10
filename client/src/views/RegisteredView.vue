@@ -18,24 +18,23 @@ const { editThread } = useEditThread();
 const { diagnose } = useDiagnosePrinter();
 const { repair } = useRepair();
 
-let registered = ref<Array<Device>>([]) // Stores array of printers already registered in the system
-let editMode = ref(false)
-let editNum = ref<number | undefined>(0)
-let newName = ref('')
-let message = ref('')
-let showMessage = ref(false)
-let messageId = ref<number | undefined>(0)
+const registered = ref<Array<Device>>([]) // Stores array of printers already registered in the system
+const editMode = ref(false)
+const editNum = ref<number | undefined>(0)
+const newName = ref('')
+const message = ref('')
+const showMessage = ref(false)
+const messageId = ref<number | undefined>(0)
 
-let modalTitle = ref('');
-let modalMessage = ref('');
-let modalAction = ref('');
+const modalTitle = ref('');
+const modalMessage = ref('');
+const modalAction = ref('');
 const selectedPrinter = ref<Device | null>(null);
 
 // fetch list of connected ports from backend and automatically load them into the form dropdown 
 onMounted(async () => {
     isLoading.value = true
-    const allPrinters = await retrieve(); // load all registered printers
-    registered.value = allPrinters
+    registered.value = await retrieve(); // load all registered printers
     isLoading.value = false
 });
 
@@ -51,8 +50,7 @@ const doDelete = async (printer: Device) => {
     if (printer.status == "printing") {
         toast.error("Cannot deregister printer while status is printing. Please wait for the printer to finish")
     }
-    const printerId = printer.id;
-    const foundPrinter = printers.value.find(p => p.id === printerId);    // code to find printer where printer.id is equal to the printer.id in the printers array
+    const foundPrinter = printers.value.find(p => p.id === printer.id);    // code to find printer where printer.id is equal to the printer.id in the printers array
 
     if (foundPrinter?.status === "printing") {
         toast.error("Cannot deregister printer while status is printing. Please turn offline or wait for the printer to finish printing.")
@@ -63,21 +61,7 @@ const doDelete = async (printer: Device) => {
 
     await nullifyJobs(printer.id)
 
-    let response = await deletePrinter(printer.id)
-    if (response) {
-        if (response.success == false) {
-            toast.error(response.message)
-        } else if (response.success === true) {
-            toast.success(response.message)
-            await removeThread(printer.id)
-        } else {
-            console.error('Unexpected response:', response)
-            toast.error('Failed to delete printer. Unexpected response.')
-        }
-    } else {
-        console.error('Response is undefined or null')
-        toast.error('Failed to delete printer. Unexpected response')
-    }
+    await deletePrinter(printer.id)
 
     printers.value = await retrieveInfo();
     registered.value = await retrieve();
@@ -110,9 +94,7 @@ const doDiagnose = async (printer: Device) => {
     isLoading.value = true
     message.value = `Diagnosing <b>${printer.name}</b>:<br/><br/>This printer is registered under port <b>${printer.device}</b>.`
     showMessage.value = true
-    let str = await diagnose(printer.device)
-    let resstr = str.diagnoseString
-    message.value += "<br><br>" + resstr
+    message.value += "<br><br>" + (await diagnose(printer.device)).diagnoseString
     isLoading.value = false
 }
 

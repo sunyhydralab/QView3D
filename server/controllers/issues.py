@@ -29,7 +29,7 @@ def deleteIssue():
     try:
         data = request.get_json()
         issue_id = data['issueid']
-        # print(issueid)
+        # print(issue_id)
         # no need to assign to a variable, just return the result
         return Issue.delete_issue(issue_id)
     except Exception as e:

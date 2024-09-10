@@ -1,5 +1,5 @@
 import re
-from models.db import db
+from models.db import (db)
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
 from sqlalchemy.orm import relationship

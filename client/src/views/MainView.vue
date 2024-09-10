@@ -23,17 +23,17 @@ const router = useRouter()
 
 const selectedIssue = ref<Issue>()
 const selectedJob = ref<Job>()
-let jobComments = ref('')
+const jobComments = ref('')
 
-let currentJob = ref<Job>();
-let currentPrinter = ref<Device>();
+const currentJob = ref<Job>();
+const currentPrinter = ref<Device>();
 
-let issuelist = ref<Array<Issue>>([])
+const issuelist = ref<Array<Issue>>([])
 
-let isGcodeImageVisible = ref(false)
+const isGcodeImageVisible = ref(false)
 const isImageVisible = ref(true)
 
-let isGcodeLiveViewVisible = ref(false)
+const isGcodeLiveViewVisible = ref(false)
 
 let expandedState: (string | undefined)[] = [];
 

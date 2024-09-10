@@ -64,17 +64,8 @@ const handleRerun = async (job: Job, printer: Device) => {
 
 const deleteSelectedJobs = async () => {
   isLoading.value = true
-  let response = null
   const selectedJobIds = computed(() => selectedJobs.value.map(job => job.id));
-  response = await removeJob(selectedJobIds.value);
-  if (response.success == false) {
-    toast.error(response.message)
-  } else if (response.success === true) {
-    toast.success(response.message)
-  } else {
-    console.error('Unexpected response:', response)
-    toast.error('Failed to remove job. Unexpected response.')
-  }
+  await removeJob(selectedJobIds.value);
 
   for (const printer of printers.value) {
     printer.queue?.forEach((job) => job.queue_selected = false)

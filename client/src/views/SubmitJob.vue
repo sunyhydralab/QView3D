@@ -123,7 +123,7 @@ const handleSubmit = async () => {
     let isFavoriteSet = false;
     let res = null
     if (selectedPrinters.value.length == 0) {
-        let numPrints = quantity.value
+        const numPrints = quantity.value
         for (let i = 0; i < numPrints; i++) {
             const formData = new FormData() // create FormData object
             formData.append('file', file.value as File) // append form data
@@ -150,8 +150,7 @@ const handleSubmit = async () => {
         }
         resetValues()
     } else {
-        let sub = validateQuantity()
-        if (sub == true) {
+        if (validateQuantity()) {
             let printsPerPrinter = Math.floor(quantity.value / selectedPrinters.value.length) // number of even prints per printer
             let remainder = quantity.value % selectedPrinters.value.length; //remainder to be evenly distributed 
             for (const printer of selectedPrinters.value) {

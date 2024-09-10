@@ -16,15 +16,25 @@ from werkzeug.datastructures import FileStorage
 import time
 import gzip
 
+
 class Issue(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     issue = db.Column(db.String(200), nullable=False)
 
     def __init__(self, issue):
+        """
+        Issue constructor
+        :param issue:
+        """
         self.issue = issue
+
 
     @classmethod
     def get_issues(cls):
+        """
+        Get all issues
+        :return: dict of issues or dict with success or error message
+        """
         try:
             issues = cls.query.all()
             if(issues):
@@ -44,6 +54,11 @@ class Issue(db.Model):
 
     @classmethod
     def create_issue(cls, issue):
+        """
+        Create a new issue
+        :param issue:
+        :return:
+        """
         try:
             new_issue = cls(issue)
             db.session.add(new_issue)

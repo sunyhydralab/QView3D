@@ -206,8 +206,7 @@ const revertFont = () => {
                         <div class="input-group">
                             <button type="button" @click="triggerFileInput" class="btn btn-primary">Browse</button>
                             <label class="form-control" style="width: 220px;">
-                                <div v-if="fontFileName" class="ellipsis" style="width: 200px;"> {{ fontFileName }}
-                                </div>
+                                <div v-if="fontFileName" class="ellipsis" style="width: 200px;"> {{ fontFileName }}</div>
                                 <div v-else>No font selected.</div>
                             </label>
                         </div>

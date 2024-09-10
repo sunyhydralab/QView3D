@@ -1,8 +1,8 @@
 from flask import Blueprint, jsonify
-from server.app import printer_status_service  # import the instance from app.py
+from app import printer_status_service  # import the instance from app.py
 from flask import Blueprint, jsonify, request
-from server.models.jobs import Job
-from server.models.printers import Printer
+from models.jobs import Job
+from models.printers import Printer
 
 status_bp = Blueprint("status", __name__)
 

@@ -4,8 +4,7 @@ from operator import or_
 import os
 import re
 from models.db import db
-from models.printers import Printer 
-
+from models.printers import Printer
 from models.issues import Issue  # assuming the Issue model is defined in the issue.py file in the models directory
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
@@ -20,12 +19,13 @@ import time
 import gzip
 import csv
 from flask import send_file
-
 from app import printer_status_service
-# model for job history table
 
 
 class Job(db.Model):
+    """
+    model for job history table
+    """
     id = db.Column(db.Integer, primary_key=True)
     file = db.Column(db.LargeBinary(16777215), nullable=True)
     name = db.Column(db.String(50), nullable=False)
@@ -65,8 +65,26 @@ class Job(db.Model):
     job_time = [0, datetime.min, datetime.min, datetime.min]
 
 
-    
     def __init__(self, file, name, printer_id, status, file_name_original, favorite, td_id, printer_name):
+        """
+        Job constructor
+        :param file: compressed file data
+        :type file: bytes
+        :param name: job name
+        :type name: str
+        :param printer_id: id of printer
+        :type printer_id: int
+        :param status: where is the job now
+        :type status: str
+        :param file_name_original: file name without PK identifier
+        :type file_name_original: str
+        :param favorite: is this a favorite job
+        :type favorite: bool
+        :param td_id: ticket ID
+        :type td_id: int
+        :param printer_name:
+        :type printer_name: str
+        """
         self.file = file 
         self.name = name 
         self.printer_id = printer_id 
@@ -112,6 +130,31 @@ class Job(db.Model):
         fromError = None, 
         countOnly = None 
     ):
+        """
+        Get job history
+        :param page:
+        :type page: int
+        :param pageSize:
+        :type pageSize: int
+        :param printerIds:
+        :type printerIds: list
+        :param oldestFirst:
+        :type oldestFirst: bool
+        :param searchJob:
+        :type searchJob: str
+        :param searchCriteria:
+        :type searchCriteria: str
+        :param searchTicketId:
+        :type searchTicketId: int
+        :param favoriteOnly:
+        :type favoriteOnly: bool
+        :param issueIds:
+        :type issueIds: list
+        :param startDate:
+        :param endDate:
+        :param fromError:
+        :param countOnly:
+        """
         try:
             query = cls.query
             
@@ -199,7 +242,7 @@ class Job(db.Model):
             return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500
 
     @classmethod
-    def jobHistoryInsert(cls, name, printer_id, status, file, file_name_original, favorite, td_id): 
+    def jobHistoryInsert(cls, name, printer_id, status, file, file_name_original, favorite, td_id):
         try:
             if isinstance(file, bytes):
                 file_data = file
