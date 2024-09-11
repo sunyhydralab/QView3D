@@ -69,7 +69,7 @@ export const printers = ref<Device[]>([])
 export function useGetPorts() {
     return {
         async ports() {
-            return doHandleApi('getports', undefined, undefined, undefined, true)
+            return await doHandleApi('getports', undefined, undefined, undefined, true)
         }
     }
 }
@@ -77,7 +77,7 @@ export function useGetPorts() {
 export function useRegisterPrinter() {
     return {
         async register(printer: Device) {
-            doHandleApi('register', printer, 'register printer', 'registering the printer')
+            await doHandleApi('register', printer, 'register printer', 'registering the printer')
         }
     }
 }
@@ -85,7 +85,8 @@ export function useRegisterPrinter() {
 export function useRetrievePrinters() {
     return {
         async retrieve() {
-            return doHandleApi('getprinters', undefined, undefined, undefined, true).printers
+            const res = await doHandleApi('getprinters', undefined, undefined, undefined, true)
+            return res.printers
         }
     }
 }
@@ -94,7 +95,7 @@ export function useRetrievePrinters() {
 export function useRetrievePrintersInfo() {
     return {
         async retrieveInfo() {
-            doHandleApi('getprinterinfo')
+            return await doHandleApi('getprinterinfo')
         }
     }
 }
@@ -102,7 +103,7 @@ export function useRetrievePrintersInfo() {
 export function useSetStatus() {
     return {
         async setStatus(printerid: number | undefined, status: string) {
-            doHandleApi('setstatus', { printerid, status })
+            await doHandleApi('setstatus', { printerid, status })
         }
     }
 }
@@ -110,7 +111,7 @@ export function useSetStatus() {
 export function useHardReset() {
     return {
         async hardReset(printerid: number | undefined) {
-            doHandleApi('hardreset', { printerid }, 'release job', 'hard resetting the printer')
+            await doHandleApi('hardreset', { printerid }, 'release job', 'hard resetting the printer')
         }
     }
 }
@@ -118,7 +119,7 @@ export function useHardReset() {
 export function useNullifyJobs() {
     return {
         async nullifyJobs(printerid: number | undefined) {
-            doHandleApi('nullifyjobs', { printerid }, 'nullify jobs', 'nullifying jobs')
+            await doHandleApi('nullifyjobs', { printerid }, 'nullify jobs', 'nullifying jobs')
         }
     }
 }
@@ -126,7 +127,7 @@ export function useNullifyJobs() {
 export function useDeletePrinter() {
     return {
         async deletePrinter(printerid: number | undefined) {
-            doHandleApi('deleteprinter', { printerid }, 'delete printer', 'deleting the printer')
+           await doHandleApi('deleteprinter', { printerid }, 'delete printer', 'deleting the printer')
         }
     }
 }
@@ -134,7 +135,7 @@ export function useDeletePrinter() {
 export function useRemoveThread() {
     return {
         async removeThread(printerid: number | undefined) {
-            doHandleApi('removethread', { printerid }, 'remove thread', 'removing the thread')
+            await doHandleApi('removethread', { printerid }, 'remove thread', 'removing the thread')
         }
     }
 }
@@ -142,7 +143,7 @@ export function useRemoveThread() {
 export function useEditName() {
     return {
         async editName(printerid: number | undefined, name: string) {
-            doHandleApi('editname', { printerid, name }, 'edit name', 'editing the name')
+            await doHandleApi('editname', { printerid, name }, 'edit name', 'editing the name')
             
         }
     }
@@ -151,7 +152,7 @@ export function useEditName() {
 export function useEditThread() {
     return {
         async editThread(printerid: number | undefined, newname: string) {
-            return doHandleApi('editthread', { printerid, newname }, undefined, undefined, true);
+            return await doHandleApi('editthread', { printerid, newname }, undefined, undefined, true);
         }
     }
 }
@@ -159,7 +160,7 @@ export function useEditThread() {
 export function useDiagnosePrinter() {
     return {
         async diagnose(device: string) {
-            doHandleApi('diagnose', { device }, 'diagnose printer', 'diagnosing the printer')
+            return await doHandleApi('diagnose', { device }, 'diagnose printer', 'diagnosing the printer', true)
         }
     }
 }
@@ -167,7 +168,7 @@ export function useDiagnosePrinter() {
 export function useRepair() {
     return {
         async repair() {
-            doHandleApi('repairports', undefined, 'repair ports', 'repairing the ports')
+            await doHandleApi('repairports', undefined, 'repair ports', 'repairing the ports')
         }
     }
 }

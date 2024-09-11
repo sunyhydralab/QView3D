@@ -222,10 +222,10 @@ export function useGetJobs() {
             enddate: string = '',
             countOnly?: number
         ) {
-            return doHandleApi(`getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&searchTicketId=${encodeURIComponent(searchTicketId)}&favoriteOnly=${favoriteOnly}&issueIds=${JSON.stringify(issues)}&startdate=${startdate}&enddate=${enddate}&fromError=${fromError}&countOnly=${countOnly}`, undefined, undefined, 'An error occurred while retrieving the jobs', true)
+            return await doHandleApi(`getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&searchTicketId=${encodeURIComponent(searchTicketId)}&favoriteOnly=${favoriteOnly}&issueIds=${JSON.stringify(issues)}&startdate=${startdate}&enddate=${enddate}&fromError=${fromError}&countOnly=${countOnly}`, undefined, undefined, 'An error occurred while retrieving the jobs', true)
         },
         async getFavoriteJobs() {
-            return doHandleApi('getfavoritejobs', undefined, undefined, 'retrieving the jobs', true)
+            return await doHandleApi('getfavoritejobs', undefined, undefined, 'retrieving the jobs', true)
         }
     }
 }
@@ -233,7 +233,7 @@ export function useGetJobs() {
 export function useUpdateJobStatus() {
     return {
         async updateJobStatus(jobid: number, status: string) {
-            return doHandleApi('assigntoerror', { jobid, status }, 'update the job status', 'updating the job status', true)
+            return await doHandleApi('assigntoerror', { jobid, status }, 'update the job status', 'updating the job status', true)
         }
     }
 }
@@ -241,7 +241,7 @@ export function useUpdateJobStatus() {
 export function useAddJobToQueue() {
     return {
         async addJobToQueue(job: FormData) {
-            return doHandleApi('addjobtoqueue', job, 'add job to queue', 'adding the job to the queue', true, true)
+            return await doHandleApi('addjobtoqueue', job, 'add job to queue', 'adding the job to the queue', true, true)
         }
     }
 }
@@ -249,7 +249,7 @@ export function useAddJobToQueue() {
 export function useAutoQueue() {
     return {
         async auto(job: FormData) {
-            return doHandleApi('autoqueue', job, 'queue job', 'adding the job to the queue', true, true)
+            return await doHandleApi('autoqueue', job, 'queue job', 'adding the job to the queue', true, true)
         }
     }
 }
@@ -260,7 +260,7 @@ export function useRerunJob() {
         async rerunJob(job: Job | undefined, printer: Device) {
             const printerpk = printer?.id
             const jobpk = job?.id
-            doHandleApi('rerunjob', { jobpk, printerpk }, 'rerun job', 'rerunning the job')
+            await doHandleApi('rerunjob', { jobpk, printerpk }, 'rerun job', 'rerunning the job')
         }
     }
 }
@@ -288,7 +288,7 @@ export function useRerunJob() {
 export function useRemoveJob() {
     return {
         async removeJob(jobarr: number[]) {
-            doHandleApi('cancelfromqueue', { jobarr }, 'remove job', 'removing the job')
+            await doHandleApi('cancelfromqueue', { jobarr }, 'remove job', 'removing the job')
         }
     }
 }
@@ -298,7 +298,7 @@ export function bumpJobs() {
         async bumpjob(job: Job, printer: Device, choice: number) {
             const printerid = printer?.id
             const jobid = job?.id
-            doHandleApi('bumpjob', { printerid, jobid, choice }, 'bump job', 'bumping the job')
+            await doHandleApi('bumpjob', { printerid, jobid, choice }, 'bump job', 'bumping the job')
         }
     }
 }
@@ -307,7 +307,7 @@ export function useReleaseJob() {
     return {
         async releaseJob(job: Job | undefined, key: number, printerid: number | undefined) {
             const jobpk = job?.id
-            doHandleApi('releasejob', { jobpk, key, printerid }, 'release job', 'releasing the job')
+            await doHandleApi('releasejob', { jobpk, key, printerid }, 'release job', 'releasing the job')
         }
     }
 }
@@ -315,7 +315,7 @@ export function useReleaseJob() {
 export function useGetGcode() {
     return {
         async getgcode(job: Job) {
-            return doHandleApi('getgcode', job, undefined, 'retrieving the gcode',true)
+            return await doHandleApi('getgcode', job, undefined, 'retrieving the gcode',true)
         }
     }
 }
@@ -354,7 +354,7 @@ export function useGetFile() {
 export function useClearSpace() {
     return {
         async clearSpace() {
-            return doHandleApi('clearspace', undefined, 'clear space', undefined, true)
+            return await doHandleApi('clearspace', undefined, 'clear space', undefined, true)
         }
     }
 }
@@ -380,7 +380,7 @@ export function useFavoriteJob() {
 export function useMoveJob() {
     return {
         async moveJob(printerid: number | undefined, arr: number[] | undefined) {
-            return doHandleApi('movejob', { printerid, arr }, 'move job', 'An error occurred while moving the job', true, true)
+            return await doHandleApi('movejob', { printerid, arr }, 'move job', 'An error occurred while moving the job', true, true)
             /*try {
                 const response = await api('movejob', { printerid, arr })
                 if (response) {
@@ -400,7 +400,7 @@ export function useMoveJob() {
 export function useDeleteJob() {
     return {
         async deleteJob(job: Job) {
-            return doHandleApi('deletejob', job?.id, 'delete job', 'An error occurred while deleting the job', true)
+            return await doHandleApi('deletejob', job?.id, 'delete job', 'An error occurred while deleting the job', true)
         }
     }
 }
@@ -408,7 +408,7 @@ export function useDeleteJob() {
 export function useStartJob() {
     return {
         async start(jobid: number, printerid: number) {
-            return doHandleApi('startjob', { jobid, printerid }, 'start job', 'An error occurred while starting the job', true)
+            return await doHandleApi('startjob', { jobid, printerid }, 'start job', 'An error occurred while starting the job', true)
         }
     }
 }
@@ -417,7 +417,7 @@ export function useAssignComment() {
     return {
         async assignComment(job: Job, comments: string) {
             const jobid = job?.id
-            return doHandleApi('savecomment', { jobid, comments }, 'write comment', 'assigning the comment', true)
+            return await doHandleApi('savecomment', { jobid, comments }, 'write comment', 'assigning the comment', true)
         }
     }
 }
@@ -425,7 +425,7 @@ export function useAssignComment() {
 export function useRemoveIssue() {
     return {
         async removeIssue(job: Job) {
-            return doHandleApi('removeissue', job?.id, 'remove issue', 'removing the issue', true)
+            return await doHandleApi('removeissue', job?.id, 'remove issue', 'removing the issue', true)
         }
     }
 }
