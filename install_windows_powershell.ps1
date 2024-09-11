@@ -45,13 +45,13 @@ if(Get-Command python -ErrorAction SilentlyContinue) {
 if(node -v != $null) {
     Write-Host "Node.js is already installed."
 } else {
-    choco install nodejs -y -ia "'/installDirectory:C:\Program Files\nodejs'"
+    choco install nodejs -y
     # Refresh environment variables
     refreshenv
 }
 # create an environment variable that points to the new nodejs exe
-# TODO: change folder to find the nodejs exe regardless of version
-$env:node = ";C:\Program Data\nvm\22.8.0\node.exe"
+# TO DO: change folder to find the nodejs exe regardless of version
+# $env:node = ";C:\Program Data\nvm\22.8.0\node.exe"
 
 
 # Install nvm-windows
@@ -78,19 +78,20 @@ if(Get-Command pip -ErrorAction SilentlyContinue) {
 pip install -r requirements.txt 
 
 # Change directory to the server.
-Set-Location server
+#Set-Location server
 
 # Initialize the database. 
-flask db init 
+#flask db init
 
 # Generate a migration script. 
-flask db migrate 
+#flask db migrate
 
 # Apply the migration. 
-flask db upgrade 
+#flask db upgrade
 
 # Change directory to the client.
-Set-Location ../client
+#Set-Location ../client
+Set-Location /client
 
 # Install Node.js dependencies.
 npm install
@@ -107,12 +108,12 @@ Set-Location ..
 # create the QView3D.ps1 file in the program files directory and use ps2exe to create an executable
 $run = @"
 Set-Location 'C:\Program Files\QView3D\client'
-npm run start
-Start-Process "opera" "http://localhost:5173"
+npm run dev
+Start-Process "http://localhost:5173"
 Read-Host -Prompt 'Press Enter to exit'
 "@
 $run | Out-File ".\QView3D.ps1"
-Invoke-Expression "ps2exe .\QView3D.ps1 .\QView3D.exe -iconFile .\client\public\favicon2.ico -description 'QView3D Executable' -version 0.1.0 -product 'QView3D' -company 'SUNY Hydra Lab' -copyright 'MIT' -requireAdmin -NoNewWindow"
+Invoke-Expression "ps2exe .\QView3D.ps1 .\QView3D.exe -iconFile .\client\public\favicon2.ico -description 'QView3D Executable' -version 0.1.0 -product 'QView3D' -company 'SUNY Hydra Lab' -copyright 'MIT' -requireAdmin -noOutput"
 
 # create shortcut to run script on the desktop
 $WshShell = New-Object -comObject WScript.Shell
