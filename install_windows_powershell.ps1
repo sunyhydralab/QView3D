@@ -108,6 +108,7 @@ Set-Location ..
 $run = @"
 Set-Location 'C:\Program Files\QView3D\client'
 npm run start
+Read-Host -Prompt 'Press Enter to exit'
 "@
 $run | Out-File ".\QView3D.ps1"
 Invoke-Expression "ps2exe .\QView3D.ps1 .\QView3D.exe -iconFile .\client\public\favicon2.ico -description 'QView3D Executable' -version 0.1.0 -product 'QView3D' -company 'SUNY Hydra Lab' -copyright 'MIT' -requireAdmin"
