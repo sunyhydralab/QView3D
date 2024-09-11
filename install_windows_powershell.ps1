@@ -107,7 +107,7 @@ Set-Location ..
 # create the QView3D.ps1 file in the program files directory and use ps2exe to create an executable
 $run = @"
 Set-Location 'C:\Program Files\QView3D\client'
-npm run dev
+npm run start
 Read-Host -Prompt 'Press Enter to exit'
 "@
 $run | Out-File ".\QView3D.ps1"
