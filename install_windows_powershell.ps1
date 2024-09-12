@@ -76,7 +76,7 @@ Set-Location ..
 
 # create the QView3D.ps1 file in the program files directory and use ps2exe to create an executable
 $run = @"
-Set-Location 'C:\Program Files\SUNY HydraLab\QView3D\client'
+Set-Location 'C:\Program Files\SUNY Hydra Lab\QView3D\client'
 npm run dev
 Start-Process "http://localhost:5173"
 Read-Host -Prompt 'Press Enter to exit'
