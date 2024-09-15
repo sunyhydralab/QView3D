@@ -4,7 +4,7 @@
 run_prod() {
     echo "Starting the production server..."
     cd server
-    waitress-serve --call 'app:create_app'
+    waitress-serve --call --port=8000 'app:create_app'
 }
 
 # Run the production server
