@@ -97,3 +97,6 @@ if __name__ == "__main__":
     # since we are using socketio, we need to use socketio.run instead of app.run
     # which passes the app anyways
     socketio.run(app, port=8000, debug=True)  # Replace app.run with socketio.run
+    
+def create_app():
+    return app
