@@ -22,7 +22,15 @@ printer_status_service = PrinterStatusService(app)
 
 # Initialize SocketIO, which will be used to send printer status updates to the frontend
 # and this specific socketit will be used throughout the backend
-socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=True, socketio_logger=True, async_mode='eventlet') # Initialize SocketIO with the Flask app
+
+env = os.getenv('FLASK_ENV', 'development')
+
+if env == 'production':
+    async_mode = 'eventlet'  # Use 'eventlet' for production
+else:
+    async_mode = 'threading'  # Use 'threading' for development
+
+socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=True, socketio_logger=True, async_mode=async_mode) # make it eventlet on production!
 app.socketio = socketio  # Add the SocketIO object to the app object
 
 # IMPORTING BLUEPRINTS 
