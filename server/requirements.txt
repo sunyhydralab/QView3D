@@ -83,4 +83,5 @@ xdg==5
 xkit==0.0.0
 zipp==1.0.0
 
-waitress==3.0.0
+eventlet==0.37.0
+gunicorn==23.0.0
