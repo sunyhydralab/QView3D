@@ -30,7 +30,7 @@ if env == 'production':
 else:
     async_mode = 'threading'  # Use 'threading' for development
 
-socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=True, socketio_logger=True, async_mode=async_mode) # make it eventlet on production!
+socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False, async_mode=async_mode) # make it eventlet on production!
 app.socketio = socketio  # Add the SocketIO object to the app object
 
 # IMPORTING BLUEPRINTS 
@@ -67,7 +67,10 @@ app.register_blueprint(ports_bp)
 app.register_blueprint(jobs_bp)
 app.register_blueprint(status_bp)
 app.register_blueprint(issue_bp)
-
+    
+@app.socketio.on('ping')
+def handle_ping():
+    app.socketio.emit('pong')
 
 # own thread
 with app.app_context():
