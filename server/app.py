@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, Response, url_for
+from flask import Flask, jsonify, request, Response, url_for, send_from_directory
 from threading import Thread
 from flask_cors import CORS 
 import os 
@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import text
 # moved this up here so we can pass the app to the PrinterStatusService
 # Basic app setup 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../client/dist')
 app.config.from_object(__name__) # update application instantly 
 
 # moved this before importing the blueprints so that it can be accessed by the PrinterStatusService
@@ -50,6 +50,15 @@ def handle_preflight():
         res.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
         res.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
         return res
+
+# Serve static files
+@app.route('/')
+def serve_static(path='index.html'):
+    return send_from_directory(app.static_folder, path)
+
+@app.route('/assets/<path:filename>')
+def serve_assets(filename):
+    return send_from_directory(os.path.join(app.static_folder, 'assets'), filename)
 
 # start database connection
 load_dotenv()
