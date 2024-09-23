@@ -7,3 +7,6 @@ __pycache__/
 migrations/
 
 *.db
+
+server/qview3dserver.egg-info/
+server/dist

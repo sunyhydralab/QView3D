@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify
 from app import printer_status_service  # import the instance from app.py
 from flask import Blueprint, jsonify, request
 from models.jobs import Job 
+import os
 
 status_bp = Blueprint("status", __name__)
 
@@ -68,3 +69,8 @@ def editName():
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
+    
+@status_bp.route("/serverVersion", methods=["GET"])
+def getVersion():
+    res = jsonify(os.environ.get('SERVER_VERSION'))
+    return res

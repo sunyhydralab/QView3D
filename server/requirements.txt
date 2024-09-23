@@ -82,3 +82,6 @@ Werkzeug==3.0.2
 xdg==5
 xkit==0.0.0
 zipp==1.0.0
+
+eventlet==0.37.0
+gunicorn==23.0.0
