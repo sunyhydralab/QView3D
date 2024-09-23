@@ -23,8 +23,13 @@ const createWindow = () => {
     win.show()
 
     globalShortcut.register('Ctrl+Shift+C', () => {
-        win.webContents.openDevTools()
+        if (win.webContents.isDevToolsOpened()) {
+            win.webContents.closeDevTools()
+        } else {
+            win.webContents.openDevTools()
+        }
     })
+
 }
 
 app.whenReady().then(() => {
@@ -32,9 +37,4 @@ app.whenReady().then(() => {
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow()
     })
-})
-
-
-app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit()
 })
