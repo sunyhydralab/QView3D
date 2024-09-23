@@ -1,0 +1,2 @@
+# Description: This script runs the installer script in powershell.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& {Start-Process PowerShell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File "".\install_windows_powershell.ps1""' -Verb RunAs}";
