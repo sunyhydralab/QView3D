@@ -25,11 +25,12 @@ onMounted(async () => {
       socket.once('pong', () => {
         const latency = Date.now() - startTime;
         ping.value = latency;
-        console.log(`Current ping: ${ping.value} ms`);
       });
     };
 
-    setInterval(measurePing, 1000);
+    measurePing();
+
+    setInterval(measurePing, 10000);
 
     socket.on('disconnect', () => {
       ping.value = null;
