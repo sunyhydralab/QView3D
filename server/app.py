@@ -22,7 +22,15 @@ printer_status_service = PrinterStatusService(app)
 
 # Initialize SocketIO, which will be used to send printer status updates to the frontend
 # and this specific socketit will be used throughout the backend
-socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False, async_mode='threading') # Initialize SocketIO with the Flask app
+
+env = os.getenv('FLASK_ENV', 'development')
+
+if env == 'production':
+    async_mode = 'eventlet'  # Use 'eventlet' for production
+else:
+    async_mode = 'threading'  # Use 'threading' for development
+
+socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False, async_mode=async_mode) # make it eventlet on production!
 app.socketio = socketio  # Add the SocketIO object to the app object
 
 # IMPORTING BLUEPRINTS 
@@ -38,6 +46,9 @@ def handle_preflight():
     if request.method == "OPTIONS":
         res = Response()
         res.headers['X-Content-Type-Options'] = '*'
+        res.headers['Access-Control-Allow-Origin'] = '*'
+        res.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        res.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
         return res
 
 # start database connection
@@ -56,7 +67,10 @@ app.register_blueprint(ports_bp)
 app.register_blueprint(jobs_bp)
 app.register_blueprint(status_bp)
 app.register_blueprint(issue_bp)
-
+    
+@app.socketio.on('ping')
+def handle_ping():
+    app.socketio.emit('pong')
 
 # own thread
 with app.app_context():
@@ -97,3 +111,6 @@ if __name__ == "__main__":
     # since we are using socketio, we need to use socketio.run instead of app.run
     # which passes the app anyways
     socketio.run(app, port=8000, debug=True)  # Replace app.run with socketio.run
+    
+def create_app():
+    return app

@@ -34,6 +34,8 @@
   --color-text: var(--vt-c-text-light-1);
 
   --section-gap: 160px;
+
+  --main-background-color: #b9b9b9;
 }
 
 @media (prefers-color-scheme: dark) {

@@ -1,18 +1,53 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
+import { api, socket } from '../model/myFetch';
 
 const route = useRoute();
 
 const isSubmitRoute = computed(() => route.path.startsWith('/submit'));
+
+const clientVersion = import.meta.env.VITE_CLIENT_VERSION as string;
+const serverVersion = ref<string | null>(null);
+const ping = ref<number | null>(null);
+
+
+onMounted(async () => {
+  serverVersion.value = await api('serverVersion');
+
+  socket.on('connect', () => {
+    console.log('Connected to socket');
+
+    const measurePing = () => {
+      const startTime = Date.now();
+      socket.emit('ping');
+
+      socket.once('pong', () => {
+        const latency = Date.now() - startTime;
+        ping.value = latency;
+        console.log(`Current ping: ${ping.value} ms`);
+      });
+    };
+
+    setInterval(measurePing, 1000);
+
+    socket.on('disconnect', () => {
+      ping.value = null;
+    });
+  });
+});
 </script>
 
 <template>
   <div style="position: sticky; top: 0;">
     <nav class="navbar navbar-expand-lg thick">
-      <router-link to="/" class="navbar-brand">
-        <img class="logo" src="../assets/QView3D.svg" alt="QView3D Logo">
-      </router-link>
+      <div class="navbar-brand">
+        <router-link to="/" class="navbar-brand">
+          <img class="logo" src="../assets/QView3D.svg" alt="QView3D Logo">
+        </router-link>
+        <div class="client-version">v{{ clientVersion }} (v{{ serverVersion }}-serv)</div>
+        <div class="ping">Ping: {{ ping }} ms</div>
+      </div>
 
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
         aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -100,5 +135,23 @@ const isSubmitRoute = computed(() => route.path.startsWith('/submit'));
 body {
   margin: 0;
   padding: 0;
+}
+
+.client-version {
+  font-size: 0.65em;
+  color: #888888;
+  margin-top: 0.5rem;
+  text-align: center;
+  position: relative;
+  right: 60px;
+}
+
+.ping {
+  font-size: 0.65em;
+  color: #888888;
+  margin-top: 0.5rem;
+  text-align: center;
+  position: relative;
+  right: 60px;
 }
 </style>
