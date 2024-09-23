@@ -19,9 +19,12 @@ const uploadedFontFace = ref<FontFace | null>(null);
 const uploadedFontFaceTemp = ref<FontFace | null>(null);
 const fontFileName = ref(null);
 
+const backgroundColor = ref<string>("rgb(185, 185, 185)"); // 77, 77, 77
+
 const revertColors = () => {
     primaryTemp.value = "rgb(117, 97, 169)";
     successTemp.value = "rgb(96, 174, 174)";
+    backgroundColor.value = "rgb(185, 185, 185)";
     primaryFontTemp.value = fontColor(primaryTemp.value);
     successFontTemp.value = fontColor(successTemp.value);
 
@@ -36,6 +39,8 @@ const saveColors = () => {
 
     document.documentElement.style.setProperty('--bs-primary-font-color', primaryFont.value);
     document.documentElement.style.setProperty('--bs-success-font-color', successFont.value);
+    
+    document.documentElement.style.setProperty('--main-background-color', backgroundColor.value);
 
     document.documentElement.style.setProperty('--bs-primary-color', primary.value);
     document.documentElement.style.setProperty('--bs-pagination-bg', primary.value);
@@ -62,6 +67,8 @@ watchEffect(() => {
 
         document.documentElement.style.setProperty('--bs-primary-font-color-temp', primaryFontTemp.value);
         document.documentElement.style.setProperty('--bs-success-font-color-temp', successFontTemp.value);
+
+        document.documentElement.style.setProperty('--main-background-color', backgroundColor.value);
 
         document.documentElement.style.setProperty('--bs-primary-color-temp', primaryTemp.value);
         let darkenedColor = newShade(primaryTemp.value, -10);
@@ -183,6 +190,11 @@ const revertFont = () => {
                         <label for="secondaryColorPicker">Secondary Color</label>
                         <color-picker id="secondaryColorPicker" v-model:pureColor="successTemp"
                             v-model:gradientColor="gradientColorSuccess" class="color-picker" />
+                    </div>
+                    <div class="color-picker-container">
+                        <label for="backgroundColorPicker">Background Color</label>
+                        <color-picker id="backgroundColorPicker" v-model:pureColor="backgroundColor"
+                            v-model:gradientColor="backgroundColor" class="color-picker" />
                     </div>
                 </div>
                 <div class="card-footer d-flex justify-content-between">
