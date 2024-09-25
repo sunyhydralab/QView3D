@@ -39,7 +39,7 @@ $server = (($response -eq "s") -or ($response -eq "S") -or ($response -eq "b") -
 $client = (($response -eq "c") -or ($response -eq "C") -or ($response -eq "b") -or ($response -eq "B"))
 
 # clone the repository
-git clone https://github.com/L10nhunter/QView3D.git --branch Installer-Creation
+git clone https://github.com/sunyhydralab/QView3D.git --branch development
 
 # Change directory to the QView3D directory.
 Set-Location "QView3D"

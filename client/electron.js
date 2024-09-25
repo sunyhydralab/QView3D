@@ -1,3 +1,4 @@
+//import * as settings from "./settings.js";
 import { app, BrowserWindow, globalShortcut } from 'electron'
 import electronSquirrelStartup from 'electron-squirrel-startup'
 import path from 'path'
@@ -37,4 +38,11 @@ app.whenReady().then(() => {
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow()
     })
+    /*app.on("key:set", async (key, value) => {
+        await settings.set(key, value)
+    })
+    app.on("key:get", async (key) => {
+        return await settings.get(key)
+    })*/
 })
+
