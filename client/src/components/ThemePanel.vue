@@ -289,11 +289,11 @@ const revertFont = () => {
 <style>
 .btn-primary {
     --bs-btn-color: var(--bs-primary-font-color, #fff);
-    --bs-btn-bg: var(--bs-primary-color, #7561a9);
-    --bs-btn-border-color: var(--bs-primary-color, #7561a9);
+    --bs-btn-bg: var(--color-primary, #7561a9);
+    --bs-btn-border-color: var(--color-primary);
     --bs-btn-hover-color: var(--bs-primary-font-color, #fff);
-    --bs-btn-hover-bg: var(--bs-primary-color-hover, #5e548e);
-    --bs-btn-hover-border-color: var(--bs-primary-color-hover, #5e548e);
+    --bs-btn-hover-bg: var(--color-primary-hover);
+    --bs-btn-hover-border-color: var(--color-primary-hover);
     --bs-btn-focus-shadow-rgb: 49, 132, 253;
     --bs-btn-active-color: var(--bs-primary-font-color, #fff);
     --bs-btn-active-bg: var(--bs-primary-color-active, #51457c);
