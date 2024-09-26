@@ -64,7 +64,7 @@ onMounted(async () => {
                 canvas: canvas.value,
                 extrusionColor: getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9',
                 backgroundColor: 'black',
-                buildVolume: { x: 250, y: 210, z: 220, r: 0, i: 0, j: 0 },
+                buildVolume: { x: 250, y: 210, z: 220 },
             });
 
             preview.camera.position.set(0, 475, 0);

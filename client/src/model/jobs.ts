@@ -2,12 +2,12 @@
 import { api } from './ports'
 import { toast } from './toast'
 import { type Device } from '@/model/ports'
-import { socket } from './myFetch'
+import { socket, API_ROOT } from './myFetch'
 import { saveAs } from 'file-saver'
 import { ref } from 'vue'
 
-export let pageSize = ref(10)
-export let isLoading = ref(false)
+export const pageSize = ref(10)
+export const isLoading = ref(false)
 // Submit form data
 export const selectedPrinters = ref<Array<Device>>([])
 export const file = ref<File>()
@@ -18,7 +18,6 @@ export const favorite = ref<boolean>(false)
 export const name = ref<string>('')
 export const tdid = ref<number>(0)
 export const filament = ref<string>('')
-const API_ROOT = import.meta.env.VITE_API_ROOT as string
 
 export interface Job {
   id: number
@@ -50,7 +49,7 @@ export interface Job {
   priority?: string
   favorite?: boolean
   released?: number
-  job_server?: [number, Date | string, Date | string, Date | string] // this saves all of the data from the backend.Only changed if there is a pause involved.
+  job_server?: [number, Date | string, Date | string, Date | string] // this saves all the data from the backend.Only changed if there is a pause involved.
 
   job_client?: {
     // this is frontend data CALCULATED based on the backend data
@@ -85,7 +84,7 @@ export async function jobTime(job: Job, printers: any) {
         // let time_server = Array(4) // this saves all of the data from the backend.Only changed if there is a pause involved.
         // Here 'printer' represents each Device object in the 'printers' array
         if (printer.queue && printer.queue.length != 0 && printer.queue[0].status != 'inqueue') {
-          let timejson = await refetchtime(printer.id!, printer.queue[0].id)
+          const timejson = await refetchtime(printer.id!, printer.queue[0].id)
           if (printer.queue[0].job_server) {
             printer.queue[0].job_server![0] = timejson.total
             if (job.time_started == 1) {
@@ -108,11 +107,10 @@ export async function jobTime(job: Job, printers: any) {
         return
       }
 
-      let totalTime = job.job_server![0]
+      const totalTime = job.job_server![0]
       job.job_client!.total_time = totalTime * 1000
 
-      let eta =
-        job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
+      const eta = job.job_server![1] instanceof Date ? job.job_server![1].getTime() : job.job_server![1]
       // job.job_client!.eta = eta + job.job_client!.extra_time
 
       // @ts-ignore
@@ -157,7 +155,7 @@ export async function jobTime(job: Job, printers: any) {
 
 export function setupTimeSocket(printers: any) {
   // Always set up the socket connection and event listener
-  socket.on('set_time', (data: any) => {
+  socket.value.on('set_time', (data: any) => {
     if (printers) {
       const job = printers.value
         .flatMap((printer: { queue: any }) => printer.queue)
@@ -203,7 +201,7 @@ export function download(
   method: string = 'POST',
   headers: HeadersInit = { 'Content-Type': 'application/json' }
 ) {
-  return fetch(`${API_ROOT}/${action}`, {
+  return fetch(`${API_ROOT.value}/${action}`, {
     method,
     headers,
     body: JSON.stringify(body)
@@ -306,8 +304,8 @@ export function useRerunJob() {
   return {
     async rerunJob(job: Job | undefined, printer: Device) {
       try {
-        let printerpk = printer.id
-        let jobpk = job?.id
+        const printerpk = printer.id
+        const jobpk = job?.id
 
         const response = await api('rerunjob', { jobpk, printerpk }) // pass rerun job the Job object and desired printer
         // const response = {"success": true, "message": "Job rerun successfully"}
@@ -376,8 +374,8 @@ export function bumpJobs() {
   return {
     async bumpjob(job: Job, printer: Device, choice: number) {
       try {
-        let printerid = printer.id
-        let jobid = job.id
+        const printerid = printer.id
+        const jobid = job.id
         const response = await api('bumpjob', { printerid, jobid, choice })
         if (response) {
           if (response.success == false) {
@@ -404,7 +402,7 @@ export function useReleaseJob() {
   return {
     async releaseJob(job: Job | undefined, key: number, printerid: number | undefined) {
       try {
-        let jobpk = job?.id
+        const jobpk = job?.id
         const response = await api('releasejob', { jobpk, key, printerid })
         if (response) {
           if (response.success == false) {
@@ -502,7 +500,7 @@ export function useClearSpace() {
 export function useFavoriteJob() {
   return {
     async favorite(job: Job, favorite: boolean) {
-      let jobid = job?.id
+      const jobid = job?.id
       try {
         const response = await api(`favoritejob`, { jobid, favorite })
         if (response.success) {
@@ -539,7 +537,7 @@ export function useMoveJob() {
 export function useDeleteJob() {
   return {
     async deleteJob(job: Job) {
-      let jobid = job?.id
+      const jobid = job?.id
       try {
         const response = await api(`deletejob`, { jobid })
         return response
@@ -568,7 +566,7 @@ export function useStartJob() {
 export function useAssignComment() {
   return {
     async assignComment(job: Job, comments: string) {
-      let jobid = job?.id
+      const jobid = job?.id
       try {
         const response = await api(`savecomment`, { jobid, comments })
         if (response) {
@@ -596,7 +594,7 @@ export function useAssignComment() {
 export function useRemoveIssue() {
   return {
     async removeIssue(job: Job) {
-      let jobid = job?.id
+      const jobid = job?.id
       try {
         const response = await api(`removeissue`, { jobid })
         if (response) {

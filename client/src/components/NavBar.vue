@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { api, socket } from '../model/myFetch';
+import { api, socket } from '@/model/myFetch';
 
 const route = useRoute();
 
@@ -15,23 +15,24 @@ const ping = ref<number | null>(null);
 onMounted(async () => {
   serverVersion.value = await api('serverVersion');
 
-  socket.on('connect', () => {
+  socket.value.on('connect', () => {
     console.log('Connected to socket');
 
     const measurePing = () => {
       const startTime = Date.now();
-      socket.emit('ping');
+      socket.value.emit('ping');
 
-      socket.once('pong', () => {
+      socket.value.once('pong', () => {
         const latency = Date.now() - startTime;
         ping.value = latency;
-        console.log(`Current ping: ${ping.value} ms`);
       });
     };
 
-    setInterval(measurePing, 1000);
+    measurePing();
 
-    socket.on('disconnect', () => {
+    setInterval(measurePing, 10000);
+
+    socket.value.on('disconnect', () => {
       ping.value = null;
     });
   });
