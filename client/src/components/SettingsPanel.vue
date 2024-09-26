@@ -48,7 +48,7 @@ const saveSettings = () => {
 
 <style scoped>
 .offcanvas{
-    background-color: var(--color-background);
+    background-color: var(--color-form-background);
     color: var(--color-text);
 }
 .form-group {
