@@ -781,7 +781,6 @@ class Printer(db.Model):
                 "status": status,  # Assuming status is accessible here
             }
             
-            base_url = os.getenv('BASE_URL')
             response = requests.post(f"{base_url}/updatejobstatus", json=data)
             if response.status_code == 200:
                 print("Status sent successfully")
@@ -793,7 +792,6 @@ class Printer(db.Model):
     @classmethod 
     def repairPorts(cls):
         try:
-            base_url = os.getenv('BASE_URL')
             response = requests.post(f"{base_url}/repairports")
 
         except requests.exceptions.RequestException as e:
@@ -802,7 +800,6 @@ class Printer(db.Model):
     @classmethod 
     def hardReset(cls, printerid, status):
         try:
-            base_url = os.getenv('BASE_URL')
             response = requests.post(f"{base_url}/queuerestore", json={'printerid': printerid, 'status': status})
 
         except requests.exceptions.RequestException as e:

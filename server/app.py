@@ -6,12 +6,27 @@ from models.db import db
 from models.printers import Printer
 from models.PrinterStatusService import PrinterStatusService
 from flask_migrate import Migrate
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key
 from controllers.ports import getRegisteredPrinters
 import shutil
 from flask_socketio import SocketIO
 from datetime import datetime, timedelta
 from sqlalchemy import text
+import json
+
+# load config file
+def load_config(file_path):
+    with open(file_path, 'r') as config_file:
+        config = json.load(config_file)
+    return config
+
+config = load_config('./config/config.json')
+
+environment = config.get('environment', 'development')
+ip = config.get('ip', '127.0.0.1')
+database_uri = config.get('databaseURI', 'hvamc') + ".db"
+port = os.environ.get('FLASK_RUN_PORT', 8000)
+
 # moved this up here so we can pass the app to the PrinterStatusService
 # Basic app setup 
 app = Flask(__name__, static_folder='../client/dist')
@@ -23,9 +38,7 @@ printer_status_service = PrinterStatusService(app)
 # Initialize SocketIO, which will be used to send printer status updates to the frontend
 # and this specific socketit will be used throughout the backend
 
-env = os.getenv('FLASK_ENV', 'development')
-
-if env == 'production':
+if environment == 'production':
     async_mode = 'eventlet'  # Use 'eventlet' for production
 else:
     async_mode = 'threading'  # Use 'threading' for development
@@ -63,9 +76,9 @@ def serve_assets(filename):
 # start database connection
 load_dotenv()
 basedir = os.path.abspath(os.path.dirname(__file__))
-database_file = os.path.join(basedir, os.environ.get('SQLALCHEMY_DATABASE_URI'))
-database_uri = 'sqlite:///' + database_file
-app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
+database_file = os.path.join(basedir, database_uri)
+databaseuri = 'sqlite:///' + database_file
+app.config['SQLALCHEMY_DATABASE_URI'] = databaseuri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -119,7 +132,10 @@ if __name__ == "__main__":
         # Before sending to printer, query for status. If error, throw error. 
     # since we are using socketio, we need to use socketio.run instead of app.run
     # which passes the app anyways
-    socketio.run(app, port=8000, debug=True)  # Replace app.run with socketio.run
+    socketio.run(app, debug=True)  # Replace app.run with socketio.run
     
 def create_app():
     return app
+
+def base_url():
+    return f"http://{ip}:{port}"
