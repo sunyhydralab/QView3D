@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters } from '../model/ports'
+import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters, useMoveHead } from '../model/ports'
 import { isLoading } from '../model/jobs'
 import { useRouter } from 'vue-router'
 import { ref, onMounted } from 'vue';
@@ -17,18 +17,19 @@ const { removeThread } = useRemoveThread();
 const { editThread } = useEditThread();
 const { diagnose } = useDiagnosePrinter();
 const { repair } = useRepair();
+const { move } = useMoveHead();
 
-let registered = ref<Array<Device>>([]) // Stores array of printers already registered in the system
-let editMode = ref(false)
-let editNum = ref<number | undefined>(0)
-let newName = ref('')
-let message = ref('')
-let showMessage = ref(false)
-let messageId = ref<number | undefined>(0)
+const registered = ref<Array<Device>>([]) // Stores array of printers already registered in the system
+const editMode = ref(false)
+const editNum = ref<number | undefined>(0)
+const newName = ref('')
+const message = ref('')
+const showMessage = ref(false)
+const messageId = ref<number | undefined>(0)
 
-let modalTitle = ref('');
-let modalMessage = ref('');
-let modalAction = ref('');
+const modalTitle = ref('');
+const modalMessage = ref('');
+const modalAction = ref('');
 const selectedPrinter = ref<Device | null>(null);
 
 // fetch list of connected ports from backend and automatically load them into the form dropdown 
@@ -41,8 +42,11 @@ onMounted(async () => {
 
 const doHardReset = async (printer: Device) => {
     isLoading.value = true
-    await hardReset(printer.id)
-    router.go(0)
+    await hardReset(printer.id).then(() => {
+        router.go(0)
+    }).catch(() => {
+        toast.error('Failed to reset printer')
+    })
     isLoading.value = false
 }
 
@@ -101,8 +105,21 @@ const saveName = async (printer: Device) => {
 
 const doRepair = async () => {
     isLoading.value = true
-    await repair()
-    router.go(0)
+    await repair().then(() => {
+        router.go(0)
+    }).catch(() => {
+        toast.error('Failed to repair ports')
+    })
+    isLoading.value = false
+}
+
+const doMove = async (printer: Device) => {
+    isLoading.value = true
+    await move(printer.device).then(() => {
+        toast.success('Printer moved to home position')
+    }).catch(() => {
+        toast.error('Failed to move printer to home position')
+    })
     isLoading.value = false
 }
 
@@ -218,8 +235,13 @@ const doCloseRegisterModal = async () => {
                                             <a class="dropdown-item d-flex align-items-center"
                                                 @click="toggleMessage(printer)">
                                                 <i class="fas fa-stethoscope"></i>
-                                                <span class="ms-2">{{ messageId == printer.id && showMessage ?
-                        'Clear Message' : 'Diagnose Printer' }}</span>
+                                                <span class="ms-2">{{ messageId == printer.id && showMessage ? 'Clear Message' : 'Diagnose Printer' }}</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center" @click="doMove(printer)">
+                                                <i class="fas fa-home"></i>
+                                                <span class="ms-2">Home Printer</span>
                                             </a>
                                         </li>
                                     </ul>
