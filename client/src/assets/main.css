@@ -2,7 +2,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 
 body {
-  background-color: var(--main-background-color, #b9b9b9);
+  background-color: var(--color-background);
 }
 
 input[type='checkbox'],
@@ -11,7 +11,8 @@ input[type='text'],
 input[type='number'],
 input[type='name'],
 .border-top {
-  background-color: #f4f4f4 !important;
+  color: var(--color-text);
+  background-color: var(--color-modal-background);
   border-color: #484848 !important;
 }
 
