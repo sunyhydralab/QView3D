@@ -13,13 +13,13 @@ input[type='name'],
 .border-top {
   color: var(--color-text);
   background-color: var(--color-modal-background);
-  border-color: #484848 !important;
+  border-color: var(--color-border);
 }
 
 table {
-  color: #1b1b1b;
-  background-color: #d8d8d8;
-  border: 1px solid #929292;
+  color: var(--color-text);
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border-invert);
   width: 100%;
   border-collapse: collapse;
 }
@@ -31,15 +31,15 @@ table {
 }
 
 th {
-  background-color: #b9b9b9 !important;
+  background-color: var(--color-background);
   border-left: none !important;
   border-right: none !important;
 }
 
 td,
 th {
-  border-top: 1px solid #929292;
-  border-bottom: 1px solid #929292 !important;
+  border-top: 1px solid var(--color-border-invert);
+  border-bottom: 1px solid var(--color-border-invert) !important;
   border-left: none !important;
   border-right: none !important;
   text-align: center !important;
@@ -60,23 +60,23 @@ th {
 
 .accordion-button,
 .accordion-button:not(.collapsed) {
-  background-color: #d8d8d8;
+  background-color: var(--color-background);
 }
 
 .accordion-item {
-  border: 1px solid #484848;
+  border: 1px solid var(--color-modal-background-inverted);
 }
 
 .dropdown-menu.show,
 .dropdown-menu .dropdown-menu {
-  background-color: #d8d8d8;
-  border: 1px solid #484848;
+  background-color: var(--color-background);
+  border: 1px solid var(--color-modal-background-inverted);
 }
 
 .dropdown-menu li a:hover,
 .dropdown-item:hover,
 .dropdown-submenu .dropdown-item:hover {
-  background-color: #c0c0c0;
+  background-color: var(--color-background);
 }
 
 .dropdown {
@@ -88,28 +88,29 @@ th {
 }
 
 .modal-content {
-  background-color: #b9b9b9;
-  border: 1px solid #484848;
+  color: var(--color-text);
+  background-color: var(--color-background);
+  border: 1px solid var(--color-modal-background-inverted);
 }
 
 .modal-header {
-  background-color: #9f9f9f;
-  border-bottom: 1px solid #484848;
+  background-color: var(--color-modal-background);
+  border-bottom: 1px solid var(--color-modal-background-inverted);
 }
 
 .modal-footer {
-  background-color: #9f9f9f;
-  border-top: 1px solid #484848;
+  background-color: var(--color-modal-background);
+  border-top: 1px solid var(--color-modal-background-inverted);
 }
 
 .modal-body .card-body {
-  background-color: #cdcdcd;
+  background-color: var(--color-background);
   /* border radius */
   border-radius: 5px;
 }
 
 .modal-body .card {
-  border: 1px solid #484848;
+  border: 1px solid var(--color-modal-background-inverted);
 }
 
 .tooltip {
@@ -125,8 +126,8 @@ th {
     opacity 0.2s linear,
     visibility 0.2s linear 0.2s;
   width: 200px;
-  background-color: #484848;
-  color: #dbdbdb;
+  background-color: var(--color-modal-background-inverted);
+  color: var(--color-background);
   text-align: center;
   border-radius: 6px;
   padding: 5px 0;
@@ -145,7 +146,7 @@ th {
   margin-left: -5px;
   border-width: 5px;
   border-style: solid;
-  border-color: #484848 transparent transparent transparent;
+  border-color: var(--color-modal-background-inverted) transparent transparent transparent;
 }
 
 .tooltip:hover .tooltiptext {
@@ -162,31 +163,31 @@ th {
 .dp__input,
 .dp__input:focus,
 .dp__input:hover {
-  background-color: #f4f4f4 !important;
-  border-color: #484848 !important;
+  background-color: var(--color-background) !important;
+  border-color: var(--color-modal-background-inverted) !important;
 }
 
 .dp__theme_light {
-  background-color: none !important;
-  border-color: #484848 !important;
-  --dp-range-between-dates-background-color: #dddddd !important;
-  --dp-range-between-border-color: #dddddd !important;
-  --dp-hover-color: #c0c0c0 !important;
-  --dp-background-color: #f4f4f4 !important;
+  background-color: transparent !important;
+  border-color: var(--color-modal-background-inverted) !important;
+  --dp-range-between-dates-background-color: var(--color-background) !important;
+  --dp-range-between-border-color: var(--color-background) !important;
+  --dp-hover-color: var(--color-form-background) !important;
+  --dp-background-color: var(--color-background-mute) !important;
 }
 
 .dp__arrow_bottom {
-  background-color: #f4f4f4 !important;
-  border-color: #484848 !important;
-  --dp-range-between-dates-background-color: #dddddd !important;
-  --dp-range-between-border-color: #dddddd !important;
-  --dp-hover-color: #c0c0c0 !important;
-  --dp-background-color: #f4f4f4 !important;
+  background-color: var(--color-background-mute) !important;
+  border-color: var(--color-modal-background-inverted) !important;
+  --dp-range-between-dates-background-color: var(--color-background)!important;
+  --dp-range-between-border-color: var(--color-background) !important;
+  --dp-hover-color: var(--color-form-background) !important;
+  --dp-background-color: var(--color-background-mute) !important;
 }
 
 .dp__input_icon,
 .dp__clear_icon {
-  color: #484848 !important;
+  color: var(--color-modal-background-inverted) !important;
 }
 
 .page-item.disabled {

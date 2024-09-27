@@ -20,7 +20,7 @@
   --vt-c-text-dark-1: var(--vt-c-white);
   --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
 
-  --main-background-color-light: #b9b9b9ff;
+  --main-background-color-light: #ccccccff;
   --main-background-color-dark: #333333ff;
   --primary-light: #7561A9ff;
   --primary-dark: #7561A9ff;
@@ -44,10 +44,17 @@
 
   --color-modal-background-light: #b9b9b9ff;
   --color-modal-background-dark: #464646ff;
+  --color-modal-background-light-inverted: #484848ff;
+  --color-modal-background-dark-inverted: #B7B7B7ff;
 
   --color-form-background-light: #cdcdcdff;
   --color-form-background-dark: #323232ff;
 
+  --color-border-light-1: #333333ff;
+  --color-border-dark-1: #ccccccff;
+
+  --color-border-light-2: #929292ff;
+  --color-border-dark-2: #6D6D6Dff;
 }
 
 /* semantic color variables for this project */
@@ -58,7 +65,8 @@
     --color-background-soft: var(--vt-c-white-soft);
     --color-background-mute: var(--vt-c-white-mute);
 
-    --color-border: var(--vt-c-divider-light-2);
+    --color-border: var(--color-border-light-1);
+    --color-border-invert: var(--color-border-light-2);
     --color-border-hover: var(--vt-c-divider-light-1);
 
     --color-heading: var(--vt-c-text-light-1);
@@ -79,6 +87,7 @@
     --color-secondary-disabled: var(--color-secondary-disabled-light);
 
     --color-modal-background: var(--color-modal-background-light);
+    --color-modal-background-inverted: var(--color-modal-background-light-inverted);
     --color-form-background: var(--color-form-background-light);
   }
 }
@@ -90,7 +99,8 @@
     --color-background-soft: var(--vt-c-black-soft);
     --color-background-mute: var(--vt-c-black-mute);
 
-    --color-border: var(--vt-c-divider-dark-2);
+    --color-border: var(--color-border-dark-1);
+    --color-border-invert: var(--color-border-dark-2);
     --color-border-hover: var(--vt-c-divider-dark-1);
 
     --color-heading: var(--vt-c-text-dark-1);
@@ -110,6 +120,7 @@
     --color-primary-disabled: var(--color-primary-disabled-dark);
     --color-secondary-disabled: var(--color-secondary-disabled-dark);
     --color-modal-background: var(--color-modal-background-dark);
+    --color-modal-background-inverted: var(--color-modal-background-dark-inverted);
     --color-form-background: var(--color-form-background-dark);
   }
 }

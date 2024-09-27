@@ -255,6 +255,9 @@ const revertFont = () => {
 </template>
 
 <style scoped>
+.offcanvas-body {
+    background-color: var(--color-modal-background);
+}
 .ellipsis {
     white-space: nowrap;
     overflow: hidden;
@@ -279,18 +282,25 @@ const revertFont = () => {
 }
 
 .card-body {
-    background-color: #cdcdcd;
+    color: var(--color-text);
+    background-color: var(--color-border-invert);
     margin-bottom: 0;
 }
 
 .card {
-    border: 1px solid #484848;
+    border: 1px solid var(--color-modal-background-inverted);
     overflow: hidden;
 }
 
 .card-header,
 .card-footer {
-    background-color: #9f9f9f;
+    color: var(--color-text);
+    background-color: var(--color-border-invert);
+}
+label.form-control{
+    background-color: var(--color-modal-background);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
 }
 </style>
 
