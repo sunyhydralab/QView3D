@@ -134,16 +134,17 @@ const doMove = async (printer: Device) => {
 
 <style scoped>
 .modal-body {
-    background: #b9b9b9;
+    background: var(--color-modal-background);
 }
 
 .form-text {
-    background: #cdcdcd;
-    border: 1px solid #484848;
+    background: var(--color-modal-background);
+    border: 1px solid var(--color-modal-background-inverted);
 }
 
 .form-select {
-    background-color: #f4f4f4 !important;
-    border-color: #484848 !important;
+    color: var(--color-text);
+    background-color: var(--color-background-soft) !important;
+    border-color: var(--color-modal-background-inverted) !important;
 }
 </style>
