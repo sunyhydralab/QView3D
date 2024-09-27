@@ -41,11 +41,8 @@ async function measurePing() {
 }
 
 onMounted(async () => {
-
     await refreshServerConnection();
-
     setInterval(measurePing, 10000);
-
 });
 
 watch([API_IP_ADDRESS, API_PORT], async () => {
