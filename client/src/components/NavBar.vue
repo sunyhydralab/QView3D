@@ -61,13 +61,12 @@ watch([API_IP_ADDRESS, API_PORT], async () => {
                 <div class="ping">Ping: {{ ping }} ms</div>
             </div>
 
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
                     aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav" style="padding-right: 1rem;">
-                <!-- Add justify-content-end class here -->
                 <ul class="navbar-nav">
                     <li class="nav-item">
                         <router-link to="/" class="nav-link" active-class="active-tab">HOME</router-link>
@@ -92,9 +91,6 @@ watch([API_IP_ADDRESS, API_PORT], async () => {
                 </ul>
             </div>
         </nav>
-        <!-- <div class="current-page">
-          {{ currentPage }}
-        </div> -->
     </div>
 </template>
 
@@ -108,16 +104,13 @@ watch([API_IP_ADDRESS, API_PORT], async () => {
 }
 
 .navbar {
-    /* background: #525060 !important; */
     background: #484848 !important;
 }
 
 .nav-link {
     font-size: 1.2em;
-    /* Adjust the value as needed */
     font-weight: bold;
     padding-right: 1.5rem !important;
-    /* Adjust the value as needed */
     color: #a8a8a8;
 }
 
