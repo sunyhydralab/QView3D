@@ -1,18 +1,19 @@
 <script setup lang="ts">
-import { ref, watch, watchEffect } from 'vue';
+import { on } from 'events';
+import { ref, watch, watchEffect, onMounted } from 'vue';
 import { ColorPicker } from "vue3-colorpicker";
 import "vue3-colorpicker/style.css";
 
 const primary = ref<string>("rgb(117, 97, 169)");
 const primaryFont = ref<string>("white");
-const success = ref<string>("rgb(96, 174, 174)");
-const successFont = ref<string>("white");
+const secondary = ref<string>("rgb(96, 174, 174)");
+const secondaryFont = ref<string>("white");
 
 const primaryTemp = ref<string>("rgb(117, 97, 169)");
 const primaryFontTemp = ref<string>("white");
 const gradientColorPrimary = ref("linear-gradient(0deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 100%)");
-const successTemp = ref<string>("rgb(96, 174, 174)");
-const successFontTemp = ref<string>("white");
+const secondaryTemp = ref<string>("rgb(96, 174, 174)");
+const secondaryFontTemp = ref<string>("white");
 const gradientColorSuccess = ref("linear-gradient(0deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 100%)");
 
 const uploadedFontFace = ref<FontFace | null>(null);
@@ -21,24 +22,70 @@ const fontFileName = ref(null);
 
 const backgroundColor = ref<string>("rgb(185, 185, 185)"); // 77, 77, 77
 
+interface ThemeSettings {
+  primary: string;
+  secondary: string;
+  backgroundColor: string;
+  primaryFont: string;
+  secondaryFont: string;
+}
+
+const themeSettings = ref<ThemeSettings | null>();
+
+const saveThemeSettings = () => {
+  themeSettings.value = {
+    primary: primary.value,
+    secondary: secondary.value,
+    backgroundColor: backgroundColor.value,
+    primaryFont: primaryFont.value,
+    secondaryFont: secondaryFont.value
+  }
+
+  localStorage.setItem('themeSettings', JSON.stringify(themeSettings.value));
+};
+
+const loadThemeSettings = () => {
+  const savedThemeSettings = localStorage.getItem('themeSettings');
+  if (savedThemeSettings) {
+    themeSettings.value = JSON.parse(savedThemeSettings);
+
+    if (themeSettings.value) {
+        primary.value = themeSettings.value.primary;
+        primaryFont.value = themeSettings.value.primaryFont;
+        secondary.value = themeSettings.value.secondary;
+        secondaryFont.value = themeSettings.value.secondaryFont;
+        backgroundColor.value = themeSettings.value.backgroundColor;
+    }
+  } else {
+    themeSettings.value = {
+        primary: primary.value,
+        secondary: secondary.value,
+        backgroundColor: backgroundColor.value,
+        primaryFont: primaryFont.value,
+        secondaryFont: secondaryFont.value
+    }
+  }
+  saveColors();
+};
+
 const revertColors = () => {
-    primaryTemp.value = "rgb(117, 97, 169)";
-    successTemp.value = "rgb(96, 174, 174)";
+    primary.value = "rgb(117, 97, 169)";
+    secondary.value = "rgb(96, 174, 174)";
     backgroundColor.value = "rgb(185, 185, 185)";
-    primaryFontTemp.value = fontColor(primaryTemp.value);
-    successFontTemp.value = fontColor(successTemp.value);
+    primaryFont.value = fontColor(primaryTemp.value);
+    secondaryFont.value = fontColor(secondaryTemp.value);
 
     saveColors();
 };
 
 const saveColors = () => {
-    primary.value = primaryTemp.value;
+    //primary.value = primaryTemp.value;
     primaryFont.value = fontColor(primary.value);
-    success.value = successTemp.value;
-    successFont.value = fontColor(success.value);
+    //secondary.value = secondaryTemp.value;
+    secondaryFont.value = fontColor(secondary.value);
 
     document.documentElement.style.setProperty('--bs-primary-font-color', primaryFont.value);
-    document.documentElement.style.setProperty('--bs-success-font-color', successFont.value);
+    document.documentElement.style.setProperty('--bs-success-font-color', secondaryFont.value);
     
     document.documentElement.style.setProperty('--main-background-color', backgroundColor.value);
 
@@ -51,22 +98,25 @@ const saveColors = () => {
     let lightenedColor = newShade(primary.value, 25);
     document.documentElement.style.setProperty('--bs-primary-color-disabled', lightenedColor);
 
-    document.documentElement.style.setProperty('--bs-success-color', success.value);
-    let darkenedColorSuccess = newShade(success.value, -10);
+    document.documentElement.style.setProperty('--bs-success-color', secondary.value);
+    let darkenedColorSuccess = newShade(secondary.value, -10);
     document.documentElement.style.setProperty('--bs-success-color-hover', darkenedColorSuccess);
-    let darkenedColor2Success = newShade(success.value, -20);
+    let darkenedColor2Success = newShade(secondary.value, -20);
     document.documentElement.style.setProperty('--bs-success-color-active', darkenedColor2Success);
-    let lightenedColorSuccess = newShade(success.value, 25);
+    let lightenedColorSuccess = newShade(secondary.value, 25);
     document.documentElement.style.setProperty('--bs-success-color-disabled', lightenedColorSuccess);
+    
+    // save in localstorage
+    saveThemeSettings();
 };
 
 watchEffect(() => {
-    if (primaryTemp.value !== primary.value || successTemp.value !== success.value) {
+    if (primaryTemp.value !== primary.value || secondaryTemp.value !== secondary.value) {
         primaryFontTemp.value = fontColor(primaryTemp.value);
-        successFontTemp.value = fontColor(successTemp.value);
+        secondaryFontTemp.value = fontColor(secondaryTemp.value);
 
         document.documentElement.style.setProperty('--bs-primary-font-color-temp', primaryFontTemp.value);
-        document.documentElement.style.setProperty('--bs-success-font-color-temp', successFontTemp.value);
+        document.documentElement.style.setProperty('--bs-success-font-color-temp', secondaryFontTemp.value);
 
         document.documentElement.style.setProperty('--main-background-color', backgroundColor.value);
 
@@ -78,12 +128,12 @@ watchEffect(() => {
         let lightenedColor = newShade(primaryTemp.value, 25);
         document.documentElement.style.setProperty('--bs-primary-color-disabled-temp', lightenedColor);
 
-        document.documentElement.style.setProperty('--bs-success-color-temp', successTemp.value);
-        let darkenedColorSuccess = newShade(successTemp.value, -10);
+        document.documentElement.style.setProperty('--bs-success-color-temp', secondaryTemp.value);
+        let darkenedColorSuccess = newShade(secondaryTemp.value, -10);
         document.documentElement.style.setProperty('--bs-success-color-hover-temp', darkenedColorSuccess);
-        let darkenedColor2Success = newShade(successTemp.value, -20);
+        let darkenedColor2Success = newShade(secondaryTemp.value, -20);
         document.documentElement.style.setProperty('--bs-success-color-active-temp', darkenedColor2Success);
-        let lightenedColorSuccess = newShade(successTemp.value, 25);
+        let lightenedColorSuccess = newShade(secondaryTemp.value, 25);
         document.documentElement.style.setProperty('--bs-success-color-disabled-temp', lightenedColorSuccess);
     }
 });
@@ -166,6 +216,10 @@ const revertFont = () => {
     fontFileName.value = null;
 };
 
+onMounted(() => {
+    loadThemeSettings();
+});
+
 </script>
 
 <template>
@@ -183,13 +237,13 @@ const revertFont = () => {
                 <div class="card-body">
                     <div class="color-picker-container mb-3">
                         <label for="primaryColorPicker">Primary Color</label>
-                        <color-picker id="primaryColorPicker" v-model:pureColor="primaryTemp"
-                            v-model:gradientColor="gradientColorPrimary" class="color-picker" />
+                        <color-picker id="primaryPicker" v-model:pureColor="primary"
+                            v-model:gradientColor="primary" class="color-picker" />
                     </div>
                     <div class="color-picker-container">
                         <label for="secondaryColorPicker">Secondary Color</label>
-                        <color-picker id="secondaryColorPicker" v-model:pureColor="successTemp"
-                            v-model:gradientColor="gradientColorSuccess" class="color-picker" />
+                        <color-picker id="secondaryPicker" v-model:pureColor="secondary"
+                            v-model:gradientColor="secondary" class="color-picker" />
                     </div>
                     <div class="color-picker-container">
                         <label for="backgroundColorPicker">Background Color</label>
@@ -202,7 +256,7 @@ const revertFont = () => {
                         :class="{ 'btn-primary-temp': primaryTemp !== primary, 'btn-primary': primaryTemp === primary }"
                         @click="revertColors">Revert</button>
                     <button class="btn"
-                        :class="{ 'btn-success-temp': successTemp !== success, 'btn-success': successTemp === success }"
+                        :class="{ 'btn-success-temp': secondaryTemp !== secondary, 'btn-success': secondaryTemp === secondary }"
                         @click="saveColors">Save</button>
                 </div>
             </div>
