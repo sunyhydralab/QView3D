@@ -1,5 +1,5 @@
-import configFile from '../config/config.json';
-import { type Config } from '../model/config';
+import configFile from '@/config/config.json';
+import { type Config } from '@/model/config';
 import io from 'socket.io-client';
 import { ref, computed } from 'vue';
 
