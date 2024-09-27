@@ -1,8 +1,14 @@
+import configFile from '../config/config.json';
+import { type Config } from '../model/config';
 import io from 'socket.io-client';
 import { ref, computed } from 'vue';
-export const API_IP_ADDRESS = ref<string>("192.168.1.106");
-export const API_PORT = ref<number>(8000);
+
+const config = configFile as Config;
+
+export const API_IP_ADDRESS = ref<string>(config.apiIPAddress);
+export const API_PORT = ref<number>(config.apiPort);
 export const API_ROOT = computed(() => `http://${API_IP_ADDRESS.value}:${API_PORT.value}`);
+
 // socket.io setup for status updates, using the VITE_API_ROOT environment variable
 // moved this to myFetch.ts to make it easier to use in other files
 export const socket = computed(() => io(API_ROOT.value, {
@@ -47,6 +53,7 @@ export function setServerIP(ip: string){
         }
     }
     API_IP_ADDRESS.value = ip;
+    config.apiIPAddress = ip;
 }
 export function setServerPort(port: number){
     // test if the port is valid
@@ -54,4 +61,5 @@ export function setServerPort(port: number){
         throw new Error('Invalid port number');
     }
     API_PORT.value = port;
+    config.apiPort = port;
 }
