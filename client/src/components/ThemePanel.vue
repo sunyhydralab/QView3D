@@ -1,19 +1,20 @@
 <script setup lang="ts">
-import {ref, watchEffect} from 'vue';
-import {ColorPicker} from "vue3-colorpicker";
+import { ref, watch, watchEffect, onMounted } from 'vue';
+import { ColorPicker } from "vue3-colorpicker";
 import "vue3-colorpicker/style.css";
 import "@/assets/base.css";
 
 const primary = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-primary'));
 const primaryFont = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-text'));
-const success = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary'));
-const successFont = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary-font'));
+const secondary = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary'));
+const secondaryFont = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary-font'));
+
 
 const primaryTemp = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-primary'));
 const primaryFontTemp = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-text'));
 const gradientColorPrimary = ref("linear-gradient(0deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 100%)");
-const successTemp = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary'));
-const successFontTemp = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary-font'));
+const secondaryTemp = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary'));
+const secondaryFontTemp = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary-font'));
 const gradientColorSuccess = ref("linear-gradient(0deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 100%)");
 
 const uploadedFontFace = ref<FontFace | null>(null);
@@ -22,24 +23,70 @@ const fontFileName = ref(null);
 
 const backgroundColor = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-background'));
 
-const revertColors = () => {
-    primaryTemp.value = getComputedStyle(document.documentElement, null).getPropertyValue('--color-primary-reversion');
-    successTemp.value = getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary-reversion');
-    backgroundColor.value = getComputedStyle(document.documentElement, null).getPropertyValue('--color-background-reversion');
-    primaryFontTemp.value = fontColor(primaryTemp.value);
-    successFontTemp.value = fontColor(successTemp.value);
+interface ThemeSettings {
+  primary: string;
+  secondary: string;
+  backgroundColor: string;
+  primaryFont: string;
+  secondaryFont: string;
+}
 
+const themeSettings = ref<ThemeSettings | null>();
+
+const saveThemeSettings = () => {
+  themeSettings.value = {
+    primary: primary.value,
+    secondary: secondary.value,
+    backgroundColor: backgroundColor.value,
+    primaryFont: primaryFont.value,
+    secondaryFont: secondaryFont.value
+  }
+
+  localStorage.setItem('themeSettings', JSON.stringify(themeSettings.value));
+};
+
+const loadThemeSettings = () => {
+  const savedThemeSettings = localStorage.getItem('themeSettings');
+  if (savedThemeSettings) {
+    themeSettings.value = JSON.parse(savedThemeSettings);
+
+    if (themeSettings.value) {
+        primary.value = themeSettings.value.primary;
+        primaryFont.value = themeSettings.value.primaryFont;
+        secondary.value = themeSettings.value.secondary;
+        secondaryFont.value = themeSettings.value.secondaryFont;
+        backgroundColor.value = themeSettings.value.backgroundColor;
+    }
+  } else {
+    themeSettings.value = {
+        primary: primary.value,
+        secondary: secondary.value,
+        backgroundColor: backgroundColor.value,
+        primaryFont: primaryFont.value,
+        secondaryFont: secondaryFont.value
+    }
+  }
+  saveColors();
+};
+
+const revertColors = () => {
+    primary.value = getComputedStyle(document.documentElement, null).getPropertyValue('--color-primary-reversion');
+    secondary.value = getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary-reversion');
+    backgroundColor.value = getComputedStyle(document.documentElement, null).getPropertyValue('--color-background-reversion');
+    primaryFont.value = fontColor(primaryTemp.value);
+    successFont.value = fontColor(successTemp.value);
     saveColors();
 };
 
 const saveColors = () => {
-    primary.value = primaryTemp.value;
+    //primary.value = primaryTemp.value;
     primaryFont.value = fontColor(primary.value);
-    success.value = successTemp.value;
-    successFont.value = fontColor(success.value);
+    //secondary.value = secondaryTemp.value;
+    secondaryFont.value = fontColor(secondary.value);
 
     document.documentElement.style.setProperty('--color-text', primaryFont.value);
-    document.documentElement.style.setProperty('--color-secondary-font', successFont.value);
+    document.documentElement.style.setProperty('--color-secondary-font', secondaryFont.value);
+    document.documentElement.style.setProperty('--main-background-color', backgroundColor.value);
 
     document.documentElement.style.setProperty('--color-background', backgroundColor.value);
 
@@ -52,22 +99,25 @@ const saveColors = () => {
     let lightenedColor = newShade(primary.value, 25);
     document.documentElement.style.setProperty('--color-primary-disabled', lightenedColor);
 
-    document.documentElement.style.setProperty('--color-secondary', success.value);
+    document.documentElement.style.setProperty('--color-secondary', secondary.value);
     let darkenedColorSuccess = newShade(success.value, -10);
     document.documentElement.style.setProperty('--color-success-hover', darkenedColorSuccess);
     let darkenedColor2Success = newShade(success.value, -20);
     document.documentElement.style.setProperty('--color-success-active', darkenedColor2Success);
     let lightenedColorSuccess = newShade(success.value, 25);
     document.documentElement.style.setProperty('--color-success-disabled', lightenedColorSuccess);
+    
+    // save in localstorage
+    saveThemeSettings();
 };
 
 watchEffect(() => {
-    if (primaryTemp.value !== primary.value || successTemp.value !== success.value) {
+    if (primaryTemp.value !== primary.value || secondaryTemp.value !== secondary.value) {
         primaryFontTemp.value = fontColor(primaryTemp.value);
-        successFontTemp.value = fontColor(successTemp.value);
+        secondaryFontTemp.value = fontColor(secondaryTemp.value);
 
         document.documentElement.style.setProperty('--bs-primary-font-color-temp', primaryFontTemp.value);
-        document.documentElement.style.setProperty('--bs-success-font-color-temp', successFontTemp.value);
+        document.documentElement.style.setProperty('--bs-success-font-color-temp', secondaryFontTemp.value);
 
         document.documentElement.style.setProperty('--color-background', backgroundColor.value);
 
@@ -79,12 +129,12 @@ watchEffect(() => {
         let lightenedColor = newShade(primaryTemp.value, 25);
         document.documentElement.style.setProperty('--bs-primary-color-disabled-temp', lightenedColor);
 
-        document.documentElement.style.setProperty('--bs-success-color-temp', successTemp.value);
-        let darkenedColorSuccess = newShade(successTemp.value, -10);
+        document.documentElement.style.setProperty('--bs-success-color-temp', secondaryTemp.value);
+        let darkenedColorSuccess = newShade(secondaryTemp.value, -10);
         document.documentElement.style.setProperty('--bs-success-color-hover-temp', darkenedColorSuccess);
-        let darkenedColor2Success = newShade(successTemp.value, -20);
+        let darkenedColor2Success = newShade(secondaryTemp.value, -20);
         document.documentElement.style.setProperty('--bs-success-color-active-temp', darkenedColor2Success);
-        let lightenedColorSuccess = newShade(successTemp.value, 25);
+        let lightenedColorSuccess = newShade(secondaryTemp.value, 25);
         document.documentElement.style.setProperty('--bs-success-color-disabled-temp', lightenedColorSuccess);
     }
 });
@@ -178,6 +228,10 @@ const revertFont = () => {
     uploadedFontFace.value = null;
     fontFileName.value = null;
 };
+
+onMounted(() => {
+    loadThemeSettings();
+});
 </script>
 
 <template>
@@ -195,13 +249,13 @@ const revertFont = () => {
                 <div class="card-body">
                     <div class="color-picker-container mb-3">
                         <label for="primaryColorPicker">Primary Color</label>
-                        <color-picker id="primaryColorPicker" v-model:pureColor="primaryTemp"
-                                      v-model:gradientColor="gradientColorPrimary" class="color-picker"/>
+                        <color-picker id="primaryPicker" v-model:pureColor="primary"
+                            v-model:gradientColor="primary" class="color-picker" />
                     </div>
                     <div class="color-picker-container">
                         <label for="secondaryColorPicker">Secondary Color</label>
-                        <color-picker id="secondaryColorPicker" v-model:pureColor="successTemp"
-                                      v-model:gradientColor="gradientColorSuccess" class="color-picker"/>
+                        <color-picker id="secondaryPicker" v-model:pureColor="secondary"
+                            v-model:gradientColor="secondary" class="color-picker" />
                     </div>
                     <div class="color-picker-container">
                         <label for="backgroundColorPicker">Background Color</label>
@@ -215,9 +269,8 @@ const revertFont = () => {
                             @click="revertColors">Revert
                     </button>
                     <button class="btn"
-                            :class="{ 'btn-success-temp': successTemp !== success, 'btn-success': successTemp === success }"
-                            @click="saveColors">Save
-                    </button>
+                        :class="{ 'btn-success-temp': secondaryTemp !== secondary, 'btn-success': secondaryTemp === secondary }"
+                        @click="saveColors">Save</button>
                 </div>
             </div>
             <div class="card">
