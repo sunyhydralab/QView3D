@@ -778,8 +778,9 @@ const onlyNumber = ($event: KeyboardEvent) => {
 </template>
 <style scoped>
 .list-group-item {
-    background-color: #d8d8d8 !important;
-    border-color: #484848 !important;
+    color: var(--color-text) !important;
+    background-color: var(--color-modal-background) !important;
+    border-color: var(--color-border-invert) !important;
 }
 
 .sticky {
@@ -910,12 +911,18 @@ label.form-check-label {
 }
 
 .form-control {
-    background: #f4f4f4;
-    border: 1px solid #484848;
+    color: var(--color-text);
+    background: var(--color-modal-background);
+    border: 1px solid var(--color-modal-background-light-inverted);
 }
 
 .form-select {
-    background-color: #f4f4f4 !important;
-    border-color: #484848 !important;
+    color: var(--color-text);
+    background-color: var(--color-modal-background) !important;
+    border-color: var(--color-modal-background-light-inverted) !important;
+}
+
+::placeholder {
+    color: var(--color-text); /* Change this to your desired color */
 }
 </style>
