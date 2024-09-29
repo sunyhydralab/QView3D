@@ -13,19 +13,9 @@ from flask_socketio import SocketIO
 from datetime import datetime, timedelta
 from sqlalchemy import text
 import json
+from models.config import Config
 
-# load config file
-def load_config(file_path):
-    with open(file_path, 'r') as config_file:
-        config = json.load(config_file)
-    return config
 
-config = load_config('./config/config.json')
-
-environment = config.get('environment', 'development')
-ip = config.get('ip', '127.0.0.1')
-database_uri = config.get('databaseURI', 'hvamc') + ".db"
-port = os.environ.get('FLASK_RUN_PORT', 8000)
 
 # moved this up here so we can pass the app to the PrinterStatusService
 # Basic app setup 
@@ -38,7 +28,7 @@ printer_status_service = PrinterStatusService(app)
 # Initialize SocketIO, which will be used to send printer status updates to the frontend
 # and this specific socketit will be used throughout the backend
 
-if environment == 'production':
+if Config.get('environment') == 'production':
     async_mode = 'eventlet'  # Use 'eventlet' for production
 else:
     async_mode = 'threading'  # Use 'threading' for development
@@ -76,7 +66,7 @@ def serve_assets(filename):
 # start database connection
 load_dotenv()
 basedir = os.path.abspath(os.path.dirname(__file__))
-database_file = os.path.join(basedir, database_uri)
+database_file = os.path.join(basedir, Config.get('database_uri'))
 databaseuri = 'sqlite:///' + database_file
 app.config['SQLALCHEMY_DATABASE_URI'] = databaseuri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -136,6 +126,3 @@ if __name__ == "__main__":
     
 def create_app():
     return app
-
-def base_url():
-    return f"http://{ip}:{port}"

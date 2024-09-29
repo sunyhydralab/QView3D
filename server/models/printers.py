@@ -16,6 +16,8 @@ import json
 import requests
 from dotenv import load_dotenv
 
+from models.config import Config
+
 load_dotenv()
 # model for Printer table
 class Printer(db.Model):
@@ -781,7 +783,7 @@ class Printer(db.Model):
                 "status": status,  # Assuming status is accessible here
             }
             
-            response = requests.post(f"{base_url}/updatejobstatus", json=data)
+            response = requests.post(f"{Config.get('base_url')}/updatejobstatus", json=data)
             if response.status_code == 200:
                 print("Status sent successfully")
             else:
@@ -792,7 +794,7 @@ class Printer(db.Model):
     @classmethod 
     def repairPorts(cls):
         try:
-            response = requests.post(f"{base_url}/repairports")
+            response = requests.post(f"{Config.get('base_url')}/repairports")
 
         except requests.exceptions.RequestException as e:
             print(f"Failed to repair ports: {e}")
@@ -800,7 +802,7 @@ class Printer(db.Model):
     @classmethod 
     def hardReset(cls, printerid, status):
         try:
-            response = requests.post(f"{base_url}/queuerestore", json={'printerid': printerid, 'status': status})
+            response = requests.post(f"{Config.get('base_url')}/queuerestore", json={'printerid': printerid, 'status': status})
 
         except requests.exceptions.RequestException as e:
             print(f"Failed to repair ports: {e}")   
