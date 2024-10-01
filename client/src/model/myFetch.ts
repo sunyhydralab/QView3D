@@ -1,12 +1,21 @@
-import configFile from '@/config/config.json';
 import { type Config } from '@/model/config';
 import io from 'socket.io-client';
 import {ref, computed} from 'vue';
 
-const config = ref<Config>(configFile as Config);
+const config = ref<Config>({
+    apiIPAddress: '0.0.0.0',
+    apiPort: 0
+});
 
-export const API_IP_ADDRESS = computed(() => config.value.apiIPAddress);
-export const API_PORT = computed(() => config.value.apiPort);
+const storedIP = localStorage.getItem('apiIPAddress') || '127.0.0.1';
+const storedPort = localStorage.getItem('apiPort') || '8000';
+localStorage.setItem('apiIPAddress', storedIP);
+localStorage.setItem('apiPort', storedPort);
+config.value.apiIPAddress = storedIP;
+config.value.apiPort = parseInt(storedPort, 10);
+
+export const API_IP_ADDRESS = computed(() => localStorage.getItem('apiIPAddress'));
+export const API_PORT = computed(() => localStorage.getItem('apiPort'));
 export const API_ROOT = computed(() => `http://${API_IP_ADDRESS.value}:${API_PORT.value}`);
 
 // socket.io setup for status updates, using the config.json variable
@@ -72,4 +81,5 @@ function socketUpdate(ip: string, port: number) {
     socket.value = io(`http://${ip}:${port}`, {
         transports: ['websocket']
     });
+    window.location.reload();
 }
