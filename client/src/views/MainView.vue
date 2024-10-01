@@ -216,7 +216,7 @@ const handleDragEnd = async () => {
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
             @click="selectedIssue = undefined; selectedJob = undefined">Close</button>
-          <button type="button" class="btn btn-success" data-bs-dismiss="modal" @click="doAssignIssue">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @click="doAssignIssue">
             Save Changes
           </button>
         </div>
@@ -347,19 +347,19 @@ const handleDragEnd = async () => {
                     Turn Offline
                   </button>
 
-                  <button class="btn btn-success"
+                  <button class="btn btn-secondary"
                     v-if="printer.status == 'printing' && printer.queue?.[0].released == 0"
                     @click="startPrint(printer.id, printer.queue[0].id)">
                     Start Print
                   </button>
 
-                  <button class="btn btn-success" :disabled="printer.queue?.[0]?.extruded == 0"
+                  <button class="btn btn-secondary" :disabled="printer.queue?.[0]?.extruded == 0"
                     @click="setPrinterStatus(printer, 'paused')"
                     v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
                     Pause
                   </button>
 
-                  <button class="btn btn-success" :disabled="printer.queue?.[0]?.extruded == 0"
+                  <button class="btn btn-secondary" :disabled="printer.queue?.[0]?.extruded == 0"
                     @click="setPrinterStatus(printer, 'colorchange')"
                     v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
                     Color&nbsp;Change
@@ -398,7 +398,7 @@ const handleDragEnd = async () => {
                       :aria-valuenow="printer.queue?.[0].progress" aria-valuemin="0" aria-valuemax="100">
                     </div>
                     <!-- job progress set to 2 decimal places -->
-                    <p style="position: absolute; width: 100%; text-align: center; color: black;">{{
+                    <p style="position: absolute; width: 100%; text-align: center; color: var(--color-background-font);">{{
               printer.queue?.[0].progress
                 ?
                 `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
@@ -502,7 +502,7 @@ const handleDragEnd = async () => {
                   :class="{ 'icon-disabled': printers.length <= 1 || printer.isInfoExpanded }"></i>
               </td>
             </tr>
-            <tr style="background-color: #cdcdcd;">
+            <tr>
               <td class="borderless-bottom">
                 <b>Layer:</b>
               </td>
@@ -528,7 +528,7 @@ const handleDragEnd = async () => {
                 <b>ETA:</b>
               </td>
             </tr>
-            <tr style="background-color: #cdcdcd;">
+            <tr>
               <td class="borderless-top">
                 <span
                   v-if="printer.queue[0] && printer.queue[0]?.current_layer_height != null && printer.queue[0]?.max_layer_height != null && printer.queue[0]?.max_layer_height !== 0">
@@ -624,18 +624,18 @@ const handleDragEnd = async () => {
                   Turn Offline
                 </button>
 
-                <button class="btn btn-success" v-if="printer.status == 'printing' && printer.queue?.[0].released == 0"
+                <button class="btn btn-secondary" v-if="printer.status == 'printing' && printer.queue?.[0].released == 0"
                   @click="startPrint(printer.id, printer.queue[0].id)">
                   Start Print
                 </button>
 
-                <button class="btn btn-success" :disabled="printer.queue?.[0]?.extruded == 0"
+                <button class="btn btn-secondary" :disabled="printer.queue?.[0]?.extruded == 0"
                   @click="setPrinterStatus(printer, 'paused')"
                   v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
                   Pause
                 </button>
 
-                <button class="btn btn-success" :disabled="printer.queue?.[0]?.extruded == 0"
+                <button class="btn btn-secondary" :disabled="printer.queue?.[0]?.extruded == 0"
                   @click="setPrinterStatus(printer, 'colorchange')"
                   v-if="(printer.status === 'printing' && printer.queue?.[0]?.released !== 0)">
                   Color&nbsp;Change
@@ -674,7 +674,7 @@ const handleDragEnd = async () => {
                     :aria-valuenow="printer.queue?.[0].progress" aria-valuemin="0" aria-valuemax="100">
                   </div>
                   <!-- job progress set to 2 decimal places -->
-                  <p style="position: absolute; width: 100%; text-align: center; color: black;">{{
+                  <p style="position: absolute; width: 100%; text-align: center; color: var(--color-background-font);">{{
               printer.queue?.[0].progress
                 ?
                 `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
@@ -736,7 +736,7 @@ const handleDragEnd = async () => {
                   <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                     <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
                       style="background: none; border: none;">
-                      <i class="fa-solid fa-bars"
+                      <i class="fa-solid fa-bars" 
                         :class="{ 'icon-disabled': printer.queue && printer.queue.length == 0 }"></i>
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="settingsDropdown">

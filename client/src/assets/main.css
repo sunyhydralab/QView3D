@@ -47,6 +47,10 @@ th {
   text-align: center !important;
   padding: 8px;
 }
+tr {
+  background-color: var(--color-background-mute);
+  color: var(--color-background-font);
+}
 
 .table-striped tbody tr:nth-of-type(odd) {
   background-color: rgba(0, 0, 0, 0.05);
@@ -74,6 +78,10 @@ th {
 .dropdown-menu .dropdown-menu {
   background-color: var(--color-background);
   border: 1px solid var(--color-modal-background-inverted);
+}
+
+.dropdown-item {
+    color: var(--color-nav-text);
 }
 
 .dropdown-menu li a:hover,
@@ -109,13 +117,13 @@ th {
   border-top: 1px solid var(--color-modal-background-inverted);
 }
 
-.modal-body .card-body {
+.modal-body .card-body, .card-body {
   color: var(--color-background-font);
   background-color: var(--color-background);
   border-radius: 5px;
 }
 
-.modal-body .card {
+.modal-body .card, .card {
   background-color: var(--color-background);
   color: var(--color-background-font);
   border: 1px solid var(--color-modal-background-inverted);
@@ -386,5 +394,17 @@ th {
     background-color: var(--color-background-soft);
     color: var(--color-background-font);
     position: relative;
+}
+
+button i {
+    color: var(--color-nav-text-hover);
+}
+button:hover i {
+    color: var(--color-background-font);
+}
+.form-check-input:checked {
+    color: var(--color-primary-font);
+    background-color: var(--color-primary);
+    border-color: var(--color-border);
 }
 

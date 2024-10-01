@@ -506,8 +506,8 @@ const onlyNumber = ($event: KeyboardEvent) => {
 
     <!-- bootstrap off canvas to the right -->
     <div class="offcanvas offcanvas-end" data-bs-backdrop="static" tabindex="-1" id="offcanvasRight"
-        aria-labelledby="offcanvasRightLabel" style="background-color: #b9b9b9;">
-        <div class="offcanvas-header" style="background-color: #484848; color: #dbdbdb;">
+        aria-labelledby="offcanvasRightLabel">
+        <div class="offcanvas-header">
             <div class="container-fluid">
                 <div class="row align-items-center">
                     <div class="col">
@@ -551,7 +551,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
                     </div>
                 </div>
             </div>
-            <p v-else class="text-center text-muted">No favorite jobs found. Favorite your first job!</p>
+            <p v-else class="text-center" style="color: var(--color-nav-text)">No favorite jobs found. Favorite your first job!</p>
         </div>
     </div>
     <div class="offcanvas-btn-box" :style="{ transform: `translateX(${buttonTransform}px)` }">
@@ -651,7 +651,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
                         <div class="mb-3">
                             <label class="form-label">Device:</label>
                             <div class="card"
-                                style="max-height: 120px; overflow-y: auto; background-color: #f4f4f4 !important; border-color: #484848 !important;">
+                                style="max-height: 120px; overflow-y: auto;">
                                 <ul class="list-unstyled card-body m-0"
                                     style="padding-top: .5rem; padding-bottom: .5rem;">
                                     <li v-for="printer in printers" :key="printer.id">
@@ -682,7 +682,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
                         <div class="mb-3">
                             <label class="form-label">Issue:</label>
                             <div class="card"
-                                style="max-height: 120px; overflow-y: auto; background-color: #f4f4f4 !important; border-color: #484848 !important;">
+                                style="max-height: 120px; overflow-y: auto;">
                                 <ul class="list-unstyled card-body m-0"
                                     style="padding-top: .5rem; padding-bottom: .5rem;">
                                     <li v-for="issue in issuelist" :key="issue.id">
@@ -816,7 +816,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
                     <td>
                         <div style="display: flex; justify-content: start; align-items: center;">
                             <div class="d-flex align-items-center" @click="favoriteJob(job, !job.favorite)">
-                                <i style="color: #1b1b1b;" :class="job.favorite ? 'fas fa-star' : 'far fa-star'"></i>
+                                <i :class="job.favorite ? 'fas fa-star' : 'far fa-star'"></i>
                             </div>
                             <div class="truncate" style="margin-left: 10px;" :title="job.name">
                                 {{ job.name }}
@@ -1035,11 +1035,13 @@ label.form-check-label {
 
 .form-control {
     background: var(--color-background);
+    color: var(--color-background-font);
     border: 1px solid var(--color-border);
 }
 
 .form-select {
     background-color: var(--color-background);
+    color: var(--color-background-font);
     border-color: var(--color-border);
 }
 </style>
