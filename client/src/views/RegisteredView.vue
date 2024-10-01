@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters } from '../model/ports'
+import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters, useMoveHead } from '../model/ports'
 import { isLoading } from '../model/jobs'
 import { useRouter } from 'vue-router'
 import { ref, onMounted } from 'vue';
@@ -17,18 +17,19 @@ const { removeThread } = useRemoveThread();
 const { editThread } = useEditThread();
 const { diagnose } = useDiagnosePrinter();
 const { repair } = useRepair();
+const { move } = useMoveHead();
 
-let registered = ref<Array<Device>>([]) // Stores array of printers already registered in the system
-let editMode = ref(false)
-let editNum = ref<number | undefined>(0)
-let newName = ref('')
-let message = ref('')
-let showMessage = ref(false)
-let messageId = ref<number | undefined>(0)
+const registered = ref<Array<Device>>([]) // Stores array of printers already registered in the system
+const editMode = ref(false)
+const editNum = ref<number | undefined>(0)
+const newName = ref('')
+const message = ref('')
+const showMessage = ref(false)
+const messageId = ref<number | undefined>(0)
 
-let modalTitle = ref('');
-let modalMessage = ref('');
-let modalAction = ref('');
+const modalTitle = ref('');
+const modalMessage = ref('');
+const modalAction = ref('');
 const selectedPrinter = ref<Device | null>(null);
 
 // fetch list of connected ports from backend and automatically load them into the form dropdown 
@@ -41,8 +42,11 @@ onMounted(async () => {
 
 const doHardReset = async (printer: Device) => {
     isLoading.value = true
-    await hardReset(printer.id)
-    router.go(0)
+    await hardReset(printer.id).then(() => {
+        router.go(0)
+    }).catch(() => {
+        toast.error('Failed to reset printer')
+    })
     isLoading.value = false
 }
 
@@ -101,8 +105,21 @@ const saveName = async (printer: Device) => {
 
 const doRepair = async () => {
     isLoading.value = true
-    await repair()
-    router.go(0)
+    await repair().then(() => {
+        router.go(0)
+    }).catch(() => {
+        toast.error('Failed to repair ports')
+    })
+    isLoading.value = false
+}
+
+const doMove = async (printer: Device) => {
+    isLoading.value = true
+    await move(printer.device).then(() => {
+        toast.success('Printer moved to home position')
+    }).catch(() => {
+        toast.error('Failed to move printer to home position')
+    })
     isLoading.value = false
 }
 
@@ -182,7 +199,7 @@ const doCloseRegisterModal = async () => {
                             <div class="dropdown" v-if="!editMode || !(editNum == printer.id)">
                                 <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                                     <button type="button" id="settingsDropdown" data-bs-toggle="dropdown"
-                                        aria-expanded="false" style="background: none; border: none;">
+                                        aria-expanded="false" style="color: var(--color-background-font); background: transparent; border: none;">
                                         <i class="fa-solid fa-bars"></i>
                                     </button>
                                     <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
@@ -218,8 +235,13 @@ const doCloseRegisterModal = async () => {
                                             <a class="dropdown-item d-flex align-items-center"
                                                 @click="toggleMessage(printer)">
                                                 <i class="fas fa-stethoscope"></i>
-                                                <span class="ms-2">{{ messageId == printer.id && showMessage ?
-                        'Clear Message' : 'Diagnose Printer' }}</span>
+                                                <span class="ms-2">{{ messageId == printer.id && showMessage ? 'Clear Message' : 'Diagnose Printer' }}</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item d-flex align-items-center" @click="doMove(printer)">
+                                                <i class="fas fa-home"></i>
+                                                <span class="ms-2">Home Printer</span>
                                             </a>
                                         </li>
                                     </ul>
@@ -233,7 +255,7 @@ const doCloseRegisterModal = async () => {
                                     @click="editMode = false; editNum = undefined; newName = ''">Cancel</button>
                             </div>
                         </div>
-                        <h6 class="card-text mb-0 text-muted"> <b>Printer device:</b> {{ printer.device }}</h6>
+                        <h6 class="card-text mb-0"> <b>Printer device:</b> {{ printer.device }}</h6>
                         <h6 class="card-text mb-0"> <b>Printer description:</b> {{ printer.description }}</h6>
                         <h6 class="card-text mb-0"> <b>Date registered:</b> {{ printer.date }}</h6>
                         <h6 class="card-text mt-0"> <b>HWID:</b> {{ printer.hwid }}</h6>
@@ -254,10 +276,19 @@ const doCloseRegisterModal = async () => {
 </template>
 
 <style scoped>
+.dropdown {
+    background-color: var(--color-background-mute);
+    color: var(--color-background-font)
+}
 .dropdown-item {
+    background-color: var(--color-background);
+    color: var(--color-background-font);
     display: flex;
     align-items: center;
     padding-left: .5rem;
+}
+.dropdown-item:hover {
+    background-color: var(--color-background-mute);
 }
 
 .dropdown-item i {
@@ -268,36 +299,9 @@ const doCloseRegisterModal = async () => {
     margin-left: 10px;
 }
 
-.form-container,
 .card {
-    border: 1px solid #484848;
-}
-
-.register {
-    color: red;
-}
-
-.form-container {
-    border: 2px solid #333;
-    padding: 20px;
-    width: 300px;
-}
-
-.register {
-    color: red;
-}
-
-.form-container {
-    border: 2px solid #333;
-    padding: 20px;
-    width: 300px;
-    margin-top: 20px;
-}
-
-.register {
-    color: red;
-    margin-bottom: 10px;
-    /* Add margin to the bottom */
+    background-color: var(--color-background);
+    border: 1px solid var(--color-border);
 }
 
 .modal-dialog {
@@ -305,12 +309,10 @@ const doCloseRegisterModal = async () => {
     /* Adjust modal width */
 }
 
-.modal-content {
-    background-color: #fff;
-    /* Change modal background color */
-}
-
 .card-body {
+    color: var(--color-background-font);
+    background-color: var(--color-background-mute);
+    border: 0 solid var(--color-border-hover);
     display: flex;
     flex-direction: column;
 }
@@ -330,28 +332,10 @@ const doCloseRegisterModal = async () => {
     /* Add margin below each line */
 }
 
-.message {
-    color: red;
-    margin-top: 10px;
-    /* Add margin to the top */
-}
-
-
-.register {
-    color: red;
-    margin-bottom: 10px;
-    font-size: 1.2em;
-}
-
-.register-form {
-    margin-top: 10px;
-    /* Add margin to the top of the register form */
-}
-
 .register-form select {
     margin-bottom: 10px;
     padding: 8px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-background);
     border-radius: 5px;
     width: 100%;
 }
@@ -359,7 +343,7 @@ const doCloseRegisterModal = async () => {
 .register-form input[type="text"] {
     margin-bottom: 10px;
     padding: 8px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-background);
     border-radius: 5px;
     width: 100%;
     box-sizing: border-box;
@@ -370,22 +354,12 @@ const doCloseRegisterModal = async () => {
     padding: 10px 16px;
     border: none;
     border-radius: 5px;
-    background-color: #007bff;
-    color: #fff;
     cursor: pointer;
     width: 100%;
     transition: background-color 0.3s ease;
 }
 
-.register-form input[type="submit"]:hover {
-    background-color: #0056b3;
-}
-
 .alert {
     margin-bottom: 0;
-}
-
-.modal-body {
-    background: #cdcdcd
 }
 </style>

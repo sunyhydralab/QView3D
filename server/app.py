@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, Response, url_for
+from flask import Flask, jsonify, request, Response, url_for, send_from_directory
 from threading import Thread
 from flask_cors import CORS 
 import os 
@@ -6,15 +6,20 @@ from models.db import db
 from models.printers import Printer
 from models.PrinterStatusService import PrinterStatusService
 from flask_migrate import Migrate
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key
 from controllers.ports import getRegisteredPrinters
 import shutil
 from flask_socketio import SocketIO
 from datetime import datetime, timedelta
 from sqlalchemy import text
+import json
+from models.config import Config
+
+
+
 # moved this up here so we can pass the app to the PrinterStatusService
 # Basic app setup 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../client/dist')
 app.config.from_object(__name__) # update application instantly 
 
 # moved this before importing the blueprints so that it can be accessed by the PrinterStatusService
@@ -22,7 +27,13 @@ printer_status_service = PrinterStatusService(app)
 
 # Initialize SocketIO, which will be used to send printer status updates to the frontend
 # and this specific socketit will be used throughout the backend
-socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False, async_mode='threading') # Initialize SocketIO with the Flask app
+
+if Config.get('environment') == 'production':
+    async_mode = 'eventlet'  # Use 'eventlet' for production
+else:
+    async_mode = 'threading'  # Use 'threading' for development
+
+socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False, async_mode=async_mode) # make it eventlet on production!
 app.socketio = socketio  # Add the SocketIO object to the app object
 
 # IMPORTING BLUEPRINTS 
@@ -38,14 +49,26 @@ def handle_preflight():
     if request.method == "OPTIONS":
         res = Response()
         res.headers['X-Content-Type-Options'] = '*'
+        res.headers['Access-Control-Allow-Origin'] = '*'
+        res.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        res.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
         return res
+
+# Serve static files
+@app.route('/')
+def serve_static(path='index.html'):
+    return send_from_directory(app.static_folder, path)
+
+@app.route('/assets/<path:filename>')
+def serve_assets(filename):
+    return send_from_directory(os.path.join(app.static_folder, 'assets'), filename)
 
 # start database connection
 load_dotenv()
 basedir = os.path.abspath(os.path.dirname(__file__))
-database_file = os.path.join(basedir, os.environ.get('SQLALCHEMY_DATABASE_URI'))
-database_uri = 'sqlite:///' + database_file
-app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
+database_file = os.path.join(basedir, Config.get('database_uri'))
+databaseuri = 'sqlite:///' + database_file
+app.config['SQLALCHEMY_DATABASE_URI'] = databaseuri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -56,7 +79,10 @@ app.register_blueprint(ports_bp)
 app.register_blueprint(jobs_bp)
 app.register_blueprint(status_bp)
 app.register_blueprint(issue_bp)
-
+    
+@app.socketio.on('ping')
+def handle_ping():
+    app.socketio.emit('pong')
 
 # own thread
 with app.app_context():
@@ -96,4 +122,7 @@ if __name__ == "__main__":
         # Before sending to printer, query for status. If error, throw error. 
     # since we are using socketio, we need to use socketio.run instead of app.run
     # which passes the app anyways
-    socketio.run(app, port=8000, debug=True)  # Replace app.run with socketio.run
+    socketio.run(app, debug=True)  # Replace app.run with socketio.run
+    
+def create_app():
+    return app

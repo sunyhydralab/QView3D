@@ -77,7 +77,7 @@ export function useAssignIssue() {
 export function useDeleteIssue() {
     return {
         async deleteIssue(issue: Issue) {
-            let issueid = issue.id
+            const issueid = issue.id
             try {
                 const response = await api(`deleteissue`, { issueid })
                 if (response) {

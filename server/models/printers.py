@@ -9,12 +9,14 @@ from Classes.Queue import Queue
 import serial
 import serial.tools.list_ports
 import time
-from datetime import datetime, timezone, timedelta 
+from datetime import datetime, timezone, timedelta
 from tzlocal import get_localzone
 import os
 import json
 import requests
 from dotenv import load_dotenv
+
+from models.config import Config
 
 load_dotenv()
 # model for Printer table
@@ -40,8 +42,8 @@ class Printer(db.Model):
     bed_temp = 0
     canPause = 0
     prevMes = ""
-    colorbuff = 0 
-    terminated = 0 
+    colorbuff = 0
+    terminated = 0
 
     def __init__(self, device, description, hwid, name, status=status, id=None):
         self.device = device
@@ -58,7 +60,7 @@ class Printer(db.Model):
         self.canPause = 0
         self.prevMes=""
         self.colorbuff=0
-        self.terminated = 0 
+        self.terminated = 0
         # self.colorChangeBuffer=0
 
         if id is not None:
@@ -91,10 +93,10 @@ class Printer(db.Model):
 
     @classmethod
     def create_printer(cls, device, description, hwid, name, status):
-        try:                
+        try:
             # hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
             # hwid_without_location = '-'.join(hwid_parts[:-1])
-            
+
             printerExists = cls.searchByDevice(hwid)
             if printerExists:
                 printer = cls.query.filter_by(hwid=hwid).first()
@@ -159,25 +161,39 @@ class Printer(db.Model):
             )
 
     @classmethod
-    def getConnectedPorts(cls):
-        ports = serial.tools.list_ports.comports()
+    def getConnectedPorts(cls, retries=3, delay=2):
+        """Detects all available printer ports with retries."""
+        for _ in range(retries):
+            ports = serial.tools.list_ports.comports()
+            if ports:
+                break
+            time.sleep(delay)  # Wait for ports to initialize
+
         printerList = []
         for port in ports:
-            hwid = port.hwid # get hwid 
+            hwid = port.hwid  # Get HWID
             hwid_without_location = hwid.split(' LOCATION=')[0]  # Split at ' LOCATION=' and take the first part
+
             port_info = {
                 "device": port.device,
                 "description": port.description,
                 "hwid": hwid_without_location,
             }
-            # supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"]
+            print(f"Port Info: {port_info}")  # Print port info for debugging
 
-            if (("original" in port.description.lower()) or ("prusa" in port.description.lower())) and (Printer.getPrinterByHwid(hwid_without_location) is None) :
+            # Check VID:PID combinations for known printers
+            if (
+                    "2C99:0002" in hwid  # Prusa MK3
+                    or "2C99:000D" in hwid  # Prusa MK4
+                    or "1A86:7523" in hwid  # Ender 3 and Ender 3 Pro
+                    or "prusa" in port.description.lower()  # Fallback for Prusa in description
+                    or "ender" in port.description.lower()  # Fallback for Ender in description
+            ) and (cls.getPrinterByHwid(hwid_without_location) is None):
                 printerList.append(port_info)
+                print(f"Added to printerList: {port_info}")  # Print added port info
 
-                # print(port_info)
+        print(f"Final printerList: {printerList}")  # Print final printer list
         return printerList
-
     @classmethod
     def diagnosePrinter(cls, deviceToDiagnose):  # deviceToDiagnose = port
         try:
@@ -767,8 +783,7 @@ class Printer(db.Model):
                 "status": status,  # Assuming status is accessible here
             }
             
-            base_url = os.getenv('BASE_URL')
-            response = requests.post(f"{base_url}/updatejobstatus", json=data)
+            response = requests.post(f"{Config.get('base_url')}/updatejobstatus", json=data)
             if response.status_code == 200:
                 print("Status sent successfully")
             else:
@@ -779,8 +794,7 @@ class Printer(db.Model):
     @classmethod 
     def repairPorts(cls):
         try:
-            base_url = os.getenv('BASE_URL')
-            response = requests.post(f"{base_url}/repairports")
+            response = requests.post(f"{Config.get('base_url')}/repairports")
 
         except requests.exceptions.RequestException as e:
             print(f"Failed to repair ports: {e}")
@@ -788,8 +802,7 @@ class Printer(db.Model):
     @classmethod 
     def hardReset(cls, printerid, status):
         try:
-            base_url = os.getenv('BASE_URL')
-            response = requests.post(f"{base_url}/queuerestore", json={'printerid': printerid, 'status': status})
+            response = requests.post(f"{Config.get('base_url')}/queuerestore", json={'printerid': printerid, 'status': status})
 
         except requests.exceptions.RequestException as e:
             print(f"Failed to repair ports: {e}")   

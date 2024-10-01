@@ -1,119 +1,243 @@
 <script setup lang="ts">
-import { ref, watch, watchEffect } from 'vue';
-import { ColorPicker } from "vue3-colorpicker";
-import "vue3-colorpicker/style.css";
+import {ref, watch, watchEffect, onMounted, onBeforeUnmount} from 'vue';
+import {Vue3ColorPicker} from '@cyhnkckali/vue3-color-picker';
+import {vOnClickOutside} from '@vueuse/components'
+import "@/assets/base.css";
 
-const primary = ref<string>("rgb(117, 97, 169)");
-const primaryFont = ref<string>("white");
-const success = ref<string>("rgb(96, 174, 174)");
-const successFont = ref<string>("white");
+const prefersDarkScheme = ref(window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-const primaryTemp = ref<string>("rgb(117, 97, 169)");
-const primaryFontTemp = ref<string>("white");
-const gradientColorPrimary = ref("linear-gradient(0deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 100%)");
-const successTemp = ref<string>("rgb(96, 174, 174)");
-const successFontTemp = ref<string>("white");
-const gradientColorSuccess = ref("linear-gradient(0deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 100%)");
+// Create a function to update the theme based on the preference
+const updateTheme = () => {
+    prefersDarkScheme.value = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    revertColors(); // Call your function to revert colors based on the new preference
+};
+
+// Set up the media query listener
+const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+const primary = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-primary'));
+const primaryFont = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-text'));
+const secondary = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary'));
+const secondaryFont = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary-font'));
+const background = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-background'));
+const backgroundFont = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-background-font'));
+
+const primaryTemp = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-primary'));
+const primaryFontTemp = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-text'));
+const secondaryTemp = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary'));
+const secondaryFontTemp = ref<string>(getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary-font'));
 
 const uploadedFontFace = ref<FontFace | null>(null);
 const uploadedFontFaceTemp = ref<FontFace | null>(null);
 const fontFileName = ref(null);
 
-const revertColors = () => {
-    primaryTemp.value = "rgb(117, 97, 169)";
-    successTemp.value = "rgb(96, 174, 174)";
-    primaryFontTemp.value = fontColor(primaryTemp.value);
-    successFontTemp.value = fontColor(successTemp.value);
 
+const showPrimaryColorPicker = ref(false);
+const showSecondaryColorPicker = ref(false);
+const showBackgroundColorPicker = ref(false);
+
+function hidePrimaryColorPicker() {
+    showPrimaryColorPicker.value = false;
+}
+
+function hideSecondaryColorPicker() {
+    showSecondaryColorPicker.value = false;
+}
+
+function hideBackgroundColorPicker() {
+    showBackgroundColorPicker.value = false;
+}
+
+interface ThemeSettings {
+    primary: string;
+    secondary: string;
+    backgroundColor: string;
+    primaryFont: string;
+    secondaryFont: string;
+    backgroundFont: string;
+}
+
+const themeSettings = ref<ThemeSettings | null>();
+
+function saveThemeSettings() {
+    themeSettings.value = {
+        primary: primary.value,
+        secondary: secondary.value,
+        backgroundColor: background.value,
+        primaryFont: primaryFont.value,
+        secondaryFont: secondaryFont.value,
+        backgroundFont: backgroundFont.value
+    }
+
+    localStorage.setItem('themeSettings', JSON.stringify(themeSettings.value));
+}
+
+function loadThemeSettings() {
+    const savedThemeSettings = localStorage.getItem('themeSettings');
+    if (savedThemeSettings) {
+        themeSettings.value = JSON.parse(savedThemeSettings);
+
+        if (themeSettings.value) {
+            primary.value = themeSettings.value.primary;
+            primaryFont.value = themeSettings.value.primaryFont;
+            secondary.value = themeSettings.value.secondary;
+            secondaryFont.value = themeSettings.value.secondaryFont;
+            background.value = themeSettings.value.backgroundColor;
+            backgroundFont.value = themeSettings.value.backgroundColor;
+        }
+    } else {
+        themeSettings.value = {
+            primary: primary.value,
+            secondary: secondary.value,
+            backgroundColor: background.value,
+            primaryFont: primaryFont.value,
+            secondaryFont: secondaryFont.value,
+            backgroundFont: backgroundFont.value
+        }
+    }
     saveColors();
-};
+}
 
-const saveColors = () => {
-    primary.value = primaryTemp.value;
+function revertColors() {
+    primary.value = getComputedStyle(document.documentElement, null).getPropertyValue('--color-primary-reversion');
+    secondary.value = getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary-reversion');
+    background.value = getComputedStyle(document.documentElement, null).getPropertyValue('--color-background-reversion');
+    saveColors();
+}
+
+function saveColors() {
     primaryFont.value = fontColor(primary.value);
-    success.value = successTemp.value;
-    successFont.value = fontColor(success.value);
+    secondaryFont.value = fontColor(secondary.value);
+    backgroundFont.value = fontColor(background.value);
+    document.documentElement.style.setProperty('--color-primary-font', primaryFont.value);
+    document.documentElement.style.setProperty('--color-secondary-font', secondaryFont.value);
+    document.documentElement.style.setProperty('--color-background-font', backgroundFont.value);
+    document.documentElement.style.setProperty('--color-background', background.value);
+    document.documentElement.style.setProperty('--color-background-soft-dark', newShade(background.value, 10));
+    document.documentElement.style.setProperty('--color-background-mute-dark', newShade(background.value, 20));
+    document.documentElement.style.setProperty('--color-background-soft-light', newShade(background.value, -10));
+    document.documentElement.style.setProperty('--color-background-mute-light', newShade(background.value, -20));
+    document.documentElement.style.setProperty('--color-primary', primary.value);
+    document.documentElement.style.setProperty('--color-primary-hover-light', newShade(primary.value, 10));
+    document.documentElement.style.setProperty('--color-primary-hover-dark', newShade(primary.value, -10));
+    document.documentElement.style.setProperty('--color-primary-active-light', newShade(primary.value, 20));
+    document.documentElement.style.setProperty('--color-primary-active-dark', newShade(primary.value, -20));
+    document.documentElement.style.setProperty('--color-primary-disabled-light', newShade(primary.value, -25));
+    document.documentElement.style.setProperty('--color-primary-disabled-dark', newShade(primary.value, 25));
+    document.documentElement.style.setProperty('--color-secondary', secondary.value);
+    document.documentElement.style.setProperty('--color-secondary-hover-light', newShade(secondary.value, 10));
+    document.documentElement.style.setProperty('--color-secondary-active-light', newShade(secondary.value, 20));
+    document.documentElement.style.setProperty('--color-secondary-disabled-light', newShade(secondary.value, -25));
+    document.documentElement.style.setProperty('--color-secondary-hover-dark', newShade(secondary.value, -10));
+    document.documentElement.style.setProperty('--color-secondary-active-dark', newShade(secondary.value, -20));
+    document.documentElement.style.setProperty('--color-secondary-disabled-dark', newShade(secondary.value, 25));
 
-    document.documentElement.style.setProperty('--bs-primary-font-color', primaryFont.value);
-    document.documentElement.style.setProperty('--bs-success-font-color', successFont.value);
-
-    document.documentElement.style.setProperty('--bs-primary-color', primary.value);
     document.documentElement.style.setProperty('--bs-pagination-bg', primary.value);
-    let darkenedColor = newShade(primary.value, -10);
-    document.documentElement.style.setProperty('--bs-primary-color-hover', darkenedColor);
-    let darkenedColor2 = newShade(primary.value, -20);
-    document.documentElement.style.setProperty('--bs-primary-color-active', darkenedColor2);
-    let lightenedColor = newShade(primary.value, 25);
-    document.documentElement.style.setProperty('--bs-primary-color-disabled', lightenedColor);
-
-    document.documentElement.style.setProperty('--bs-success-color', success.value);
-    let darkenedColorSuccess = newShade(success.value, -10);
-    document.documentElement.style.setProperty('--bs-success-color-hover', darkenedColorSuccess);
-    let darkenedColor2Success = newShade(success.value, -20);
-    document.documentElement.style.setProperty('--bs-success-color-active', darkenedColor2Success);
-    let lightenedColorSuccess = newShade(success.value, 25);
-    document.documentElement.style.setProperty('--bs-success-color-disabled', lightenedColorSuccess);
-};
+    // save in localstorage
+    saveThemeSettings();
+}
 
 watchEffect(() => {
-    if (primaryTemp.value !== primary.value || successTemp.value !== success.value) {
+    if (primaryTemp.value !== primary.value || secondaryTemp.value !== secondary.value) {
         primaryFontTemp.value = fontColor(primaryTemp.value);
-        successFontTemp.value = fontColor(successTemp.value);
+        secondaryFontTemp.value = fontColor(secondaryTemp.value);
 
-        document.documentElement.style.setProperty('--bs-primary-font-color-temp', primaryFontTemp.value);
-        document.documentElement.style.setProperty('--bs-success-font-color-temp', successFontTemp.value);
+        document.documentElement.style.setProperty('--color-primary-font-temp', primaryFontTemp.value);
+        document.documentElement.style.setProperty('--color-secondary-font-temp', secondaryFontTemp.value);
 
-        document.documentElement.style.setProperty('--bs-primary-color-temp', primaryTemp.value);
-        let darkenedColor = newShade(primaryTemp.value, -10);
-        document.documentElement.style.setProperty('--bs-primary-color-hover-temp', darkenedColor);
-        let darkenedColor2 = newShade(primaryTemp.value, -20);
-        document.documentElement.style.setProperty('--bs-primary-color-active-temp', darkenedColor2);
-        let lightenedColor = newShade(primaryTemp.value, 25);
-        document.documentElement.style.setProperty('--bs-primary-color-disabled-temp', lightenedColor);
+        document.documentElement.style.setProperty('--color-background', background.value);
 
-        document.documentElement.style.setProperty('--bs-success-color-temp', successTemp.value);
-        let darkenedColorSuccess = newShade(successTemp.value, -10);
-        document.documentElement.style.setProperty('--bs-success-color-hover-temp', darkenedColorSuccess);
-        let darkenedColor2Success = newShade(successTemp.value, -20);
-        document.documentElement.style.setProperty('--bs-success-color-active-temp', darkenedColor2Success);
-        let lightenedColorSuccess = newShade(successTemp.value, 25);
-        document.documentElement.style.setProperty('--bs-success-color-disabled-temp', lightenedColorSuccess);
+        document.documentElement.style.setProperty('--color-primary-temp', primaryTemp.value);
+        document.documentElement.style.setProperty('--color-primary-hover-temp', newShade(primaryTemp.value, -10));
+        document.documentElement.style.setProperty('--color-primary-active-temp', newShade(primaryTemp.value, -20));
+        document.documentElement.style.setProperty('--color-primary-disabled-temp', newShade(primaryTemp.value, 25));
+
+        document.documentElement.style.setProperty('--color-secondary-temp', secondaryTemp.value);
+        document.documentElement.style.setProperty('--color-secondary-hover-temp', newShade(secondaryTemp.value, -10));
+        document.documentElement.style.setProperty('--color-secondary-active-temp', newShade(secondaryTemp.value, -20));
+        document.documentElement.style.setProperty('--color-secondary-disabled-temp', newShade(secondaryTemp.value, 25));
     }
 });
 
 const newShade = (rgb: string, magnitude: number): string => {
     // Extract the individual red, green, and blue color values
-    let rgbValues = rgb.match(/\d+/g);
-
-    if (!rgbValues) {
+    const rgbValuesStrings = ref<string>();
+    const rgbValues = ref<number[]>(new Array(4));
+    if (rgb.startsWith("rgb(")) {
+        rgb = rgb.replace("rgb(", "rgba(");
+        rgb = rgb.replace(")", ", 1)");
+    }
+    if (rgb.startsWith("rgba(")) {
+        // Extract the individual red, green, blue and alpha color values
+        if (rgb.match(/\d+/g) !== null) {
+            rgbValuesStrings.value = rgb.match(/\d+/g);
+        } else {
+            throw new Error('Invalid RGB color');
+        }
+    } else {
+        if (rgb.match(/\w\w+/g) !== null) {
+            rgbValuesStrings.value = rgb.match(/\w\w/g);
+        } else {
+            throw new Error('Invalid RGB color');
+        }
+    }
+    for (let i = 0; i < rgbValuesStrings.value.length; i++) {
+        rgbValues.value[i] = parseInt(rgbValuesStrings.value[i], 16);
+    }
+    if (!rgbValues.value) {
+        throw new Error('Invalid RGB color');
+    }
+    if (rgbValues.value.length !== 4) {
+        console.error(rgbValues.value);
         throw new Error('Invalid RGB color');
     }
 
-    let [r, g, b] = rgbValues.map(Number);
-
     // Adjust color brightness
-    r = Math.round(Math.min(Math.max(0, r + (r * magnitude / 100)), 255));
-    g = Math.round(Math.min(Math.max(0, g + (g * magnitude / 100)), 255));
-    b = Math.round(Math.min(Math.max(0, b + (b * magnitude / 100)), 255));
-
+    rgbValues.value[0] = Math.round(Math.min(Math.max(0, rgbValues.value[0] + (rgbValues.value[0] * magnitude / 100)), 255));
+    rgbValues.value[1] = Math.round(Math.min(Math.max(0, rgbValues.value[1] + (rgbValues.value[1] * magnitude / 100)), 255));
+    rgbValues.value[2] = Math.round(Math.min(Math.max(0, rgbValues.value[2] + (rgbValues.value[2] * magnitude / 100)), 255));
+    rgbValues.value[3] = Math.min(Math.max(0, rgbValues.value[3] + (rgbValues.value[3] * magnitude / 100)), 1);
     // Return the new color in RGB format
-    return `rgb(${r}, ${g}, ${b})`;
+    return `rgba(${rgbValues.value[0]}, ${rgbValues.value[1]}, ${rgbValues.value[2]}, ${rgbValues.value[3]})`;
 };
 
 const brightness = (rgb: string) => {
-    let rgbValues = rgb.match(/\d+/g);
-
-    if (!rgbValues) {
-        throw new Error('Invalid RGB color');
+    const rgbValuesStrings = ref<string>();
+    const rgbValues = ref<number[]>(new Array(4));
+    if (rgb.startsWith("rgb(")) {
+        rgb = rgb.replace("rgb(", "rgba(");
+        rgb = rgb.replace(")", ", 1)");
     }
-
-    let [r, g, b] = rgbValues.map(Number);
-
-    return Math.round(((r * 299) + (g * 587) + (b * 114)) / 1000);
+    if (rgb.startsWith("rgba(")) {
+        // Extract the individual red, green, blue and alpha color values
+        if (rgb.match(/\d+/g) !== null) {
+            rgbValuesStrings.value = rgb.match(/\d+/g);
+            for (let i = 0; i < rgbValuesStrings.value.length; i++) {
+                rgbValues.value[i] = parseInt(rgbValuesStrings.value[i]);
+            }
+        } else {
+            throw new Error('Invalid RGB color');
+        }
+    } else {
+        if (rgb.startsWith("#")) {
+            rgb = rgb.replace("#", "");
+        }
+        if (rgb.match(/\w\w+/g) !== null) {
+            rgbValuesStrings.value = rgb.match(/\w\w/g);
+            for (let i = 0; i < rgbValuesStrings.value.length; i++) {
+                rgbValues.value[i] = parseInt(rgbValuesStrings.value[i], 16);
+            }
+        } else {
+            throw new Error('Invalid RGB color');
+        }
+    }
+    return Math.round(((rgbValues.value[0] * 299) + (rgbValues.value[1] * 587) + (rgbValues.value[2] * 114)) / 1000);
 }
 
 const fontColor = (rgb: string) => {
-    return brightness(rgb) > 155 ? 'black' : 'white';
+    const bright = brightness(rgb);
+    console.log("rgb", rgb, "brightness", bright);
+    return bright < 155 ? getComputedStyle(document.documentElement, null).getPropertyValue('--vt-c-text-dark-1') : getComputedStyle(document.documentElement, null).getPropertyValue('--vt-c-text-light-1');
 }
 
 const handleFontUpload = (event: any) => {
@@ -159,12 +283,21 @@ const revertFont = () => {
     fontFileName.value = null;
 };
 
+onMounted(() => {
+    loadThemeSettings();
+    // Add the media query listener here
+    mediaQuery.addEventListener('change', updateTheme);
+});
+
+onBeforeUnmount(() => {
+    mediaQuery.removeEventListener('change', updateTheme);
+});
+
 </script>
 
 <template>
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="themeOffcanvas" aria-labelledby="themeOffcanvasLabel"
-        style="background-color: #b9b9b9;">
-        <div class="offcanvas-header" style="background-color: #484848; color: #dbdbdb;">
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="themeOffcanvas" aria-labelledby="themeOffcanvasLabel">
+        <div class="offcanvas-header">
             <h5 id="themeOffcanvasLabel">Theme Settings</h5>
             <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
@@ -176,22 +309,47 @@ const revertFont = () => {
                 <div class="card-body">
                     <div class="color-picker-container mb-3">
                         <label for="primaryColorPicker">Primary Color</label>
-                        <color-picker id="primaryColorPicker" v-model:pureColor="primaryTemp"
-                            v-model:gradientColor="gradientColorPrimary" class="color-picker" />
+                        <div class="color-box" :style="{ backgroundColor: primary }"
+                             @click="showPrimaryColorPicker = true"></div>
+                        <div class="color-picker-wrapper" v-if="showPrimaryColorPicker"
+                             v-on-click-outside="hidePrimaryColorPicker">
+                            <Vue3ColorPicker v-model="primary" mode="solid"
+                                             :showPickerMode="false" :theme="prefersDarkScheme ? 'dark' : 'light'"
+                                             :showColorList="true" :showEyeDrop="true" class="color-picker"/>
+                        </div>
                     </div>
                     <div class="color-picker-container">
                         <label for="secondaryColorPicker">Secondary Color</label>
-                        <color-picker id="secondaryColorPicker" v-model:pureColor="successTemp"
-                            v-model:gradientColor="gradientColorSuccess" class="color-picker" />
+                        <div class="color-box" :style="{ backgroundColor: secondary }"
+                             @click="showSecondaryColorPicker = true"></div>
+                        <div class="color-picker-wrapper" v-if="showSecondaryColorPicker"
+                             v-on-click-outside="hideSecondaryColorPicker">
+                            <Vue3ColorPicker v-model="secondary" mode="solid"
+                                             :showPickerMode="false" :theme="prefersDarkScheme ? 'dark' : 'light'"
+                                             :showColorList="true" :showEyeDrop="true" class="color-picker"/>
+                        </div>
+                    </div>
+                    <div class="color-picker-container">
+                        <label for="backgroundColorPicker">Background Color</label>
+                        <div class="color-box" :style="{ backgroundColor: background }"
+                             @click="showBackgroundColorPicker = true"></div>
+                        <div class="color-picker-wrapper" v-if="showBackgroundColorPicker"
+                             v-on-click-outside="hideBackgroundColorPicker">
+                            <Vue3ColorPicker v-model="background" mode="solid"
+                                             :showPickerMode="false" :theme="prefersDarkScheme ? 'dark' : 'light'"
+                                             :showColorList="true" :showEyeDrop="true" class="color-picker"/>
+                        </div>
                     </div>
                 </div>
                 <div class="card-footer d-flex justify-content-between">
                     <button class="btn"
-                        :class="{ 'btn-primary-temp': primaryTemp !== primary, 'btn-primary': primaryTemp === primary }"
-                        @click="revertColors">Revert</button>
+                            :class="{ 'btn-primary-temp': primaryTemp !== primary, 'btn-primary': primaryTemp === primary }"
+                            @click="revertColors">Revert
+                    </button>
                     <button class="btn"
-                        :class="{ 'btn-success-temp': successTemp !== success, 'btn-success': successTemp === success }"
-                        @click="saveColors">Save</button>
+                            :class="{ 'btn-secondary-temp': secondaryTemp !== secondary, 'btn-secondary': secondaryTemp === secondary }"
+                            @click="saveColors">Save
+                    </button>
                 </div>
             </div>
             <div class="card">
@@ -202,7 +360,7 @@ const revertFont = () => {
                     <div class="mb-3">
                         <label for="fontFile" class="form-label">Upload your .ttf file</label>
                         <input ref="fontFileInput" @change="handleFontUpload" style="display: none;" type="file"
-                            id="fontFile" name="fontFile" accept=".ttf">
+                               id="fontFile" name="fontFile" accept=".ttf">
                         <div class="input-group">
                             <button type="button" @click="triggerFileInput" class="btn btn-primary">Browse</button>
                             <label class="form-control" style="width: 220px;">
@@ -215,7 +373,8 @@ const revertFont = () => {
                 </div>
                 <div class="card-footer d-flex justify-content-between">
                     <button class="btn btn-primary" @click="revertFont">Revert</button>
-                    <button class="btn btn-success" @click="saveFont" v-bind:disabled="!fontFileName">Save</button>
+                    <button class="btn btn-secondary" @click="saveFont" v-bind:disabled="!fontFileName">Save
+                    </button>
                 </div>
             </div>
         </div>
@@ -229,16 +388,18 @@ const revertFont = () => {
 </template>
 
 <style scoped>
-.form-control,
-.list-group-item {
-    background-color: #f4f4f4 !important;
-    border-color: #484848 !important;
-}
 
 .ellipsis {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.color-box {
+    width: 50px;
+    height: 20px;
+    border: 1px solid var(--color-border);
+    cursor: pointer;
 }
 
 .color-picker-container {
@@ -254,192 +415,68 @@ const revertFont = () => {
 }
 
 .color-picker-container .color-picker {
+    border: 1px solid var(--color-border);
     width: 300px;
-    height: 300px;
+}
+
+.color-picker-wrapper {
+    position: absolute;
+    z-index: 1050;
+    background-color: var(--color-background-mute);
+    color: var(--color-background-font);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    top: 0
 }
 
 .card-body {
-    background-color: #cdcdcd;
     margin-bottom: 0;
 }
 
 .card {
-    border: 1px solid #484848;
-    overflow: hidden;
+    color: var(--color-background-font);
+    background-color: var(--color-background);
+    border: 1px solid var(--color-modal-background-inverted);
 }
 
 .card-header,
 .card-footer {
-    background-color: #9f9f9f;
-}
-</style>
-
-<style>
-.btn-primary {
-    --bs-btn-color: var(--bs-primary-font-color, #fff);
-    --bs-btn-bg: var(--bs-primary-color, #7561a9);
-    --bs-btn-border-color: var(--bs-primary-color, #7561a9);
-    --bs-btn-hover-color: var(--bs-primary-font-color, #fff);
-    --bs-btn-hover-bg: var(--bs-primary-color-hover, #5e548e);
-    --bs-btn-hover-border-color: var(--bs-primary-color-hover, #5e548e);
-    --bs-btn-focus-shadow-rgb: 49, 132, 253;
-    --bs-btn-active-color: var(--bs-primary-font-color, #fff);
-    --bs-btn-active-bg: var(--bs-primary-color-active, #51457c);
-    --bs-btn-active-border-color: var(--bs-primary-color-active, #51457c);
-    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
-    --bs-btn-disabled-color: var(--bs-primary-font-color, #fff);
-    --bs-btn-disabled-bg: var(--bs-primary-color-disabled, #9681ca);
-    --bs-btn-disabled-border-color: var(--bs-primary-color-disabled, #9681ca);
 }
 
-.btn-primary-temp {
-    --bs-btn-color: var(--bs-primary-font-color-temp, #fff);
-    --bs-btn-bg: var(--bs-primary-color-temp, #7561a9);
-    --bs-btn-border-color: var(--bs-primary-color-temp, #7561a9);
-    --bs-btn-hover-color: var(--bs-primary-font-color-temp, #fff);
-    --bs-btn-hover-bg: var(--bs-primary-color-hover-temp, #5e548e);
-    --bs-btn-hover-border-color: var(--bs-primary-color-hover-temp, #5e548e);
-    --bs-btn-focus-shadow-rgb: 49, 132, 253;
-    --bs-btn-active-color: var(--bs-primary-font-color-temp, #fff);
-    --bs-btn-active-bg: var(--bs-primary-color-active-temp, #51457c);
-    --bs-btn-active-border-color: var(--bs-primary-color-active-temp, #51457c);
-    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
-    --bs-btn-disabled-color: var(--bs-primary-font-color-temp, #fff);
-    --bs-btn-disabled-bg: var(--bs-primary-color-disabled-temp, #9681ca);
-    --bs-btn-disabled-border-color: var(--bs-primary-color-disabled-temp, #9681ca);
-}
-
-.btn-success {
-    --bs-btn-color: var(--bs-success-font-color, #fff);
-    --bs-btn-bg: var(--bs-success-color, #60aeae);
-    --bs-btn-border-color: var(--bs-success-color, #60aeae);
-    --bs-btn-hover-color: var(--bs-success-font-color, #fff);
-    --bs-btn-hover-bg: var(--bs-success-color-hover, #4a8e8b);
-    --bs-btn-hover-border-color: var(--bs-success-color-hover, #4a8e8b);
-    --bs-btn-focus-shadow-rgb: 60, 153, 110;
-    --bs-btn-active-color: var(--bs-success-font-color, #fff);
-    --bs-btn-active-bg: var(--bs-success-color-active, #3e7776);
-    --bs-btn-active-border-color: var(--bs-success-color-active, #3e7776);
-    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
-    --bs-btn-disabled-color: var(--bs-success-font-color, #fff);
-    --bs-btn-disabled-bg: var(--bs-success-color-disabled, #88d3d3);
-    --bs-btn-disabled-border-color: var(--bs-success-color-disabled, #88d3d3);
-}
-
-.btn-success-temp {
-    --bs-btn-color: var(--bs-success-font-color-temp, #fff);
-    --bs-btn-bg: var(--bs-success-color-temp, #60aeae);
-    --bs-btn-border-color: var(--bs-success-color-temp, #60aeae);
-    --bs-btn-hover-color: var(--bs-success-font-color-temp, #fff);
-    --bs-btn-hover-bg: var(--bs-success-color-hover-temp, #4a8e8b);
-    --bs-btn-hover-border-color: var(--bs-success-color-hover-temp, #4a8e8b);
-    --bs-btn-focus-shadow-rgb: 60, 153, 110;
-    --bs-btn-active-color: var(--bs-success-font-color-temp, #fff);
-    --bs-btn-active-bg: var(--bs-success-color-active-temp, #3e7776);
-    --bs-btn-active-border-color: var(--bs-success-color-active-temp, #3e7776);
-    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
-    --bs-btn-disabled-color: var(--bs-success-font-color-temp, #fff);
-    --bs-btn-disabled-bg: var(--bs-success-color-disabled-temp, #88d3d3);
-    --bs-btn-disabled-border-color: var(--bs-success-color-disabled-temp, #88d3d3);
-}
-
-.btn-danger {
-    --bs-btn-color: #fff;
-    --bs-btn-bg: #ad6060;
-    --bs-btn-border-color: #ad6060;
-    --bs-btn-hover-color: #fff;
-    --bs-btn-hover-bg: #935252;
-    --bs-btn-hover-border-color: #935252;
-    --bs-btn-focus-shadow-rgb: 225, 83, 97;
-    --bs-btn-active-color: #fff;
-    --bs-btn-active-bg: #794343;
-    --bs-btn-active-border-color: #794343;
-    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
-    --bs-btn-disabled-color: #fff;
-    --bs-btn-disabled-bg: #ad6060;
-    --bs-btn-disabled-border-color: #ad6060;
-}
-
-.btn-link {
-    text-decoration: none !important;
-}
-
-.pagination {
-    --bs-pagination-padding-x: 0.75rem;
-    --bs-pagination-padding-y: 0.375rem;
-    --bs-pagination-font-size: 1rem;
-    --bs-pagination-color: var(--bs-primary-font-color, #fff);
-    --bs-pagination-bg: var(--bs-primary-color, #7561a9);
-    --bs-pagination-border-width: var(--bs-border-width);
-    --bs-pagination-border-color: #929292;
-    --bs-pagination-border-radius: var(--bs-border-radius);
-    --bs-pagination-hover-color: var(--bs-primary-font-color, #fff);
-    --bs-pagination-hover-bg: var(--bs-primary-color-hover, #5e548e);
-    --bs-pagination-hover-border-color: #929292;
-    --bs-pagination-focus-color: var(--bs-primary-font-color, #fff);
-    --bs-pagination-focus-bg: var(--bs-primary-color-hover, #5e548e);
-    --bs-pagination-focus-box-shadow: 0 0 0 0.25rem rgba(49, 132, 253, 0.25);
-    --bs-pagination-active-color: var(--bs-primary-font-color, #fff);
-    --bs-pagination-active-bg: var(--bs-primary-color-active, #51457c);
-    --bs-pagination-active-border-color: #929292;
-    --bs-pagination-disabled-color: #525252;
-    --bs-pagination-disabled-bg: #d8d8d8;
-    --bs-pagination-disabled-border-color: #929292;
-    list-style: none;
-}
-
-.progress {
-    --bs-progress-bar-bg: var(--bs-primary-color, #7561a9);
-    --bs-progress-bg: #d8d8d8;
-    border: 1px solid #b9b9b9;
-}
-
-.alert {
-    --bs-alert-border: 1px solid #ad6060;
-    --bs-alert-bg: #e4b6b6;
+label.form-control {
+    border: 1px solid var(--color-border);
 }
 
 input[type='checkbox']:checked,
 input[type='radio']:checked {
-    background-color: var(--bs-success-color, #60aeae) !important;
-    border-color: var(--bs-success-color, #60aeae) !important;
+    background-color: var(--color-secondary) !important;
+    border-color: var(--color-secondary) !important;
 }
 
 .dropdown-menu li a:active,
 .dropdown-item:active,
 .dropdown-submenu .dropdown-item:active {
-    background-color: var(--bs-primary-color, #7561a9);
-    color: var(--bs-primary-font-color, #fff);
+    background-color: var(--color-primary);
+    color: var(--color-text);
 }
 
 a {
-    color: var(--bs-primary-font-color, #fff);
+    color: var(--color-text);
 }
 
-.btn-link, .routerLink {
-    color: var(--bs-primary-color, #7561a9);
-}
 
-a:hover{
-    color: var(--bs-primary-font-color, #fff);
-}
-
-.btn-link:hover, .routerLink:hover {
-    color: var(--bs-primary-color-hover, #5e548e);
+a:hover {
+    color: var(--color-text);
 }
 
 a:active {
-    color: var(--bs-primary-font-color, #fff) !important;
-}
-
-.btn-link:active, .routerLink:active {
-    color: var(--bs-primary-color-active, #51457c) !important;
+    color: var(--color-text) !important;
 }
 
 .dp__theme_light {
-    --dp-primary-color: var(--bs-primary-color, #7561a9) !important;
-    --dp-primary-disabled-color: var(--bs-primary-color-disabled, #9681ca) !important;
-    --dp-primary-text-color: var(--bs-primary-font-color, #fff) !important;
+    --dp-primary-color: var(--color-primary) !important;
+    --dp-primary-disabled-color: var(--color-primary-disabled) !important;
+    --dp-primary-text-color: var(--color-primary-font) !important;
 }
 
 .dp__action_cancel,
@@ -449,16 +486,16 @@ a:active {
 }
 
 .nav-link:not(.active-tab):hover {
-    color: var(--bs-primary-color, #7561a9);
+    color: var(--color-primary);
 }
 
 .current-page {
-    background-color: var(--bs-primary-color, #7561a9);
-    color: white;
+    background-color: var(--color-primary);
+    color: var(--color-primary-font);
     padding: 5px;
     display: inline-block;
-    border-right: 2px solid var(--bs-primary-color, #7561a9);
-    border-bottom: 2px solid var(--bs-primary-color, #7561a9);
+    border-right: 2px solid var(--color-primary);
+    border-bottom: 2px solid var(--color-primary);
     border-bottom-right-radius: 5px;
     position: relative;
     z-index: 1;
@@ -473,12 +510,12 @@ a:active {
     padding-top: 10px;
     border-radius: 5px;
     margin-bottom: 10px;
-    background-color: var(--bs-primary-color, #7561a9);
-    color: #dbdbdb;
+    background-color: var(--color-primary);
+    color: var(--color-primary-font);
 }
 
 .d-flex.align-items-center .fas.fa-star {
-    color: var(--bs-success-color, #60aeae);
+    color: var(--color-secondary);
 }
 
 *,
@@ -488,5 +525,9 @@ input {
 
 .dp__action_button {
     font-family: var(--user-font, 'Public Sans'), sans-serif !important;
+}
+
+.fas, .fa-classic, .fa-solid, .far, .fa-regular {
+    font-family: 'Font Awesome 6 Free', serif;
 }
 </style>

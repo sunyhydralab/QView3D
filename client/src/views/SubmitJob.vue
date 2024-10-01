@@ -443,8 +443,9 @@ const getFilament = (file: File) => {
 
 .form-control,
 .list-group-item {
-    background-color: #f4f4f4 !important;
-    border-color: #484848 !important;
+    color: var(--color-text);
+    background-color: var(--color-background-soft);
+    border-color: var(--color-modal-background-inverted);
 }
 
 .form-container {
@@ -460,10 +461,14 @@ const getFilament = (file: File) => {
 }
 
 .card {
-    --bs-card-border-color: #484848;
+    --bs-card-border-color: var(--color-modal-background-inverted);
 }
 
 .text-danger {
     cursor: help;
+}
+.card-body {
+    color: var(--color-background-font);
+    background-color: var(--color-background-mute);
 }
 </style>
