@@ -35,7 +35,7 @@ QView3D, developed at SUNY's Hydra Lab, is an open-source software project desig
 
 ## Architecture Diagram
 
-![QView3D-Architecture-Diagram](QView3D-Architecture-Diagram.jpg)
+![QView3D Diagram](QView3D-Architecture%20Diagram.jpg)
 
 ## Setup and Installation
 
