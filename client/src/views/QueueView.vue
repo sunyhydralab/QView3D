@@ -20,17 +20,17 @@ let currentJob = ref<Job | null>(null)
 let isGcodeImageVisible = ref(false)
 const isImageVisible = ref(true)
 
-const primaryColor = ref('');
-const primaryColorActive = ref('');
-const successColorActive = ref('');
+const primaryColor = ref(window.getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#7561A9');
+const primaryColorActive = ref(window.getComputedStyle(document.documentElement).getPropertyValue('--color-primary-active').trim() || '#51457C');
+const secondaryColorActive = ref(window.getComputedStyle(document.documentElement).getPropertyValue('--color-secondary-active').trim() || '#3e7776');
 let observer: MutationObserver;
 
 onMounted(() => {
   isLoading.value = true
   observer = new MutationObserver(() => {
-    primaryColor.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9';
-    primaryColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color-active').trim() || '#51457C';
-    successColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-success-color-active').trim() || '#3e7776';
+    primaryColor.value = window.getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#7561A9';
+    primaryColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--color-primary-active').trim() || '#51457C';
+    secondaryColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--color-secondary-active').trim() || '#3e7776';
   });
 
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
@@ -53,9 +53,9 @@ onUnmounted(() => {
 })
 
 watchEffect(() => {
-  primaryColor.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9';
-  primaryColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color-active').trim() || '#51457C';
-  successColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--bs-success-color-active').trim() || '#3e7776';
+  primaryColor.value = window.getComputedStyle(document.documentElement).getPropertyValue('--color-primary') || '#7561A9';
+  primaryColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--color-primary-active') || '#51457C';
+  secondaryColorActive.value = window.getComputedStyle(document.documentElement).getPropertyValue('--color-secondary-active') || '#3e7776';
 });
 
 const handleRerun = async (job: Job, printer: Device) => {
@@ -106,17 +106,17 @@ function capitalizeFirstLetter(string: string | undefined) {
 function statusColor(status: string | undefined) {
   switch (status) {
     case 'ready':
-      return successColorActive.value;
+      return secondaryColorActive.value;
     case 'error':
       return '#ad6060';
     case 'offline':
-      return 'black';
+      return getComputedStyle(document.documentElement, null).getPropertyValue('--color-background-font');
     case 'printing':
       return primaryColorActive.value;
     case 'complete':
       return primaryColor.value;
     default:
-      return 'black';
+      return getComputedStyle(document.documentElement, null).getPropertyValue('--color-background-font');
   }
 }
 
@@ -373,8 +373,6 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
 }
 
 table {
-  color: #1b1b1b;
-  background-color: #d8d8d8;
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
@@ -382,7 +380,7 @@ table {
 
 td,
 th {
-  border-top: 0px solid #929292 !important;
+  border-top: 0 solid var(--color-border-invert)!important;
 }
 
 .dropdown-item {
@@ -444,10 +442,10 @@ th {
 }
 
 table {
-  border-bottom: 0px !important;
-  border-left: 0px !important;
-  border-right: 0px !important;
-  border-top: 0px !important;
+  border-bottom: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-top: 0 !important;
 }
 
 table tr:last-child td {
@@ -464,16 +462,12 @@ table tr:last-child td {
   overflow: hidden !important;
 }
 
-.accordion-button:not(.collapsed) {
-  background-color: #9f9f9f;
-}
-
 .accordion-button {
   box-shadow: none;
 }
 
 .accordion-button {
-  color: black;
+  color: var(--color-text);
   display: flex;
 }
 

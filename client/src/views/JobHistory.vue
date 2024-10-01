@@ -773,13 +773,13 @@ const onlyNumber = ($event: KeyboardEvent) => {
             <div class="col-9 d-flex justify-content-center align-items-center"></div>
 
             <div class="col-2 text-end d-flex justify-content-end" style="padding-right: 0;">
-                <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#csvModal">
+                <button class="btn btn-secondary me-2" data-bs-toggle="modal" data-bs-target="#csvModal">
                     <i class="fa-solid fa-file-csv"></i>
                 </button>
 
                 <button
                     @click="openModal(clearSpaceTitle, 'Are you sure you want to clear space? This action will remove the files from jobs that are older than 6 months, except for those marked as favorite jobs, and this cannot be <b>undone</b>.', 'clear')"
-                    class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                    class="btn btn-secondary me-2" data-bs-toggle="modal" data-bs-target="#exampleModal">
                     <i class="fa-solid fa-recycle"></i>
                 </button>
 
@@ -914,7 +914,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
 .sticky {
     position: sticky;
     bottom: 0px;
-    background: #b9b9b9;
+    background: var(--color-modal-background);
     margin-right: -1rem;
     margin-left: -1rem;
 }
@@ -931,8 +931,8 @@ const onlyNumber = ($event: KeyboardEvent) => {
     /* Adjust this value to increase or decrease the gap */
     width: 400px;
     z-index: 1000;
-    background: #d8d8d8;
-    border: 1px solid #484848;
+    background: var(--color-background-mute);
+    border: 1px solid var(--color-border);
     padding-bottom: 0 !important;
 }
 
@@ -989,7 +989,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
 .job {
     padding: 10px;
     border-radius: 5px;
-    background-color: #d8d8d8;
+    background-color: var(--color-background-mute);
 }
 
 .offcanvas {
@@ -1022,24 +1022,24 @@ ul.dropdown-menu.w-100.show li.divider {
     margin-left: 0;
 }
 
-.form-check-input:focus,
+/*.form-check-input:focus,
 .form-control:focus {
     outline: none;
     box-shadow: none;
-    border-color: #dee2e6;
-}
+    border-color: #e2e2e2;
+}*/
 
 label.form-check-label {
     cursor: pointer;
 }
 
 .form-control {
-    background: #f4f4f4;
-    border: 1px solid #484848;
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
 }
 
 .form-select {
-    background-color: #f4f4f4 !important;
-    border-color: #484848 !important;
+    background-color: var(--color-background);
+    border-color: var(--color-border);
 }
 </style>

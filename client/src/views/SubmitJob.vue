@@ -468,7 +468,7 @@ const getFilament = (file: File) => {
     cursor: help;
 }
 .card-body {
-    color: var(--color-text);
-    background-color: var(--color-modal-background);
+    color: var(--color-background-font);
+    background-color: var(--color-background-mute);
 }
 </style>

@@ -1,76 +1,85 @@
 /* color palette from <https://github.com/vuejs/theme> */
 :root {
-  --vt-c-white: #ffffffff;
-  --vt-c-white-soft: #f8f8f8ff;
-  --vt-c-white-mute: #f2f2f2ff;
-
-  --vt-c-black: #181818ff;
-  --vt-c-black-soft: #222222ff;
-  --vt-c-black-mute: #282828ff;
-
-  --vt-c-indigo: #2c3e50ff;
+  --vt-c-white: #E7E7E7;
+  --vt-c-black: #181818;
 
   --vt-c-divider-light-1: rgba(60, 60, 60, 0.29);
   --vt-c-divider-light-2: rgba(60, 60, 60, 0.12);
   --vt-c-divider-dark-1: rgba(84, 84, 84, 0.65);
   --vt-c-divider-dark-2: rgba(84, 84, 84, 0.48);
 
-  --vt-c-text-light-1: var(--vt-c-indigo);
+  --vt-c-text-light-1: var(--vt-c-black);
   --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
   --vt-c-text-dark-1: var(--vt-c-white);
   --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
 
-  --main-background-color-light: #ccccccff;
-  --main-background-color-dark: #333333ff;
+  --color-nav-text-light: #575757ff;
+  --color-nav-text-light-hover: #242424ff;
+  --color-nav-text-light-active: #000000;
+
+  --color-nav-text-dark: #a8a8a8ff;
+  --color-nav-text-dark-hover: #dbdbdbff;
+  --color-nav-text-dark-active: #ffffff;
+
+  --color-background-light: #ccccccff;
+  --color-background-soft-light: #c4c4c4ff;
+  --color-background-mute-light: #b9b9b9ff;
+
+  --color-background-dark: #333333ff;
+  --color-background-soft-dark: #3b3b3bff;
+  --color-background-mute-dark: #464646ff;
+
   --primary-light: #7561A9ff;
-  --primary-dark: #7561A9ff;
-  --secondary-light: #60AEAEff;
-  --secondary-dark: #60AEAEff;
   --color-primary-hover-light: #5e548eff;
-  --color-primary-hover-dark: #5e548eff;
-  --color-secondary-hover-light: #4f9b9bff;
-  --color-secondary-hover-dark: #4f9b9bff;
   --color-primary-active-light: #51457cff;
-  --color-primary-active-dark: #51457cff;
-  --color-secondary-active-light: #3e7776ff;
-  --color-secondary-active-dark: #3e7776ff;
   --color-primary-disabled-light: #9681caff;
+
+  --primary-dark: #7561A9ff;
+  --color-primary-hover-dark: #5e548eff;
+  --color-primary-active-dark: #51457cff;
   --color-primary-disabled-dark: #9681caff;
+
+  --secondary-light: #60AEAEff;
+  --color-secondary-hover-light: #4f9b9bff;
+  --color-secondary-active-light: #3e7776ff;
   --color-secondary-disabled-light: #88d3d3ff;
+
+  --secondary-dark: #60AEAEff;
+  --color-secondary-hover-dark: #4f9b9bff;
+  --color-secondary-active-dark: #3e7776ff;
   --color-secondary-disabled-dark: #88d3d3ff;
 
   --user-font: 'Public Sans', sans-serif;
   --user-font-reversion: 'Public Sans', sans-serif;
 
   --color-modal-background-light: #b9b9b9ff;
+  --color-modal-background-light-inverted: #464646ff;
+
   --color-modal-background-dark: #464646ff;
-  --color-modal-background-light-inverted: #484848ff;
-  --color-modal-background-dark-inverted: #B7B7B7ff;
+  --color-modal-background-dark-inverted: #b9b9b9ff;
 
   --color-form-background-light: #cdcdcdff;
+
   --color-form-background-dark: #323232ff;
 
   --color-border-light-1: #333333ff;
-  --color-border-dark-1: #ccccccff;
+  --color-border-light-2: #6D6D6Dff;
 
-  --color-border-light-2: #929292ff;
-  --color-border-dark-2: #6D6D6Dff;
+  --color-border-dark-1: #ccccccff;
+  --color-border-dark-2: #929292ff;
 }
 
 /* semantic color variables for this project */
 @media (prefers-color-scheme: light) {
   :root {
-    --color-background: var(--main-background-color-light);
-    --color-background-reversion: var(--main-background-color-light);
-    --color-background-soft: var(--vt-c-white-soft);
-    --color-background-mute: var(--vt-c-white-mute);
+    --color-background: var(--color-background-light);
+    --color-background-reversion: var(--color-background-light);
+    --color-background-soft: var(--color-background-soft-light);
+    --color-background-mute: var(--color-background-mute-light);
 
     --color-border: var(--color-border-light-1);
     --color-border-invert: var(--color-border-light-2);
     --color-border-hover: var(--vt-c-divider-light-1);
-
-    --color-heading: var(--vt-c-text-light-1);
-    --color-text: var(--vt-c-text-light-1);
 
     --section-gap: 160px;
     --color-primary: var(--primary-light);
@@ -79,8 +88,6 @@
     --color-secondary-reversion: var(--secondary-light);
     --color-primary-hover: var(--color-primary-hover-light);
     --color-secondary-hover: var(--color-secondary-hover-light);
-    --color-primary-font: var(--vt-c-white);
-    --color-secondary-font: var(--vt-c-white);
     --color-primary-active: var(--color-primary-active-light);
     --color-secondary-active: var(--color-secondary-active-light);
     --color-primary-disabled: var(--color-primary-disabled-light);
@@ -89,22 +96,33 @@
     --color-modal-background: var(--color-modal-background-light);
     --color-modal-background-inverted: var(--color-modal-background-light-inverted);
     --color-form-background: var(--color-form-background-light);
+
+    --color-heading: var(--vt-c-text-light-1);
+    --color-text: var(--vt-c-text-light-1);
+    --color-primary-font: var(--color-text);
+    --color-secondary-font: var(--color-text);
+    --color-background-font: var(--color-text);
+    --color-background-mute-font: var(--color-text);
+    --color-background-soft-font: var(--color-text);
+    --color-modal-background-font: var(--color-text);
+    --color-form-background-font: var(--color-text);
+    --color-modal-background-inverted-font: var(--color-text);
+    --color-nav-text: var(--color-nav-text-light);
+    --color-nav-text-hover: var(--color-nav-text-light-hover);
+    --color-nav-text-active: var(--color-nav-text-light-active);
   }
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-background: var(--main-background-color-dark);
-    --color-background-reversion: var(--main-background-color-dark);
-    --color-background-soft: var(--vt-c-black-soft);
-    --color-background-mute: var(--vt-c-black-mute);
+    --color-background: var(--color-background-dark);
+    --color-background-reversion: var(--color-background-dark);
+    --color-background-soft: var(--color-background-soft-dark);
+    --color-background-mute: var(--color-background-mute-dark);
 
     --color-border: var(--color-border-dark-1);
     --color-border-invert: var(--color-border-dark-2);
     --color-border-hover: var(--vt-c-divider-dark-1);
-
-    --color-heading: var(--vt-c-text-dark-1);
-    --color-text: var(--vt-c-text-dark-2);
 
     --color-primary: var(--primary-dark);
     --color-primary-reversion: var(--primary-dark);
@@ -112,8 +130,6 @@
     --color-secondary-reversion: var(--secondary-dark);
     --color-primary-hover: var(--color-primary-hover-dark);
     --color-secondary-hover: var(--color-secondary-hover-dark);
-    --color-primary-font: var(--vt-c-black-mute);
-    --color-secondary-font: var(--vt-c-black-mute);
     --color-primary-active: var(--color-primary-active-dark);
     --color-secondary-active: var(--color-secondary-active-dark);
 
@@ -122,6 +138,20 @@
     --color-modal-background: var(--color-modal-background-dark);
     --color-modal-background-inverted: var(--color-modal-background-dark-inverted);
     --color-form-background: var(--color-form-background-dark);
+
+    --color-heading: var(--vt-c-text-dark-1);
+    --color-text: var(--vt-c-text-dark-1);
+    --color-primary-font: var(--color-text);
+    --color-secondary-font: var(--color-text);
+    --color-background-font: var(--color-text);
+    --color-background-mute-font: var(--color-text);
+    --color-background-soft-font: var(--color-text);
+    --color-modal-background-font: var(--color-text);
+    --color-form-background-font: var(--color-text);
+    --color-modal-background-inverted-font: var(--color-text);
+    --color-nav-text: var(--color-nav-text-dark);
+    --color-nav-text-hover: var(--color-nav-text-dark-hover);
+    --color-nav-text-active: var(--color-nav-text-dark-active);
   }
 }
 
@@ -134,7 +164,7 @@
 
 body {
   min-height: 100vh;
-  color: var(--color-text);
+  color: var(--color-background-font);
   background: var(--color-background);
   transition: color 0.5s,
   background-color 0.5s;

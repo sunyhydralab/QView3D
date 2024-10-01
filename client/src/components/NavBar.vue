@@ -95,6 +95,7 @@ watch([API_IP_ADDRESS, API_PORT], async () => {
 </template>
 
 <style scoped>
+
 .logo {
     height: 100px;
     position: relative;
@@ -104,15 +105,19 @@ watch([API_IP_ADDRESS, API_PORT], async () => {
 }
 
 .navbar {
-    background: #484848 !important;
+    background: var(--color-background-mute);
 }
-
 .nav-link {
     font-size: 1.2em;
     font-weight: bold;
+    color: var(--color-nav-text);
     padding-right: 1.5rem !important;
-    color: #a8a8a8;
 }
+
+.nav-link:hover {
+    color: var(--color-nav-text-hover);
+}
+
 
 .form-check {
     padding-right: 20px;
@@ -128,13 +133,12 @@ watch([API_IP_ADDRESS, API_PORT], async () => {
 }
 
 .thick {
-    background-color: #fff;
-    border-bottom: 2px solid #3b3b3b;
-    box-shadow: 0 2px 6px -2px #000000;
+    border-bottom: 2px solid var(--color-background-soft);
+    box-shadow: 0 2px 6px -2px var(--vt-c-black);
 }
 
 .active-tab {
-    color: #dbdbdb;
+    color: var(--color-nav-text-active) !important;
     font-weight: bolder;
 }
 
@@ -145,7 +149,7 @@ body {
 
 .client-version {
     font-size: 0.65em;
-    color: #888888;
+    color: var(--color-background-font);
     margin-top: 0.5rem;
     text-align: center;
     position: relative;
@@ -154,7 +158,7 @@ body {
 
 .ping {
     font-size: 0.65em;
-    color: #888888;
+    color: var(--color-background-font);
     margin-top: 0.5rem;
     text-align: center;
     position: relative;

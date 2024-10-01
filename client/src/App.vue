@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import "./assets/base.css"
 import 'bootstrap/dist/js/bootstrap.bundle'
-import {RouterView} from 'vue-router'
+import '@cyhnkckali/vue3-color-picker/dist/style.css'
+import "@/assets/main.css"
+import { RouterView } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
 import ThemePanel from '@/components/ThemePanel.vue'
-import {onMounted, nextTick, watch} from 'vue';
+import SettingsPanel from '@/components/SettingsPanel.vue'
+import { onMounted } from 'vue';
 import {
     setupPortRepairSocket,
     setupErrorSocket,
@@ -22,7 +24,6 @@ import {
 } from '@/model/sockets';
 import {useRetrievePrintersInfo, printers} from '@/model/ports';
 import {setupTimeSocket, isLoading} from '@/model/jobs';
-import SettingsPanel from "@/components/SettingsPanel.vue";
 
 const { retrieveInfo } = useRetrievePrintersInfo();
 

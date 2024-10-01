@@ -882,13 +882,13 @@ th {
 }
 
 .form-control {
-  background: #f4f4f4;
-  border: 1px solid #484848;
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
 }
 
 .form-select {
-  background-color: #f4f4f4 !important;
-  border-color: #484848 !important;
+  background-color: var(--color-background-soft);
+  border-color: var(--color-border);
 }
 
 .alert {

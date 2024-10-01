@@ -386,7 +386,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button @click="doDownloadCsv" type="button" class="btn btn-success"
+                    <button @click="doDownloadCsv" type="button" class="btn btn-secondary"
                         data-bs-dismiss="modal">Download CSV</button>
                 </div>
             </div>
@@ -457,13 +457,13 @@ const onlyNumber = ($event: KeyboardEvent) => {
                                     <input id="editName" type="text" class="form-control me-2 flex-grow-1"
                                         v-model="newName" />
                                     <div class="d-flex">
-                                        <button class="btn btn-success me-2" @click="saveIssue(issue)">Save</button>
+                                        <button class="btn btn-secondary me-2" @click="saveIssue(issue)">Save</button>
                                         <button class="btn btn-secondary"
                                             @click="editMode = false; editNum = undefined; newName = ''">Cancel</button>
                                     </div>
                                 </div>
                                 <div v-else>
-                                    <button class="btn btn-success"
+                                    <button class="btn btn-secondary"
                                         @click="editMode = true; editNum = issue.id; newName = issue.issue || ''">
                                         <i class="fas fa-edit"></i>
                                     </button>
@@ -668,7 +668,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
             <div class="col-7 text-center"></div>
 
             <div class="col-4 text-end" style="padding-right: 0">
-                <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#csvModal">
+                <button class="btn btn-secondary me-2" data-bs-toggle="modal" data-bs-target="#csvModal">
                     <i class="fa-solid fa-file-csv"></i>
                 </button>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#issueModal">
@@ -785,8 +785,8 @@ const onlyNumber = ($event: KeyboardEvent) => {
 
 .sticky {
     position: sticky;
-    bottom: 0px;
-    background: #b9b9b9;
+    bottom: 0;
+    background: var(--color-background-mute);
     margin-right: -1rem;
     margin-left: -1rem;
 }
@@ -797,8 +797,8 @@ const onlyNumber = ($event: KeyboardEvent) => {
     /* Adjust this value to increase or decrease the gap */
     width: 400px;
     z-index: 1000;
-    background: #d8d8d8;
-    border: 1px solid #484848;
+    background: var(--color-background-mute);
+    border: 1px solid var(--color-border);
     padding-bottom: 0 !important;
 }
 
@@ -911,18 +911,18 @@ label.form-check-label {
 }
 
 .form-control {
-    color: var(--color-text);
-    background: var(--color-modal-background);
+    color: var(--color-background-font);
+    background-color: var(--color-background-mute);
     border: 1px solid var(--color-modal-background-light-inverted);
 }
 
 .form-select {
-    color: var(--color-text);
-    background-color: var(--color-modal-background) !important;
+    color: var(--color-background-font);
+    background-color: var(--color-background-mute) !important;
     border-color: var(--color-modal-background-light-inverted) !important;
 }
 
 ::placeholder {
-    color: var(--color-text); /* Change this to your desired color */
+    color: var(--color-background-font); /* Change this to your desired color */
 }
 </style>

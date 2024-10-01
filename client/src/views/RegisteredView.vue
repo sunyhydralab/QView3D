@@ -199,7 +199,7 @@ const doCloseRegisterModal = async () => {
                             <div class="dropdown" v-if="!editMode || !(editNum == printer.id)">
                                 <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                                     <button type="button" id="settingsDropdown" data-bs-toggle="dropdown"
-                                        aria-expanded="false" style="background: none; border: none;">
+                                        aria-expanded="false" style="color: var(--color-background-font); background: transparent; border: none;">
                                         <i class="fa-solid fa-bars"></i>
                                     </button>
                                     <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
@@ -255,7 +255,7 @@ const doCloseRegisterModal = async () => {
                                     @click="editMode = false; editNum = undefined; newName = ''">Cancel</button>
                             </div>
                         </div>
-                        <h6 class="card-text mb-0 text-muted"> <b>Printer device:</b> {{ printer.device }}</h6>
+                        <h6 class="card-text mb-0"> <b>Printer device:</b> {{ printer.device }}</h6>
                         <h6 class="card-text mb-0"> <b>Printer description:</b> {{ printer.description }}</h6>
                         <h6 class="card-text mb-0"> <b>Date registered:</b> {{ printer.date }}</h6>
                         <h6 class="card-text mt-0"> <b>HWID:</b> {{ printer.hwid }}</h6>
@@ -276,10 +276,19 @@ const doCloseRegisterModal = async () => {
 </template>
 
 <style scoped>
+.dropdown {
+    background-color: var(--color-background-mute);
+    color: var(--color-background-font)
+}
 .dropdown-item {
+    background-color: var(--color-background);
+    color: var(--color-background-font);
     display: flex;
     align-items: center;
     padding-left: .5rem;
+}
+.dropdown-item:hover {
+    background-color: var(--color-background-mute);
 }
 
 .dropdown-item i {
@@ -290,36 +299,9 @@ const doCloseRegisterModal = async () => {
     margin-left: 10px;
 }
 
-.form-container,
 .card {
-    border: 1px solid #484848;
-}
-
-.register {
-    color: red;
-}
-
-.form-container {
-    border: 2px solid #333;
-    padding: 20px;
-    width: 300px;
-}
-
-.register {
-    color: red;
-}
-
-.form-container {
-    border: 2px solid #333;
-    padding: 20px;
-    width: 300px;
-    margin-top: 20px;
-}
-
-.register {
-    color: red;
-    margin-bottom: 10px;
-    /* Add margin to the bottom */
+    background-color: var(--color-background);
+    border: 1px solid var(--color-border);
 }
 
 .modal-dialog {
@@ -327,12 +309,10 @@ const doCloseRegisterModal = async () => {
     /* Adjust modal width */
 }
 
-.modal-content {
-    background-color: #fff;
-    /* Change modal background color */
-}
-
 .card-body {
+    color: var(--color-background-font);
+    background-color: var(--color-background-mute);
+    border: 0 solid var(--color-border-hover);
     display: flex;
     flex-direction: column;
 }
@@ -352,28 +332,10 @@ const doCloseRegisterModal = async () => {
     /* Add margin below each line */
 }
 
-.message {
-    color: red;
-    margin-top: 10px;
-    /* Add margin to the top */
-}
-
-
-.register {
-    color: red;
-    margin-bottom: 10px;
-    font-size: 1.2em;
-}
-
-.register-form {
-    margin-top: 10px;
-    /* Add margin to the top of the register form */
-}
-
 .register-form select {
     margin-bottom: 10px;
     padding: 8px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-background);
     border-radius: 5px;
     width: 100%;
 }
@@ -381,7 +343,7 @@ const doCloseRegisterModal = async () => {
 .register-form input[type="text"] {
     margin-bottom: 10px;
     padding: 8px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-background);
     border-radius: 5px;
     width: 100%;
     box-sizing: border-box;
@@ -392,22 +354,12 @@ const doCloseRegisterModal = async () => {
     padding: 10px 16px;
     border: none;
     border-radius: 5px;
-    background-color: #007bff;
-    color: #fff;
     cursor: pointer;
     width: 100%;
     transition: background-color 0.3s ease;
 }
 
-.register-form input[type="submit"]:hover {
-    background-color: #0056b3;
-}
-
 .alert {
     margin-bottom: 0;
-}
-
-.modal-body {
-    background: #cdcdcd
 }
 </style>
