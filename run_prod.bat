@@ -7,19 +7,8 @@ for /f "usebackq tokens=1,* delims==" %%a in ("server/.env") do (
 )
 
 :build
-echo Building the client...
-cd client
-call npm run build-only
-if errorlevel 1 (
-    echo Build failed. Exiting...
-    exit /b 1
-)
-goto run
-
-:run
-echo Starting the production server...
-cd ../server
-call gunicorn --bind=%FLASK_RUN_HOST%:%FLASK_RUN_PORT% --worker-class eventlet -w 1 app:app
+echo Running docker container
+call PORT=%FLASK_RUN_HOST% docker-compose up --build
 if errorlevel 1 (
     echo Server failed to start. Exiting...
     exit /b 1
