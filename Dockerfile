@@ -14,9 +14,13 @@ WORKDIR /
 
 COPY . .
 
+RUN sed -i -e 's/\r$//' install.sh
+
 RUN chmod +x ./install.sh
 
 RUN ./install.sh
+
+RUN sed -i -e 's/\r$//' run_prod.sh
 
 RUN chmod +x ./run_prod.sh
 
