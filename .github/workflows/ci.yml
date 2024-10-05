@@ -34,11 +34,11 @@ jobs:
 
       - name: Setup server
         run: |
+          cd ./
           pip install -r requirements.txt 
           flask db init 
           flask db migrate 
           flask db upgrade
-        working-directory: /
 
       - name: Build server
         run: |
