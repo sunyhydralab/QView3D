@@ -26,20 +26,23 @@ jobs:
           npm ci
         working-directory: client
 
-      - name: Run install.sh
-        run: |
-          chmod +x ./install.sh
-          ./install.sh
-        working-directory: ./
-
       - name: Build client
         run: |
           npm run build-only
         working-directory: client
 
+      - name: Setup server
+        run: |
+          pip install -r requirements.txt 
+          flask db init 
+          flask db migrate 
+          flask db upgrade
+        working-directory: /
+
       - name: Build server
         run: |
           npm run start-flask
+        working-directory: client
 
       - name: Verify server is running
         run: |
