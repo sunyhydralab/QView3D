@@ -23,6 +23,7 @@ jobs:
 
       - name: Install CLI dependencies
         run: |
+          npm install rollup --save-dev
           npm ci
         working-directory: client
 
