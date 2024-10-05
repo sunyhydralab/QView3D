@@ -25,13 +25,22 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '21.x'
-          cache-dependency-path: 'client/package-lock.json'
           cache: 'npm'
-    
+
+      - name: Clean up
+        run: |
+          rm -rf client/node_modules client/package-lock.json
+
+      - name: Install CLI dependencies
+        run: |
+          npm ci
+        working-directory: client
+
       - name: Run install.sh
         run: |
           chmod +x ./install.sh
           ./install.sh
+        working-directory: ./
 
       - name: Build client
         run: |
