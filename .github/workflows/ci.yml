@@ -25,6 +25,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '21.x'
+          cache-dependency-path: 'client/package-lock.json'
           cache: 'npm'
     
       - name: Run install.sh
