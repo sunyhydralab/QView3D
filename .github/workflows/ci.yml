@@ -41,11 +41,15 @@ jobs:
           flask db migrate 
           flask db upgrade
 
-      - name: Build server
+      - name: Start server
         run: |
-          npm run start-flask
+          nohup npm run start-flask &
         working-directory: client
 
       - name: Verify server is running
         run: |
-          curl localhost:8000
+          sleep 10
+
+      - name: Verify server is running
+        run: |
+          curl -f http://localhost:8000
