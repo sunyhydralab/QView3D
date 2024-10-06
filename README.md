@@ -2,7 +2,7 @@
 
 ## Overview
 
-QView3d, developed at SUNY's Hydra Lab, is an open-source software project designed to streamline the management and communication of 3D printing files to printer arrays. It offers users an expandable framework to enhance their workflow and take control of their process. Embracing an open community ethos, QView3d continuously evolves, actively seeking collaboration and feedback from users to improve and innovate.
+QView3D, developed at SUNY's Hydra Lab, is an open-source software project designed to streamline the management and communication of 3D printing files to printer arrays. It offers users an expandable framework to enhance their workflow and take control of their process. Embracing an open community ethos, QView3d continuously evolves, actively seeking collaboration and feedback from users to improve and innovate.
 
 ## Development Team
 
@@ -32,6 +32,10 @@ QView3d, developed at SUNY's Hydra Lab, is an open-source software project desig
 - **Backend**: Flask integrated with SQLite, handling data through Node.js.
 - **Communication**: Serial communication via Python, CORS for middleware support.
 - **Database**: SQLite.
+
+## Architecture Diagram
+
+![QView3D Diagram](QView3D-Architecture%20Diagram.jpg)
 
 ## Setup and Installation
 
@@ -67,4 +71,4 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Version
 
-0.1.0
+1.0.0

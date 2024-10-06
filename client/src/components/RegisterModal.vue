@@ -1,7 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue';
-import { printers, useRegisterPrinter, useGetPorts, useRetrievePrinters, useRetrievePrintersInfo, useRepair, useMoveHead, type Device } from '../model/ports';
-import { toast } from '@/model/toast';
+import {onMounted, ref} from 'vue';
+import {
+    type Device,
+    printers,
+    useGetPorts,
+    useMoveHead,
+    useRegisterPrinter,
+    useRetrievePrinters,
+    useRetrievePrintersInfo
+} from '../model/ports';
 
 const { ports } = useGetPorts();
 const { retrieve } = useRetrievePrinters();
@@ -16,8 +23,8 @@ let devices = ref<Array<Device>>([]) // Stores the list of devices
 const emit = defineEmits(['close', 'submit-form'])
 
 onMounted(async () => {
-    const allDevices = await ports();  // load all ports
-    devices.value = allDevices
+      // load all ports
+    devices.value = await ports()
 
     const modalElement = document.getElementById('registerModal')
     if (modalElement) {
@@ -32,8 +39,7 @@ onMounted(async () => {
 })
 
 const doGetPorts = async () => {
-    const allDevices = await ports();
-    devices.value = allDevices;
+    devices.value = await ports();
 }
 
 const doRegister = async () => {
@@ -134,16 +140,16 @@ const doMove = async (printer: Device) => {
 
 <style scoped>
 .modal-body {
-    background: var(--color-modal-background);
+    background: var(--color-background-mute);
 }
 
 .form-text {
-    background: var(--color-modal-background);
+    background: var(--color-background-mute);
     border: 1px solid var(--color-modal-background-inverted);
 }
 
 .form-select {
-    color: var(--color-text);
+    color: var(--color-background-font);
     background-color: var(--color-background-soft) !important;
     border-color: var(--color-modal-background-inverted) !important;
 }

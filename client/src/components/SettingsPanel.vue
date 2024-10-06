@@ -33,24 +33,20 @@ const saveSettings = () => {
                         <label for="port">Server Port:</label>
                         <input type="number" id="port" v-model="serverPort" required/>
                     </div>
-                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="submit" class="btn btn-secondary">Save</button>
                 </form>
             </div>
         </div>
     </div>
 
     <div class="position-fixed end-0 m-3" style="bottom:3rem">
-        <button class="btn btn-primary" data-bs-toggle="offcanvas" data-bs-target="#settingsOffcanvas">
+        <button class="btn btn-secondary" data-bs-toggle="offcanvas" data-bs-target="#settingsOffcanvas">
             <i class="fas fa-gear"></i>
         </button>
     </div>
 </template>
 
 <style scoped>
-.offcanvas{
-    background-color: var(--color-form-background);
-    color: var(--color-text);
-}
 .form-group {
     margin-bottom: 15px;
 }
@@ -63,7 +59,7 @@ label {
 input {
     width: 100%;
     padding: 8px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-border);
     border-radius: 4px;
 }
 </style>
