@@ -1,18 +1,14 @@
 import re
 from models.db import db
-from datetime import datetime, timezone
-from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
 from sqlalchemy.exc import SQLAlchemyError
 from flask import jsonify, current_app
 from Classes.Queue import Queue
 import serial
 import serial.tools.list_ports
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from tzlocal import get_localzone
 import os
-import json
 import requests
 from dotenv import load_dotenv
 
@@ -163,6 +159,7 @@ class Printer(db.Model):
     @classmethod
     def getConnectedPorts(cls, retries=3, delay=2):
         """Detects all available printer ports with retries."""
+        ports = []
         for _ in range(retries):
             ports = serial.tools.list_ports.comports()
             if ports:

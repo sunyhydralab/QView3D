@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
-
 from Classes.Vector3 import Vector3
-
 
 class hasResponsecodes(ABC):
     headPosition: Vector3 = None

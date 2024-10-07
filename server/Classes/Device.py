@@ -18,14 +18,14 @@ import serial.tools.list_ports
 
 class Device(ABC):
     # static variables
-    __MODEL: str= None
-    __VENDORID: int = None
-    __PRODUCTID: int = None
-    __DESCRIPTION: str = None
-    __serialID: str = None
-    __serialConnection: serial.Serial = None
-    __serialPort: ListPortInfo | SysFS = None
-    __homePosition: Vector3 = None
+    __MODEL: str | None = None
+    __VENDORID: int | None = None
+    __PRODUCTID: int | None = None
+    __DESCRIPTION: str | None = None
+    __serialID: str | None = None
+    __serialConnection: serial.Serial | None = None
+    __serialPort: ListPortInfo | SysFS | None = None
+    __homePosition: Vector3| None = None
 
     def __init__(self, serialPort: ListPortInfo | SysFS):
         self.__serialPort = serialPort
@@ -79,7 +79,7 @@ class Device(ABC):
                     hwid = self.getHWID().split(' LOCATION=')[0]
                     printerExists = PrinterList.getPrinterByHwid(hwid)
                     if printerExists:
-                        printer = PrinterList.query.filter_by(hwid=hwid).first()
+                        printer = PrinterList.getPrinterByHwid(hwid)
                         diagnoseString += f"<hr><br>Device <b>{port.device}</b> is registered with the following details: <br><br> <b>Name:</b> {printer.name} <br> <b>Device:</b> {printer.device}, <br> <b>Description:</b> {printer.description}, <br><b> HWID:</b> {printer.hwid}"
             if diagnoseString == "":
                 diagnoseString = "The port this printer is registered under is <b>not found</b>. Please check the connection and try again."

@@ -1,13 +1,14 @@
+from flask import jsonify
+from sqlalchemy.exc import SQLAlchemyError
+import serial
+import serial.tools.list_ports
 from Classes.Device import Device
 from Classes.Ports import Ports
 from Classes.Printer import Printer
-from models.db import db
 
-# TODO: change https://github.com/prusa3d/Prusa-Firmware-Buddy/blob/master/src/gui/res/png/serial_printing_172x138.png to QView3D logo
-
-class PrinterList(db.Model):
+class PrinterList():
     printers = Printer.queryAll()
-    
+
     @staticmethod
     def addPrinter(serialPortName: str, name: str):
         """add a printer to the list, and to the database"""
@@ -26,27 +27,27 @@ class PrinterList(db.Model):
 
     @staticmethod
     def deletePrinter(printerid):
-        try:
-            ports = serial.tools.list_ports.comports()
-            for port in ports:
-                hwid = port["hwid"]  # get hwid
-                if hwid == Printer.query.get(printerid).hwid:
-                    ser = serial.Serial(port["device"], 115200, timeout=1)
-                    ser.close()
-                    break
-
-                    # ser.close()
-
-            printer = cls.query.get(printerid)
-            db.session.delete(printer)
-            db.session.commit()
-            return {"success": True, "message": "Printer successfully deleted."}
-        except SQLAlchemyError as e:
-            print(f"Database error: {e}")
-            return (
-                jsonify({"error": "Failed to delete printer. Database error"}),
-                500,
-            )
+        """delete a printer from the list, and from the database"""
+        # TODO: Implement deletePrinter
+        pass
+        # try:
+        #     ports = serial.tools.list_ports.comports()
+        #     for port in ports:
+        #         hwid = port["hwid"]  # get hwid
+        #         if hwid == Printer.query.get(printerid).hwid:
+        #             ser = serial.Serial(port["device"], 115200, timeout=1)
+        #             ser.close()
+        #             break
+        #     printer = PrinterList.query.get(printerid)
+        #     db.session.delete(printer)
+        #     db.session.commit()
+        #     return {"success": True, "message": "Printer successfully deleted."}
+        # except SQLAlchemyError as e:
+        #     print(f"Database error: {e}")
+        #     return (
+        #         jsonify({"error": "Failed to delete printer. Database error"}),
+        #         500,
+        #     )
     @staticmethod
     def getPrinterCount():
         return len(PrinterList.printers)

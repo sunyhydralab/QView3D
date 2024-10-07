@@ -65,6 +65,7 @@ class Printer(db.Model):
         self.__job.setStatus("printing")
 
     def cancelPrint(self):
+        # TODO: implement cancel print
         pass
 
     def getStatus(self):

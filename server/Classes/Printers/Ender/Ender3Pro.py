@@ -9,3 +9,7 @@ class Ender3Pro(ABC, Ender3):
 
     def __init__(self, serialPort):
         super().__init__(self, serialPort)
+
+    def home(self):
+        # TODO: make the home work without crashing the printer
+        pass

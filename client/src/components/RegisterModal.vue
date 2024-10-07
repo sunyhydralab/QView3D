@@ -8,7 +8,7 @@ import {
     useRegisterPrinter,
     useRetrievePrinters,
     useRetrievePrintersInfo
-} from '../model/ports';
+} from '@/model/ports';
 
 const { ports } = useGetPorts();
 const { retrieve } = useRetrievePrinters();

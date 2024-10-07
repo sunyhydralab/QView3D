@@ -1,5 +1,4 @@
 from abc import ABC
-import serial
 from serial.tools.list_ports_common import ListPortInfo
 from Classes.Vector3 import Vector3
 from Classes.Device import Device

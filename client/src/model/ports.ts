@@ -1,9 +1,7 @@
-import { useRouter } from 'vue-router'
-import { ref, computed, onUnmounted } from 'vue'
+import {ref} from 'vue'
 import * as myFetch from './myFetch'
-import { toast } from './toast'
-import { type Job } from './jobs'
-import { socket } from './myFetch'
+import {toast} from './toast'
+import {type Job} from './jobs'
 
 export function api(action: string, body?: unknown, method?: string, headers?: any) {
   headers = headers ?? {}
@@ -28,14 +26,13 @@ export interface Device {
   colorChangeBuffer?: number
 }
 
-export let printers = ref<Device[]>([])
+export const printers = ref<Device[]>([])
 
 export function useGetPorts() {
   return {
     async ports() {
       try {
-        const response = await api('getports')
-        return response
+        return await api('getports')
       } catch (error) {
         console.error(error)
       }
