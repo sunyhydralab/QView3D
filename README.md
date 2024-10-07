@@ -4,12 +4,18 @@
 
 QView3D, developed at SUNY's Hydra Lab, is an open-source software project designed to streamline the management and communication of 3D printing files to printer arrays. It offers users an expandable framework to enhance their workflow and take control of their process. Embracing an open community ethos, QView3d continuously evolves, actively seeking collaboration and feedback from users to improve and innovate.
 
-## Development Team
+## Development Teams
+#### - Created and advised by [**Professor Michael Curry**](https://github.com/currymike123)
 
-- [**Lars Palombi** ](https://github.com/Lars-Codes)
+### Fall 2024
+- [**Ari Yeger**](https://github.com/L10nhunter)
+- [**CJ Jenks**](https://github.com/iron768)
+- [**Nathan Gopee**](https://github.com/ndg8743)
+
+### Spring 2024
+- [**Lars Palombi**](https://github.com/Lars-Codes)
 - [**Jack Gusler**](https://github.com/jackgusler)
 - [**Olamide Kumapayi**](https://github.com/olakuma)
-- [**Michael Curry**](https://github.com/currymike123)
 
 ## Features
 
@@ -20,7 +26,7 @@ QView3D, developed at SUNY's Hydra Lab, is an open-source software project desig
   - Storage management for purging old files while retaining essential data.
   - Job prioritization and favoring.
   - Comprehensive job filtering and history tracking.
-  - initiate printer pauses and filament color changes.
+  - Initiate printer pauses and filament color changes.
 - **Error Logging**: Assign comments and track issues for past jobs to analyze job success and error rates.
 - **Advanced Viewing**:
   - Real-time 3D model previews before and during printing.
