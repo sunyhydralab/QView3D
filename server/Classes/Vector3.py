@@ -8,7 +8,7 @@ class Vector3:
 
     # String representation for printing
     def __repr__(self):
-        return f"Vector3({self.x}, {self.y}, {self.z})"
+        return f"X:{self.x:.2f} Y:{self.y:.2f} Z:{self.z:.2f}"
 
     # Adding two vectors
     def __add__(self, other):
