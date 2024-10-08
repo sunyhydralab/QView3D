@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install CLI dependencies
         run: |
@@ -44,9 +44,9 @@ jobs:
           nohup npm run start-flask &
         working-directory: client
 
-      - name: Verify server is running
+      - name: Wait for server to start
         run: |
-          sleep 10
+          sleep 5
 
       - name: Verify server is running
         run: |
