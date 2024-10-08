@@ -1,23 +1,24 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue';
-import { printers, useSetStatus, useMovePrinterList, type Device } from '@/model/ports';
-import draggable from 'vuedraggable';
+import {nextTick, onMounted, ref} from 'vue';
+import {printers, useSetStatus, useMovePrinterList, type Device} from '@/model/ports';
+import {VueDraggableNext} from 'vue-draggable-next';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue';
 import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 import GCode3DLiveViewer from '@/components/GCode3DLiveViewer.vue';
-import { useAssignIssue, useGetIssues, type Issue } from '@/model/issues';
-import { jobTime, useAssignComment, useGetFile, useGetJobFile, useReleaseJob, useStartJob, type Job } from '@/model/jobs';
-import { useRouter } from 'vue-router';
+import {useAssignIssue, useGetIssues, type Issue} from '@/model/issues';
+import {jobTime, useAssignComment, useGetFile, useGetJobFile, useReleaseJob, useStartJob, type Job} from '@/model/jobs';
+import {useRouter} from 'vue-router';
+import TableInfo from "@/components/TableInfo.vue";
 
-const { assign } = useAssignIssue();
-const { assignComment } = useAssignComment();
-const { releaseJob } = useReleaseJob();
-const { issues } = useGetIssues();
-const { getFile } = useGetFile();
-const { setStatus } = useSetStatus();
-const { start } = useStartJob();
-const { getFileDownload } = useGetJobFile();
-const { movePrinterList } = useMovePrinterList();
+const {assign} = useAssignIssue();
+const {assignComment} = useAssignComment();
+const {releaseJob} = useReleaseJob();
+const {issues} = useGetIssues();
+const {getFile} = useGetFile();
+const {setStatus} = useSetStatus();
+const {start} = useStartJob();
+const {getFileDownload} = useGetJobFile();
+const {movePrinterList} = useMovePrinterList();
 
 const router = useRouter();
 
@@ -31,25 +32,25 @@ let currentJob = ref<Job>();
 let currentPrinter = ref<Device>();
 
 // State for issues and visibility of GCode modals
-let issuelist = ref<Array<Issue>>([]);
-let isGcodeImageVisible = ref(false);
+const issuelist = ref<Array<Issue>>([]);
+const isGcodeImageVisible = ref(false);
 const isImageVisible = ref(true);
-let isGcodeLiveViewVisible = ref(false);
+const isGcodeLiveViewVisible = ref(false);
 
 // Expanded printer state
 let expandedState: (string | undefined)[] = [];
 
+
 // Table headers
 const headers = [
-  { text: 'ID', style: 'width: 64px; position: relative;' },
-  { text: 'Printer Name', style: 'width: 130px; position: relative;' },
-  { text: 'Printer Status', style: 'width: 142px; position: relative;' },
-  { text: 'Job Name', style: 'width: 110px; position: relative;' },
-  { text: 'File', style: 'width: 110px; position: relative;' },
-  { text: 'Printer Options', style: 'width: 314px; position: relative;' },
-  { text: 'Progress', style: 'width: 315px; position: relative;' },
-  { text: 'Actions', style: 'width: 75px; position: relative;' },
-  { text: 'Move', style: 'width: 58px; position: relative;' }
+  {text: 'ID', style: 'width: 64px; position: relative;'},
+  {text: 'Printer Name', style: 'width: 130px; position: relative;'},
+  {text: 'Printer Status', style: 'width: 142px; position: relative;'},
+  {text: 'Job Name', style: 'width: 110px; position: relative;'},
+  {text: 'File', style: 'width: 110px; position: relative;'},
+  {text: 'Printer Options', style: 'width: 314px; position: relative;'},
+  {text: 'Progress', style: 'width: 315px; position: relative;'},
+  {text: 'Actions', style: 'width: 133px; position: relative;'}
 ];
 
 // On component mount, fetch issues and initialize modals
@@ -58,24 +59,6 @@ onMounted(async () => {
   setupModalEvents();
   initResizableColumns();
 });
-
-// Format time for display
-function formatTime(milliseconds: number): string {
-  const seconds = Math.floor((milliseconds / 1000) % 60);
-  const minutes = Math.floor((milliseconds / (1000 * 60)) % 60);
-  const hours = Math.floor((milliseconds / (1000 * 60 * 60)) % 24);
-
-  return [hours, minutes, seconds]
-      .map(unit => (unit < 10 ? '0' + unit : unit))
-      .join(':') || '<i>Waiting...</i>';
-}
-
-// Format ETA for display
-function formatETA(milliseconds: number): string {
-  const date = new Date(milliseconds);
-  const timeString = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-  return !isNaN(date.getTime()) && timeString !== '07:00 PM' ? timeString : '<i>Waiting...</i>';
-}
 
 // Collapse and restore expanded printer state
 const collapseAll = () => {
@@ -164,6 +147,34 @@ function setupModalEvents() {
   });
 }
 
+/*
+function startResize(event, index) {
+  this.resizingColumnIndex = index;
+  this.startX = event.pageX;
+  this.startWidth = this.columns[index].width;
+
+  document.addEventListener('mousemove', this.resizeColumn);
+  document.addEventListener('mouseup', this.stopResize);
+}
+
+function resizeColumn(event) {
+  if (this.resizingColumnIndex !== null) {
+    const dx = event.pageX - this.startX;
+    const newWidth = this.startWidth + dx;
+    this.$set(this.columns, this.resizingColumnIndex, {
+      ...this.columns[this.resizingColumnIndex],
+      width: newWidth > 50 ? newWidth : 50, // Minimum width of 50px
+    });
+  }
+}
+
+function stopResize() {
+  document.removeEventListener('mousemove', this.resizeColumn);
+  document.removeEventListener('mouseup', this.stopResize);
+  this.resizingColumnIndex = null;
+}
+*/
+
 // Initialize resizable columns by adding event listeners for drag resizing
 function initResizableColumns() {
   const table = document.querySelector("table");
@@ -218,149 +229,72 @@ function openImageViewer() {
     if (file) currentJob.value.file = file;
   });
 }
-
-// Return appropriate status text for the printer
-const getStatusText = (printer: Device) => {
-  return printer.status === 'printing' && printer.queue?.[0]?.released === 0 ? 'Waiting release' : printer.status;
-};
-
-// Define actions based on the printer's status
-const printerActions = (printer: Device) => {
-  const actions = [];
-  if (['configuring', 'offline', 'error'].includes(printer.status)) {
-    actions.push({ text: 'Set to Ready', class: 'btn btn-primary', method: () => setPrinterStatus(printer, 'ready') });
-  }
-  if (['configuring', 'ready', 'error', 'complete'].includes(printer.status)) {
-    actions.push({ text: 'Turn Offline', class: 'btn btn-danger', method: () => setPrinterStatus(printer, 'offline') });
-  }
-  if (printer.status === 'printing' && printer.queue?.[0].released === 0) {
-    actions.push({ text: 'Start Print', class: 'btn btn-secondary', method: () => startPrint(printer.id, printer.queue[0].id) });
-  }
-  return actions;
-};
 </script>
 
 <template>
   <div class="container">
     <table ref="table">
+      <thead>
       <tr>
         <th v-for="(header, index) in headers" :key="index" :style="header.style" class="resizable">
           {{ header.text }}
           <div class="resize-handle"></div>
         </th>
       </tr>
-      <draggable v-model="printers" tag="tbody" :animation="300" item-key="printer.id" handle=".handle"
-                 dragClass="hidden-ghost" @start="collapseAll" @end="restoreExpandedState">
-        <template #item="{ element: printer }">
-          <tr>
-            <td>{{ printer.queue?.[0]?.td_id || 'idle' }}</td>
-            <td class="truncate" :title="printer.name">{{ printer.name }}</td>
-            <td>{{ getStatusText(printer) }}</td>
-            <td class="truncate" :title="printer.queue?.[0]?.name">{{ printer.queue?.[0]?.name || '' }}</td>
-            <td class="truncate" :title="printer.queue?.[0]?.file_name_original">{{ printer.queue?.[0]?.file_name_original || '' }}</td>
-            <td>
-              <div class="buttons">
-                <button v-for="action in printerActions(printer)" :key="action.text" :class="action.class" @click="action.method">{{ action.text }}</button>
-              </div>
-            </td>
-            <td>
-              <div class="progress-wrapper">
-                <div v-if="printer.queue?.[0]?.progress !== undefined" class="progress">
-                  <div class="progress-bar" :style="{ width: (printer.queue?.[0].progress || 0) + '%' }"></div>
-                  <p class="progress-text">{{ printer.queue?.[0]?.progress?.toFixed(2) + '%' || '0.00%' }}</p>
-                </div>
-              </div>
-            </td>
-            <td style="width: 1%; white-space: nowrap;">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <!-- Dropdown icon for actions -->
-                <i :class="{ 'fa fa-chevron-down': !printer.isInfoExpanded, 'fa fa-chevron-up': printer.isInfoExpanded }"
-                   @click="openPrinterInfo(printer)">
-                </i>
-
-                <!-- Dropdown actions for the printer -->
-                <div :class="{ 'not-draggable': printer.queue && printer.queue.length === 0 }" class="dropdown">
-                  <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
-                          style="background: none; border: none;">
-                    <i class="fas fa-bars" :class="{ 'icon-disabled': printer.queue && printer.queue.length === 0 }"></i>
-                  </button>
-                  <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
-                    <!-- Display GCode Image if the printer has jobs -->
-                    <li v-if="printer.queue && printer.queue.length > 0">
-                      <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
-                         data-bs-target="#gcodeImageModal" v-bind:job="printer.queue[0]"
-                         @click="openModal(printer.queue[0], printer.name, 2, printer)">
-                        <i class="fa-solid fa-image"></i>
-                        <span class="ms-2">GCode Image</span>
-                      </a>
-                    </li>
-                    <!-- Display GCode Live if the printer has extruded job -->
-                    <li v-if="printer.queue.length > 0 && printer.queue[0].extruded">
-                      <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
-                         data-bs-target="#gcodeLiveViewModal" v-bind:job="printer.queue[0]"
-                         @click="openModal(printer.queue[0], printer.name, 1, printer)">
-                        <i class="fas fa-code"></i>
-                        <span class="ms-2">GCode Live</span>
-                      </a>
-                    </li>
-                    <!-- Display Download option -->
-                    <li v-if="printer.queue.length > 0">
-                      <a class="dropdown-item d-flex align-items-center" @click="getFileDownload(printer.queue[0].id)">
-                        <i class="fas fa-download"></i>
-                        <span class="ms-2">Download</span>
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </td>
-            <td class="text-center handle"><i class="fas fa-grip-vertical"></i></td>
-          </tr>
-        </template>
-      </draggable>
+      </thead>
+      <tbody>
+      <VueDraggableNext v-model="printers">
+        <TableInfo v-for="printer in printers" :key="printer.id" :printer="printer"/>
+      </VueDraggableNext>
+      </tbody>
     </table>
     <div v-if="printers.length === 0" class="no-printers-message">
-      No printers available. Either register a printer <RouterLink to="/registration">here</RouterLink>, or restart the server.
+      No printers available. Either register a printer
+      <RouterLink to="/registration">here</RouterLink>
+      , or restart the server.
     </div>
-  </div>
 
-  <!-- Modals for GCode Image and Live View -->
-  <div class="modal fade" id="gcodeLiveViewModal" tabindex="-1" aria-labelledby="gcodeLiveViewModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="gcodeLiveViewModalLabel">
-            <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}<br>
-            <b>Z-Layer:</b> {{ currentJob?.current_layer_height }}/{{ currentJob?.max_layer_height }}
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="row">
-            <GCode3DLiveViewer v-if="isGcodeLiveViewVisible" :job="currentJob" />
+    <!-- Modals for GCode Image and Live View -->
+    <div class="modal fade" id="gcodeLiveViewModal" tabindex="-1" aria-labelledby="gcodeLiveViewModalLabel"
+         aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="gcodeLiveViewModalLabel">
+              <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}<br>
+              <b>Z-Layer:</b> {{ currentJob?.current_layer_height }}/{{ currentJob?.max_layer_height }}
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <GCode3DLiveViewer v-if="isGcodeLiveViewVisible" :job="currentJob"/>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel" aria-hidden="true">
-    <div :class="['modal-dialog', isImageVisible ? '' : 'modal-xl', 'modal-dialog-centered']">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="gcodeImageModalLabel">
-            <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
-            <div class="form-check form-switch">
-              <label class="form-check-label" for="switchView">{{ isImageVisible ? 'Image' : 'Viewer' }}</label>
-              <input class="form-check-input" type="checkbox" id="switchView" v-model="isImageVisible">
+
+    <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel"
+         aria-hidden="true">
+      <div :class="['modal-dialog', isImageVisible ? '' : 'modal-xl', 'modal-dialog-centered']">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="gcodeImageModalLabel">
+              <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
+              <div class="form-check form-switch">
+                <label class="form-check-label" for="switchView">{{ isImageVisible ? 'Image' : 'Viewer' }}</label>
+                <input class="form-check-input" type="checkbox" id="switchView" v-model="isImageVisible">
+              </div>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <GCode3DImageViewer v-if="isGcodeImageVisible && !isImageVisible" :job="currentJob"/>
+              <GCodeThumbnail v-else-if="isGcodeImageVisible && isImageVisible" :job="currentJob"/>
             </div>
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="row">
-            <GCode3DImageViewer v-if="isGcodeImageVisible && !isImageVisible" :job="currentJob" />
-            <GCodeThumbnail v-else-if="isGcodeImageVisible && isImageVisible" :job="currentJob" />
           </div>
         </div>
       </div>
@@ -372,15 +306,16 @@ const printerActions = (printer: Device) => {
 /* Resize handle styles */
 .resize-handle {
   position: absolute;
-  right: 0;
   top: 0;
+  right: 0;
   width: 5px;
   height: 100%;
   cursor: col-resize;
+  background-color: transparent;
 }
 
-.resize-handle:hover {
-  background-color: rgba(0, 0, 0, 0.1);
+th:hover .resize-handle {
+  background-color: var(--color-border);
 }
 
 .resizable {
@@ -389,6 +324,7 @@ const printerActions = (printer: Device) => {
 
 table {
   table-layout: fixed;
+  border-collapse: collapse;
   width: 100%;
 }
 
@@ -400,8 +336,13 @@ table {
 
 .buttons {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
+  align-content: center;
   flex-wrap: wrap;
+}
+
+.buttons button {
+  margin: 0.25rem;
 }
 
 .progress-wrapper {
@@ -426,5 +367,14 @@ table {
 
 .no-printers-message {
   margin-top: 1rem;
+}
+
+tr {
+  display: table-row !important;
+}
+
+tbody {
+  display: table-row-group !important;
+  height: max-content;
 }
 </style>

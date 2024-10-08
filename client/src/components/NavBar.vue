@@ -40,19 +40,6 @@ async function measurePing() {
 
 }
 
-
-const observer = new MutationObserver(() => {
-    const colorPrimary = getComputedStyle(document.documentElement, null).getPropertyValue('--color-primary').trim();
-    const colorSecondary = getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary').trim();
-
-    const svgElementPrimary = document.getElementById('cls-1');
-    svgElementPrimary.style.fill = colorPrimary;
-    const svgElementSecondary = document.getElementById('cls-2');
-    svgElementSecondary.style.stroke = colorSecondary;
-});
-
-observer.observe(document.documentElement, {attributes: true, attributeFilter: ['style']});
-
 onMounted(async () => {
     await refreshServerConnection();
     setInterval(measurePing, 10000);

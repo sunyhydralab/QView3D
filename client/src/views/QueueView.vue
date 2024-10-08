@@ -2,7 +2,7 @@
 import { onUnmounted, ref, computed, watchEffect, onMounted, watch } from 'vue'
 import { printers, type Device } from '../model/ports'
 import { useRerunJob, useRemoveJob, type Job, useMoveJob, useGetFile, useGetJobFile, isLoading } from '../model/jobs'
-import draggable from 'vuedraggable'
+import { VueDraggableNext} from 'vue-draggable-next';
 import { toast } from '@/model/toast'
 import { useRouter } from 'vue-router'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'

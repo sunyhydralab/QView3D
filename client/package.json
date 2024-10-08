@@ -48,7 +48,7 @@
         "vue-socket.io-extended": "^4.2.0",
         "vue-toast-notification": "^3.1.2",
         "vue3-toast": "^0.0.1",
-        "vuedraggable": "^4.1.0"
+        "vue-draggable-next": "^2.2.1"
     },
     "devDependencies": {
         "@electron-forge/cli": "^7.4.0",
