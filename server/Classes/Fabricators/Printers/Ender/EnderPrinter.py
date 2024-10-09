@@ -1,10 +1,9 @@
-from abc import ABC
-from Classes.Device import Device
-from Interfaces.hasEndingSequence import hasEndingSequence
+from abc import ABCMeta
+from Classes.Fabricators.Device import Device
+from Mixins.hasEndingSequence import hasEndingSequence
 
-
-class EnderPrinter(ABC, Device, hasEndingSequence):
-    __VENDORID = 0x1A86
+class EnderPrinter(Device, hasEndingSequence, metaclass=ABCMeta):
+    VENDORID = 0x1A86
 
     def endSequence(self):
         self.gcodeEnding("G91") # Relative positioning

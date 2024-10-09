@@ -1,6 +1,6 @@
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 
-class hasStartupSequence(ABC):
+class hasStartupSequence(metaclass=ABCMeta):
     @abstractmethod
     def startupSequence(self):
         pass

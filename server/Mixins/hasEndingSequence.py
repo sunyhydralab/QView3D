@@ -1,6 +1,7 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod, ABCMeta
 
-class hasEndingSequence(ABC):
+
+class hasEndingSequence(metaclass=ABCMeta):
     @abstractmethod
     def endSequence(self):
         pass

@@ -1,6 +1,6 @@
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 
-class canPause(ABC):
+class canPause(metaclass=ABCMeta):
     @abstractmethod
     def pause(self):
         pass

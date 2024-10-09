@@ -21,6 +21,6 @@ class Ports:
     def getPortByHwid(hwid: str) -> ListPortInfo | SysFS | None:
         ports = Ports.getPorts()
         for port in ports:
-            if port.hwid == hwid:
+            if hwid in port.hwid:
                 return port
         return None
