@@ -1,29 +1,37 @@
 #!/bin/bash
 
+setup_python() {
+    pip install -r requirements.txt 
+}
+
+setup_flask() {
+    flask db init 
+
+    flask db migrate 
+
+    flask db upgrade    
+}
+
+setup_client() {
+    npm install --save-dev
+}
+
+build_client() {
+    npm run build-only
+}
+
 echo "Installing dependencies for QView3D"
 
-# Install Python dependencies. Requirements was created with pipreqs.
-pip install -r requirements.txt 
+setup_python
 
-# Change directory to the server.
 cd server
 
-# Initialize the database. 
-flask db init 
+setup_flask
 
-# Generate a migration script. 
-flask db migrate 
-
-# Apply the migration. 
-flask db upgrade 
-
-# Change directory to the client.
 cd ../client
 
-# Install Node.js dependencies.
-npm install
+setup_client
 
-# Build client so server can host it.
-npm run build-only
+build_client
 
 echo "Finished installed dependencies!"

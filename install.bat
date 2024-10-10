@@ -13,7 +13,7 @@ goto clientSetup
 
 :clientSetup
 cd ../client
-npm install
+npm install --save-dev
 npm run build-only
 goto finish
 
