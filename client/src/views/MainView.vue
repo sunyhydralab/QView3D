@@ -1,24 +1,24 @@
 <script setup lang="ts">
-import {nextTick, onMounted, ref} from 'vue';
-import {printers, useSetStatus, useMovePrinterList, type Device} from '@/model/ports';
-import {VueDraggableNext} from 'vue-draggable-next';
+import { nextTick, onMounted, ref } from 'vue';
+import { printers, useSetStatus, useMovePrinterList, type Device } from '@/model/ports';
+import { VueDraggableNext } from 'vue-draggable-next';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue';
 import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 import GCode3DLiveViewer from '@/components/GCode3DLiveViewer.vue';
-import {useAssignIssue, useGetIssues, type Issue} from '@/model/issues';
-import {jobTime, useAssignComment, useGetFile, useGetJobFile, useReleaseJob, useStartJob, type Job} from '@/model/jobs';
-import {useRouter} from 'vue-router';
+import { useAssignIssue, useGetIssues, type Issue } from '@/model/issues';
+import { jobTime, useAssignComment, useGetFile, useGetJobFile, useReleaseJob, useStartJob, type Job } from '@/model/jobs';
+import { useRouter, RouterLink } from 'vue-router';
 import TableInfo from "@/components/TableInfo.vue";
 
-const {assign} = useAssignIssue();
-const {assignComment} = useAssignComment();
-const {releaseJob} = useReleaseJob();
-const {issues} = useGetIssues();
-const {getFile} = useGetFile();
-const {setStatus} = useSetStatus();
-const {start} = useStartJob();
-const {getFileDownload} = useGetJobFile();
-const {movePrinterList} = useMovePrinterList();
+const { assign } = useAssignIssue();
+const { assignComment } = useAssignComment();
+const { releaseJob } = useReleaseJob();
+const { issues } = useGetIssues();
+const { getFile } = useGetFile();
+const { setStatus } = useSetStatus();
+const { start } = useStartJob();
+const { getFileDownload } = useGetJobFile();
+const { movePrinterList } = useMovePrinterList();
 
 const router = useRouter();
 
@@ -40,17 +40,16 @@ const isGcodeLiveViewVisible = ref(false);
 // Expanded printer state
 let expandedState: (string | undefined)[] = [];
 
-
 // Table headers
 const headers = [
-  {text: 'ID', style: 'width: 64px; position: relative;'},
-  {text: 'Printer Name', style: 'width: 130px; position: relative;'},
-  {text: 'Printer Status', style: 'width: 142px; position: relative;'},
-  {text: 'Job Name', style: 'width: 110px; position: relative;'},
-  {text: 'File', style: 'width: 110px; position: relative;'},
-  {text: 'Printer Options', style: 'width: 314px; position: relative;'},
-  {text: 'Progress', style: 'width: 315px; position: relative;'},
-  {text: 'Actions', style: 'width: 133px; position: relative;'}
+  { text: 'ID', style: 'width: 64px; position: relative;' },
+  { text: 'Printer Name', style: 'width: 130px; position: relative;' },
+  { text: 'Printer Status', style: 'width: 142px; position: relative;' },
+  { text: 'Job Name', style: 'width: 110px; position: relative;' },
+  { text: 'File', style: 'width: 110px; position: relative;' },
+  { text: 'Printer Options', style: 'width: 314px; position: relative;' },
+  { text: 'Progress', style: 'width: 315px; position: relative;' },
+  { text: 'Actions', style: 'width: 133px; position: relative;' },
 ];
 
 // On component mount, fetch issues and initialize modals
@@ -63,7 +62,7 @@ onMounted(async () => {
 // Collapse and restore expanded printer state
 const collapseAll = () => {
   expandedState = printers.value.filter(printer => printer.isInfoExpanded).map(printer => printer.id?.toString());
-  printers.value.forEach(printer => printer.isInfoExpanded = false);
+  printers.value.forEach(printer => (printer.isInfoExpanded = false));
 };
 
 const restoreExpandedState = () => {
@@ -147,56 +146,32 @@ function setupModalEvents() {
   });
 }
 
-/*
-function startResize(event, index) {
-  this.resizingColumnIndex = index;
-  this.startX = event.pageX;
-  this.startWidth = this.columns[index].width;
-
-  document.addEventListener('mousemove', this.resizeColumn);
-  document.addEventListener('mouseup', this.stopResize);
-}
-
-function resizeColumn(event) {
-  if (this.resizingColumnIndex !== null) {
-    const dx = event.pageX - this.startX;
-    const newWidth = this.startWidth + dx;
-    this.$set(this.columns, this.resizingColumnIndex, {
-      ...this.columns[this.resizingColumnIndex],
-      width: newWidth > 50 ? newWidth : 50, // Minimum width of 50px
-    });
-  }
-}
-
-function stopResize() {
-  document.removeEventListener('mousemove', this.resizeColumn);
-  document.removeEventListener('mouseup', this.stopResize);
-  this.resizingColumnIndex = null;
-}
-*/
-
 // Initialize resizable columns by adding event listeners for drag resizing
 function initResizableColumns() {
-  const table = document.querySelector("table");
-  const cols = table.querySelectorAll("th");
-  let isResizing = false, startX, startWidth;
+  const table = document.querySelector('table');
+  const cols = table?.querySelectorAll('th');
+  let isResizing = false,
+      startX,
+      startWidth;
 
-  cols.forEach(col => {
-    const resizer = col.querySelector(".resize-handle");
+  cols?.forEach(col => {
+    const resizer = col.querySelector('.resize-handle');
 
-    resizer.addEventListener("mousedown", e => {
+    resizer?.addEventListener('mousedown', e => {
       isResizing = true;
       startX = e.pageX;
       startWidth = parseInt(window.getComputedStyle(col).width, 10);
 
-      document.addEventListener("mousemove", resizeColumn);
-      document.addEventListener("mouseup", stopResize);
+      document.addEventListener('mousemove', resizeColumn);
+      document.addEventListener('mouseup', stopResize);
     });
 
-    const resizeColumn = (e) => isResizing && (col.style.width = `${startWidth + e.pageX - startX}px`);
+    const resizeColumn = e => {
+      if (isResizing) col.style.width = `${startWidth + e.pageX - startX}px`;
+    };
     const stopResize = () => {
-      document.removeEventListener("mousemove", resizeColumn);
-      document.removeEventListener("mouseup", stopResize);
+      document.removeEventListener('mousemove', resizeColumn);
+      document.removeEventListener('mouseup', stopResize);
       isResizing = false;
     };
   });
@@ -206,7 +181,7 @@ function initResizableColumns() {
 function resetSelectElement() {
   setTimeout(() => {
     const selectElement = document.querySelector('select');
-    selectElement && (selectElement.value = '');
+    if (selectElement) selectElement.value = '';
   });
 }
 
@@ -236,15 +211,22 @@ function openImageViewer() {
     <table ref="table">
       <thead>
       <tr>
-        <th v-for="(header, index) in headers" :key="index" :style="header.style" class="resizable">
+        <th
+            v-for="(header, index) in headers"
+            :key="index"
+            :style="header.style"
+            class="resizable"
+        >
           {{ header.text }}
           <div class="resize-handle"></div>
         </th>
       </tr>
       </thead>
       <tbody>
-      <VueDraggableNext v-model="printers">
-        <TableInfo v-for="printer in printers" :key="printer.id" :printer="printer"/>
+      <VueDraggableNext v-model="printers" @end="handleDragEnd">
+        <tr v-for="printer in printers" :key="printer.id">
+          <TableInfo :printer="printer" :setPrinterStatus="setPrinterStatus" />
+        </tr>
       </VueDraggableNext>
       </tbody>
     </table>
@@ -255,45 +237,87 @@ function openImageViewer() {
     </div>
 
     <!-- Modals for GCode Image and Live View -->
-    <div class="modal fade" id="gcodeLiveViewModal" tabindex="-1" aria-labelledby="gcodeLiveViewModalLabel"
-         aria-hidden="true">
+    <div
+        class="modal fade"
+        id="gcodeLiveViewModal"
+        tabindex="-1"
+        aria-labelledby="gcodeLiveViewModalLabel"
+        aria-hidden="true"
+    >
       <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="gcodeLiveViewModalLabel">
-              <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}<br>
-              <b>Z-Layer:</b> {{ currentJob?.current_layer_height }}/{{ currentJob?.max_layer_height }}
+              <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}<br />
+              <b>Z-Layer:</b> {{ currentJob?.current_layer_height }}/
+              {{ currentJob?.max_layer_height }}
             </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+            ></button>
           </div>
           <div class="modal-body">
             <div class="row">
-              <GCode3DLiveViewer v-if="isGcodeLiveViewVisible" :job="currentJob"/>
+              <GCode3DLiveViewer
+                  v-if="isGcodeLiveViewVisible"
+                  :job="currentJob"
+              />
             </div>
           </div>
         </div>
       </div>
     </div>
 
-
-    <div class="modal fade" id="gcodeImageModal" tabindex="-1" aria-labelledby="gcodeImageModalLabel"
-         aria-hidden="true">
-      <div :class="['modal-dialog', isImageVisible ? '' : 'modal-xl', 'modal-dialog-centered']">
+    <div
+        class="modal fade"
+        id="gcodeImageModal"
+        tabindex="-1"
+        aria-labelledby="gcodeImageModalLabel"
+        aria-hidden="true"
+    >
+      <div
+          :class="[
+          'modal-dialog',
+          isImageVisible ? '' : 'modal-xl',
+          'modal-dialog-centered',
+        ]"
+      >
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="gcodeImageModalLabel">
               <b>{{ currentJob?.printer }}:</b> {{ currentJob?.name }}
               <div class="form-check form-switch">
-                <label class="form-check-label" for="switchView">{{ isImageVisible ? 'Image' : 'Viewer' }}</label>
-                <input class="form-check-input" type="checkbox" id="switchView" v-model="isImageVisible">
+                <label class="form-check-label" for="switchView"
+                >{{ isImageVisible ? 'Image' : 'Viewer' }}</label
+                >
+                <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="switchView"
+                    v-model="isImageVisible"
+                />
               </div>
             </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+            ></button>
           </div>
           <div class="modal-body">
             <div class="row">
-              <GCode3DImageViewer v-if="isGcodeImageVisible && !isImageVisible" :job="currentJob"/>
-              <GCodeThumbnail v-else-if="isGcodeImageVisible && isImageVisible" :job="currentJob"/>
+              <GCode3DImageViewer
+                  v-if="isGcodeImageVisible && !isImageVisible"
+                  :job="currentJob"
+              />
+              <GCodeThumbnail
+                  v-else-if="isGcodeImageVisible && isImageVisible"
+                  :job="currentJob"
+              />
             </div>
           </div>
         </div>
