@@ -7,6 +7,7 @@ goto flaskSetup
 :flaskSetup
 cd server
 rmdir /s /q "migrations"
+del "hvamc.db"
 flask db init
 flask db migrate
 flask db upgrade

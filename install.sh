@@ -6,6 +6,8 @@ setup_python() {
 
 setup_flask() {
     rm -rf migrations
+
+    rm -f hvamc.db
     
     flask db init 
 
