@@ -5,6 +5,8 @@ setup_python() {
 }
 
 setup_flask() {
+    rm -rf migrations
+    
     flask db init 
 
     flask db migrate 
