@@ -1,5 +1,6 @@
 from Classes.Fabricators.Printers.Prusa.PrusaPrinter import PrusaPrinter
 from Classes.Vector3 import Vector3
+from Mixins.hasResponseCodes import alwaysTrue
 
 
 class PrusaMK4(PrusaPrinter):
@@ -10,7 +11,7 @@ class PrusaMK4(PrusaPrinter):
 
     def endSequence(self):
         # self.gcodeEnding("{if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+1, max_print_height)} F720 ; Move print head up{endif}")
-        self.gcodeEnding("M104 S0")  # ; turn off temperature
-        self.gcodeEnding("M140 S0")  # ; turn off heatbed
-        self.gcodeEnding("M107")  # ; turn off fan
+        self.sendGcode(b"M104 S0\n", alwaysTrue)  # ; turn off temperature
+        self.sendGcode(b"M140 S0\n", alwaysTrue)  # ; turn off heatbed
+        self.sendGcode(b"M107\n", alwaysTrue)  # ; turn off fan
 

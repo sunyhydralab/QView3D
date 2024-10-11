@@ -33,30 +33,11 @@ class Device(ABC):
     def __repr__(self):
         return f"{self.getModel()} on {self.getSerialPort().device}"
 
-    # @staticmethod
-    # def createDevice(serialPort: ListPortInfo | SysFS | None):
-    #     """creates the correct printer object based on the serial port info"""
-    #     if serialPort is None:
-    #         return None
-    #     if serialPort.vid == PrusaPrinter.__VENDORID:
-    #         if serialPort.pid == PrusaMK4.__PRODUCTID:
-    #             return PrusaMK4(serialPort)
-    #         elif serialPort.pid == PrusaMK4S.__PRODUCTID:
-    #             return PrusaMK4S(serialPort)
-    #         elif serialPort.pid == PrusaMK3.__PRODUCTID:
-    #             return PrusaMK3(serialPort)
-    #         else:
-    #             return None
-    #     elif serialPort.vid == EnderPrinter.__VENDORID:
-    #         if serialPort.pid == Ender3.__PRODUCTID:
-    #             return Ender3(serialPort)
-    #         elif serialPort.pid == Ender3Pro.__PRODUCTID:
-    #             return Ender3Pro(serialPort)
-
 
     def connect(self):
         try:
             self.serialConnection = serial.Serial(self.serialPort.device, 115200, timeout=10)
+            self.serialConnection.reset_input_buffer()
             return True
         except Exception as e:
             # let the printer parent class deal with the error
@@ -71,10 +52,19 @@ class Device(ABC):
     def home(self):
         pass
 
-    def parseGcode(self):
+    @abstractmethod
+    def goTo(self, loc: Vector3):
         pass
 
+    def parseGcode(self, file):
+        pass
+
+    @abstractmethod
     def sendGcode(self, gcode: Buffer, checkFunction):
+        pass
+
+    @abstractmethod
+    def getPrintHeadLocation(self) -> Vector3:
         pass
 
     def repair(self):

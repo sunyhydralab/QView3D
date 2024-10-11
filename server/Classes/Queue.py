@@ -9,6 +9,9 @@ class Queue:
 
     def __iter__(self):  # iterate over queue
         return iter(self.__queue)
+
+    def __len__(self):
+        return len(self.__queue)
     
     # def setToInQueue(self): 
     #     for job in self.__queue: 
