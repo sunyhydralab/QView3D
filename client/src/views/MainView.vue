@@ -271,18 +271,18 @@ const handleDragEnd = async () => {
   </div>
 
   <div class="container">
-    <table ref="table">
+    <table ref="table" class="modern-table">
       <tr>
         <!-- NEED TO FIX THIS FOR EVERY DISPLAYS -->
-        <th style="width: 64px">ID</th>
-        <th style="width: 130px">Printer name</th>
-        <th style="width: 142px">Printer Status</th>
-        <th style="width: 110px">Job Name</th>
-        <th style="width: 110px">File</th>
-        <th style="width: 314px">Printer Options</th>
-        <th style="width: 315px">Progress</th>
-        <th style="width: 75px;">Actions</th>
-        <th style="width: 58px">Move</th>
+        <th class="col-1">ID</th>
+        <th class="col-2">Printer name</th>
+        <th class="col-2">Printer Status</th>
+        <th class="col-2">Job Name</th>
+        <th class="col-2">File</th>
+        <th class="col-3">Printer Options</th>
+        <th class="col-3">Progress</th>
+        <th class="col-1">Actions</th>
+        <th class="col-1">Move</th>
       </tr>
       <draggable v-model="printers" tag="tbody" :animation="300" item-key="printer.id" handle=".handle"
         dragClass="hidden-ghost" :onEnd="handleDragEnd" v-if="printers.length > 0" @start="collapseAll"
@@ -894,5 +894,13 @@ th {
 .alert {
   margin: 0;
   padding: 0.3rem;
+}
+
+.modern-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 </style>
