@@ -202,7 +202,7 @@ const handleDragEnd = async () => {
               <label for="issue" class="form-label">Select Issue</label>
               <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
                 <option disabled value="undefined">Select Issue</option>
-                <option v-for="issue in issuelist" :value="issue">
+                <option v-for="issue in issuelist" :key="issue.id" :value="issue">
                   {{ issue.issue }}
                 </option>
               </select>

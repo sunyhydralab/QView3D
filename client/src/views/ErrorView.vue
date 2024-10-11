@@ -501,7 +501,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
                             <label for="issue" class="form-label">Select Issue</label>
                             <select name="issue" id="issue" v-model="selectedIssueId" class="form-select" required>
                                 <option disabled value="undefined">Select Issue</option>
-                                <option v-for="issue in issuelist" :value="issue.id">
+                                <option v-for="issue in issuelist" :key="issue.id" :value="issue.id">
                                     {{ issue.issue }}
                                 </option>
                                 <option disabled class="separator">----------------</option>
