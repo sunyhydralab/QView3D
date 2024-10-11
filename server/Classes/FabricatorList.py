@@ -12,6 +12,10 @@ class FabricatorList():
         return iter(FabricatorList.fabricators)
 
     @staticmethod
+    def __len__():
+        return len(FabricatorList.fabricators)
+
+    @staticmethod
     def addFabricator(serialPortName: str, name: str):
         """add a printer to the list, and to the database"""
         # TODO: test if the printer is already in the list
@@ -50,10 +54,6 @@ class FabricatorList():
         #         jsonify({"error": "Failed to delete printer. Database error"}),
         #         500,
         #     )
-    @staticmethod
-    def getFabricatorCount():
-        return len(FabricatorList.fabricators)
-
     @staticmethod
     def getFabricatorByName(name) -> Fabricator | None:
         """find the first printer with the given name"""

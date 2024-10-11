@@ -11,6 +11,7 @@ class Ports:
 
     @staticmethod
     def getPortByName(name: str) -> ListPortInfo | SysFS | None:
+        assert isinstance(name, str)
         ports = Ports.getPorts()
         for port in ports:
             if port.device == name:
@@ -19,6 +20,7 @@ class Ports:
 
     @staticmethod
     def getPortByHwid(hwid: str) -> ListPortInfo | SysFS | None:
+        assert isinstance(hwid, str)
         ports = Ports.getPorts()
         for port in ports:
             if hwid in port.hwid:

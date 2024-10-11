@@ -1,7 +1,4 @@
-from abc import ABC
-
 from Classes.Fabricators.Printers.Ender.EnderPrinter import EnderPrinter
-
 
 class Ender3(EnderPrinter):
     MODEL = "Ender 3"
