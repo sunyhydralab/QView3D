@@ -160,36 +160,34 @@ watchEffect(() => {
 });
 
 const newShade = (rgb: string, magnitude: number): string => {
-    // Extract the individual red, green, and blue color values
-    const rgbValuesStrings = ref<string>();
-    const rgbValues = ref<number[]>(new Array(4));
+    const rgbValuesStrings = ref<string[]>([]);
+    const rgbValues = ref<number[]>(new Array(4).fill(0)); // Initialize with zeros
+
     if (rgb.startsWith("rgb(")) {
         rgb = rgb.replace("rgb(", "rgba(");
         rgb = rgb.replace(")", ", 1)");
     }
+
     if (rgb.startsWith("rgba(")) {
-        // Extract the individual red, green, blue and alpha color values
-        if (rgb.match(/\d+/g) !== null) {
-            rgbValuesStrings.value = rgb.match(/\d+/g);
+        // Extract the individual red, green, blue, and alpha color values
+        const matched = rgb.match(/\d+/g); // Match RGB(A) values
+        if (matched !== null) {
+            rgbValuesStrings.value = matched;
         } else {
             throw new Error('Invalid RGB color');
         }
     } else {
-        if (rgb.match(/\w\w+/g) !== null) {
-            rgbValuesStrings.value = rgb.match(/\w\w/g);
+        const matched = rgb.match(/\w\w/g); // Match hex values
+        if (matched !== null) {
+            rgbValuesStrings.value = matched;
         } else {
             throw new Error('Invalid RGB color');
         }
     }
+
+    // Parse the RGB(A) values
     for (let i = 0; i < rgbValuesStrings.value.length; i++) {
         rgbValues.value[i] = parseInt(rgbValuesStrings.value[i], 16);
-    }
-    if (!rgbValues.value) {
-        throw new Error('Invalid RGB color');
-    }
-    if (rgbValues.value.length !== 4) {
-        console.error(rgbValues.value);
-        throw new Error('Invalid RGB color');
     }
 
     // Adjust color brightness
@@ -197,21 +195,25 @@ const newShade = (rgb: string, magnitude: number): string => {
     rgbValues.value[1] = Math.round(Math.min(Math.max(0, rgbValues.value[1] + (rgbValues.value[1] * magnitude / 100)), 255));
     rgbValues.value[2] = Math.round(Math.min(Math.max(0, rgbValues.value[2] + (rgbValues.value[2] * magnitude / 100)), 255));
     rgbValues.value[3] = Math.min(Math.max(0, rgbValues.value[3] + (rgbValues.value[3] * magnitude / 100)), 1);
-    // Return the new color in RGB format
+
+    // Return the new color in RGBA format
     return `rgba(${rgbValues.value[0]}, ${rgbValues.value[1]}, ${rgbValues.value[2]}, ${rgbValues.value[3]})`;
 };
 
 const brightness = (rgb: string) => {
-    const rgbValuesStrings = ref<string>();
-    const rgbValues = ref<number[]>(new Array(4));
+    const rgbValuesStrings = ref<string[]>([]);
+    const rgbValues = ref<number[]>(new Array(4).fill(0));
+
     if (rgb.startsWith("rgb(")) {
         rgb = rgb.replace("rgb(", "rgba(");
         rgb = rgb.replace(")", ", 1)");
     }
+
     if (rgb.startsWith("rgba(")) {
-        // Extract the individual red, green, blue and alpha color values
-        if (rgb.match(/\d+/g) !== null) {
-            rgbValuesStrings.value = rgb.match(/\d+/g);
+        // Extract the individual red, green, blue, and alpha color values
+        const matched = rgb.match(/\d+/g);
+        if (matched !== null) {
+            rgbValuesStrings.value = matched; // Safe to assign, no null
             for (let i = 0; i < rgbValuesStrings.value.length; i++) {
                 rgbValues.value[i] = parseInt(rgbValuesStrings.value[i]);
             }
@@ -222,8 +224,9 @@ const brightness = (rgb: string) => {
         if (rgb.startsWith("#")) {
             rgb = rgb.replace("#", "");
         }
-        if (rgb.match(/\w\w+/g) !== null) {
-            rgbValuesStrings.value = rgb.match(/\w\w/g);
+        const matched = rgb.match(/\w\w/g);
+        if (matched !== null) {
+            rgbValuesStrings.value = matched; // Safe to assign, no null
             for (let i = 0; i < rgbValuesStrings.value.length; i++) {
                 rgbValues.value[i] = parseInt(rgbValuesStrings.value[i], 16);
             }
@@ -231,8 +234,9 @@ const brightness = (rgb: string) => {
             throw new Error('Invalid RGB color');
         }
     }
+
     return Math.round(((rgbValues.value[0] * 299) + (rgbValues.value[1] * 587) + (rgbValues.value[2] * 114)) / 1000);
-}
+};
 
 const fontColor = (rgb: string) => {
     const bright = brightness(rgb);

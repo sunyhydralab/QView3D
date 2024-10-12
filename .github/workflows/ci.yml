@@ -27,7 +27,7 @@ jobs:
 
       - name: Build client
         run: |
-          npm run build-only
+          npm run build
         working-directory: client
 
       - name: Setup server
@@ -41,8 +41,8 @@ jobs:
 
       - name: Start server
         run: |
-          nohup npm run start-flask &
-        working-directory: client
+          nohup flask run &
+        working-directory: server
 
       - name: Wait for server to start
         run: |

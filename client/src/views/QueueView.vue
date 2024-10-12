@@ -42,6 +42,28 @@ onMounted(() => {
     isImageVisible.value = true
   });
   isLoading.value = false
+
+  // Event listeners for the accordion collapse
+  const accordionItems = document.querySelectorAll('.accordion-collapse');
+  accordionItems.forEach(item => {
+    item.addEventListener('show.bs.collapse', () => {
+      const printerId = item.getAttribute('data-printer-id');
+      const printer = printers.value.find(p => p.id === Number(printerId));
+
+      if (printer) {
+        printer.isQueueExpanded = true;
+      }
+    });
+
+    item.addEventListener('hide.bs.collapse', () => {
+      const printerId = item.getAttribute('data-printer-id');
+      const printer = printers.value.find(p => p.id === Number(printerId));
+
+      if (printer) {
+        printer.isQueueExpanded = false;
+      }
+    });
+  });
 });
 
 
@@ -240,8 +262,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
           </button>
         </h2>
         <div :id="'panelsStayOpen-collapse' + index" class="accordion-collapse collapse"
-          :class="{ show: printer.isQueueExpanded }" :aria-labelledby="'panelsStayOpen-heading' + index"
-          @show.bs.collapse="printer.isQueueExpanded = !printer.isQueueExpanded">
+          :class="{ show: printer.isQueueExpanded }" :aria-labelledby="'panelsStayOpen-heading' + index">
           <div class="accordion-body">
             <div :class="{ 'scrollable': printer.queue!.length > 3 }">
               <table class="table-striped">

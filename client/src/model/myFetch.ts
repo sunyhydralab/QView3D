@@ -62,7 +62,7 @@ export function setServerIP(ip: string) {
         }
     }
     config.value.apiIPAddress = ip;
-    socketUpdate(ip, API_PORT.value);
+    socketUpdate(ip, Number(API_PORT.value ?? 8000));
     localStorage.setItem('apiIPAddress', ip);
 }
 
@@ -72,7 +72,7 @@ export function setServerPort(port: number) {
         throw new Error('Invalid port number');
     }
     config.value.apiPort = port;
-    socketUpdate(API_IP_ADDRESS.value, port);
+    socketUpdate(API_IP_ADDRESS.value ?? '127.0.0.1', port);
     localStorage.setItem('apiPort', port.toString());
 }
 

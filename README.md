@@ -50,7 +50,7 @@ The software is currently designed to run on Ubuntu 20.04 LTS and later. MacOS a
 Clone the repository:
 
 ```bash
-git clone https://github.com/sunyhyralab/QView3D.git
+git clone https://github.com/sunyhydralab/QView3D.git
 ```
 
 ### Run Locally:
