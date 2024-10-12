@@ -74,6 +74,8 @@ let searchCriteria = ref('');
 const isOnlyJobNameChecked = computed(() => searchByJobName.value && !searchByFileName.value);
 const isOnlyFileNameChecked = computed(() => !searchByJobName.value && searchByFileName.value);
 
+const charLimit = 500;
+
 // computed property that returns the filtered list of jobs. 
 let filteredJobs = computed(() => {
     if (filter.value) {
@@ -238,7 +240,7 @@ const ensureOneCheckboxChecked = () => {
 
 const doCreateIssue = async () => {
     isLoading.value = true
-    await createIssue(newIssue.value)
+    await createIssue(newIssue.value.slice(0, charLimit))
     const newIssues = await issues()
     issuelist.value = newIssues
     resetIssueValues()
