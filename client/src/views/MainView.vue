@@ -901,6 +901,5 @@ th {
   border-spacing: 0;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 </style>
