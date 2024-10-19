@@ -4,12 +4,17 @@
 
 QView3D, developed at SUNY's Hydra Lab, is an open-source software project designed to streamline the management and communication of 3D printing files to printer arrays. It offers users an expandable framework to enhance their workflow and take control of their process. Embracing an open community ethos, QView3d continuously evolves, actively seeking collaboration and feedback from users to improve and innovate.
 
-## Development Team
+The project is maintained by computer science students at SUNY New Paltz, under the guidance of professor Michael Curry. Team members are responsible for the development, testing, and documentation of the software. The project is part of the Computer Science Department's capstone course, where students work on real-world projects to gain experience in software development.
 
-- [**Lars Palombi** ](https://github.com/Lars-Codes)
-- [**Jack Gusler**](https://github.com/jackgusler)
-- [**Olamide Kumapayi**](https://github.com/olakuma)
-- [**Michael Curry**](https://github.com/currymike123)
+## Lab Development Team
+
+- [**Michael Curry**](https://github.com/currymike123) 
+- [**Lars Palombi** ](https://github.com/Lars-Codes) 
+- [**Jack Gusler**](https://github.com/jackgusler) 
+- [**Olamide Kumapayi**](https://github.com/olakuma) 
+- [**Nathan Gopee**](https://github.com/ndg8743)
+- [**Ari Yeger**](https://github.com/L10nhunter)
+- [**CJ Jenks**](https://github.com/iron768)
 
 ## Features
 
@@ -30,7 +35,7 @@ QView3D, developed at SUNY's Hydra Lab, is an open-source software project desig
 
 - **Frontend**: Vue.js with Bootstrap for styling.
 - **Backend**: Flask integrated with SQLite, handling data through Node.js.
-- **Communication**: Serial communication via Python, CORS for middleware support.
+- **Communication**: Serial communication via Python.
 - **Database**: SQLite.
 
 ## Architecture Diagram
@@ -39,7 +44,7 @@ QView3D, developed at SUNY's Hydra Lab, is an open-source software project desig
 
 ## Setup and Installation
 
-The software is currently designed to run on Ubuntu 20.04 LTS and later. MacOS and Windows are not fully supported but can be achieved with additional configuration.
+The software is currently designed to run on Ubuntu 20.04 LTS and later. MacOS and Windows support can be achieved with additional configuration.
 
 Clone the repository:
 
