@@ -4,7 +4,7 @@ from Classes.Vector3 import Vector3
 from Classes.Fabricators.Printers.Printer import Printer
 from Mixins.canPause import canPause
 from Mixins.hasEndingSequence import hasEndingSequence
-from Mixins.hasResponseCodes import hasResponsecodes, checkXYZ, checkOK
+from Mixins.hasResponseCodes import hasResponsecodes, checkOK
 from Mixins.usesMarlinGcode import usesMarlinGcode
 
 
@@ -12,8 +12,8 @@ class PrusaPrinter(Printer, canPause, hasEndingSequence, hasResponsecodes, usesM
     VENDORID = 0x2C99
 
 
-    def sendGcode(self, gcode: Buffer, checkFunction: Callable):
-        return usesMarlinGcode.sendGcode(self, gcode, checkFunction)
+    def sendGcode(self, gcode: Buffer, checkFunction: Callable, isVerbose: bool = False):
+        return usesMarlinGcode.sendGcode(self, gcode, checkFunction, isVerbose)
 
     def connect(self):
         return usesMarlinGcode.connect(self)
@@ -21,11 +21,11 @@ class PrusaPrinter(Printer, canPause, hasEndingSequence, hasResponsecodes, usesM
     def disconnect(self):
         usesMarlinGcode.disconnect(self)
 
-    def home(self):
-        return usesMarlinGcode.home(self)
+    def home(self, isVerbose: bool = False):
+        return usesMarlinGcode.home(self, isVerbose)
 
-    def goTo(self, loc: Vector3):
-        return usesMarlinGcode.goTo(self, loc)
+    def goTo(self, loc: Vector3, isVerbose: bool = False):
+        return usesMarlinGcode.goTo(self, loc, isVerbose)
 
     def pause(self):
         self.sendGcode(usesMarlinGcode.pause, checkOK)

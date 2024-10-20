@@ -49,18 +49,18 @@ class Device(ABC):
             self.serialConnection = None
 
     @abstractmethod
-    def home(self):
+    def home(self, isVerbose: bool = False):
         pass
 
     @abstractmethod
-    def goTo(self, loc: Vector3):
+    def goTo(self, loc: Vector3, isVerbose: bool = False):
         pass
 
     def parseGcode(self, file):
         pass
 
     @abstractmethod
-    def sendGcode(self, gcode: Buffer, checkFunction):
+    def sendGcode(self, gcode: Buffer, checkFunction, isVerbose: bool = False):
         pass
 
     @abstractmethod

@@ -1,7 +1,7 @@
 from abc import ABCMeta
 from typing import Callable
 from typing_extensions import Buffer
-from Classes.Fabricators.Device import Device
+from Classes.Fabricators.Printers.Printer import Printer
 from Classes.Vector3 import Vector3
 from Mixins.canPause import canPause
 from Mixins.hasEndingSequence import hasEndingSequence
@@ -9,7 +9,7 @@ from Mixins.hasResponseCodes import hasResponsecodes, checkOK, alwaysTrue
 from Mixins.usesMarlinGcode import usesMarlinGcode
 
 
-class EnderPrinter(Device, canPause, hasEndingSequence, hasResponsecodes, usesMarlinGcode, metaclass=ABCMeta):
+class EnderPrinter(Printer, canPause, hasEndingSequence, hasResponsecodes, usesMarlinGcode, metaclass=ABCMeta):
     VENDORID = 0x1A86
     homePosition = Vector3(-3.0,-10.0,0.0)
 
@@ -32,8 +32,8 @@ class EnderPrinter(Device, canPause, hasEndingSequence, hasResponsecodes, usesMa
         self.sendGcode(b"M140 S0\n", alwaysTrue) # Turn-off bed
         self.sendGcode(b"M84 X Y E\n", alwaysTrue) # Disable all steppers but Z
 
-    def goTo(self, loc: Vector3):
-        return usesMarlinGcode.goTo(self, loc)
+    def goTo(self, loc: Vector3, isVerbose: bool = False):
+        return usesMarlinGcode.goTo(self, loc, isVerbose)
 
     def pause(self):
         self.sendGcode(usesMarlinGcode.pause, checkOK)
@@ -50,8 +50,8 @@ class EnderPrinter(Device, canPause, hasEndingSequence, hasResponsecodes, usesMa
     def parseGcode(self, file):
         usesMarlinGcode.parseGcode(self, file)
 
-    def sendGcode(self, gcode: Buffer, checkFunction: Callable):
-        usesMarlinGcode.sendGcode(self, gcode, checkFunction)
+    def sendGcode(self, gcode: Buffer, checkFunction: Callable, isVerbose: bool = False):
+        usesMarlinGcode.sendGcode(self, gcode, checkFunction, isVerbose)
 
-    def home(self):
-        return usesMarlinGcode.home(self)
+    def home(self, isVerbose: bool = False):
+        return usesMarlinGcode.home(self, isVerbose)
