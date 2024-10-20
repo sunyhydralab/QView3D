@@ -1,12 +1,14 @@
 import serial.tools.list_ports
 from flask import jsonify
+from serial.tools.list_ports_common import ListPortInfo
+from serial.tools.list_ports_linux import SysFS
 
 from Classes.Fabricators.Device import Device
 from Classes.Ports import Ports
 from Classes.Fabricators.Fabricator import Fabricator
 
 class FabricatorList():
-    fabricators = Fabricator.queryAll()
+    fabricators: [Fabricator] = []
     @staticmethod
     def __iter__():
         return iter(FabricatorList.fabricators)
@@ -16,25 +18,37 @@ class FabricatorList():
         return len(FabricatorList.fabricators)
 
     @staticmethod
-    def addFabricator(serialPortName: str, name: str):
+    def init():
+        """initialize the list of printers"""
+        FabricatorList.fabricators = Fabricator.queryAll()
+
+    @staticmethod
+    def addFabricator(serialPortName: str, name: str = ""):
         """add a printer to the list, and to the database"""
-        # TODO: test if the printer is already in the list
-        serialPort = Ports.getPortByName(serialPortName)
-        if FabricatorList.getPrinterByHwid(serialPort.hwid):
-            return None # TODO: return error message
-        FabricatorList.fabricators.append(Fabricator(Device.createDevice(serialPort), name))
+        serialPort: ListPortInfo | SysFS | None = Ports.getPortByName(serialPortName)
+        # TODO: check if the fabricator is in the db
+        dbFab: Fabricator | None = next((fabricator for fabricator in Fabricator.queryAll() if fabricator.hwid == serialPort.hwid.split(' LOCATION=')[0]), None)
+        listFab: Fabricator | None = next((fabricator for fabricator in FabricatorList.fabricators if fabricator.getHwid() == serialPort.hwid.split(' LOCATION=')[0]), None)
+        if dbFab is not None: # means that the fabricator is in the db
+            if listFab is not None: # means that the fabricator is in the list and the db
+                print("Fabricator is already in the list and the db")
+            else: # means that the fabricator is in the db but not in the list
+                FabricatorList.fabricators.append(Fabricator(serialPort, name=dbFab.getname()))
+        else: # means that the fabricator is not in the db
+            if listFab is not None: # means that the fabricator is in the list but not in the db
+                listFab.addToDB()
+            else: # means that the fabricator is not in the list or the db
+                FabricatorList.fabricators.append(Fabricator(serialPort, name=name, addToDB=True))
+
         # TODO: check that printerlist and database are in sync
         dbPrinters = Fabricator.queryAll()
-        if len(FabricatorList.fabricators) != len(dbPrinters):
-            return None # TODO: return error message
-        for printer in dbPrinters:
-            if printer not in FabricatorList.fabricators:
-                return None # TODO: return error message
+        assert(len(FabricatorList.fabricators) == len(dbPrinters))
+        assert all(printer in FabricatorList.fabricators for printer in dbPrinters)
 
     @staticmethod
     def deleteFabricator(printerid):
         """delete a printer from the list, and from the database"""
-        # TODO: Implement deletePrinter
+        # TODO: Implement deleteFabricator
         pass
         # try:
         #     ports = serial.tools.list_ports.comports()
@@ -57,18 +71,12 @@ class FabricatorList():
     @staticmethod
     def getFabricatorByName(name) -> Fabricator | None:
         """find the first printer with the given name"""
-        for fabricator in FabricatorList.__iter__():
-            if fabricator.getName() == name:
-                return fabricator
-        return None
+        return next((fabricator for fabricator in FabricatorList.fabricators if fabricator.getName() == name), None)
 
     @staticmethod
     def getPrinterByHwid(hwid) -> Fabricator | None:
         """find the first printer with the given hwid"""
-        for fabricator in FabricatorList.__iter__():
-            if fabricator.getHwid() == hwid:
-                return fabricator
-        return None
+        return next((fabricator for fabricator in FabricatorList.fabricators if fabricator.getHwid() == hwid), None)
 
     @staticmethod
     def diagnose(device: Device):

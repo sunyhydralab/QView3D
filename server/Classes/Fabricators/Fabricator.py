@@ -1,7 +1,8 @@
 import serial
-from flask import current_app
+from flask import current_app, jsonify, Response
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
+from sqlalchemy.exc import SQLAlchemyError
 
 from Classes.Fabricators.Device import Device
 from Classes.Fabricators.Printers.Ender.Ender3 import Ender3
@@ -11,6 +12,7 @@ from Classes.Fabricators.Printers.Prusa.PrusaMK3 import PrusaMK3
 from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
 from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
 from Classes.Fabricators.Printers.Prusa.PrusaPrinter import PrusaPrinter
+from Classes.Ports import Ports
 from Classes.Queue import Queue
 from Mixins.canPause import canPause
 from Mixins.hasEndingSequence import hasEndingSequence
@@ -32,7 +34,7 @@ class Fabricator(db.Model):
     devicePort = db.Column(db.String(50), nullable=False)
 
 
-    def __init__(self, port: ListPortInfo | SysFS, name: str):
+    def __init__(self, port: ListPortInfo | SysFS, name: str = "", addToDB: bool = False):
         assert isinstance(port, ListPortInfo) or isinstance(port, SysFS)
         assert isinstance(name, str)
 
@@ -51,8 +53,9 @@ class Fabricator(db.Model):
         self.date = datetime.now(timezone.utc).astimezone()
 
         self.device.connect()
-        db.session.add(self)
-        db.session.commit()
+        if addToDB:
+            db.session.add(self)
+            db.session.commit()
 
     @staticmethod
     def getModelFromGcodeCommand(serialPort: ListPortInfo | SysFS | None) -> str:
@@ -98,9 +101,15 @@ class Fabricator(db.Model):
 
     @classmethod
     def queryAll(cls) -> list["Fabricator"]:
-        """return all printers in the database"""
-        #return cls.query.all()
-        pass
+        """return all fabricators in the database"""
+        fabList = []
+        for fab in cls.query.all():
+            fabList.append(cls(Ports.getPortByName(fab.devicePort), fab.name))
+        return fabList
+
+    def addToDB(self):
+        db.session.add(self)
+        db.session.commit()
 
     def begin(self):
         assert self.status == "idle"
@@ -110,6 +119,8 @@ class Fabricator(db.Model):
         self.job = self.queue.getJob(self.id)
 
         # TODO: test if the file has been sliced for the device of this fabricator
+        # if issubclass(self.device, PrusaPrinter):
+        #     self.device.sendGcode(f"M862.3 P {self.device.getDescription(self.device).split(' ')[1]}\n".encode("utf-8"), lambda x: x == b'ok\n')
 
         if issubclass(self.device, hasStartupSequence):
             self.device.startupSequence(self)
@@ -189,6 +200,16 @@ class Fabricator(db.Model):
 
     def getName(self):
         return self.name
+
+    def setName(self, name: str) -> Response:
+        try:
+            Fabricator.query.filter_by(hwid=self.hwid).first().name = name
+            self.name = name
+            db.session.commit()
+            return jsonify({"success": True, "message": "Printer name successfully updated.", "code": 200})
+        except SQLAlchemyError as e:
+            print(f"Database error: {e}")
+            return jsonify({"error": "Failed to update printer name. Database error", "code": 500})
 
     def getHwid(self):
         return self.hwid
