@@ -1,4 +1,4 @@
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from typing_extensions import Buffer, Callable
 from Classes.Vector3 import Vector3
 from Classes.Fabricators.Printers.Printer import Printer
@@ -8,7 +8,7 @@ from Mixins.hasResponseCodes import hasResponsecodes, checkOK
 from Mixins.usesMarlinGcode import usesMarlinGcode
 
 
-class PrusaPrinter(Printer, canPause, hasEndingSequence, hasResponsecodes, usesMarlinGcode, metaclass=ABCMeta):
+class PrusaPrinter(Printer, hasEndingSequence, hasResponsecodes, usesMarlinGcode, metaclass=ABCMeta):
     VENDORID = 0x2C99
 
 
@@ -27,17 +27,13 @@ class PrusaPrinter(Printer, canPause, hasEndingSequence, hasResponsecodes, usesM
     def goTo(self, loc: Vector3, isVerbose: bool = False):
         return usesMarlinGcode.goTo(self, loc, isVerbose)
 
-    def pause(self):
-        self.sendGcode(usesMarlinGcode.pause, checkOK)
-
-    def resume(self):
-        self.sendGcode(usesMarlinGcode.resume, checkOK)
-
+    @abstractmethod
     def endSequence(self):
         pass
 
+    @abstractmethod
     def getPrintTime(self):
         pass
 
-    def getPrintHeadLocation(self) -> Vector3:
-        return usesMarlinGcode.getPrintHeadLocation(self)
+    def getToolHeadLocation(self) -> Vector3:
+        return usesMarlinGcode.getToolHeadLocation(self)

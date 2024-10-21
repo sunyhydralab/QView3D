@@ -4,3 +4,6 @@ class Ender3(EnderPrinter):
     MODEL = "Ender 3"
     PRODUCTID = 0x7523
     DESCRIPTION = "Ender 3 - CDC"
+    MAXFEEDRATE = 12000
+
+

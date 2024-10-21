@@ -7,6 +7,7 @@ class PrusaMK4(PrusaPrinter):
     MODEL = "Prusa MK4"
     PRODUCTID = 0x000D
     DESCRIPTION = "Original Prusa MK4 - CDC"
+    MAXFEEDRATE = 36000
     homePosition = Vector3(14.0, -4.0, 2.0)
 
     def endSequence(self):
@@ -14,4 +15,7 @@ class PrusaMK4(PrusaPrinter):
         self.sendGcode(b"M104 S0\n", alwaysTrue)  # ; turn off temperature
         self.sendGcode(b"M140 S0\n", alwaysTrue)  # ; turn off heatbed
         self.sendGcode(b"M107\n", alwaysTrue)  # ; turn off fan
+
+    def getPrintTime(self):
+        pass
 

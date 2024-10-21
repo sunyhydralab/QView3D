@@ -3,13 +3,12 @@ from typing import Callable
 from typing_extensions import Buffer
 from Classes.Fabricators.Printers.Printer import Printer
 from Classes.Vector3 import Vector3
-from Mixins.canPause import canPause
 from Mixins.hasEndingSequence import hasEndingSequence
-from Mixins.hasResponseCodes import hasResponsecodes, checkOK, alwaysTrue
+from Mixins.hasResponseCodes import hasResponsecodes, alwaysTrue
 from Mixins.usesMarlinGcode import usesMarlinGcode
 
 
-class EnderPrinter(Printer, canPause, hasEndingSequence, hasResponsecodes, usesMarlinGcode, metaclass=ABCMeta):
+class EnderPrinter(Printer, hasEndingSequence, hasResponsecodes, usesMarlinGcode, metaclass=ABCMeta):
     VENDORID = 0x1A86
     homePosition = Vector3(-3.0,-10.0,0.0)
 
@@ -35,17 +34,11 @@ class EnderPrinter(Printer, canPause, hasEndingSequence, hasResponsecodes, usesM
     def goTo(self, loc: Vector3, isVerbose: bool = False):
         return usesMarlinGcode.goTo(self, loc, isVerbose)
 
-    def pause(self):
-        self.sendGcode(usesMarlinGcode.pause, checkOK)
-
-    def resume(self):
-        self.sendGcode(usesMarlinGcode.resume, checkOK)
-
     def getPrintTime(self):
         pass
 
-    def getPrintHeadLocation(self) -> Vector3:
-        return usesMarlinGcode.getPrintHeadLocation(self)
+    def getToolHeadLocation(self) -> Vector3:
+        return usesMarlinGcode.getToolHeadLocation(self)
 
     def parseGcode(self, file):
         usesMarlinGcode.parseGcode(self, file)
