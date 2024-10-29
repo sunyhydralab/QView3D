@@ -7,11 +7,12 @@ import (
 )
 
 func main() {
-	err := src.Init()
+	extruder, printer, err := src.Init(1, "Ender3", "Creality", "hwid:032uhb3293n2", "Testing Printer", "Init")
 
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 
-	src.Run()
+	src.Run(extruder, printer)
 }

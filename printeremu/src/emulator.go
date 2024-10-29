@@ -9,23 +9,30 @@ func main() {
 
 }
 
-func Init() error {
+func Init(id int, device string, description string, hwid string, name string, status string) (*Extruder, *Printer, error) {
 	// TODO: add!
-
 	fmt.Println("Reading up...")
 
-	// Correctly create a Vector3 instance
 	position := Vector3{X: 100, Y: 27, Z: 76}
-	extruder := NewExtruder(position, 250, 100, 125) // Use the Vector3
-	
-	// Create a new Printer instance
-	printer := NewPrinter(0, "Ender3", "Creality Brand", "Hwid", "Test Ender3", "Init", time.Now().String(), extruder)
+	extruder := NewExtruder(position, 250, 100, 125)
+
+	printer := NewPrinter(id, device, description, hwid, name, status, time.Now().String(), extruder)
 
 	fmt.Println(printer.String())
-	
-	return nil
+
+	return extruder, printer, nil
 }
 
-func Run() {
-	fmt.Println("Hello world!")
+func Run(extruder *Extruder, printer *Printer) {
+	fmt.Println("Running...")
+
+	extruder.SetExtruderTemp(200)
+
+	printer.GetExtruder().SetBedTemp(50)
+
+	printer.GetExtruder().SetFanSpeed(100)
+
+	fmt.Println(printer.String())
+
+	fmt.Println("Done!")
 }
