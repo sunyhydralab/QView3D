@@ -26,7 +26,6 @@ class FabricatorList():
     def addFabricator(serialPortName: str, name: str = ""):
         """add a printer to the list, and to the database"""
         serialPort: ListPortInfo | SysFS | None = Ports.getPortByName(serialPortName)
-        # TODO: check if the fabricator is in the db
         dbFab: Fabricator | None = next((fabricator for fabricator in Fabricator.queryAll() if fabricator.hwid == serialPort.hwid.split(' LOCATION=')[0]), None)
         listFab: Fabricator | None = next((fabricator for fabricator in FabricatorList.fabricators if fabricator.getHwid() == serialPort.hwid.split(' LOCATION=')[0]), None)
         if dbFab is not None: # means that the fabricator is in the db
@@ -39,8 +38,6 @@ class FabricatorList():
                 listFab.addToDB()
             else: # means that the fabricator is not in the list or the db
                 FabricatorList.fabricators.append(Fabricator(serialPort, name=name, addToDB=True))
-
-        # TODO: check that printerlist and database are in sync
         dbPrinters = Fabricator.queryAll()
         assert(len(FabricatorList.fabricators) == len(dbPrinters))
         assert all(printer in FabricatorList.fabricators for printer in dbPrinters)

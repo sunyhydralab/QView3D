@@ -8,6 +8,8 @@ from Classes.Fabricators.Device import Device
 from Classes.Fabricators.Printers.Ender.Ender3 import Ender3
 from Classes.Fabricators.Printers.Ender.Ender3Pro import Ender3Pro
 from Classes.Fabricators.Printers.Ender.EnderPrinter import EnderPrinter
+from Classes.Fabricators.Printers.MakerBot.MakerBotPrinter import MakerBotPrinter
+from Classes.Fabricators.Printers.MakerBot.Replicator2 import Replicator2
 from Classes.Fabricators.Printers.Prusa.PrusaMK3 import PrusaMK3
 from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
 from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
@@ -17,7 +19,7 @@ from Classes.Queue import Queue
 from Mixins.canPause import canPause
 from Mixins.hasEndingSequence import hasEndingSequence
 from Mixins.hasStartupSequence import hasStartupSequence
-from models.jobs import Job
+#from models.jobs import Job
 from models.db import db
 from datetime import datetime, timezone
 
@@ -42,7 +44,7 @@ class Fabricator(db.Model):
 
         self.verdict: str = ""
         self.prevMsg: str = ""
-        self.job: Job | None = None
+        #self.job: Job | None = None
         self.queue: Queue = Queue()
         self.status: str = "idle"
 
@@ -69,8 +71,6 @@ class Fabricator(db.Model):
                 testName.close()
                 break
         response = response.decode("utf-8")
-        # while testName.readline() != b'echo:Unknown command: "M420 S1"\n':
-        #     pass
         return response
 
 
@@ -96,6 +96,9 @@ class Fabricator(db.Model):
                 return Ender3(serialPort)
             else:
                 return None
+        elif serialPort.vid == MakerBotPrinter.VENDORID:
+            if serialPort.pid == Replicator2.PRODUCTID:
+                return Replicator2(serialPort)
         else:
             return None
 
@@ -104,7 +107,8 @@ class Fabricator(db.Model):
         """return all fabricators in the database"""
         fabList = []
         for fab in cls.query.all():
-            fabList.append(cls(Ports.getPortByName(fab.devicePort), fab.name))
+            if Ports.getPortByName(fab.devicePort) is not None:
+                fabList.append(cls(Ports.getPortByName(fab.devicePort), fab.name))
         return fabList
 
     def addToDB(self):
@@ -122,8 +126,8 @@ class Fabricator(db.Model):
         # if issubclass(self.device, PrusaPrinter):
         #     self.device.sendGcode(f"M862.3 P {self.device.getDescription(self.device).split(' ')[1]}\n".encode("utf-8"), lambda x: x == b'ok\n')
 
-        if issubclass(self.device, hasStartupSequence):
-            self.device.startupSequence(self)
+        if isinstance(self.device, hasStartupSequence):
+            self.device.startupSequence()
 
         self.job = self.queue.getJob(self.id)
         if self.job is None:

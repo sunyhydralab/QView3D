@@ -8,12 +8,15 @@ from Mixins.hasResponseCodes import hasResponsecodes, checkOK
 from Mixins.usesMarlinGcode import usesMarlinGcode
 
 
-class PrusaPrinter(Printer, hasEndingSequence, hasResponsecodes, usesMarlinGcode, metaclass=ABCMeta):
+class PrusaPrinter(Printer, hasEndingSequence, usesMarlinGcode, metaclass=ABCMeta):
     VENDORID = 0x2C99
 
 
-    def sendGcode(self, gcode: Buffer, checkFunction: Callable, isVerbose: bool = False):
-        return usesMarlinGcode.sendGcode(self, gcode, checkFunction, isVerbose)
+    def sendGcode(self, gcode: Buffer, isVerbose: bool = False):
+        return usesMarlinGcode.sendGcode(self, gcode, isVerbose)
+
+    def parseGcode(self, file, isVerbose=False):
+        return usesMarlinGcode.parseGcode(self, file, isVerbose)
 
     def connect(self):
         return usesMarlinGcode.connect(self)

@@ -12,3 +12,5 @@ server/qview3dserver.egg-info/
 server/dist
 
 .DS_Store
+/qodana.yaml
+/Tests/logs/

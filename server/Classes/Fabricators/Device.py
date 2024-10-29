@@ -29,7 +29,7 @@ class Device(ABC):
 
     def connect(self):
         try:
-            self.serialConnection = serial.Serial(self.serialPort.device, 115200, timeout=10)
+            self.serialConnection = serial.Serial(self.serialPort.device, 115200, timeout=60)
             self.serialConnection.reset_input_buffer()
             return True
         except Exception as e:
@@ -49,11 +49,11 @@ class Device(ABC):
     def goTo(self, loc: Vector3, isVerbose: bool = False):
         pass
 
-    def parseGcode(self, file):
+    def parseGcode(self, file, isVerbose=False):
         pass
 
     @abstractmethod
-    def sendGcode(self, gcode: Buffer, checkFunction, isVerbose: bool = False):
+    def sendGcode(self, gcode: Buffer, isVerbose: bool = False):
         pass
 
     @abstractmethod

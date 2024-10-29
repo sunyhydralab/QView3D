@@ -29,10 +29,10 @@ class MakerBotPrinter(Printer, hasEndingSequence, hasResponsecodes, metaclass=AB
     def getToolHeadLocation(self) -> Vector3:
         pass
 
-    def parseGcode(self, file):
+    def parseGcode(self, file, isVerbose: bool = False):
         pass
 
-    def sendGcode(self, gcode: Buffer, checkFunction: Callable, isVerbose: bool = False):
+    def sendGcode(self, gcode: Buffer, isVerbose: bool = False):
         pass
 
     def home(self, isVerbose: bool = False):
