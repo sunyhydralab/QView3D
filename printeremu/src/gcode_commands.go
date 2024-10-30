@@ -79,7 +79,7 @@ func (cmd *M601Command) Execute(printer *Printer) string {
 type M602Command struct {}
 
 func (cmd *M602Command) Execute(printer *Printer) string {
-	if (printer.paused) {
+	if (!printer.paused) {
 		return "Printer is not paused\n"
 	}
 
