@@ -26,18 +26,18 @@ func NewExtruder(position Vector3, extruderTemp, bedTemp, fanSpeed float64) *Ext
 	}
 }
 
-func (e *Extruder) SetExtruderTemp(temp float64) {
-	e.ExtruderTemp = temp
+func (extruder *Extruder) SetExtruderTemp(temp float64) {
+	extruder.ExtruderTemp = temp
 }
 
-func (e *Extruder) SetBedTemp(temp float64) {
-	e.BedTemp = temp
+func (extruder *Extruder) SetBedTemp(temp float64) {
+	extruder.BedTemp = temp
 }
 
-func (e *Extruder) SetFanSpeed(speed float64) {
-	e.FanSpeed = speed
+func (extruder *Extruder) SetFanSpeed(speed float64) {
+	extruder.FanSpeed = speed
 }
 
-func (e *Extruder) String() string {
-	return fmt.Sprintf("{Position: %v, ExtruderTemp: %vc, BedTemp: %vc, FanSpeed: %v}", e.Position, e.ExtruderTemp, e.BedTemp, e.FanSpeed)
+func (extruder *Extruder) String() string {
+	return fmt.Sprintf("{Position: %v, ExtruderTemp: %vc, BedTemp: %vc, FanSpeed: %v}", extruder.Position, extruder.ExtruderTemp, extruder.BedTemp, extruder.FanSpeed)
 }

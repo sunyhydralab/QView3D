@@ -1,7 +1,11 @@
-package src 
+package src
 
 import (
+	"bufio"
 	"fmt"
+	"log"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -24,15 +28,25 @@ func Init(id int, device string, description string, hwid string, name string, s
 }
 
 func Run(extruder *Extruder, printer *Printer) {
-	fmt.Println("Running...")
+	scanner := bufio.NewScanner(os.Stdin)
 
-	extruder.SetExtruderTemp(200)
+	fmt.Println("Enter G-code commands (type 'exit' to quit):")
 
-	printer.GetExtruder().SetBedTemp(50)
+	for {
+		fmt.Print("> ")
+		scanner.Scan()
+		command := scanner.Text()
 
-	printer.GetExtruder().SetFanSpeed(100)
+		if strings.ToLower(command) == "exit" {
+			fmt.Println("Exiting printer emulator...")
+			break
+		}
 
-	fmt.Println(printer.String())
+		response := CommandHandler(command, printer)
+		fmt.Println(response)
+	}
 
-	fmt.Println("Done!")
+	if err := scanner.Err(); err != nil {
+		log.Println("Error reading input:", err)
+	}
 }
