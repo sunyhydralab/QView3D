@@ -30,14 +30,14 @@ func Init(id int, device string, description string, hwid string, name string, s
 func Run(extruder *Extruder, printer *Printer) {
 	scanner := bufio.NewScanner(os.Stdin)
 
-	fmt.Println("Enter G-code commands (type 'exit' to quit):")
+	fmt.Println("Enter G-code commands (type 'exit' or 'quit' to quit):")
 
 	for {
 		fmt.Print("> ")
 		scanner.Scan()
 		command := scanner.Text()
 
-		if strings.ToLower(command) == "exit" {
+		if strings.ToLower(command) == "exit" || strings.ToLower(command) == "quit" {
 			fmt.Println("Exiting printer emulator...")
 			break
 		}
