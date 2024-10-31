@@ -15,6 +15,14 @@ type Command interface {
 
 // CommandHandler parses and executes commands
 func CommandHandler(command string, printer *Printer) string {
+	if semicolonIndex := strings.Index(command, ";"); semicolonIndex != -1 {
+		command = command[:semicolonIndex]
+	}
+
+	if command == "" {
+		return ""
+	}
+
 	command = strings.TrimSpace(command)
 	cmd := NewCommand(command, printer)
 
