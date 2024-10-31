@@ -2,11 +2,9 @@ package src
 
 import (
 	"fmt"
-	"math"
-	"strings"
-	"time"
 )
 
+// Printer struct with associated components as pointers for easy modification
 type Printer struct {
 	id          int
 	device      string
@@ -15,11 +13,14 @@ type Printer struct {
 	name        string
 	status      string
 	date        string
-	extruder    *Extruder // Keep this as a pointer
+	extruder    *Extruder // Pointer to Extruder
+	heatbed     *Heatbed  // Pointer to Heatbed
 	paused      bool
+	units       string // Track units (e.g., "mm" or "inches").
 }
 
-func NewPrinter(id int, device, description, hwid, name, status, date string, extruder *Extruder) *Printer {
+// NewPrinter initializes a Printer with given specifications
+func NewPrinter(id int, device, description, hwid, name, status, date string, extruder *Extruder, heatbed *Heatbed) *Printer {
 	return &Printer{
 		id:          id,
 		device:      device,
@@ -29,10 +30,13 @@ func NewPrinter(id int, device, description, hwid, name, status, date string, ex
 		status:      status,
 		date:        date,
 		extruder:    extruder,
+		heatbed:     heatbed,
 		paused:      false,
+		units:       "mm", // Default units
 	}
 }
 
+// Printer methods for managing extruder and heatbed states
 func (printer *Printer) SetExtruderTemp(temp float64) {
 	printer.extruder.SetExtruderTemp(temp)
 }
@@ -46,11 +50,11 @@ func (printer *Printer) GetExtruder() *Extruder {
 }
 
 func (printer *Printer) SetBedTemp(temp float64) {
-	printer.extruder.SetBedTemp(temp)
+	printer.heatbed.SetBedTemp(temp)
 }
 
 func (printer *Printer) GetBedTemp() float64 {
-	return printer.extruder.BedTemp
+	return printer.heatbed.Temp
 }
 
 func (printer *Printer) SetFanSpeed(speed float64) {
@@ -70,27 +74,6 @@ func (printer *Printer) Resume() {
 }
 
 func (printer *Printer) String() string {
-	return fmt.Sprintf("Printer{Id: %d, Device: %s, Description: %s, Hwid: %s, Name: %s, Status: %s, Date: %s, Extruder: %v}",
-		printer.id, printer.device, printer.description, printer.hwid, printer.name, printer.status, printer.date, printer.extruder.String())
-}
-
-func (extruder *Extruder) moveExtruder(target Vector3, feedRate float64) {
-	// distance to move
-	distance := math.Sqrt(math.Pow(target.X-extruder.Position.X, 2) + math.Pow(target.Y-extruder.Position.Y, 2) + math.Pow(target.Z-extruder.Position.Z, 2))
-
-	// time taken for movement based on feed rate
-	moveTime := distance / feedRate
-	time.Sleep(time.Duration(moveTime*1000) * time.Millisecond) // movement delay
-
-	extruder.Position = target
-}
-
-func CommandHandler(command string, printer *Printer) string {
-	command = strings.TrimSpace(command)
-	cmd := NewCommand(command, printer)
-
-	if cmd == nil {
-		return "Unknown command\n"
-	}
-	return cmd.Execute(printer)
+	return fmt.Sprintf("Printer{Id: %d, Device: %s, Description: %s, Hwid: %s, Name: %s, Status: %s, Date: %s, Extruder: %v, Heatbed: %v}",
+		printer.id, printer.device, printer.description, printer.hwid, printer.name, printer.status, printer.date, printer.extruder.String(), printer.heatbed)
 }
