@@ -7,21 +7,32 @@ import (
 
 // Printer struct with associated components as pointers for easy modification
 type Printer struct {
-	id             int
-	device         string
-	description    string
-	hwid           string
-	name           string
-	status         string
-	date           string
-	extruder       *Extruder   // Pointer to Extruder
-	heatbed        *Heatbed    // Pointer to Heatbed
-	paused         bool
-	units          string      // Track units (e.g., "mm" or "inches")
-	keepAliveTime  time.Time   // Timestamp to track keepalive signals
-	acceleration   float64     // Acceleration setting for movement
-	progress       int         // Progress indicator (percentage) for print jobs
+	id               int
+	device           string
+	description      string
+	hwid             string
+	name             string
+	status           string
+	date             string
+	extruder         *Extruder
+	heatbed          *Heatbed
+	paused           bool
+	units            string
+	keepAliveTime    time.Time
+	acceleration     float64
+	progress         int
+	linearAdvanceFactor float64
+	heatbreakTemp    float64
+	enabledMotors    map[string]bool
 }
+
+func (printer *Printer) DisableMotor(axis string) {
+	if printer.enabledMotors == nil {
+		printer.enabledMotors = make(map[string]bool)
+	}
+	printer.enabledMotors[axis] = false
+}
+
 
 // NewPrinter initializes a Printer with given specifications
 func NewPrinter(id int, device, description, hwid, name, status, date string, extruder *Extruder, heatbed *Heatbed) *Printer {

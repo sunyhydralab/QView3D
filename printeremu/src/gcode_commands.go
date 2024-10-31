@@ -308,6 +308,50 @@ func (cmd *M602Command) Execute(printer *Printer) string {
 	return "Machine is no longer paused\n"
 }
 
+type M900Command struct {
+	kFactor float64
+}
+
+func NewM900Command(command string) *M900Command {
+	kFactor := parseKFactor(command) // Extracts the K value from the command
+	return &M900Command{kFactor: kFactor}
+}
+
+func (cmd *M900Command) Execute(printer *Printer) string {
+	printer.linearAdvanceFactor = cmd.kFactor
+	return fmt.Sprintf("Linear Advance factor set to %.2f\n", cmd.kFactor)
+}
+
+type M142Command struct {
+	temperature float64
+}
+
+func NewM142Command(command string) *M142Command {
+	temperature := parseTemperature(command) // Uses parseTemperature to get S value
+	return &M142Command{temperature: temperature}
+}
+
+func (cmd *M142Command) Execute(printer *Printer) string {
+	printer.heatbreakTemp = cmd.temperature
+	return fmt.Sprintf("Heatbreak target temperature set to %.2f\n", cmd.temperature)
+}
+
+type M84Command struct {
+	axes []string
+}
+
+func NewM84Command(command string) *M84Command {
+	axes := parseAxes(command) // Extracts axes (X, Y, Z, E) from the command
+	return &M84Command{axes: axes}
+}
+
+func (cmd *M84Command) Execute(printer *Printer) string {
+	for _, axis := range cmd.axes {
+		printer.DisableMotor(axis)
+	}
+	return fmt.Sprintf("Motors %v disabled\n", cmd.axes)
+}
+
 // ==================== Parsing Helpers ====================
 
 func parseMoveCommand(command string, currentPos Vector3) (Vector3, float64) {
@@ -396,6 +440,20 @@ func parseProgress(command string) int {
 	return progress
 }
 
+func parseKFactor(command string) float64 {
+	reK := regexp.MustCompile(`K([-+]?[0-9]*\.?[0-9]+)`)
+	kFactor := 0.0
+	if kMatch := reK.FindStringSubmatch(command); kMatch != nil {
+		kFactor, _ = strconv.ParseFloat(kMatch[1], 64)
+	}
+	return kFactor
+}
+
+func parseAxes(command string) []string {
+	reAxes := regexp.MustCompile(`[XYZE]`)
+	return reAxes.FindAllString(command, -1)
+}
+
 // ==================== Command Registry ====================
 
 var commandRegistry = map[string]func(string, *Printer) Command{
@@ -423,6 +481,9 @@ var commandRegistry = map[string]func(string, *Printer) Command{
 	"M601": func(cmd string, p *Printer) Command { return &M601Command{} },
 	"M602": func(cmd string, p *Printer) Command { return &M602Command{} },
 	"M997": func(cmd string, p *Printer) Command { return &M997Command{} },
+	"M900": func(cmd string, p *Printer) Command { return NewM900Command(cmd) },
+	"M142": func(cmd string, p *Printer) Command { return NewM142Command(cmd) },
+	"M84":  func(cmd string, p *Printer) Command { return NewM84Command(cmd) },
 }
 
 
