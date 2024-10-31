@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Command interface {
@@ -27,7 +28,7 @@ func CommandHandler(command string, printer *Printer) string {
 func NewCommand(command string, printer *Printer) Command {
 	for key, factory := range commandRegistry {
 		if strings.HasPrefix(command, key) {
-			return factory(command, printer) // Pass command and printer
+			return factory(command, printer)
 		}
 	}
 	return nil
@@ -103,8 +104,6 @@ func NewG4Command(command string) *G4Command {
 func (cmd *G4Command) Execute(printer *Printer) string {
 	return fmt.Sprintf("Dwelling for %d ms\n", cmd.duration)
 }
-
-// ==================== Positioning Commands ====================
 
 type G90Command struct{}
 
@@ -197,8 +196,74 @@ func NewM140Command(command string) *M140Command {
 }
 
 func (cmd *M140Command) Execute(printer *Printer) string {
+	// Set the target temperature of the bed, but do not block
 	printer.heatbed.TargetTemp = cmd.temperature
-	return fmt.Sprintf("Bed temperature set to %.2f\n", cmd.temperature)
+	printer.heatbed.Heating = true // Start heating
+	return fmt.Sprintf("Bed temperature set to %.2f, heating in progress\n", cmd.temperature)
+}
+
+// M190Command waits until the bed reaches the target temperature before allowing further commands
+type M190Command struct {
+	temperature float64
+}
+
+func NewM190Command(command string) *M190Command {
+	temperature := parseTemperature(command)
+	return &M190Command{temperature: temperature}
+}
+
+func (cmd *M190Command) Execute(printer *Printer) string {
+	// Set the target temperature and check if the bed is heated
+	printer.heatbed.TargetTemp = cmd.temperature
+
+	// Check if the current temperature is below the target
+	if printer.heatbed.Temp < printer.heatbed.TargetTemp {
+		return "Waiting for bed to reach target temperature...\n"
+	}
+
+	// If target temperature reached, continue
+	printer.heatbed.Heating = false
+	return fmt.Sprintf("Bed temperature reached %.2f\n", cmd.temperature)
+}
+
+
+type M113Command struct{}
+
+func NewM113Command(command string) *M113Command {
+	return &M113Command{}
+}
+
+func (cmd *M113Command) Execute(printer *Printer) string {
+	printer.keepAliveTime = time.Now()
+	return "Keepalive signal sent\n"
+}
+
+type M204Command struct {
+	acceleration float64
+}
+
+func NewM204Command(command string) *M204Command {
+	acceleration := parseAcceleration(command)
+	return &M204Command{acceleration: acceleration}
+}
+
+func (cmd *M204Command) Execute(printer *Printer) string {
+	printer.acceleration = cmd.acceleration
+	return fmt.Sprintf("Acceleration set to %.2f\n", cmd.acceleration)
+}
+
+type M73Command struct {
+	progress int
+}
+
+func NewM73Command(command string) *M73Command {
+	progress := parseProgress(command)
+	return &M73Command{progress: progress}
+}
+
+func (cmd *M73Command) Execute(printer *Printer) string {
+	printer.progress = cmd.progress
+	return fmt.Sprintf("Progress set to %d%%\n", cmd.progress)
 }
 
 // ==================== Control and Status Commands ====================
@@ -311,6 +376,26 @@ func parseFanSpeed(command string) float64 {
 	return fanSpeed
 }
 
+func parseAcceleration(command string) float64 {
+	reS := regexp.MustCompile(`S([-+]?[0-9]*\.?[0-9]+)`)
+	acceleration := 0.0
+
+	if sMatch := reS.FindStringSubmatch(command); sMatch != nil {
+		acceleration, _ = strconv.ParseFloat(sMatch[1], 64)
+	}
+	return acceleration
+}
+
+func parseProgress(command string) int {
+	reS := regexp.MustCompile(`S([0-9]+)`)
+	progress := 0
+
+	if sMatch := reS.FindStringSubmatch(command); sMatch != nil {
+		progress, _ = strconv.Atoi(sMatch[1])
+	}
+	return progress
+}
+
 // ==================== Command Registry ====================
 
 var commandRegistry = map[string]func(string, *Printer) Command{
@@ -329,10 +414,15 @@ var commandRegistry = map[string]func(string, *Printer) Command{
 	"M106": func(cmd string, p *Printer) Command { return NewM106Command(cmd) },
 	"M107": func(cmd string, p *Printer) Command { return &M107Command{} },
 	"M112": func(cmd string, p *Printer) Command { return &CancelCommand{} },
+	"M113": func(cmd string, p *Printer) Command { return &M113Command{} },
 	"M114": func(cmd string, p *Printer) Command { return &M114Command{} },
 	"M140": func(cmd string, p *Printer) Command { return NewM140Command(cmd) },
-	"M190": func(cmd string, p *Printer) Command { return NewM140Command(cmd) },
+	"M190": func(cmd string, p *Printer) Command { return NewM190Command(cmd) },
+	"M204": func(cmd string, p *Printer) Command { return NewM204Command(cmd) },
+	"M73":  func(cmd string, p *Printer) Command { return NewM73Command(cmd) },
 	"M601": func(cmd string, p *Printer) Command { return &M601Command{} },
 	"M602": func(cmd string, p *Printer) Command { return &M602Command{} },
 	"M997": func(cmd string, p *Printer) Command { return &M997Command{} },
 }
+
+
