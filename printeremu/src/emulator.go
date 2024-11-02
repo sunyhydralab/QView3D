@@ -9,8 +9,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	socketio_client "github.com/zhouhui8915/go-socket.io-client"
 )
 
 type PrintJob struct {
@@ -49,47 +47,42 @@ func Init(id int, device string, description string, hwid string, name string, s
 }
 
 func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer) {
-	opts := &socketio_client.Options{
-		Transport: "websocket",
-	}
+	client := NewClient()
+	defer client.Close()
 
-	uri := "http://127.0.0.1:8000/"
-	c, err := socketio_client.NewClient(uri, opts)
-	if err != nil {
-		log.Printf("NewClient error: %v\n", err)
-		return
-	}
+	client.On("connection", func(data interface{}) {
+		fmt.Println("Connected to backend!")
 
-	log.Println("Attempting to connect...")
-
-	if c == nil {
-		log.Println("Failed to create socket.io client.")
-		return
-	}
-
-	c.On("connection", func() {
-		log.Println("Connected to backend with virtual USB...")
-		RegisterPrinter(c, printer)
+		RegisterPrinter(client, printer)
 	})
 
-	c.On("disconnection", func() {
+	client.On("disconnect", func(data interface{}) {
 		log.Println("Disconnected from backend")
+		close(jobQueue)
+	})
+	
+	client.On("error", func(data interface{}) {
+		if err, ok := data.(error); ok {
+			log.Println("Socket error:", err)
+		}
 	})
 
-	c.On("error", func(err error) {
-		log.Println("Socket error:", err)
-	})
+    log.Println("Attempting to connect...")
+    err := client.Connect("http://127.0.0.1:8000")
+    if err != nil {
+        log.Printf("Connection error: %v\n", err)
+        return
+    }
 
-	go ProcessJobs(ctx, printer, c)
+    go ProcessJobs(ctx, printer, client)
 
-	select {
-	case <-ctx.Done():
-		log.Println("Stopping connection...")
-	}
+	<-ctx.Done()
+	log.Println("Connection stopping...")
 }
 
-func RegisterPrinter(c *socketio_client.Client, printer *Printer) {
+func RegisterPrinter(c *SocketIOClient, printer *Printer) {
 	jsonPrinter, err := json.Marshal(printer)
+
 	if err != nil {
 		log.Println("Failed to marshal printer object:", err)
 		return
@@ -99,11 +92,17 @@ func RegisterPrinter(c *socketio_client.Client, printer *Printer) {
 	c.Emit("emuprintconnect", jsonPrinter)
 }
 
-func ProcessJobs(ctx context.Context, printer *Printer, c *socketio_client.Client) {
+func ProcessJobs(ctx context.Context, printer *Printer, c *SocketIOClient) {
 	for {
 		select {
-		case job := <-jobQueue:
+		case job, ok := <-jobQueue:
+			if !ok {
+				log.Println("Job queue closed, exiting ProcessJobs.")
+				return
+			}
+
 			response := CommandHandler(job.Command, printer)
+			log.Printf("Processing job: %s, response: %s\n", job.Command, response)
 
 			// todo: handle weird edge case responses
 			/* 		if job.Command == "G29" {
@@ -115,8 +114,11 @@ func ProcessJobs(ctx context.Context, printer *Printer, c *socketio_client.Clien
 			if !strings.Contains(response, "Unknown command") {
 				c.Emit("job_response", "ok\n")
 			}
+		case <-c.close:
+			log.Println("Client connection closed.")
+			return
 		case <-ctx.Done():
-			log.Println("Stopping job processing...")
+			log.Println("Context done, exiting ProcessJobs.")
 			return
 		}
 	}
