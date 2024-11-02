@@ -22,9 +22,6 @@ from models.config import Config
 app = Flask(__name__, static_folder='../client/dist')
 app.config.from_object(__name__) # update application instantly 
 
-# moved this before importing the blueprints so that it can be accessed by the PrinterStatusService
-printer_status_service = PrinterStatusService(app)
-
 # Initialize SocketIO, which will be used to send printer status updates to the frontend
 # and this specific socketit will be used throughout the backend
 
@@ -33,8 +30,11 @@ if Config.get('environment') == 'production':
 else:
     async_mode = 'threading'  # Use 'threading' for development
 
-socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False, async_mode=async_mode) # make it eventlet on production!
+socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False, async_mode=async_mode, transport=['websocket', 'polling']) # make it eventlet on production!
 app.socketio = socketio  # Add the SocketIO object to the app object
+
+# moved this before importing the blueprints so that it can be accessed by the PrinterStatusService
+printer_status_service = PrinterStatusService(app, socketio)
 
 # IMPORTING BLUEPRINTS 
 from controllers.ports import ports_bp
@@ -83,6 +83,17 @@ app.register_blueprint(issue_bp)
 @app.socketio.on('ping')
 def handle_ping():
     app.socketio.emit('pong')
+    
+@app.socketio.on('connect')
+def handle_connect():
+    print("Client connected")
+    
+@app.socketio.on('emuprintconnect')
+def handle_emuprintconnect(data):
+    printer_data = json.loads(data)
+    
+    print("Received emuprintconnect event with data:", printer_data)
+    printer_status_service.add_printer(data)
 
 # own thread
 with app.app_context():

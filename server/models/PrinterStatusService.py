@@ -14,8 +14,9 @@ class PrinterThread(Thread):
 
 class PrinterStatusService:
     # in order to access the app context, we need to pass the app to the PrinterStatusService, mainly for the websockets
-    def __init__(self, app):
+    def __init__(self, app, socketio):
         self.app = app
+        self.socketio = socketio
         self.printer_threads = []  # array of printer threads
 
     def start_printer_thread(self, printer):
@@ -230,4 +231,10 @@ class PrinterStatusService:
                     break
         self.printer_threads = new_thread_list
         return jsonify({"success": True, "message": "Printer list reordered successfully"})
+    
+    def add_printer(self, printer_data):
+        printer = Printer(**printer_data)
+        # add the printer to the list of printer threads
+        print("Adding printer:", printer)
+        self.printer_threads.append(PrinterThread(printer, target=self.update_thread, args=(printer, self.app)))
 

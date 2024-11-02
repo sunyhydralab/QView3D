@@ -2,17 +2,21 @@ package main
 
 import (
 	"fmt"
+	"context"
 
 	"printeremu/src"
 )
 
 func main() {
-	extruder, printer, err := src.Init(1, "Generic", "Marlin GCode", "hwid:032uhb3293n2", "Testing Printer 1", "Init")
+	ctx, cancel := context.WithCancel(context.Background())
+    defer cancel() 
+
+	extruder, printer, err := src.Init(1, "Generic", "Marlin GCode", "EMU032uhb3293n2", "Testing Printer 1", "Init")
 
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	src.Run(extruder, printer)
+	src.RunConnection(ctx, extruder, printer)
 }
