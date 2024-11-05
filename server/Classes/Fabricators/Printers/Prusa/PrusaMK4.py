@@ -13,6 +13,7 @@ class PrusaMK4(PrusaPrinter):
         self.sendGcode(b"M104 S0\n")  # ; turn off temperature
         self.sendGcode(b"M140 S0\n")  # ; turn off heatbed
         self.sendGcode(b"M107\n")  # ; turn off fan
+        self.sendGcode(b"G1 X241 Y170 F3600")
 
     def getPrintTime(self):
         pass

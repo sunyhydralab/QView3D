@@ -8,6 +8,9 @@ from Classes.Vector3 import Vector3
 import serial
 import serial.tools.list_ports
 
+from Mixins.canPause import canPause
+
+
 class Device(ABC):
     # static variables
     MODEL: str | None = None
@@ -19,6 +22,8 @@ class Device(ABC):
     serialConnection: serial.Serial | None = None
     serialPort: ListPortInfo | SysFS | None = None
     homePosition: Vector3 | None = None
+    status: str = "idle"
+    verdict: str = ""
 
     def __init__(self, serialPort: ListPortInfo | SysFS):
         self.serialPort = serialPort
@@ -52,6 +57,12 @@ class Device(ABC):
     def parseGcode(self, file, isVerbose=False):
         pass
 
+    def pause(self: canPause):
+        pass
+
+    def resume(self: canPause):
+        pass
+
     @abstractmethod
     def sendGcode(self, gcode: Buffer, isVerbose: bool = False):
         pass
@@ -64,6 +75,9 @@ class Device(ABC):
         pass
 
     def hardReset(self, newStatus: str):
+        if self.serialConnection.is_open:
+            self.serialConnection.close()
+
         pass
 
     def getModel(self):

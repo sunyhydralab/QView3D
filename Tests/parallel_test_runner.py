@@ -4,7 +4,7 @@ import subprocess
 import threading
 import platform
 
-from Classes.Ports import Ports
+from server.Classes.Ports import Ports
 
 red = '\033[31m'
 green = '\033[32m'
@@ -40,30 +40,14 @@ else:
 def printColor(color, message):
     print(color + message + reset)
 
-
 # Function to run pytest for a specific port
 def run_tests_for_port(port):
     env = os.environ.copy()
+    verbosity = 1
     env["PORT"] = port
-    log_folder = "logs"
-    os.makedirs(log_folder, exist_ok=True)
-
-    from datetime import datetime
-    timestamp = datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
-    subfolder = os.path.join(log_folder, timestamp)
-    os.makedirs(subfolder, exist_ok=True)
-
-    log_file_path = os.path.join(subfolder, f"test_{port}.log")
-    print(f"Running tests for {port}")
-    with open(log_file_path, "w") as log_file:
-        process = subprocess.Popen(["pytest", "test_runner.py", "-s"], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        for line in process.stdout:
-            log_file.write(line.decode().rstrip('\n'))
-            print(line.decode(), end='')
-        for line in process.stderr:
-            log_file.write(line.decode().rstrip('\n'))
-            print(line.decode(), end='')
-    printColor(green,f"Tests for {port} completed. Log file: {log_file_path}")
+    showAnything = False
+    verbosityCommand = "-p no:terminal" if not showAnything else "-vvv"
+    subprocess.Popen(["pytest", "test_runner.py", verbosityCommand, f"--myVerbose={verbosity}"], env=env).wait()
 
 # Create and start a thread for each port
 threads = []

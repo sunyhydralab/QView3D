@@ -1,3 +1,4 @@
+import logging
 from abc import ABCMeta
 from time import sleep
 from typing_extensions import Buffer
@@ -6,6 +7,7 @@ from Classes.Fabricators.Device import Device
 from Classes.LocationResponse import LocationResponse
 from Classes.Vector3 import Vector3
 from Mixins.canPause import canPause
+from Mixins.hasEndingSequence import hasEndingSequence
 from Mixins.hasResponseCodes import checkOK, checkXYZ, alwaysTrue, checkBedTemp, checkExtruderTemp, hasResponsecodes
 
 
@@ -23,36 +25,63 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
     callablesHashtable = {
         "G0": [alwaysTrue, checkOK], # Move
         "G1": [alwaysTrue, checkOK], # Move
-        "G28": [alwaysTrue, checkOK], # Home
-        "G29": [alwaysTrue, checkOK], # Auto bed leveling
+        "G28": [alwaysTrue, checkXYZ], # Home
+        "G29": [checkXYZ, checkXYZ], # Auto bed leveling
         "M73": [alwaysTrue, checkOK], # Set build percentage
+        "M104": [alwaysTrue, alwaysTrue], # Set hotend temp
         "M109": [alwaysTrue, checkExtruderTemp], # Wait for hotend to reach target temp
         "M114": [alwaysTrue, checkXYZ], # Get current position
-        "M140": [alwaysTrue, checkOK], # Set bed temp
+        "M140": [alwaysTrue, alwaysTrue], # Set bed temp
+        "M155": [alwaysTrue, alwaysTrue], # Set temperature auto report
         "M190": [alwaysTrue, checkBedTemp], # Wait for bed to reach target temp
     }
 
     def goTo(self: Device, loc: Vector3, isVerbose: bool = False):
+        assert isinstance(loc, Vector3)
+        assert isinstance(isVerbose, bool)
+        assert isinstance(self, Device)
         self.sendGcode(f"G0 X{loc.x} Y{loc.y} Z{loc.z} F36000\n".encode("utf-8"), isVerbose=isVerbose)
         self.sendGcode(f'M114\n'.encode("utf-8"), isVerbose=isVerbose)
         return loc == self.getToolHeadLocation()
 
-    def parseGcode(self: Device, file, isVerbose: bool = False):
+    def parseGcode(self: Device, file: str, isVerbose: bool = False):
+        assert isinstance(file, str)
+        assert isinstance(isVerbose, bool)
+        assert isinstance(self, Device)
         try:
             with open(file, "r") as f:
                 for line in f:
                     if line.startswith(";") or line == "\n":
                         continue
+                    if self.status == "paused":
+                        self.pause()
+                        while self.status == "paused":
+                            sleep(1)
+                        if self.status == "cancelled":
+                            if isinstance(self, hasEndingSequence):
+                                self.endSequence()
+                            self.verdict = "cancelled"
+                            return True
+                        elif self.status == "printing":
+                            self.resume()
+                    if self.status == "cancelled":
+                        if isinstance(self, hasEndingSequence):
+                            self.endSequence()
+                        self.verdict = "cancelled"
+                        return True
                     if isVerbose:
                         print(line, end="")
                     self.sendGcode(line.encode("utf-8"), isVerbose=isVerbose)
+            self.verdict = "complete"
             return True
         except Exception as e:
             print(e)
-            return False
+            self.verdict = "error"
+            return True
 
 
     def sendGcode(self: Device, gcode: Buffer, isVerbose: bool = False):
+        assert self.serialConnection.is_open
         assert isinstance(gcode, bytes)
         self.serialConnection.write(gcode)
         callables = usesMarlinGcode.callablesHashtable.get(gcode.decode("utf-8").split("\n")[0].split(" ")[0], [alwaysTrue, checkOK])
@@ -69,7 +98,6 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
                     if callables[1](line):
                         return True
                 except Exception as e:
-                    print(e)
                     return False
 
 
@@ -83,33 +111,53 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
         return Vector3(loc.x, loc.y, loc.z)
 
 
-    def home(self: Device, isVerbose: bool = False):
+    def home(self, isVerbose: bool = False):
         self.sendGcode(usesMarlinGcode.homeCMD, isVerbose=isVerbose)
+        assert isinstance(self, Device)
         return self.getHomePosition() == self.getToolHeadLocation()
 
 
     def pause(self):
-        self.sendGcode(usesMarlinGcode.keepAliveCMD)
-        self.sendGcode(usesMarlinGcode.pauseCMD)
-
+        assert isinstance(self, canPause)
+        assert isinstance(self, Device)
+        assert self.serialConnection is not None
+        assert self.serialConnection.is_open
+        assert self.status == "printing"
+        try:
+            self.sendGcode(usesMarlinGcode.keepAliveCMD)
+            self.sendGcode(usesMarlinGcode.pauseCMD)
+            return True
+        except Exception as e:
+            print(e)
+            return False
 
     def resume(self):
-        self.sendGcode(usesMarlinGcode.doNotKeepAliveCMD)
-        self.sendGcode(usesMarlinGcode.resumeCMD)
+        assert isinstance(self, canPause)
+        assert isinstance(self, Device)
+        assert self.serialConnection is not None
+        assert self.serialConnection.is_open
+        assert self.status == "paused"
+        try:
+            self.sendGcode(usesMarlinGcode.doNotKeepAliveCMD)
+            self.sendGcode(usesMarlinGcode.resumeCMD)
+            return True
+        except Exception as e:
+            print(e)
+            return False
 
 
     def connect(self: Device):
         Device.connect(self)
         try:
             if self.serialConnection:
-                self.serialConnection.write(b"M155 S1\n")
+                #self.serialConnection.write(b"M155 S1\n")
                 return True
         except Exception as e:
             return e
 
 
     def disconnect(self: Device):
-        if self.serialConnection:
+        if self.serialConnection and self.serialConnection.is_open:
             self.sendGcode(b"M155 S0\n")
             self.sendGcode(b"M104 S0\n")
             self.sendGcode(b"M140 S0\n")
