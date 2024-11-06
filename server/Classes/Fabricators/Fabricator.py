@@ -56,7 +56,7 @@ class Fabricator(db.Model):
             db.session.commit()
 
     def __repr__(self):
-        return f"Fabricator: {self.name}, {self.description}, {self.hwid}, {self.devicePort}, {self.status}"
+        return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}"
     @staticmethod
     def getModelFromGcodeCommand(serialPort: ListPortInfo | SysFS | None) -> str:
         """returns the model of the printer based on the response to M997"""
@@ -153,18 +153,30 @@ class Fabricator(db.Model):
 
     def cancel(self):
         """cancels the fabrication process"""
-        if self.status != "printing" and self.status != "paused":
-            print("status:", self.status)
-            return #TODO: return error message
-        self.setStatus("cancelled")
-        assert isinstance(self.device, Device)
-        return self.status == self.device.status == "cancelled"
+        try:
+            assert self.job is not None
+            assert self.device is not None
+            if self.status != "printing" and self.status != "paused":
+                self.device.logger.error(f"Fabricator isn't in the middle of a job: current status: {self.status}")
+                return #TODO: return error message
+            self.setStatus("cancelled")
+            return self.status == self.device.status == "cancelled"
+        except Exception as e:
+            if self.device is None:
+                print(e)
+            else:
+                self.device.logger.error("Error cancelling job:")
+                self.device.logger.error(e)
+            return False
 
     def getStatus(self):
         return self.status
 
     def setStatus(self, newStatus):
         try:
+            assert newStatus in ["idle", "printing", "paused", "complete", "error", "cancelled", "misprint"]
+            assert self.device is not None
+
             if self.status == "error" and newStatus!= "error":
                 self.device.hardReset(newStatus)
             self.status = newStatus
@@ -178,7 +190,11 @@ class Fabricator(db.Model):
             # )
             return True
         except Exception as e:
-            print("Error setting status:", e)
+            if self.device is None:
+                print(e)
+            else:
+                self.device.logger.error("Error setting status:")
+                self.device.logger.error(e)
             return False
 
     def resetToIdle(self):

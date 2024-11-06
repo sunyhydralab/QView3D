@@ -2,7 +2,6 @@ import logging
 import os
 import sys
 import traceback
-
 from _pytest._code.code import ExceptionChainRepr
 
 
@@ -13,23 +12,32 @@ class Logger(logging.Logger):
     ERROR = logging.ERROR
     CRITICAL = logging.CRITICAL
 
-    def __init__(self, port, deviceName, consoleLogger=sys.stdout, fileLogger=None):
+    def __init__(self, port, deviceName, consoleLogger=sys.stdout, fileLogger=None, loggingLevel=logging.INFO, showFile=True, showLevel=True, showDate=True):
         super().__init__(f"Logger_{port}_{deviceName}")
-        console_handler = logging.StreamHandler(consoleLogger)
-        console_handler.setFormatter(CustomFormatter("%(asctime)s - %(message)s"))
-        self.addHandler(console_handler)
-        self.setLevel(logging.INFO)  # Adjust this as needed
+        info = []
+        if showDate:
+            info.append("%(asctime)s")
+        if showLevel:
+            info.append("%(levelname)s")
+        if showFile:
+            info.append("%(module)s.%(funcName)s:%(lineno)d")
+        formatString = " - ".join(info + ["%(message)s"]).lstrip(" - ")
+        if consoleLogger is not None:
+            console_handler = logging.StreamHandler(consoleLogger)
+            console_handler.setFormatter(CustomFormatter(formatString))
+            self.addHandler(console_handler)
         if fileLogger is None:
             log_folder = "./server/logs"
             os.makedirs(log_folder, exist_ok=True)
-            subfolder = os.path.join(log_folder, port)
+            subfolder = os.path.join(log_folder, deviceName)
             os.makedirs(subfolder, exist_ok=True)
-            fileLogger = logging.FileHandler(os.path.join(subfolder, f"test_{port}.log"))
+            from datetime import datetime
+            fileLogger = logging.FileHandler(os.path.join(subfolder, f"{datetime.now().strftime('%m-%d-%Y__%H-%M-%S')}.log"))
         else:
             fileLogger = logging.FileHandler(fileLogger)
-        fileLogger.setFormatter(logging.Formatter("%(message)s"))
+        fileLogger.setFormatter(logging.Formatter(formatString))
         self.addHandler(fileLogger)
-        self.setLevel(logging.INFO)  # Adjust this as needed
+        self.setLevel(loggingLevel)
 
     def formatLog(self, msg):
         if isinstance(msg, str):
@@ -47,32 +55,32 @@ class Logger(logging.Logger):
             msg = str(msg)
         return msg
 
-    def info(self, msg: str | Exception | ExceptionChainRepr, *args, end='', **kwargs):
+    def info(self, msg: str | Exception | ExceptionChainRepr, end='', stacklevel: int = 2, *args, **kwargs):
         """Log a message with level INFO and append `end` after the message."""
         msg = self.formatLog(msg)
-        super().info(msg + end, *args, **kwargs)
+        super().info(msg + end, *args, **kwargs, stacklevel=stacklevel)
 
-    def debug(self, msg: str | Exception | ExceptionChainRepr, *args, end='', **kwargs):
+    def debug(self, msg: str | Exception | ExceptionChainRepr, end='', stacklevel: int = 2, *args, **kwargs):
         """Log a message with level DEBUG and append `end` after the message."""
         msg = self.formatLog(msg)
-        super().debug(msg + end, *args, **kwargs)
+        super().debug(msg + end, *args, **kwargs, stacklevel=stacklevel)
 
-    def warning(self, msg: str | Exception | ExceptionChainRepr, *args, end='', **kwargs):
+    def warning(self, msg: str | Exception | ExceptionChainRepr, end='', stacklevel: int = 2, *args, **kwargs):
         """Log a message with level WARNING and append `end` after the message."""
         msg = self.formatLog(msg)
-        super().warning(msg + end, *args, **kwargs)
+        super().warning(msg + end, *args, **kwargs, stacklevel=stacklevel)
 
-    def error(self, msg: str | Exception | ExceptionChainRepr, *args, end='', **kwargs):
+    def error(self, msg: str | Exception | ExceptionChainRepr, end='', stacklevel: int = 2, *args, **kwargs):
         """Log a message with level ERROR and append `end` after the message."""
         msg = self.formatLog(msg)
-        super().error(msg + end, *args, **kwargs)
+        super().error(msg + end, *args, **kwargs, stacklevel=stacklevel)
 
-    def critical(self, msg: str | Exception | ExceptionChainRepr, *args, end='', **kwargs):
+    def critical(self, msg: str | Exception | ExceptionChainRepr, end='',stacklevel: int = 2, *args, **kwargs):
         """Log a message with level CRITICAL and append `end` after the message."""
         msg = self.formatLog(msg)
-        super().critical(msg + end, *args, **kwargs)
+        super().critical(msg + end, *args, **kwargs, stacklevel=stacklevel)
 
-    def logMessageOnly(self, msg: str, logLevel: int = None, *args, **kwargs):
+    def logMessageOnly(self, msg: str, logLevel: int = None, stacklevel: int = 3, *args, **kwargs):
         if logLevel is None:
             logLevel = self.level
         """Log a message without any additional formatting."""
@@ -80,15 +88,15 @@ class Logger(logging.Logger):
         for handler in self.handlers:
             handler.setFormatter(CustomFormatter("%(message)s"))
         if logLevel == self.DEBUG:
-            self.debug(msg, *args, **kwargs)
+            self.debug(msg, stacklevel=stacklevel, *args, **kwargs)
         elif logLevel == self.INFO:
-            self.info(msg, *args, **kwargs)
+            self.info(msg, stacklevel=stacklevel, *args, **kwargs)
         elif logLevel == self.WARNING:
-            self.warning(msg, *args, **kwargs)
+            self.warning(msg, stacklevel=stacklevel, *args, **kwargs)
         elif logLevel == self.ERROR:
-            self.error(msg, *args, **kwargs)
+            self.error(msg, stacklevel=stacklevel, *args, **kwargs)
         elif logLevel == self.CRITICAL:
-            self.critical(msg, *args, **kwargs)
+            self.critical(msg, stacklevel=stacklevel, *args, **kwargs)
         for handler, formatter in zip(self.handlers, oldFormatters):
             handler.setFormatter(formatter)
 

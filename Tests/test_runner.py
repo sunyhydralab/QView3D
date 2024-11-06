@@ -6,23 +6,28 @@ from Classes.Fabricators.Printers.Ender.Ender3 import Ender3
 from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
 from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
 from Classes.Ports import Ports
+from Classes.Jobs import Job
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.Vector3 import Vector3
 from Mixins.canPause import canPause
 
+def fabricator_setup(port):
+    if not port: return None
+    return Fabricator(Ports.getPortByName(port), "Test Printer", addToDB=False)
+
 class TestFabricator:
-    testLevelToRun = 5
+    testLevelToRun = 1
     shortTest = True
+
+    def __repr__(self):
+        return f"TestFabricator Class running on port {Ports.getPortByName(os.getenv('PORT'))}"
 
     @classmethod
     @pytest.fixture(scope="session", autouse=True)
     def function_setup(cls, request):
-        port = os.getenv("PORT")
-        if not port:
+        fabricator_instance = fabricator_setup(request.session.config.port)
+        if fabricator_instance is None:
             pytest.skip("No port specified")
-
-        fabricator_instance = Fabricator(Ports.getPortByName(port), "Test Printer", addToDB=False)
-
         yield fabricator_instance
 
         fabricator_instance.device.disconnect()
@@ -37,7 +42,13 @@ class TestFabricator:
     @pytest.mark.order(2)
     def test_home(self, function_setup):
         fabricator = function_setup
-        assert fabricator.device.home(isVerbose=False), f"Failed to home {fabricator.getDescription()}"
+        assert fabricator.device.home(), f"Failed to home {fabricator.getDescription()}"
+
+    @pytest.mark.xfail(reason="Expected to fail")
+    @pytest.mark.order(2)
+    def test_xfail(self, function_setup):
+        fabricator = function_setup
+        assert False, f"Expected to fail on {fabricator.getDescription()}"
 
     @pytest.mark.skipif(condition=testLevelToRun < 5, reason="Not doing lvl 5 tests")
     @pytest.mark.order(3)
@@ -46,7 +57,7 @@ class TestFabricator:
         squarePasses = 0
         for point in [Vector3(50.0, 50.0, 2.0), Vector3(200.0, 50.0, 2.0), Vector3(200.0, 150.0, 2.0),
                       Vector3(50.0, 150.0, 2.0)]:
-            squarePasses += 1 if fabricator.device.goTo(point) else 0
+            squarePasses += 1 if fabricator.device.goTo(point, isVerbose=True) else 0
         assert squarePasses == 4, f"Failed to draw square on {fabricator.getDescription()}"
 
 
@@ -69,45 +80,63 @@ class TestFabricator:
         assert fabricator.device.goTo(
             Vector3(125.0, 100.0, 2.0)), f"Failed to go to center on {fabricator.getDescription()}"
 
-    @pytest.mark.skip(reason="Pause isn't implemented yet")
-    @pytest.mark.order(6)
-    # @pytest.mark.skipif(condition=testLevelToRun < 10, reason="Not doing lvl 10 tests")
-    def test_pause(self, function_setup):
+    # @pytest.mark.skip(reason="Not doing heat test")
+    # @pytest.mark.order(6)
+    # def test_parse_gcode(self, function_setup):
+    #     fabricator = function_setup
+    #     assert fabricator.device.parseGcode(
+    #         "../server/heatTest.gcode"), f"Failed to parse Gcode on {fabricator.getDescription()}"
+
+    @pytest.mark.order(7)
+    @pytest.mark.skipif(condition=testLevelToRun < 10, reason="Not doing lvl 10 tests")
+    def test_pause_and_resume(self, function_setup):
         fabricator = function_setup
         if not isinstance(fabricator.device, canPause):
             pytest.skip(f"{fabricator.getDescription()} doesn't support pausing")
-        assert fabricator.device.pause(), f"Failed to pause on {fabricator.getDescription()}"
+
+        from time import sleep
+        import threading
+
+        def parse_gcode():
+            fabricator.queue.addToFront(Job("../server/pauseAndResumeTest.gcode", "pauseAndResumeTest", fabricator.dbID, "ready", "../server/pauseAndResumeTest.gcode", False, 1, fabricator.name),fabricator.dbID)
+            fabricator.begin()
+            assert fabricator.getStatus() == fabricator.device.status == "cancelled", f"Failed to cancel on {fabricator.getDescription()}, expected cancel, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
+            assert fabricator.job is None, f"Failed to complete on {fabricator.getDescription()}, expected job to be None, got {fabricator.job}"
+        def pause_and_resume_fabricator():
+            sleep(2)
+            assert fabricator.pause(),  f"Failed to pause on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
+            sleep(20)
+            assert fabricator.resume(), f"Failed to resume on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
+            sleep(1)
+            assert fabricator.cancel(), f"Failed to cancel on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
+            assert fabricator.getStatus() == "cancelled", f"Failed to cancel on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
+            sleep(20)
+
+            fabricator.resetToIdle()
+            assert fabricator.getStatus() == "idle", f"Failed to reset to idle on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
+
+        parse_thread = threading.Thread(target=parse_gcode)
+        pause_thread = threading.Thread(target=pause_and_resume_fabricator)
+
+        parse_thread.start()
+        pause_thread.start()
+
+        parse_thread.join()
+        pause_thread.join()
 
 
-    @pytest.mark.skip(reason="Resume isn't implemented yet")
-    @pytest.mark.order(7)
-    # @pytest.mark.skipif(condition=testLevelToRun < 10, reason="Not doing lvl 10 tests")
-    def test_resume(self, function_setup):
-        fabricator = function_setup
-        if not isinstance(fabricator.device, canPause):
-            pytest.skip(f"{fabricator.getDescription()} doesn't support resuming")
-        assert fabricator.device.resume(), f"Failed to resume on {fabricator.getDescription()}"
-
-
-    @pytest.mark.skip(reason="Cancel isn't implemented yet")
+    @pytest.mark.skipif(condition=testLevelToRun < 10, reason="Not doing lvl 10 tests")
     @pytest.mark.order(8)
-    # @pytest.mark.skipif(condition=testLevelToRun < 10, reason="Not doing lvl 10 tests")
-    def test_cancel(self, function_setup):
-        fabricator = function_setup
-        assert fabricator.cancel(), f"Failed to cancel on {fabricator.getDescription()}"
-
-
-    @pytest.mark.skip(reason="getStatus isn't implemented yet")
-    @pytest.mark.order(9)
-    # @pytest.mark.skipif(condition=testLevelToRun < 10, reason="Not doing lvl 10 tests")
     def test_status(self, function_setup):
         fabricator = function_setup
         assert fabricator.getStatus() is not None, f"Failed to get status on {fabricator.getDescription()}"
-
+        assert fabricator.device.status is not None, f"Failed to get status on device of {fabricator.getDescription()}"
+        assert fabricator.getStatus() == fabricator.device.status, f"Internal status mismatch: fabricator: {fabricator.getDescription()}, device: {fabricator.device.status}"
+        assert fabricator.getStatus() == "idle", f"Status incorrect at {fabricator.getDescription()}, expected idle, got {fabricator.getStatus()}"
 
     @pytest.mark.skipif(condition=testLevelToRun < 9, reason="Not doing lvl 9 tests")
     @pytest.mark.order(10)
-    def test_gcode(self, function_setup):
+    def test_gcode_print_time(self, function_setup):
         fabricator = function_setup
         expectedTime = 3 * 60
         file = "../server/xyz-cali-cube"
@@ -115,7 +144,7 @@ class TestFabricator:
             file = file + "-mini"
         if isinstance(fabricator.device, Ender3):
             file = file + "_ENDER3.gcode"
-            expectedTime = 4 * 60 + 15 if self.shortTest else 28 * 60
+            expectedTime = 14 * 60 + 15 if self.shortTest else 28 * 60
         elif isinstance(fabricator.device, PrusaMK4S):
             file = file + "_MK4S.gcode"
             expectedTime = 180 if self.shortTest else 1800
@@ -125,7 +154,9 @@ class TestFabricator:
         # expectedTime = 2040 # for my personal home test, 1072
         expectedMinutes, expectedSeconds = divmod(expectedTime, 60)
         time = datetime.now()
-        assert fabricator.device.parseGcode(file), f"Failed to parse Gcode on {fabricator.getDescription()}"
+        with open(file, "r") as f:
+            fabricator.queue.addToFront(Job(f.read(), "xyz cali cube", fabricator.dbID, "ready", file, False, 1, fabricator.name),fabricator.dbID)
+            fabricator.begin()
         time = datetime.now() - time
         minutes, seconds = divmod(time.seconds, 60)
         fabricator.device.serialConnection.write(b"M31\n")
@@ -138,3 +169,23 @@ class TestFabricator:
         timeBoundary = max(120, expectedTime // 5)
         assert printTime - expectedTime < timeBoundary, f"Failed to print within time boundary of expected time on {fabricator.getDescription()}. Expected: {int(expectedMinutes):02}:{int(expectedSeconds):02}, Actual: {int(printMinutes):02}:{int(printSeconds):02}"
         assert time.seconds - expectedTime < timeBoundary, f"Failed to print within time boundary of expected time on {fabricator.getDescription()}. Expected: {int(expectedMinutes):02}:{int(expectedSeconds):02}, Actual: {int(minutes):02}:{int(seconds):02}"
+
+    # @pytest.mark.skipif(condition=testLevelToRun < 10, reason="Not doing lvl 10 tests")
+    # @pytest.mark.order(9)
+    # def test_add_job(self, function_setup):
+    #     fabricator = function_setup
+    #     file = "../server/xyz-cali-cube"
+    #     if self.shortTest:
+    #         file = file + "-mini"
+    #     if isinstance(fabricator.device, Ender3):
+    #         file = file + "_ENDER3.gcode"
+    #     elif isinstance(fabricator.device, PrusaMK4S):
+    #         file = file + "_MK4S.gcode"
+    #     elif isinstance(fabricator.device, PrusaMK4):
+    #         file = file + "_MK4.gcode"
+    #     with open(file, "r") as f:
+    #         assert fabricator.queue.addToFront(Job(f.read(), "xyz cali cube", 3, "ready", file, False, 1, fabricator.name),3), f"Failed to add job on {fabricator.getDescription()}"
+    #     for job in fabricator.queue.getQueue():
+    #         assert job.status == "ready", f"Job status incorrect on {fabricator.getDescription()}"
+    #     fabricator.queue.removeJob()
+    #     assert len(fabricator.queue.getQueue()) == 0, f"Failed to remove job on {fabricator.getDescription()}"

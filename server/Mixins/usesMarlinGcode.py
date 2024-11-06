@@ -1,4 +1,3 @@
-import logging
 from abc import ABCMeta
 from time import sleep
 from typing_extensions import Buffer
@@ -26,7 +25,8 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
         "G0": [alwaysTrue, checkOK], # Move
         "G1": [alwaysTrue, checkOK], # Move
         "G28": [alwaysTrue, checkXYZ], # Home
-        "G29": [checkXYZ, checkXYZ], # Auto bed leveling
+        "G29 P1": [alwaysTrue, checkOK], # Auto bed leveling
+        "G29 P9": [checkOK, checkOK], # Auto bed leveling
         "M73": [alwaysTrue, checkOK], # Set build percentage
         "M104": [alwaysTrue, alwaysTrue], # Set hotend temp
         "M109": [alwaysTrue, checkExtruderTemp], # Wait for hotend to reach target temp
@@ -53,6 +53,7 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
                 for line in f:
                     if line.startswith(";") or line == "\n":
                         continue
+                    if isVerbose: self.logger.debug(line.strip("\n"))
                     if self.status == "paused":
                         self.pause()
                         while self.status == "paused":
@@ -69,13 +70,15 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
                             self.endSequence()
                         self.verdict = "cancelled"
                         return True
-                    if isVerbose:
-                        print(line, end="")
                     self.sendGcode(line.encode("utf-8"), isVerbose=isVerbose)
             self.verdict = "complete"
             return True
         except Exception as e:
-            print(e)
+            if self.logger is None:
+                print(e)
+            else:
+                self.logger.error("Error cancelling job:")
+                self.logger.error(e)
             self.verdict = "error"
             return True
 
@@ -84,6 +87,15 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
         assert self.serialConnection.is_open
         assert isinstance(gcode, bytes)
         self.serialConnection.write(gcode)
+        hashIndex = gcode.decode("utf-8").split("\n")[0].split(" ")[0]
+        if hashIndex == "G29":
+            g29addon = gcode.decode("utf-8").split("\n")[0].split(" ")[1]
+            if g29addon == "P9":
+                hashIndex += " " + g29addon
+            else:
+                hashIndex += " P1"
+        elif hashIndex == "M109" or hashIndex == "M190":
+            self.logger.info("Waiting for temperature to stabilize...")
         callables = usesMarlinGcode.callablesHashtable.get(gcode.decode("utf-8").split("\n")[0].split(" ")[0], [alwaysTrue, checkOK])
         if callables[0] != alwaysTrue:
             while not callables[0](self.serialConnection.readline()):
@@ -94,10 +106,12 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
                     line = self.serialConnection.readline()
                     if "processing" in line.decode("utf-8"):
                         continue
-                    if isVerbose: print(line)
+                    if isVerbose: self.logger.debug(line)
                     if callables[1](line):
+                        self.logger.info(gcode.decode().strip() + ": " + line.decode().strip())
                         return True
                 except Exception as e:
+                    self.logger.error(e)
                     return False
 
 
@@ -106,43 +120,60 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
         response = ""
         while not (("X:" in response) and ("Y:" in response) and ("Z:" in response)):
             response = self.serialConnection.readline().decode("utf-8")
-            if isVerbose: print(response)
+            if isVerbose: self.logger.info(response)
         loc = LocationResponse(response)
         return Vector3(loc.x, loc.y, loc.z)
 
 
     def home(self, isVerbose: bool = False):
-        self.sendGcode(usesMarlinGcode.homeCMD, isVerbose=isVerbose)
-        assert isinstance(self, Device)
-        return self.getHomePosition() == self.getToolHeadLocation()
+        try:
+            assert isinstance(isVerbose, bool)
+            assert isinstance(self, Device)
+            self.sendGcode(usesMarlinGcode.homeCMD, isVerbose=isVerbose)
+            return self.getHomePosition() == self.getToolHeadLocation()
+        except Exception as e:
+            if self.logger is None:
+                print(e)
+            else:
+                self.logger.error("Error homing:")
+                self.logger.error(e)
+            return
 
 
     def pause(self):
-        assert isinstance(self, canPause)
-        assert isinstance(self, Device)
-        assert self.serialConnection is not None
-        assert self.serialConnection.is_open
-        assert self.status == "printing"
         try:
+            assert isinstance(self, canPause)
+            assert isinstance(self, Device)
+            assert self.serialConnection is not None
+            assert self.serialConnection.is_open
+            assert self.status == "printing"
             self.sendGcode(usesMarlinGcode.keepAliveCMD)
             self.sendGcode(usesMarlinGcode.pauseCMD)
             return True
         except Exception as e:
-            print(e)
+            if self.logger is None:
+                print(e)
+            else:
+                self.logger.error("Error pausing job:")
+                self.logger.error(e)
             return False
 
     def resume(self):
-        assert isinstance(self, canPause)
-        assert isinstance(self, Device)
-        assert self.serialConnection is not None
-        assert self.serialConnection.is_open
-        assert self.status == "paused"
         try:
+            assert isinstance(self, canPause)
+            assert isinstance(self, Device)
+            assert self.serialConnection is not None
+            assert self.serialConnection.is_open
+            assert self.status == "paused"
             self.sendGcode(usesMarlinGcode.doNotKeepAliveCMD)
             self.sendGcode(usesMarlinGcode.resumeCMD)
             return True
         except Exception as e:
-            print(e)
+            if self.logger is None:
+                print(e)
+            else:
+                self.logger.error("Error resuming job:")
+                self.logger.error(e)
             return False
 
 
@@ -150,14 +181,20 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
         Device.connect(self)
         try:
             if self.serialConnection:
-                #self.serialConnection.write(b"M155 S1\n")
+                self.serialConnection.write(b"M155 S1\n")
                 return True
         except Exception as e:
-            return e
+            if self.logger is None:
+                print(e)
+            else:
+                self.logger.error("Error connecting:")
+                self.logger.error(e)
+            return False
 
 
     def disconnect(self: Device):
         if self.serialConnection and self.serialConnection.is_open:
+            self.sendGcode(b"M155 S100\n")
             self.sendGcode(b"M155 S0\n")
             self.sendGcode(b"M104 S0\n")
             self.sendGcode(b"M140 S0\n")

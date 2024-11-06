@@ -41,10 +41,10 @@ def printColor(color, message):
     print(color + message + reset)
 
 # Function to run pytest for a specific port
-def run_tests_for_port(port):
+def run_tests_for_port(comm_port):
     env = os.environ.copy()
     verbosity = 1
-    env["PORT"] = port
+    env["PORT"] = comm_port
     showAnything = False
     verbosityCommand = "-p no:terminal" if not showAnything else "-vvv"
     subprocess.Popen(["pytest", "test_runner.py", verbosityCommand, f"--myVerbose={verbosity}"], env=env).wait()

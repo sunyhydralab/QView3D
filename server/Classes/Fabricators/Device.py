@@ -5,6 +5,7 @@ from serial.tools.list_ports_linux import SysFS
 from typing_extensions import Buffer
 
 from Classes.Vector3 import Vector3
+from Classes.Logger import Logger
 import serial
 import serial.tools.list_ports
 
@@ -28,6 +29,9 @@ class Device(ABC):
     def __init__(self, serialPort: ListPortInfo | SysFS):
         self.serialPort = serialPort
         self.serialID = serialPort.serial_number
+        self.logger = Logger(self.serialPort.device, self.DESCRIPTION)
+        self.status = "idle"
+        self.verdict = ""
 
     def __repr__(self):
         return f"{self.getModel()} on {self.getSerialPort().device}"
