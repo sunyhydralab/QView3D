@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import datetime
 import re
 import pytest
@@ -13,10 +14,11 @@ from Mixins.canPause import canPause
 
 def fabricator_setup(port):
     if not port: return None
-    return Fabricator(Ports.getPortByName(port), "Test Printer", addToDB=False)
+    return Fabricator(Ports.getPortByName(port), "Test Printer", addToDB=False, consoleLogger=sys.stdout)
 
 class TestFabricator:
-    testLevelToRun = 1
+    from parallel_test_runner import testLevel
+    testLevelToRun = testLevel
     shortTest = True
 
     def __repr__(self):
@@ -32,25 +34,28 @@ class TestFabricator:
 
         fabricator_instance.device.disconnect()
 
+    @pytest.mark.dependency(name="test_connection")
     @pytest.mark.skipif(condition=testLevelToRun < 1, reason="Not doing lvl 1 tests")
     @pytest.mark.order(1)
     def test_connection(self, function_setup):
         fabricator = function_setup
         assert fabricator.device is not None, f"No printer connected on {fabricator.getDescription()}"
 
+    @pytest.mark.dependency(name="test_home", depends=["test_connection"])
     @pytest.mark.skipif(condition=testLevelToRun < 3, reason="Not doing lvl 3 tests")
     @pytest.mark.order(2)
     def test_home(self, function_setup):
         fabricator = function_setup
         assert fabricator.device.home(), f"Failed to home {fabricator.getDescription()}"
 
-    @pytest.mark.xfail(reason="Expected to fail")
-    @pytest.mark.order(2)
-    def test_xfail(self, function_setup):
-        fabricator = function_setup
-        assert False, f"Expected to fail on {fabricator.getDescription()}"
+    # @pytest.mark.xfail(reason="Expected to fail")
+    # @pytest.mark.order(2)
+    # def test_xfail(self, function_setup):
+    #     fabricator = function_setup
+    #     assert False, f"Expected to fail on {fabricator.getDescription()}"
 
     @pytest.mark.skipif(condition=testLevelToRun < 5, reason="Not doing lvl 5 tests")
+    @pytest.mark.dependency(depends=["test_home"])
     @pytest.mark.order(3)
     def test_square(self, function_setup):
         fabricator = function_setup
@@ -62,6 +67,7 @@ class TestFabricator:
 
 
     @pytest.mark.skipif(condition=testLevelToRun < 5, reason="Not doing lvl 5 tests")
+    @pytest.mark.dependency(depends=["test_home"])
     @pytest.mark.order(4)
     def test_octagon(self, function_setup):
         fabricator = function_setup
@@ -74,6 +80,7 @@ class TestFabricator:
 
 
     @pytest.mark.skipif(condition=testLevelToRun < 5, reason="Not doing lvl 5 tests")
+    @pytest.mark.dependency(depends=["test_home"])
     @pytest.mark.order(5)
     def test_center(self, function_setup):
         fabricator = function_setup
@@ -87,8 +94,9 @@ class TestFabricator:
     #     assert fabricator.device.parseGcode(
     #         "../server/heatTest.gcode"), f"Failed to parse Gcode on {fabricator.getDescription()}"
 
-    @pytest.mark.order(7)
-    @pytest.mark.skipif(condition=testLevelToRun < 10, reason="Not doing lvl 10 tests")
+    @pytest.mark.order(8)
+    @pytest.mark.skipif(condition=testLevelToRun < 9, reason="Not doing lvl 9 tests")
+    @pytest.mark.dependency(depends=["test_home", "test_add_job"])
     def test_pause_and_resume(self, function_setup):
         fabricator = function_setup
         if not isinstance(fabricator.device, canPause):
@@ -125,7 +133,8 @@ class TestFabricator:
         pause_thread.join()
 
 
-    @pytest.mark.skipif(condition=testLevelToRun < 10, reason="Not doing lvl 10 tests")
+    @pytest.mark.skipif(condition=testLevelToRun < 5, reason="Not doing lvl 5 tests")
+    @pytest.mark.dependency(depends=["test_connection"])
     @pytest.mark.order(8)
     def test_status(self, function_setup):
         fabricator = function_setup
@@ -134,7 +143,31 @@ class TestFabricator:
         assert fabricator.getStatus() == fabricator.device.status, f"Internal status mismatch: fabricator: {fabricator.getDescription()}, device: {fabricator.device.status}"
         assert fabricator.getStatus() == "idle", f"Status incorrect at {fabricator.getDescription()}, expected idle, got {fabricator.getStatus()}"
 
+    @pytest.mark.skipif(condition=testLevelToRun < 5, reason="Not doing lvl 5 tests")
+    @pytest.mark.dependency(name="test_add_job", depends=["test_connection"])
+    @pytest.mark.order(7)
+    def test_add_job(self, function_setup):
+        fabricator = function_setup
+        file = "../server/xyz-cali-cube"
+        if self.shortTest:
+            file = file + "-mini"
+        if isinstance(fabricator.device, Ender3):
+            file = file + "_ENDER3.gcode"
+        elif isinstance(fabricator.device, PrusaMK4S):
+            file = file + "_MK4S.gcode"
+        elif isinstance(fabricator.device, PrusaMK4):
+            file = file + "_MK4.gcode"
+        with open(file, "r") as f:
+            assert fabricator.queue.addToFront(
+                Job(f.read(), "xyz cali cube", 3, "ready", file, False, 1, fabricator.name),
+                3), f"Failed to add job on {fabricator.getDescription()}"
+        for job in fabricator.queue.getQueue():
+            assert job.status == "ready", f"Job status incorrect on {fabricator.getDescription()}"
+        fabricator.queue.removeJob()
+        assert len(fabricator.queue.getQueue()) == 0, f"Failed to remove job on {fabricator.getDescription()}"
+
     @pytest.mark.skipif(condition=testLevelToRun < 9, reason="Not doing lvl 9 tests")
+    @pytest.mark.dependency(depends=["test_home", "test_add_job"])
     @pytest.mark.order(10)
     def test_gcode_print_time(self, function_setup):
         fabricator = function_setup
@@ -169,23 +202,3 @@ class TestFabricator:
         timeBoundary = max(120, expectedTime // 5)
         assert printTime - expectedTime < timeBoundary, f"Failed to print within time boundary of expected time on {fabricator.getDescription()}. Expected: {int(expectedMinutes):02}:{int(expectedSeconds):02}, Actual: {int(printMinutes):02}:{int(printSeconds):02}"
         assert time.seconds - expectedTime < timeBoundary, f"Failed to print within time boundary of expected time on {fabricator.getDescription()}. Expected: {int(expectedMinutes):02}:{int(expectedSeconds):02}, Actual: {int(minutes):02}:{int(seconds):02}"
-
-    # @pytest.mark.skipif(condition=testLevelToRun < 10, reason="Not doing lvl 10 tests")
-    # @pytest.mark.order(9)
-    # def test_add_job(self, function_setup):
-    #     fabricator = function_setup
-    #     file = "../server/xyz-cali-cube"
-    #     if self.shortTest:
-    #         file = file + "-mini"
-    #     if isinstance(fabricator.device, Ender3):
-    #         file = file + "_ENDER3.gcode"
-    #     elif isinstance(fabricator.device, PrusaMK4S):
-    #         file = file + "_MK4S.gcode"
-    #     elif isinstance(fabricator.device, PrusaMK4):
-    #         file = file + "_MK4.gcode"
-    #     with open(file, "r") as f:
-    #         assert fabricator.queue.addToFront(Job(f.read(), "xyz cali cube", 3, "ready", file, False, 1, fabricator.name),3), f"Failed to add job on {fabricator.getDescription()}"
-    #     for job in fabricator.queue.getQueue():
-    #         assert job.status == "ready", f"Job status incorrect on {fabricator.getDescription()}"
-    #     fabricator.queue.removeJob()
-    #     assert len(fabricator.queue.getQueue()) == 0, f"Failed to remove job on {fabricator.getDescription()}"

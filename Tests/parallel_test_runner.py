@@ -1,4 +1,3 @@
-import os
 import re
 import subprocess
 import threading
@@ -41,23 +40,23 @@ def printColor(color, message):
     print(color + message + reset)
 
 # Function to run pytest for a specific port
+testLevel = 10
+verbosity = 2
+showAnything = False
+verbosityCommand = "-p no:terminal" if not showAnything else "-vvv"
 def run_tests_for_port(comm_port):
-    env = os.environ.copy()
-    verbosity = 1
-    env["PORT"] = comm_port
-    showAnything = False
-    verbosityCommand = "-p no:terminal" if not showAnything else "-vvv"
-    subprocess.Popen(["pytest", "test_runner.py", verbosityCommand, f"--myVerbose={verbosity}"], env=env).wait()
+    subprocess.Popen(["pytest", "test_runner.py", verbosityCommand, f"--myVerbose={verbosity}", f"--port={comm_port}"]).wait()
 
-# Create and start a thread for each port
-threads = []
-for port in PORTS:
-    if Ports.getPortByName(port) is None:
-        continue
-    thread = threading.Thread(target=run_tests_for_port, args=(port,))
-    thread.start()
-    threads.append(thread)
+if __name__ == "__main__":
+    # Create and start a thread for each port
+    threads = []
+    for port in PORTS:
+        if Ports.getPortByName(port) is None:
+            continue
+        thread = threading.Thread(target=run_tests_for_port, args=(port,))
+        thread.start()
+        threads.append(thread)
 
-# Wait for all threads to complete
-for thread in threads:
-    thread.join()
+    # Wait for all threads to complete
+    for thread in threads:
+        thread.join()

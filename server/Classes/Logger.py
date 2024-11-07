@@ -12,8 +12,9 @@ class Logger(logging.Logger):
     ERROR = logging.ERROR
     CRITICAL = logging.CRITICAL
 
-    def __init__(self, port, deviceName, consoleLogger=sys.stdout, fileLogger=None, loggingLevel=logging.INFO, showFile=True, showLevel=True, showDate=True):
+    def __init__(self, port, deviceName, consoleLogger=None, fileLogger=None, loggingLevel=logging.INFO, showFile=True, showLevel=True, showDate=True):
         super().__init__(f"Logger_{port}_{deviceName}")
+        self.setLevel(loggingLevel)
         info = []
         if showDate:
             info.append("%(asctime)s")
@@ -25,6 +26,12 @@ class Logger(logging.Logger):
         if consoleLogger is not None:
             console_handler = logging.StreamHandler(consoleLogger)
             console_handler.setFormatter(CustomFormatter(formatString))
+            console_handler.setLevel(loggingLevel)
+            self.addHandler(console_handler)
+        else:
+            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler.setFormatter(CustomFormatter(formatString))
+            console_handler.setLevel(self.ERROR)
             self.addHandler(console_handler)
         if fileLogger is None:
             log_folder = "./server/logs"
@@ -36,8 +43,8 @@ class Logger(logging.Logger):
         else:
             fileLogger = logging.FileHandler(fileLogger)
         fileLogger.setFormatter(logging.Formatter(formatString))
+        fileLogger.setLevel(loggingLevel)
         self.addHandler(fileLogger)
-        self.setLevel(loggingLevel)
 
     def formatLog(self, msg):
         if isinstance(msg, str):
