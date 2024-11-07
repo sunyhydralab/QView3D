@@ -50,6 +50,7 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
         assert isinstance(self, Device)
         try:
             with open(file, "r") as f:
+                self.logger.info(f"Printing {file}")
                 for line in f:
                     if line.startswith(";") or line == "\n":
                         continue
@@ -62,6 +63,7 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
                             if isinstance(self, hasEndingSequence):
                                 self.endSequence()
                             self.verdict = "cancelled"
+                            self.logger.info("Job cancelled")
                             return True
                         elif self.status == "printing":
                             self.resume()
@@ -69,9 +71,11 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
                         if isinstance(self, hasEndingSequence):
                             self.endSequence()
                         self.verdict = "cancelled"
+                        self.logger.info("Job cancelled")
                         return True
                     self.sendGcode(line.encode("utf-8"), isVerbose=isVerbose)
             self.verdict = "complete"
+            self.logger.info("Job complete")
             return True
         except Exception as e:
             if self.logger is None:
@@ -149,6 +153,7 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
             assert self.status == "printing"
             self.sendGcode(usesMarlinGcode.keepAliveCMD)
             self.sendGcode(usesMarlinGcode.pauseCMD)
+            self.logger.info("Job Paused")
             return True
         except Exception as e:
             if self.logger is None:
@@ -167,6 +172,7 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
             assert self.status == "paused"
             self.sendGcode(usesMarlinGcode.doNotKeepAliveCMD)
             self.sendGcode(usesMarlinGcode.resumeCMD)
+            self.logger.info("Job Resumed")
             return True
         except Exception as e:
             if self.logger is None:
