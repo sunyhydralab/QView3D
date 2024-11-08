@@ -19,16 +19,12 @@ class Device(ABC):
     PRODUCTID: int | None = None
     DESCRIPTION: str | None = None
     MAXFEEDRATE: int | None = None
-    serialID: str | None = None
     serialConnection: serial.Serial | None = None
-    serialPort: ListPortInfo | SysFS | None = None
     homePosition: Vector3 | None = None
-    status: str = "idle"
-    verdict: str = ""
 
     def __init__(self, serialPort: ListPortInfo | SysFS, consoleLogger=None, fileLogger=None):
-        self.serialPort = serialPort
-        self.serialID = serialPort.serial_number
+        self.serialPort: ListPortInfo | SysFS | None = serialPort
+        self.serialID: str | None = serialPort.serial_number
         self.logger = Logger(self.serialPort.device, self.DESCRIPTION, consoleLogger=consoleLogger, fileLogger=fileLogger)
         self.status = "idle"
         self.verdict = ""
@@ -42,8 +38,12 @@ class Device(ABC):
             self.serialConnection.reset_input_buffer()
             return True
         except Exception as e:
-            # let the printer parent class deal with the error
-            return e
+            if self.logger is None:
+                print(e)
+            else:
+                self.logger.error("Error connecting:")
+                self.logger.error(e)
+            return False
 
     def disconnect(self):
         if self.serialConnection:
