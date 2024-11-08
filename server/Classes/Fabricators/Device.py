@@ -5,8 +5,12 @@ from serial.tools.list_ports_linux import SysFS
 from typing_extensions import Buffer
 
 from Classes.Vector3 import Vector3
+from Classes.Logger import Logger
 import serial
 import serial.tools.list_ports
+
+from Mixins.canPause import canPause
+
 
 class Device(ABC):
     # static variables
@@ -19,10 +23,15 @@ class Device(ABC):
     serialConnection: serial.Serial | None = None
     serialPort: ListPortInfo | SysFS | None = None
     homePosition: Vector3 | None = None
+    status: str = "idle"
+    verdict: str = ""
 
-    def __init__(self, serialPort: ListPortInfo | SysFS):
+    def __init__(self, serialPort: ListPortInfo | SysFS, consoleLogger=None, fileLogger=None):
         self.serialPort = serialPort
         self.serialID = serialPort.serial_number
+        self.logger = Logger(self.serialPort.device, self.DESCRIPTION, consoleLogger=consoleLogger, fileLogger=fileLogger)
+        self.status = "idle"
+        self.verdict = ""
 
     def __repr__(self):
         return f"{self.getModel()} on {self.getSerialPort().device}"
@@ -52,6 +61,12 @@ class Device(ABC):
     def parseGcode(self, file, isVerbose=False):
         pass
 
+    def pause(self: canPause):
+        pass
+
+    def resume(self: canPause):
+        pass
+
     @abstractmethod
     def sendGcode(self, gcode: Buffer, isVerbose: bool = False):
         pass
@@ -64,6 +79,9 @@ class Device(ABC):
         pass
 
     def hardReset(self, newStatus: str):
+        if self.serialConnection.is_open:
+            self.serialConnection.close()
+
         pass
 
     def getModel(self):
