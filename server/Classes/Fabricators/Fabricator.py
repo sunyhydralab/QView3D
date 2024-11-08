@@ -5,21 +5,9 @@ from serial.tools.list_ports_linux import SysFS
 from sqlalchemy.exc import SQLAlchemyError
 
 from Classes.Fabricators.Device import Device
-from Classes.Fabricators.Printers.Ender.Ender3 import Ender3
-from Classes.Fabricators.Printers.Ender.Ender3Pro import Ender3Pro
-from Classes.Fabricators.Printers.Ender.EnderPrinter import EnderPrinter
-from Classes.Fabricators.Printers.MakerBot.MakerBotPrinter import MakerBotPrinter
-from Classes.Fabricators.Printers.MakerBot.Replicator2 import Replicator2
-from Classes.Fabricators.Printers.Prusa.PrusaMK3 import PrusaMK3
-from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
-from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
-from Classes.Fabricators.Printers.Prusa.PrusaPrinter import PrusaPrinter
-from Classes.Ports import Ports
-from Classes.Queue import Queue
 from Mixins.canPause import canPause
 from Mixins.hasEndingSequence import hasEndingSequence
 #from Mixins.hasStartupSequence import hasStartupSequence
-from Classes.Jobs import Job
 from models.db import db
 from datetime import datetime, timezone
 
@@ -42,8 +30,12 @@ class Fabricator(db.Model):
         assert isinstance(port, ListPortInfo) or isinstance(port, SysFS)
         assert isinstance(name, str)
 
+        from Classes.Queue import Queue
+        from Classes.Jobs import Job
+
         self.device: Device = Fabricator.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger)
         self.job: Job | None = None
+
         self.queue: Queue = Queue()
         self.status: str = "idle"
 
@@ -79,7 +71,13 @@ class Fabricator(db.Model):
         """creates the correct printer object based on the serial port info"""
         if serialPort is None:
             return None
+        from Classes.Fabricators.Printers.Ender.EnderPrinter import EnderPrinter
+        from Classes.Fabricators.Printers.MakerBot.MakerBotPrinter import MakerBotPrinter
+        from Classes.Fabricators.Printers.Prusa.PrusaPrinter import PrusaPrinter
         if serialPort.vid == PrusaPrinter.VENDORID:
+            from Classes.Fabricators.Printers.Prusa.PrusaMK3 import PrusaMK3
+            from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
+            from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
             if serialPort.pid == PrusaMK4.PRODUCTID:
                 return PrusaMK4(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
             elif serialPort.pid == PrusaMK4S.PRODUCTID:
@@ -89,6 +87,8 @@ class Fabricator(db.Model):
             else:
                 return None
         elif serialPort.vid == EnderPrinter.VENDORID:
+            from Classes.Fabricators.Printers.Ender.Ender3 import Ender3
+            from Classes.Fabricators.Printers.Ender.Ender3Pro import Ender3Pro
             model = Fabricator.getModelFromGcodeCommand(serialPort)
             if "Ender-3 Pro" in model:
                 return Ender3Pro(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
@@ -97,6 +97,7 @@ class Fabricator(db.Model):
             else:
                 return None
         elif serialPort.vid == MakerBotPrinter.VENDORID:
+            from Classes.Fabricators.Printers.MakerBot.Replicator2 import Replicator2
             if serialPort.pid == Replicator2.PRODUCTID:
                 return Replicator2(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
         else:
@@ -107,10 +108,16 @@ class Fabricator(db.Model):
     def queryAll(cls) -> list["Fabricator"]:
         """return all fabricators in the database"""
         fabList = []
+        from Classes.Ports import Ports
         for fab in cls.query.all():
             if Ports.getPortByName(fab.devicePort) is not None:
                 fabList.append(cls(Ports.getPortByName(fab.devicePort), fab.name))
         return fabList
+
+    @classmethod
+    def updateDB(cls):
+        """commits all changes to the db"""
+        db.session.commit()
 
     def addToDB(self):
         db.session.add(self)
