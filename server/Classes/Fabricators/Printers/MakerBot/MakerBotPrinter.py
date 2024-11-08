@@ -1,11 +1,10 @@
 from abc import ABCMeta
-from typing import Callable
 from typing_extensions import Buffer
 from Classes.Fabricators.Printers.Printer import Printer
 from Classes.Vector3 import Vector3
 from Mixins.hasEndingSequence import hasEndingSequence
-from Mixins.hasResponseCodes import hasResponsecodes, checkOK, alwaysTrue
-from Mixins.usesMarlinGcode import usesMarlinGcode
+from Mixins.hasResponseCodes import hasResponsecodes
+from Mixins.gcode.usesMarlinGcode import usesMarlinGcode
 
 class MakerBotPrinter(Printer, hasEndingSequence, hasResponsecodes, metaclass=ABCMeta):
     VENDORID = 0x23C1

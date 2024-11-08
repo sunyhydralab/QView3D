@@ -1,9 +1,9 @@
 from abc import ABCMeta, abstractmethod
-from typing_extensions import Buffer, Callable
+from typing_extensions import Buffer
 from Classes.Vector3 import Vector3
 from Classes.Fabricators.Printers.Printer import Printer
 from Mixins.hasEndingSequence import hasEndingSequence
-from Mixins.usesMarlinGcode import usesMarlinGcode
+from Mixins.gcode.usesMarlinGcode import usesMarlinGcode
 
 
 class PrusaPrinter(Printer, hasEndingSequence, usesMarlinGcode, metaclass=ABCMeta):
