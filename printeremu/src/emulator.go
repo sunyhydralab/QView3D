@@ -48,43 +48,109 @@ func Init(id int, device string, description string, hwid string, name string, s
 }
 
 func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer) {
-	// Connect to the WebSocket server
-	serverURL := "ws://127.0.0.1:8000"
-	conn, _, err := websocket.DefaultDialer.Dial(serverURL, nil)
-	if err != nil {
-		log.Fatal("Failed to connect to server:", err)
-	}
-	defer conn.Close()
+    serverURL := "ws://127.0.0.1:8000"
 
-	fmt.Println("Connected to WebSocket server")
+    conn, _, err := websocket.DefaultDialer.Dial(serverURL, nil)
 
-	// Send a message to the server
-	err = conn.WriteMessage(websocket.TextMessage, []byte("Hello from Go client!"))
-	if err != nil {
-		log.Fatal("Failed to send message:", err)
-	}
+    if err != nil {
+        log.Fatal("Failed to connect to server:", err)
+    }
 
-	// Read the server's response
-	_, message, err := conn.ReadMessage()
-	if err != nil {
-		log.Fatal("Failed to read message:", err)
-	}
+    defer conn.Close()
 
-	fmt.Println("Received from server:", string(message))
+    fmt.Println("Connected to WebSocket server")
 
-	// Keep the connection alive
-	time.Sleep(5 * time.Second)
+    RegisterPrinter(conn, printer)
+
+    pingTicker := time.NewTicker(5 * time.Second)
+    defer pingTicker.Stop()
+
+    for {
+        select {
+        case <-ctx.Done():
+            fmt.Println("Context canceled, closing connection.")
+            return
+        case <-pingTicker.C:
+            pingMessage := map[string]interface{}{
+                "event": "ping",
+                "data":  "alive",
+            }
+
+            jsonPingMessage, err := json.Marshal(pingMessage)
+
+            if err != nil {
+                log.Println("Failed to marshal ping message:", err)
+                return
+            }
+
+            if err := conn.WriteMessage(websocket.TextMessage, jsonPingMessage); err != nil {
+                log.Println("Error sending ping message:", err)
+                return
+            }
+
+        default:
+            messageType, message, err := conn.ReadMessage()
+
+            if err != nil {
+                log.Println("Error reading message:", err)
+                return
+            }
+
+            if messageType == websocket.TextMessage && string(message) == "close" {
+                fmt.Println("Received 'close' signal from server, ending connection.")
+                return
+            }
+
+            var parsedMessage map[string]interface{}
+
+            if err := json.Unmarshal(message, &parsedMessage); err != nil {
+                log.Println("Error parsing received message:", err)
+                continue
+            }
+
+            event, ok := parsedMessage["event"].(string)
+
+            if !ok {
+                log.Println("Missing or invalid 'event' field:", parsedMessage)
+                continue
+            }
+
+            data, _ := parsedMessage["data"]
+
+            switch event {
+            case "info":
+                if message, exists := parsedMessage["message"].(string); exists {
+                    log.Println("Info:", message)
+                } else {
+                    fmt.Println("Missing or invalid 'message' field in 'info' event data")
+                }
+
+            case "error":
+                log.Println("Error:", data)
+
+            default:
+                log.Println("Received from server:", string(message))
+            }
+        }
+    }
 }
 
-func RegisterPrinter(c *SocketIOClient, printer *Printer) {
-	jsonPrinter, err := json.Marshal(printer)
+func RegisterPrinter(conn *websocket.Conn, printer *Printer) {
+	message := map[string]interface{}{
+		"event": "emuprintconnect",
+		"data":  printer,
+	}
+
+	jsonMessage, err := json.Marshal(message)
+
 	if err != nil {
 		log.Println("Failed to marshal printer object:", err)
 		return
 	}
 
-	log.Println("Emitting emuprintconnect event with JSON data:", string(jsonPrinter))
-	//c.Emit("emuprintconnect", string(jsonPrinter))
+	log.Println("Registering printer...")
+
+	conn.WriteMessage(websocket.TextMessage, []byte(jsonMessage))
 }
 
 // Run function for G-code command input and processing
