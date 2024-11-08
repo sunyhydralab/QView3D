@@ -6,25 +6,22 @@ from Classes.Fabricators.Device import Device
 from Classes.LocationResponse import LocationResponse
 from Classes.Vector3 import Vector3
 from Mixins.canPause import canPause
+from Mixins.gcode.usesVanillaGcode import usesVanillaGcode
 from Mixins.hasEndingSequence import hasEndingSequence
 from Mixins.hasResponseCodes import checkOK, checkXYZ, alwaysTrue, checkBedTemp, checkExtruderTemp, hasResponsecodes
 
 
-class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
-    homeCMD: Buffer = "G28\n".encode("utf-8")
-    cancelCMD: Buffer = "M112\n".encode("utf-8")
-    keepAliveCMD: Buffer = "M113 S1\n".encode("utf-8")
-    doNotKeepAliveCMD: Buffer = "M113 S0\n".encode("utf-8")
-    statusCMD: Buffer = "M115\n".encode("utf-8")
-    getLocationCMD: Buffer = "M114\n".encode("utf-8")
-    pauseCMD: Buffer = "M601\n".encode("utf-8")
-    resumeCMD: Buffer = "M602\n".encode("utf-8")
-    getMachineNameCMD: Buffer = "M997\n".encode("utf-8")
+class usesMarlinGcode(usesVanillaGcode, canPause, hasResponsecodes, metaclass=ABCMeta):
+    cancelCMD: Buffer = b"M112\n"
+    keepAliveCMD: Buffer = b"M113 S1\n"
+    doNotKeepAliveCMD: Buffer = b"M113 S0\n"
+    statusCMD: Buffer = b"M115\n"
+    getLocationCMD: Buffer = b"M114\n"
+    pauseCMD: Buffer = b"M601\n"
+    resumeCMD: Buffer = b"M602\n"
+    getMachineNameCMD: Buffer = b"M997\n"
 
     callablesHashtable = {
-        "G0": [alwaysTrue, checkOK], # Move
-        "G1": [alwaysTrue, checkOK], # Move
-        "G28": [alwaysTrue, checkXYZ], # Home
         "G29 P1": [alwaysTrue, checkOK], # Auto bed leveling
         "G29 P9": [checkOK, checkOK], # Auto bed leveling
         "M73": [alwaysTrue, checkOK], # Set build percentage
@@ -36,11 +33,13 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
         "M190": [alwaysTrue, checkBedTemp], # Wait for bed to reach target temp
     }
 
+    callablesHashtable = {**usesVanillaGcode.callablesHashtable, **callablesHashtable}
+
     def goTo(self: Device, loc: Vector3, isVerbose: bool = False):
         assert isinstance(loc, Vector3)
         assert isinstance(isVerbose, bool)
         assert isinstance(self, Device)
-        self.sendGcode(f"G0 X{loc.x} Y{loc.y} Z{loc.z} F36000\n".encode("utf-8"), isVerbose=isVerbose)
+        self.sendGcode(f"G0 X{loc.x} Y{loc.y} Z{loc.z} F{int(self.MAXFEEDRATE)}\n".encode("utf-8"), isVerbose=isVerbose)
         self.sendGcode(f'M114\n'.encode("utf-8"), isVerbose=isVerbose)
         return loc == self.getToolHeadLocation()
 
