@@ -115,7 +115,7 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer) {
                 continue
             }
 
-            data, _ := parsedMessage["data"]
+            data := parsedMessage["data"]
 
             switch event {
             case "info":
