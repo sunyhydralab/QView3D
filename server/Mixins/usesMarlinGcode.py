@@ -114,6 +114,8 @@ class usesMarlinGcode(canPause, hasResponsecodes, metaclass=ABCMeta):
                     if callables[1](line):
                         self.logger.info(gcode.decode().strip() + ": " + line.decode().strip())
                         return True
+                except UnicodeDecodeError as e:
+                      continue
                 except Exception as e:
                     self.logger.error(e)
                     return False

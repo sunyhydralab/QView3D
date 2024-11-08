@@ -36,11 +36,13 @@ class Fabricator(db.Model):
     devicePort = db.Column(db.String(50), nullable=False)
 
 
-    def __init__(self, port: ListPortInfo | SysFS, name: str = "", addToDB: bool = False):
+    def __init__(self, port: ListPortInfo | SysFS | None, name: str = "", addToDB: bool = False, consoleLogger=None, fileLogger=None):
+        if port is None:
+            return
         assert isinstance(port, ListPortInfo) or isinstance(port, SysFS)
         assert isinstance(name, str)
 
-        self.device: Device = Fabricator.createDevice(port)
+        self.device: Device = Fabricator.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger)
         self.job: Job | None = None
         self.queue: Queue = Queue()
         self.status: str = "idle"
@@ -73,31 +75,32 @@ class Fabricator(db.Model):
 
 
     @staticmethod
-    def createDevice(serialPort: ListPortInfo | SysFS | None):
+    def createDevice(serialPort: ListPortInfo | SysFS | None, consoleLogger=None, fileLogger=None) -> Device | None:
         """creates the correct printer object based on the serial port info"""
         if serialPort is None:
             return None
         if serialPort.vid == PrusaPrinter.VENDORID:
             if serialPort.pid == PrusaMK4.PRODUCTID:
-                return PrusaMK4(serialPort)
+                return PrusaMK4(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
             elif serialPort.pid == PrusaMK4S.PRODUCTID:
-                return PrusaMK4S(serialPort)
+                return PrusaMK4S(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
             elif serialPort.pid == PrusaMK3.PRODUCTID:
-                return PrusaMK3(serialPort)
+                return PrusaMK3(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
             else:
                 return None
         elif serialPort.vid == EnderPrinter.VENDORID:
             model = Fabricator.getModelFromGcodeCommand(serialPort)
             if "Ender-3 Pro" in model:
-                return Ender3Pro(serialPort)
+                return Ender3Pro(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
             elif "Ender-3" in model:
-                return Ender3(serialPort)
+                return Ender3(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
             else:
                 return None
         elif serialPort.vid == MakerBotPrinter.VENDORID:
             if serialPort.pid == Replicator2.PRODUCTID:
-                return Replicator2(serialPort)
+                return Replicator2(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
         else:
+            #TODO: assume generic printer, do stuff
             return None
 
     @classmethod

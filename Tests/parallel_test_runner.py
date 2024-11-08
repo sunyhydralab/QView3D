@@ -5,13 +5,6 @@ import platform
 
 from server.Classes.Ports import Ports
 
-red = '\033[31m'
-green = '\033[32m'
-yellow = '\033[33m'
-blue = '\033[34m'
-magenta = '\033[35m'
-cyan = '\033[36m'
-reset = '\033[0m'
 PORTS = []
 # List of available ports for testing
 if platform.system() == "Windows":
@@ -28,16 +21,12 @@ if platform.system() == "Windows":
                 break
     except FileNotFoundError:
         pass
-
 elif platform.system() == "Darwin":
     import glob
     PORTS = glob.glob("/dev/tty.*")
 else:
     import glob
     PORTS = glob.glob("/dev/tty[A-Za-z]*")
-
-def printColor(color, message):
-    print(color + message + reset)
 
 # Function to run pytest for a specific port
 testLevel = 10

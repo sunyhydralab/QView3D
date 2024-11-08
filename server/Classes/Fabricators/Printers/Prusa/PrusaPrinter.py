@@ -2,9 +2,7 @@ from abc import ABCMeta, abstractmethod
 from typing_extensions import Buffer, Callable
 from Classes.Vector3 import Vector3
 from Classes.Fabricators.Printers.Printer import Printer
-from Mixins.canPause import canPause
 from Mixins.hasEndingSequence import hasEndingSequence
-from Mixins.hasResponseCodes import hasResponsecodes, checkOK
 from Mixins.usesMarlinGcode import usesMarlinGcode
 
 

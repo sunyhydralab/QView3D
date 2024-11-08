@@ -26,10 +26,10 @@ class Device(ABC):
     status: str = "idle"
     verdict: str = ""
 
-    def __init__(self, serialPort: ListPortInfo | SysFS):
+    def __init__(self, serialPort: ListPortInfo | SysFS, consoleLogger=None, fileLogger=None):
         self.serialPort = serialPort
         self.serialID = serialPort.serial_number
-        self.logger = Logger(self.serialPort.device, self.DESCRIPTION)
+        self.logger = Logger(self.serialPort.device, self.DESCRIPTION, consoleLogger=consoleLogger, fileLogger=fileLogger)
         self.status = "idle"
         self.verdict = ""
 

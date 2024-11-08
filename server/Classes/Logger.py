@@ -22,7 +22,7 @@ class Logger(logging.Logger):
             info.append("%(levelname)s")
         if showFile:
             info.append("%(module)s.%(funcName)s:%(lineno)d")
-        formatString = " - ".join(info + ["%(message)s"]).lstrip(" - ")
+        formatString = " - ".join(info + ["%(message)s"])
         if consoleLogger is not None:
             console_handler = logging.StreamHandler(consoleLogger)
             console_handler.setFormatter(CustomFormatter(formatString))
@@ -118,8 +118,8 @@ class CustomFormatter(logging.Formatter):
     }
     RESET_CODE = "\033[0m"  # Reset to default color
 
-    def format(session, record):
+    def format(self, record):
         # Apply color based on log level
-        color = session.COLOR_CODES.get(record.levelname, session.RESET_CODE)
+        color = self.COLOR_CODES.get(record.levelname, self.RESET_CODE)
         message = super().format(record)
-        return f"{color}{message}{session.RESET_CODE}"
+        return f"{color}{message}{self.RESET_CODE}"

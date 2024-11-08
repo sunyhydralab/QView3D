@@ -21,7 +21,7 @@ def pytest_addoption(parser):
         help="port to test"
     )
 
-def line_separator(interrupter: str, symbol: str = "-", length: int = 80) -> str:
+def line_separator(interrupter: str, symbol: str = "-", length: int = 104) -> str:
     if not interrupter:
         return symbol * length
     interrupterNoColor = re.sub(r'\033\[[0-9;]*m', '', interrupter)
@@ -43,6 +43,16 @@ def setup_logger(port):
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_sessionstart(session) -> None:
+    for arg in session.config.invocation_params.args:
+        if not hasattr(session.config, "verbosity") and arg.startswith("--myVerbose="):
+            session.config.verbosity = int(arg.split("=")[1])
+        elif not hasattr(session.config, "port") and arg.startswith("--port="):
+            session.config.port = arg.split("=")[1]
+        elif not hasattr(session.config, "testLevel") and arg.startswith("--testLevel="):
+            session.config.testLevel = int(arg.split("=")[1])
+    if session.config.verbosity > 2:
+        session.config.verbosity = 2
+
     session.config.start_time = time.time()
     session.config.passed_count = 0
     session.config.failed_count = 0
@@ -53,7 +63,8 @@ def pytest_sessionstart(session) -> None:
     session.config.fails = {}
     session.config.logger = setup_logger(session.config.port)
 
-    if session.config.verbosity > 0:
+
+    if session.config.verbosity >= 0:
         logger = session.config.logger
         logger.logMessageOnly("\033[1m" + line_separator("test session starts", symbol="=") + "\033[0m")
         verinfo = platform.python_version()
@@ -67,7 +78,7 @@ def pytest_sessionstart(session) -> None:
         logger.logMessageOnly(f"rootdir: {session.config.rootdir}")
 
 def pytest_collection_modifyitems(session, config, items):
-    session.config.logger.logMessageOnly(f"\033[1m...collected {len(items)} items...", end="\n")
+    session.config.logger.logMessageOnly(f"\033[1m...collected {len(items)} items...")
 
 def pytest_sessionfinish(session, exitstatus) -> None:
     session_duration = time.time() - session.config.start_time
@@ -78,7 +89,6 @@ def pytest_sessionfinish(session, exitstatus) -> None:
     xpasses = session.config.xpassed_count
     logger  = session.config.logger
 
-    summary = ""
     stats = []
     if passes > 0: stats.append(f"\033[32m\033[1m{passes} passed")
     if fails > 0: stats.append(f"\033[31m\033[1m{fails} failed")
@@ -86,10 +96,8 @@ def pytest_sessionfinish(session, exitstatus) -> None:
     if xfails > 0: stats.append(f"\033[33m{xfails} xfailed")
     if xpasses > 0: stats.append(f"\031[33m{xpasses} xpassed")
 
-    if len(stats) > 0:
-        summary = ", ".join(stats)
-    else:
-        summary = "\033[33mno tests ran"
+    if len(stats) > 0: summary = ", ".join(stats)
+    else: summary = "\033[33mno tests ran"
 
     summary += f"\033[32m in {session_duration:.2f}s"
     if session_duration > 3600:
@@ -117,24 +125,14 @@ def pytest_sessionfinish(session, exitstatus) -> None:
 
     logger.logMessageOnly("\n\033[32m" + line_separator(summary, symbol="="))
 
-def pytest_configure(config):
-    for arg in config.invocation_params.args:
-        if not hasattr(config, "verbosity") and arg.startswith("--myVerbose="):
-            config.verbosity = int(arg.split("=")[1])
-        elif not hasattr(config, "port") and arg.startswith("--port="):
-            config.port = arg.split("=")[1]
-        elif not hasattr(config, "testLevel") and arg.startswith("--testLevel="):
-            config.testLevel = int(arg.split("=")[1])
-    if config.verbosity > 2:
-        config.verbosity = 2
+visited_modules = set()
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     outcome = yield
     report = outcome.get_result()  # Retrieve the TestReport object
     # Only check the outcome after the "call" phase (i.e., after the test ran)
-
-    if (report.when == "setup" and report.skipped) or (report.when == "call"):
+    if (report.when == "setup" and not report.passed) or (report.when == "call"):
         if report.passed:
             if hasattr(report, "wasxfail"):
                 report.outcome = "xpassed"
@@ -157,6 +155,10 @@ def pytest_runtest_makereport(item, call):
     report.port = item.config.port
     report.verbosity = item.config.verbosity
     report.logger = item.config.logger
+    module_name = item.module.__name__
+    if module_name not in visited_modules:
+        visited_modules.add(module_name)
+        report.logger.logMessageOnly("\n" + line_separator(item.module.__desc__(), symbol="-"))
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_logreport(report):
@@ -164,11 +166,10 @@ def pytest_runtest_logreport(report):
     yield
     logger = report.logger
     port = report.port
-    if (report.when == "setup" and report.skipped) or (report.when == "call"):
-        if port is None and "test_runner.py::TestFabricator::" in report.nodeid:
+    if (report.when == "setup" and not report.passed) or (report.when == "call"):
+        if port is None:
             # Retrieve port from the test function if it's set as an attribute
-            from test_runner import fabricator_setup
-            port = fabricator_setup(os.getenv("PORT")).devicePort
+            port = os.getenv("PORT")
 
         if verbosity == 0:
             if report.passed:
@@ -181,6 +182,8 @@ def pytest_runtest_logreport(report):
                 logger.info("\033[33mX\033[0m")
             elif hasattr(report, "xpassed") and report.xpassed:
                 logger.info("\033[31mx\033[0m")
+            else:
+                logger.info(f"IDK what happened!?!?: {report}")
         elif verbosity == 1:
             loc = report.nodeid.split("::")[-1]
             testString = f"{loc}[{port}]{' ' * (27 - len(loc) - len(str(port)) - 2)}"
@@ -194,12 +197,16 @@ def pytest_runtest_logreport(report):
                 logger.info(f"{testString} \033[33mXFAILED\033[0m")
             elif hasattr(report, "xpassed") and report.xpassed:
                 logger.info(f"{testString} \033[31mXPASSED\033[0m")
+            else:
+                logger.info(f"{testString} IDK what happened!?!?: {report}")
         elif verbosity >= 2:
             loc = report.nodeid
-            testString = f"{loc}[{port}]{' ' * (59 - len(loc) - len(str(port)) - 2)}"
+            testString = f"{loc}[{port}]{' ' * (47 - len(loc) - len(str(port)) - 2)}"
             if report.passed:
                 logger.info(f"{testString} \033[32mPASSED\033[0m")
             elif report.failed:
                 logger.info(f"{testString} \033[31mFAILED\033[0m:\n\n {report.longrepr}")
             elif report.skipped:
                 logger.info(f"{testString} \033[33mSKIPPED\033[0m: {report.longrepr[-1].split('Skipped: ')[-1]}")
+            else:
+                logger.info(f"{testString} IDK what happened!?!?: {report}")
