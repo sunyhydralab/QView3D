@@ -9,13 +9,14 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
-type PrintJob struct {
-	Command string
+type Event struct {
+	Event string      `json:"event"`
+	Data  interface{} `json:"data"`
 }
-
-var jobQueue = make(chan PrintJob)
 
 // Main function to initialize and run the printer emulator
 func main() {
@@ -47,81 +48,43 @@ func Init(id int, device string, description string, hwid string, name string, s
 }
 
 func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer) {
-	client := NewClient()
-	defer client.Close()
+	// Connect to the WebSocket server
+	serverURL := "ws://127.0.0.1:8000"
+	conn, _, err := websocket.DefaultDialer.Dial(serverURL, nil)
+	if err != nil {
+		log.Fatal("Failed to connect to server:", err)
+	}
+	defer conn.Close()
 
-	client.On("connection", func(data interface{}) {
-		fmt.Println("Connected to backend!")
+	fmt.Println("Connected to WebSocket server")
 
-		RegisterPrinter(client, printer)
-	})
+	// Send a message to the server
+	err = conn.WriteMessage(websocket.TextMessage, []byte("Hello from Go client!"))
+	if err != nil {
+		log.Fatal("Failed to send message:", err)
+	}
 
-	client.On("disconnect", func(data interface{}) {
-		log.Println("Disconnected from backend")
-		close(jobQueue)
-	})
-	
-	client.On("error", func(data interface{}) {
-		if err, ok := data.(error); ok {
-			log.Println("Socket error:", err)
-		}
-	})
+	// Read the server's response
+	_, message, err := conn.ReadMessage()
+	if err != nil {
+		log.Fatal("Failed to read message:", err)
+	}
 
-    log.Println("Attempting to connect...")
-    err := client.Connect("http://127.0.0.1:8000")
-    if err != nil {
-        log.Printf("Connection error: %v\n", err)
-        return
-    }
+	fmt.Println("Received from server:", string(message))
 
-    go ProcessJobs(ctx, printer, client)
-
-	<-ctx.Done()
-	log.Println("Connection stopping...")
+	// Keep the connection alive
+	time.Sleep(5 * time.Second)
 }
 
 func RegisterPrinter(c *SocketIOClient, printer *Printer) {
 	jsonPrinter, err := json.Marshal(printer)
-
 	if err != nil {
 		log.Println("Failed to marshal printer object:", err)
 		return
 	}
 
-	log.Println("Emitting emuprintconnect event with data:", string(jsonPrinter))
-	c.Emit("emuprintconnect", jsonPrinter)
-}
-
-func ProcessJobs(ctx context.Context, printer *Printer, c *SocketIOClient) {
-	for {
-		select {
-		case job, ok := <-jobQueue:
-			if !ok {
-				log.Println("Job queue closed, exiting ProcessJobs.")
-				return
-			}
-
-			response := CommandHandler(job.Command, printer)
-			log.Printf("Processing job: %s, response: %s\n", job.Command, response)
-
-			// todo: handle weird edge case responses
-			/* 		if job.Command == "G29" {
-
-			} else if job.Command == "G92" {
-
-			}
-			*/
-			if !strings.Contains(response, "Unknown command") {
-				c.Emit("job_response", "ok\n")
-			}
-		case <-c.close:
-			log.Println("Client connection closed.")
-			return
-		case <-ctx.Done():
-			log.Println("Context done, exiting ProcessJobs.")
-			return
-		}
-	}
+	log.Println("Emitting emuprintconnect event with JSON data:", string(jsonPrinter))
+	//c.Emit("emuprintconnect", string(jsonPrinter))
 }
 
 // Run function for G-code command input and processing

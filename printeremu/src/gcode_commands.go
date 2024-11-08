@@ -47,7 +47,7 @@ func NewCommand(command string, printer *Printer) Command {
 type G28Command struct{}
 
 func (cmd *G28Command) Execute(printer *Printer) string {
-	printer.extruder.Position = Vector3{X: 0, Y: 0, Z: 0}
+	printer.Extruder.Position = Vector3{X: 0, Y: 0, Z: 0}
 	return "Homing completed\n"
 }
 
@@ -57,15 +57,15 @@ type G0G1Command struct {
 }
 
 func NewG0G1Command(command string, printer *Printer) *G0G1Command {
-	target, feedRate := parseMoveCommand(command, printer.extruder.Position)
+	target, feedRate := parseMoveCommand(command, printer.Extruder.Position)
 	return &G0G1Command{target: target, feedRate: feedRate}
 }
 
 func (cmd *G0G1Command) Execute(printer *Printer) string {
-	if printer.paused {
+	if printer.Paused {
 		return "Printer is paused\n"
 	}
-	printer.extruder.Position = cmd.target
+	printer.Extruder.Position = cmd.target
 	return fmt.Sprintf("Moved to X:%.2f Y:%.2f Z:%.2f\n", cmd.target.X, cmd.target.Y, cmd.target.Z)
 }
 
@@ -76,15 +76,15 @@ type G2G3Command struct {
 }
 
 func NewG2G3Command(command string, clockwise bool, printer *Printer) *G2G3Command {
-	target, radius := parseArcCommand(command, printer.extruder.Position)
+	target, radius := parseArcCommand(command, printer.Extruder.Position)
 	return &G2G3Command{target: target, radius: radius, clockwise: clockwise}
 }
 
 func (cmd *G2G3Command) Execute(printer *Printer) string {
-	if printer.paused {
+	if printer.Paused {
 		return "Printer is paused\n"
 	}
-	currentPos := printer.extruder.Position
+	currentPos := printer.Extruder.Position
 	arcAngle := 180.0
 	angleRad := arcAngle * math.Pi / 180.0
 
@@ -95,7 +95,7 @@ func (cmd *G2G3Command) Execute(printer *Printer) string {
 		cmd.target.X = currentPos.X - cmd.radius*math.Cos(angleRad)
 		cmd.target.Y = currentPos.Y + cmd.radius*math.Sin(angleRad)
 	}
-	printer.extruder.Position = cmd.target
+	printer.Extruder.Position = cmd.target
 
 	return fmt.Sprintf("Arc move to X:%.2f Y:%.2f Z:%.2f\n", cmd.target.X, cmd.target.Y, cmd.target.Z)
 }
@@ -116,14 +116,14 @@ func (cmd *G4Command) Execute(printer *Printer) string {
 type G90Command struct{}
 
 func (cmd *G90Command) Execute(printer *Printer) string {
-	printer.extruder.AbsolutePositioning = true
+	printer.Extruder.AbsolutePositioning = true
 	return "Set to Absolute Positioning\n"
 }
 
 type G91Command struct{}
 
 func (cmd *G91Command) Execute(printer *Printer) string {
-	printer.extruder.AbsolutePositioning = false
+	printer.Extruder.AbsolutePositioning = false
 	return "Set to Relative Positioning\n"
 }
 
@@ -137,7 +137,7 @@ func NewG92Command(command string) *G92Command {
 }
 
 func (cmd *G92Command) Execute(printer *Printer) string {
-	printer.extruder.Position = cmd.position
+	printer.Extruder.Position = cmd.position
 	return fmt.Sprintf("Position set to X:%.2f Y:%.2f Z:%.2f\n", cmd.position.X, cmd.position.Y, cmd.position.Z)
 }
 
@@ -146,14 +146,14 @@ func (cmd *G92Command) Execute(printer *Printer) string {
 type G20Command struct{}
 
 func (cmd *G20Command) Execute(printer *Printer) string {
-	printer.units = "inches"
+	printer.Units = "inches"
 	return "Units set to inches\n"
 }
 
 type G21Command struct{}
 
 func (cmd *G21Command) Execute(printer *Printer) string {
-	printer.units = "mm"
+	printer.Units = "mm"
 	return "Units set to millimeters\n"
 }
 
@@ -169,7 +169,7 @@ func NewM104Command(command string) *M104Command {
 }
 
 func (cmd *M104Command) Execute(printer *Printer) string {
-	printer.extruder.TargetTemp = cmd.temperature
+	printer.Extruder.TargetTemp = cmd.temperature
 	return fmt.Sprintf("Extruder temperature set to %.2f\n", cmd.temperature)
 }
 
@@ -183,14 +183,14 @@ func NewM106Command(command string) *M106Command {
 }
 
 func (cmd *M106Command) Execute(printer *Printer) string {
-	printer.extruder.FanSpeed = cmd.fanSpeed
+	printer.Extruder.FanSpeed = cmd.fanSpeed
 	return fmt.Sprintf("Fan speed set to %.2f\n", cmd.fanSpeed)
 }
 
 type M107Command struct{}
 
 func (cmd *M107Command) Execute(printer *Printer) string {
-	printer.extruder.FanSpeed = 0.0
+	printer.Extruder.FanSpeed = 0.0
 	return "Fan turned off\n"
 }
 
@@ -205,8 +205,8 @@ func NewM140Command(command string) *M140Command {
 
 func (cmd *M140Command) Execute(printer *Printer) string {
 	// Set the target temperature of the bed, but do not block
-	printer.heatbed.TargetTemp = cmd.temperature
-	printer.heatbed.Heating = true // Start heating
+	printer.Heatbed.TargetTemp = cmd.temperature
+	printer.Heatbed.Heating = true // Start heating
 	return fmt.Sprintf("Bed temperature set to %.2f, heating in progress\n", cmd.temperature)
 }
 
@@ -222,18 +222,17 @@ func NewM190Command(command string) *M190Command {
 
 func (cmd *M190Command) Execute(printer *Printer) string {
 	// Set the target temperature and check if the bed is heated
-	printer.heatbed.TargetTemp = cmd.temperature
+	printer.Heatbed.TargetTemp = cmd.temperature
 
 	// Check if the current temperature is below the target
-	if printer.heatbed.Temp < printer.heatbed.TargetTemp {
+	if printer.Heatbed.Temp < printer.Heatbed.TargetTemp {
 		return "Waiting for bed to reach target temperature...\n"
 	}
 
 	// If target temperature reached, continue
-	printer.heatbed.Heating = false
+	printer.Heatbed.Heating = false
 	return fmt.Sprintf("Bed temperature reached %.2f\n", cmd.temperature)
 }
-
 
 type M113Command struct{}
 
@@ -242,7 +241,7 @@ func NewM113Command(command string) *M113Command {
 }
 
 func (cmd *M113Command) Execute(printer *Printer) string {
-	printer.keepAliveTime = time.Now()
+	printer.KeepAliveTime = time.Now()
 	return "Keepalive signal sent\n"
 }
 
@@ -256,7 +255,7 @@ func NewM204Command(command string) *M204Command {
 }
 
 func (cmd *M204Command) Execute(printer *Printer) string {
-	printer.acceleration = cmd.acceleration
+	printer.Acceleration = cmd.acceleration
 	return fmt.Sprintf("Acceleration set to %.2f\n", cmd.acceleration)
 }
 
@@ -270,7 +269,7 @@ func NewM73Command(command string) *M73Command {
 }
 
 func (cmd *M73Command) Execute(printer *Printer) string {
-	printer.progress = cmd.progress
+	printer.Progress = cmd.progress
 	return fmt.Sprintf("Progress set to %d%%\n", cmd.progress)
 }
 
@@ -279,40 +278,40 @@ func (cmd *M73Command) Execute(printer *Printer) string {
 type CancelCommand struct{}
 
 func (cmd *CancelCommand) Execute(printer *Printer) string {
-	printer.paused = true
+	printer.Paused = true
 	return "Emergency stop activated, printer paused\n"
 }
 
 type M114Command struct{}
 
 func (cmd *M114Command) Execute(printer *Printer) string {
-	position := printer.extruder.Position
+	position := printer.Extruder.Position
 	return fmt.Sprintf("X:%.2f Y:%.2f Z:%.2f\n", position.X, position.Y, position.Z)
 }
 
 type M997Command struct{}
 
 func (cmd *M997Command) Execute(printer *Printer) string {
-	return fmt.Sprintf("Machine name: %s", printer.device)
+	return fmt.Sprintf("Machine name: %s", printer.Device)
 }
 
 type M601Command struct{}
 
 func (cmd *M601Command) Execute(printer *Printer) string {
-	if printer.paused {
+	if printer.Paused {
 		return "Printer is already paused\n"
 	}
-	printer.paused = true
+	printer.Paused = true
 	return "Machine is paused\n"
 }
 
 type M602Command struct{}
 
 func (cmd *M602Command) Execute(printer *Printer) string {
-	if !printer.paused {
+	if !printer.Paused {
 		return "Printer is not paused\n"
 	}
-	printer.paused = false
+	printer.Paused = false
 	return "Machine is no longer paused\n"
 }
 
@@ -326,7 +325,7 @@ func NewM900Command(command string) *M900Command {
 }
 
 func (cmd *M900Command) Execute(printer *Printer) string {
-	printer.linearAdvanceFactor = cmd.kFactor
+	printer.LinearAdvanceFactor = cmd.kFactor
 	return fmt.Sprintf("Linear Advance factor set to %.2f\n", cmd.kFactor)
 }
 
@@ -340,7 +339,7 @@ func NewM142Command(command string) *M142Command {
 }
 
 func (cmd *M142Command) Execute(printer *Printer) string {
-	printer.heatbreakTemp = cmd.temperature
+	printer.HeatbreakTemp = cmd.temperature
 	return fmt.Sprintf("Heatbreak target temperature set to %.2f\n", cmd.temperature)
 }
 
@@ -493,5 +492,3 @@ var commandRegistry = map[string]func(string, *Printer) Command{
 	"M142": func(cmd string, p *Printer) Command { return NewM142Command(cmd) },
 	"M84":  func(cmd string, p *Printer) Command { return NewM84Command(cmd) },
 }
-
-
