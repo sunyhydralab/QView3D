@@ -34,57 +34,16 @@ class Ports:
                 return port
         return None
 
-    @staticmethod
-    #TODO: @nate, why does this method exist? why not just use the Fabricator.queryAll? if that doesnt do what this does, just rewrite it to do what you need, I'm not at attached to its current implementation
-    def getRegisteredFabricators() -> list[Fabricator]:
-        """Get a list of all registered fabricators."""
-        fabricators = Fabricator.queryAll()  # Assuming Fabricator has a method to query all instances
-        registered_fabricators = []
-        for fab in fabricators:
-            port = Ports.getPortByName(fab.devicePort)
-            if port:
-                registered_fabricators.append(fab)
-        return registered_fabricators
-
-    @staticmethod
-    #TODO: @nate should this be in ports, or should it be in the fabricator or device class? if it was, there would be no need for creating a device
-    def diagnosePort(port: ListPortInfo | SysFS) -> str:
-        """Diagnose a port to check if it is functional by sending basic G-code commands."""
-        try:
-            device = Fabricator.createDevice(port)  # Create a Device instance using Fabricator logic
-            if not device:
-                return "Device creation failed."
-
-            device.connect()
-            #TODO: @nate, M115 isn't supported by generic gcode
-            sendGcode("M115")  # Standard G-code command to get firmware information
-            #TODO: @nate, generic devices don't have serial responses
-            response = device.getSerialConnection().readline().decode("utf-8").strip()
-            device.disconnect()
-
-            return f"Diagnosis result for {port.device}: {response}"
-        except Exception as e:
-            return f"Error diagnosing port {port.device}: {e}"
-
 # Blueprint for ports routes
 ports_bp = Blueprint("ports", __name__)
 
 @ports_bp.route("/getports", methods=["GET"])
-#TODO: @nate, what is this gonna be used for?
-def getPorts():
-    """Get a list of all connected ports."""
-    try:
-        ports = Ports.getPorts()
-        return jsonify([port.device for port in ports])
-    except Exception as e:
-        print(f"Error getting ports: {e}")
-        return jsonify({"error": "Failed to retrieve ports"}), 500
 
 @ports_bp.route("/getfabricators", methods=["GET"])
 def getRegisteredFabricators():
     """Get a list of all registered fabricators."""
     try:
-        fabricators = Ports.getRegisteredFabricators()
+        fabricators = Fabricator.queryAll()
         return jsonify([{
             "name": fab.name,
             "description": fab.description,
@@ -102,15 +61,10 @@ def registerFabricator():
     try:
         data = request.get_json()
         device = data['fabricator']['device']
-        # TODO: @nate the description and hwid are assigned in the constructor, so this is redundant
-        # description = data['fabricator']['description']
-        # hwid = data['fabricator']['hwid']
         name = data['fabricator']['name']
 
         # Create a new fabricator instance using the Fabricator class
         new_fabricator = Fabricator(Ports.getPortByName(device), name, addToDB=True)
-        # new_fabricator.description = description
-        # new_fabricator.hwid = hwid
         return jsonify({"success": True, "message": "Fabricator registered successfully", "fabricator_id": new_fabricator.dbID})
     except SQLAlchemyError as db_err:
         print(f"Database error during registration: {db_err}")
@@ -164,17 +118,42 @@ def diagnoseFabricator():
         port = Ports.getPortByName(device_name)
 
         if port:
-            diagnosis_result = Ports.diagnosePort(port)
-            return jsonify({"success": True, "message": diagnosis_result})
+            fabricator = Fabricator.createDevice(port)  # Ensure the Fabricator has this method
+            if fabricator:
+                diagnosis_result = fabricator.diagnose()
+                return jsonify({"success": True, "message": diagnosis_result})
+            else:
+                return jsonify({"error": "Failed to create fabricator for diagnosis"}), 500
         else:
             return jsonify({"error": "Device not found"}), 404
     except Exception as e:
         print(f"Error diagnosing fabricator: {e}")
         return jsonify({"error": "Failed to diagnose fabricator"}), 500
 
+@ports_bp.route("/repair", methods=["POST"])
+def repairFabricator():
+    """Repair a fabricator based on its port."""
+    try:
+        data = request.get_json()
+        device_name = data['device']
+        port = Ports.getPortByName(device_name)
+
+        if port:
+            fabricator = Fabricator.createDevice(port)  # Ensure the Fabricator has this method
+            if fabricator:
+                repair_result = fabricator.repair()
+                return jsonify({"success": True, "message": repair_result})
+            else:
+                return jsonify({"error": "Failed to create fabricator for repair"}), 500
+        else:
+            return jsonify({"error": "Device not found"}), 404
+    except Exception as e:
+        print(f"Error repairing fabricator: {e}")
+        return jsonify({"error": "Failed to repair fabricator"}), 500
+
 @ports_bp.route("/movehead", methods=["POST"])
 def moveHead():
-    """Move the head of a fabricator. Deprecated??????"""
+    """Move the head of a fabricator. Deprecated if no longer needed."""
     try:
         data = request.get_json()
         device_name = data['port']
@@ -182,7 +161,7 @@ def moveHead():
 
         if port:
             fabricator = Fabricator(port)
-            result = fabricator.device.home()  # Ensuring `home()` method from Device is used
+            result = fabricator.device.home()  # Use home() method from Device
             return jsonify({"success": True, "message": "Head move successful"}) if result else jsonify({"success": False, "message": "Head move unsuccessful"})
         else:
             return jsonify({"error": "Device not found"}), 404
@@ -194,7 +173,7 @@ def moveHead():
 def moveFabricatorList():
     """Change the order of fabricators."""
     try:
-        from app import printer_status_service  # Ensure integration aligns with the new naming convention
+        from app import printer_status_service
         data = request.get_json()
         fabricator_ids = data['fabricator_ids']
 
