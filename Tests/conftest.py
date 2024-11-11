@@ -111,18 +111,20 @@ def pytest_sessionfinish(session, exitstatus) -> None:
         for failTest in session.config.failNames:
             logger.logMessageOnly(line_separator(failTest, symbol="_"), end="\n", logLevel=logger.ERROR)
             #todo: break this out into something that can be called anywhere for the Logger class
-            things = list(session.config.fails[failTest].reprtraceback.reprentries[0].reprfuncargs.args)
-            for args in things:
-                logger.logMessageOnly(f"{args[0]} = {args[1]}")
-            logger.logMessageOnly("")
-            for line in list(session.config.fails[failTest].reprtraceback.reprentries[0].lines):
-                if line.startswith("E") or line.startswith(">"):
-                    logger.logMessageOnly(line.__str__(), logLevel=logger.ERROR)
-                else:
-                    logger.logMessageOnly(line.__str__())
-            loc = session.config.fails[failTest].reprtraceback.reprentries[0].reprfileloc
-            logger.logMessageOnly("\n" + loc.path + ":" + loc.lineno.__str__() + ": " + loc.message, logLevel=logger.ERROR)
-
+            for reprentry in session.config.fails[failTest].reprtraceback.reprentries:
+                if reprentry.reprfuncargs is not None:
+                    things = list(reprentry.reprfuncargs.args)
+                    for args in things:
+                        logger.logMessageOnly(f"{args[0]} = {args[1]}")
+                logger.logMessageOnly("")
+                for line in list(reprentry.lines):
+                    if line.startswith("E") or line.startswith(">"):
+                        logger.logMessageOnly(line.__str__(), logLevel=logger.ERROR)
+                    else:
+                        logger.logMessageOnly(line.__str__())
+                loc = reprentry.reprfileloc
+                logger.logMessageOnly("\n" + loc.path + ":" + loc.lineno.__str__() + ": " + loc.message, logLevel=logger.ERROR)
+                logger.logMessageOnly(line_separator("", symbol="- "), logLevel=logger.info)
     logger.logMessageOnly("\n\033[32m" + line_separator(summary, symbol="="))
 
 visited_modules = set()
