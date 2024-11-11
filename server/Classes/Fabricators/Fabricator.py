@@ -7,7 +7,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from Classes.Fabricators.Device import Device
 from Mixins.canPause import canPause
 from Mixins.hasEndingSequence import hasEndingSequence
-#from Mixins.hasStartupSequence import hasStartupSequence
 from models.db import db
 from datetime import datetime, timezone
 
@@ -130,12 +129,14 @@ class Fabricator(db.Model):
         assert len(self.queue) > 0
 
         self.job = self.queue.getNext()
+        if self.job is None:
+            return # TODO: return error message
+
+        #TODO: check filament type
+        self.checkValidJob()
 
         # if isinstance(self.device, hasStartupSequence):
         #     self.device.startupSequence()
-
-        if self.job is None:
-            return # TODO: return error message
 
         assert self.setStatus("printing"), "Failed to set status to printing"
         assert self.device.parseGcode(self.job.file_name_original), f"Failed to parse Gcode, status: {self.status}, verdict: {self.device.verdict}, file: {self.job.file_name_original}" # this is the actual command to read the file and fabricate.
@@ -252,3 +253,42 @@ class Fabricator(db.Model):
 
     def getDescription(self):
         return self.description
+
+
+    def checkValidJob(self):
+        """checks if the job is valid for the fabricator"""
+        settingsDict = getFileConfig(self.job.file_name_original)
+        from Classes.Fabricators.Printers.Printer import Printer
+        from Classes.Fabricators.CNCMachines.CNCMachine import CNCMachine
+        from Classes.Fabricators.LaserCutters.LaserCutter import LaserCutter
+        if isinstance(self.device, Printer):
+            assert self.device.filamentType is not None, "Filament type not set"
+            assert self.device.filamentDiameter is not None, "Filament diameter not set"
+            assert self.device.nozzleDiameter is not None, "Nozzle diameter not set"
+            assert self.device.filamentType == settingsDict["filament_type"], f"Filament type mismatch: {self.device.filamentType} != {settingsDict['filament_type']}"
+            assert self.device.filamentDiameter == float(settingsDict["filament_diameter"]), f"Filament diameter mismatch: {self.device.filamentDiameter} != {float(settingsDict['filament_diameter'])}, subtraction test: {self.device.nozzleDiameter - float(settingsDict['nozzle_diameter'])} != 0"
+            assert self.device.nozzleDiameter == float(settingsDict["nozzle_diameter"]), f"Nozzle diameter mismatch: {self.device.nozzleDiameter} != {float(settingsDict['nozzle_diameter'])}, subtraction test: {self.device.nozzleDiameter - float(settingsDict['nozzle_diameter'])} != 0.0"
+
+        elif isinstance(self.device, CNCMachine):
+            # if self.device.bitDiameter is not None and self.device.bitDiameter != float(settingsDict["bit_diameter"]):
+            #     return False
+            pass
+        elif isinstance(self.device, LaserCutter):
+            # if self.device.laserPower is not None and self.device.laserPower != int(settingsDict["laser_power"]):
+            #     return False
+            pass
+
+
+def getFileConfig(file):
+    """Get the config lines from the job file."""
+    with open(file, 'r') as f:
+        lines = f.readlines()
+    comment_lines = [line.lstrip('; ').strip() for line in lines if line.startswith(';')]
+    if "prusaslicer" in comment_lines[0].lower():
+        return {line.split('=')[0].strip(): line.split('=')[1].strip() for line in comment_lines[-358:] if '=' in line}
+    elif "cura" in comment_lines[11].lower():
+        settingsDict = {line.split('=')[0].strip(): line.split('=')[1].strip() for line in comment_lines if '=' in line}
+        settingsDict["filament_type"] = settingsDict["material_type"]
+        settingsDict["filament_diameter"] = settingsDict["material_diameter"]
+        settingsDict["nozzle_diameter"] = settingsDict["machine_nozzle_size"]
+        return settingsDict
