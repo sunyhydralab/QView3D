@@ -1,3 +1,4 @@
+import os
 import re
 import subprocess
 import threading
@@ -34,7 +35,9 @@ verbosity = 2
 showAnything = False
 verbosityCommand = "-p no:terminal" if not showAnything else "-vvv"
 def run_tests_for_port(comm_port):
-    subprocess.Popen(["pytest", "test_runner.py", verbosityCommand, f"--myVerbose={verbosity}", f"--port={comm_port}"]).wait()
+    env = os.environ.copy()
+    env["PORT"] = comm_port
+    subprocess.Popen(["pytest", ".", verbosityCommand, f"--myVerbose={verbosity}", f"--port={comm_port}"], env=env).wait()
 
 if __name__ == "__main__":
     # Create and start a thread for each port
