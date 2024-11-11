@@ -23,7 +23,7 @@ def pytest_addoption(parser):
 
 def line_separator(interrupter: str, symbol: str = "-", length: int = 104) -> str:
     if not interrupter:
-        return symbol * length
+        return symbol * (length//len(symbol))
     interrupterNoColor = re.sub(r'\033\[[0-9;]*m', '', interrupter)
     side = (length - 2 - len(interrupterNoColor)) / 2
     return symbol * math.ceil(side) + " " + interrupter + " " + symbol * math.floor(side)
