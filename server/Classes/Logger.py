@@ -13,7 +13,7 @@ class Logger(logging.Logger):
     CRITICAL = logging.CRITICAL
 
     def __init__(self, port, deviceName, consoleLogger=None, fileLogger=None, loggingLevel=logging.INFO, showFile=True, showLevel=True, showDate=True):
-        super().__init__(f"Logger_{port}_{deviceName}")
+        super().__init__(f"_".join(["Logger", port, deviceName]))
         self.setLevel(loggingLevel)
         info = []
         if showDate:
@@ -24,15 +24,14 @@ class Logger(logging.Logger):
             info.append("%(module)s.%(funcName)s:%(lineno)d")
         formatString = " - ".join(info + ["%(message)s"])
         if consoleLogger is not None:
-            console_handler = logging.StreamHandler(consoleLogger)
-            console_handler.setFormatter(CustomFormatter(formatString))
-            console_handler.setLevel(loggingLevel)
-            self.addHandler(console_handler)
+            consoleLogger = logging.StreamHandler(consoleLogger)
+            consoleLogger.setLevel(loggingLevel)
         else:
-            console_handler = logging.StreamHandler(sys.stdout)
-            console_handler.setFormatter(CustomFormatter(formatString))
-            console_handler.setLevel(self.ERROR)
-            self.addHandler(console_handler)
+            consoleLogger = logging.StreamHandler(sys.stdout)
+            consoleLogger.setLevel(self.ERROR)
+        consoleLogger.setFormatter(CustomFormatter(formatString))
+        self.consoleLogger = consoleLogger
+        self.addHandler(consoleLogger)
         if fileLogger is None:
             log_folder = "./server/logs"
             os.makedirs(log_folder, exist_ok=True)
@@ -41,9 +40,13 @@ class Logger(logging.Logger):
             from datetime import datetime
             fileLogger = logging.FileHandler(os.path.join(subfolder, f"{datetime.now().strftime('%m-%d-%Y__%H-%M-%S')}.log"))
         else:
-            fileLogger = logging.FileHandler(fileLogger)
+            if not os.path.exists(fileLogger):
+                fileLogger = logging.FileHandler(fileLogger, mode='w')
+            else:
+                fileLogger = logging.FileHandler(fileLogger)
         fileLogger.setFormatter(logging.Formatter(formatString))
         fileLogger.setLevel(loggingLevel)
+        self.fileLogger = fileLogger
         self.addHandler(fileLogger)
 
     def formatLog(self, msg):
