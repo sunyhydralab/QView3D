@@ -113,7 +113,7 @@ def test_gcode_print_time():
         expectedTime = 14 * 60 + 15 if shortTest else 28 * 60
     elif isinstance(fabricator.device, PrusaMK4S):
         file = file + "_MK4S.gcode"
-        expectedTime = 180 if shortTest else 1800
+        expectedTime = 8 * 60 + 45 if shortTest else 1800
     elif isinstance(fabricator.device, PrusaMK4):
         file = file + "_MK4.gcode"
         expectedTime = 10 * 60 if shortTest else 1800
