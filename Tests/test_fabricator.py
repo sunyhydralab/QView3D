@@ -119,6 +119,10 @@ def test_gcode_print_time():
         expectedTime = 10 * 60 if shortTest else 1800
     # expectedTime = 2040 # for my personal home test, 1072
     expectedMinutes, expectedSeconds = divmod(expectedTime, 60)
+    from Classes.Fabricators.Fabricator import getFileConfig
+    config = getFileConfig(file)
+    fabricator.device.changeFilament(config["filament_type"], float(config["filament_diameter"]))
+    fabricator.device.changeNozzle(float(config["nozzle_diameter"]))
     time = datetime.now()
     with open(file, "r") as f:
         fabricator.queue.addToFront \
