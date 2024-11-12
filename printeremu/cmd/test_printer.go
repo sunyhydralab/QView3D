@@ -15,6 +15,12 @@ import (
 )
 
 func main() {
+	settings, err := src.LoadSettings("data/settings.json")
+
+	if err != nil {
+		log.Fatalf("Error loading settings: %v", err)
+	}
+
 	printers, err := src.LoadPrinters("data/printers.json")
 
 	if err != nil {
@@ -56,7 +62,7 @@ func main() {
 		if strings.ToLower(command) == "connection" || strings.ToLower(command) == "conn" {
 			fmt.Println("Running connection emulator...")
 
-			handleConnection(extruder, printer)
+			handleConnection(extruder, printer, &settings)
 
 			break
 		}
@@ -73,7 +79,7 @@ func main() {
 	}
 }
 
-func handleConnection(extruder *src.Extruder, printer *src.Printer) {
+func handleConnection(extruder *src.Extruder, printer *src.Printer, settings *src.EmulatorSettings) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -86,7 +92,7 @@ func handleConnection(extruder *src.Extruder, printer *src.Printer) {
 	}()
 
 	go func() {
-		src.RunConnection(ctx, extruder, printer)
+		src.RunConnection(ctx, extruder, printer, settings)
 	}()
 
 	<-ctx.Done()

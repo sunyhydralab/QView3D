@@ -51,8 +51,15 @@ func Init(id int, device string, description string, hwid string, name string, s
 	return extruder, printer, nil
 }
 
-func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer) {
-	serverURL := "ws://127.0.0.1:8000"
+func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, settings *EmulatorSettings) {
+	loadedAddress := func() string {
+		if settings.DefaultAddress != "" && settings.DefaultPort != 0 {
+			return fmt.Sprintf("%s:%d", settings.DefaultAddress, settings.DefaultPort)
+		}
+		return "127.0.0.1:8000" // default address
+	}()
+
+	serverURL := "ws://" + loadedAddress
 
 	conn, _, err := websocket.DefaultDialer.Dial(serverURL, nil)
 
@@ -130,7 +137,40 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer) {
 				}
 
 			case "error":
-				log.Println("Error:", data)
+				if data != nil {
+					log.Println("Error:", data)
+				}
+
+			case "gcode":
+				if data != nil {
+					gcodeCommand, ok := data.(string)
+
+					if ok {
+						response := CommandHandler(gcodeCommand, printer)
+						fmt.Println("G-code executed:", response)
+
+						gcodeResponse := map[string]interface{}{
+							"event": "gcode_response",
+							"data":  fmt.Sprintf("Response: %s", response),
+						}
+
+						responseMessage, err := json.Marshal(gcodeResponse)
+
+						if err != nil {
+							log.Println("Failed to marshal gcode_response:", err)
+							continue
+						}
+
+						if err := conn.WriteMessage(websocket.TextMessage, responseMessage); err != nil {
+							log.Println("Error sending gcode_response:", err)
+							continue
+						}
+					} else {
+						log.Println("Received G-code command, but data is not a string:", data)
+					}
+				} else {
+					log.Println("Received G-code command, but no data")
+				}
 
 			default:
 				log.Println("Received from server:", string(message))
