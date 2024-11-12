@@ -35,7 +35,7 @@ func main() {
 			break
 		}
 
-		if strings.ToLower(command) == "command" {
+		if strings.ToLower(command) == "command" || strings.ToLower(command) == "comm" {
 			fmt.Println("Running command emulator...")
 
 			handleCommand(extruder, printer)
@@ -43,7 +43,7 @@ func main() {
 			break
 		}
 
-		if strings.ToLower(command) == "connection" {
+		if strings.ToLower(command) == "connection" || strings.ToLower(command) == "conn" {
 			fmt.Println("Running command emulator...")
 
 			handleConnection(extruder, printer)
