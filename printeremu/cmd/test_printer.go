@@ -19,8 +19,14 @@ func main() {
 		return
 	}
 
+	handleCommand(extruder, printer)
+	//handleConnection(extruder, printer)
+
+}
+
+func handleConnection(extruder *src.Extruder, printer *src.Printer) {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel() 
+	defer cancel()
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
@@ -36,4 +42,8 @@ func main() {
 
 	<-ctx.Done()
 	log.Println("Shutting down...")
+}
+
+func handleCommand(extruder *src.Extruder, printer *src.Printer) {
+	src.RunCommand(extruder, printer)
 }

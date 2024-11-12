@@ -40,7 +40,11 @@ func Init(id int, device string, description string, hwid string, name string, s
 		TargetTemp: 100.0, // Target temperature for the heatbed
 	}
 
-	printer := NewPrinter(id, device, description, hwid, name, status, time.Now().String(), extruder, heatbed)
+	printer, err := NewPrinter(id, device, description, hwid, name, status, time.Now().String(), extruder, heatbed)
+
+	if err != nil {
+		log.Fatal("Failed to create printer:", err)
+	}
 
 	fmt.Println(printer.String())
 
@@ -48,91 +52,91 @@ func Init(id int, device string, description string, hwid string, name string, s
 }
 
 func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer) {
-    serverURL := "ws://127.0.0.1:8000"
+	serverURL := "ws://127.0.0.1:8000"
 
-    conn, _, err := websocket.DefaultDialer.Dial(serverURL, nil)
+	conn, _, err := websocket.DefaultDialer.Dial(serverURL, nil)
 
-    if err != nil {
-        log.Fatal("Failed to connect to server:", err)
-    }
+	if err != nil {
+		log.Fatal("Failed to connect to server:", err)
+	}
 
-    defer conn.Close()
+	defer conn.Close()
 
-    fmt.Println("Connected to WebSocket server")
+	fmt.Println("Connected to WebSocket server")
 
-    RegisterPrinter(conn, printer)
+	RegisterPrinter(conn, printer)
 
-    pingTicker := time.NewTicker(5 * time.Second)
-    defer pingTicker.Stop()
+	pingTicker := time.NewTicker(5 * time.Second)
+	defer pingTicker.Stop()
 
-    for {
-        select {
-        case <-ctx.Done():
-            fmt.Println("Context canceled, closing connection.")
-            return
-        case <-pingTicker.C:
-            pingMessage := map[string]interface{}{
-                "event": "ping",
-                "data":  "alive",
-            }
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("Context canceled, closing connection.")
+			return
+		case <-pingTicker.C:
+			pingMessage := map[string]interface{}{
+				"event": "ping",
+				"data":  "alive",
+			}
 
-            jsonPingMessage, err := json.Marshal(pingMessage)
+			jsonPingMessage, err := json.Marshal(pingMessage)
 
-            if err != nil {
-                log.Println("Failed to marshal ping message:", err)
-                return
-            }
+			if err != nil {
+				log.Println("Failed to marshal ping message:", err)
+				return
+			}
 
-            if err := conn.WriteMessage(websocket.TextMessage, jsonPingMessage); err != nil {
-                log.Println("Error sending ping message:", err)
-                return
-            }
+			if err := conn.WriteMessage(websocket.TextMessage, jsonPingMessage); err != nil {
+				log.Println("Error sending ping message:", err)
+				return
+			}
 
-        default:
-            messageType, message, err := conn.ReadMessage()
+		default:
+			messageType, message, err := conn.ReadMessage()
 
-            if err != nil {
-                log.Println("Error reading message:", err)
-                return
-            }
+			if err != nil {
+				log.Println("Error reading message:", err)
+				return
+			}
 
-            if messageType == websocket.TextMessage && string(message) == "close" {
-                fmt.Println("Received 'close' signal from server, ending connection.")
-                return
-            }
+			if messageType == websocket.TextMessage && string(message) == "close" {
+				fmt.Println("Received 'close' signal from server, ending connection.")
+				return
+			}
 
-            var parsedMessage map[string]interface{}
+			var parsedMessage map[string]interface{}
 
-            if err := json.Unmarshal(message, &parsedMessage); err != nil {
-                log.Println("Error parsing received message:", err)
-                continue
-            }
+			if err := json.Unmarshal(message, &parsedMessage); err != nil {
+				log.Println("Error parsing received message:", err)
+				continue
+			}
 
-            event, ok := parsedMessage["event"].(string)
+			event, ok := parsedMessage["event"].(string)
 
-            if !ok {
-                log.Println("Missing or invalid 'event' field:", parsedMessage)
-                continue
-            }
+			if !ok {
+				log.Println("Missing or invalid 'event' field:", parsedMessage)
+				continue
+			}
 
-            data := parsedMessage["data"]
+			data := parsedMessage["data"]
 
-            switch event {
-            case "info":
-                if message, exists := parsedMessage["message"].(string); exists {
-                    log.Println("Info:", message)
-                } else {
-                    fmt.Println("Missing or invalid 'message' field in 'info' event data")
-                }
+			switch event {
+			case "info":
+				if message, exists := parsedMessage["message"].(string); exists {
+					log.Println("Info:", message)
+				} else {
+					fmt.Println("Missing or invalid 'message' field in 'info' event data")
+				}
 
-            case "error":
-                log.Println("Error:", data)
+			case "error":
+				log.Println("Error:", data)
 
-            default:
-                log.Println("Received from server:", string(message))
-            }
-        }
-    }
+			default:
+				log.Println("Received from server:", string(message))
+			}
+		}
+	}
 }
 
 func RegisterPrinter(conn *websocket.Conn, printer *Printer) {

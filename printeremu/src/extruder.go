@@ -13,11 +13,12 @@ type Vector3 struct {
 
 // Extruder struct to handle extruder settings, including temperature and fan speed.
 type Extruder struct {
-	Position           Vector3
-	FanSpeed           float64
-	ExtruderTemp       float64
-	TargetTemp         float64 // Desired temperature for the extruder.
+	Position            Vector3
+	FanSpeed            float64
+	ExtruderTemp        float64
+	TargetTemp          float64 // Desired temperature for the extruder.
 	AbsolutePositioning bool
+	MaxZHeight          float64 // Maximum height of the extruder
 }
 
 // Heatbed struct to handle heatbed temperature.
@@ -25,15 +26,17 @@ type Heatbed struct {
 	Temp       float64
 	TargetTemp float64 // Desired temperature for the heatbed.
 	Heating    bool    // Indicates if the bed is currently heating.
+	Width      float64
+	Length     float64
 }
 
 // NewExtruder creates a new Extruder with specified initial values.
 func NewExtruder(position Vector3, extruderTemp, targetTemp, fanSpeed float64) *Extruder {
 	return &Extruder{
-		Position:           position,
-		ExtruderTemp:       extruderTemp,
-		TargetTemp:         targetTemp,
-		FanSpeed:           fanSpeed,
+		Position:            position,
+		ExtruderTemp:        extruderTemp,
+		TargetTemp:          targetTemp,
+		FanSpeed:            fanSpeed,
 		AbsolutePositioning: true, // Default positioning mode
 	}
 }
