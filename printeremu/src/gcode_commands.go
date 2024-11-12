@@ -29,6 +29,7 @@ func CommandHandler(command string, printer *Printer) string {
 	if cmd == nil {
 		return "Unknown command\n"
 	}
+
 	return cmd.Execute(printer)
 }
 

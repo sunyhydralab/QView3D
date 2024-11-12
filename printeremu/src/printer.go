@@ -3,6 +3,8 @@ package src
 import (
 	"fmt"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 // Printer struct with associated components as pointers for easy modification
@@ -25,6 +27,7 @@ type Printer struct {
 	HeatbreakTemp       float64
 	EnabledMotors       map[string]bool
 	Attributes          map[string]string
+	WSConnection        *websocket.Conn
 }
 
 // DisableMotor disables a motor for a specific axis
@@ -87,6 +90,7 @@ func NewPrinter(id int, device, description, hwid, name, status, date string, ex
 		HeatbreakTemp:       0.0,        // Default heatbreak temp
 		EnabledMotors:       make(map[string]bool),
 		Attributes:          make(map[string]string),
+		WSConnection:        nil, // Default will be offline emulator
 	}
 
 	return printer, nil
@@ -209,6 +213,33 @@ func (printer *Printer) AddAttribute(key string, value string) {
 
 func (printer *Printer) GetAttribute(key string) string {
 	return printer.Attributes[key]
+}
+
+func (printer *Printer) WriteSerial(command string) error {
+	if printer.WSConnection == nil {
+		return fmt.Errorf("WebSocket connection not established")
+	}
+
+	err := printer.WSConnection.WriteMessage(websocket.TextMessage, []byte(command))
+	if err != nil {
+		return fmt.Errorf("failed to send command over WebSocket: %v", err)
+	}
+
+	return nil
+}
+
+func (printer *Printer) ReadSerial() (string, error) {
+	if printer.WSConnection == nil {
+		return "", fmt.Errorf("WebSocket connection not established")
+	}
+
+	_, message, err := printer.WSConnection.ReadMessage()
+
+	if err != nil {
+		return "", fmt.Errorf("failed to read message from WebSocket: %v", err)
+	}
+
+	return string(message), nil
 }
 
 // String provides a formatted string representation of the Printer state
