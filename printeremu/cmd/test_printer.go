@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -20,14 +21,15 @@ func main() {
 		log.Fatalf("Error loading printers: %v", err)
 	}
 
-	src.PrintPrinters(printers)
+	fmt.Println("Loaded printers...")
 
-	extruder, printer, err := src.Init(1, "Generic", "Marlin GCode", "EMU032uhb3293n2", "Testing Printer 1", "Init")
+	var printer *src.Printer
 
-	if err != nil {
-		fmt.Println("Error initializing printer:", err)
-		return
+	for printer == nil {
+		printer = askForPrinterID(printers)
 	}
+
+	extruder := printer.Extruder
 
 	scanner := bufio.NewScanner(os.Stdin)
 
@@ -93,4 +95,37 @@ func handleConnection(extruder *src.Extruder, printer *src.Printer) {
 
 func handleCommand(extruder *src.Extruder, printer *src.Printer) {
 	src.RunCommand(extruder, printer)
+}
+
+func askForPrinterID(printers []src.Printer) *src.Printer {
+	scanner := bufio.NewScanner(os.Stdin)
+
+	for {
+		fmt.Println("Available printers:")
+
+		for _, p := range printers {
+			fmt.Printf("ID: %d, Name: %s\n", p.Id, p.Name)
+		}
+
+		fmt.Print("Enter the printer ID: ")
+
+		scanner.Scan()
+		idInput := scanner.Text()
+
+		id, err := strconv.Atoi(idInput)
+
+		if err != nil {
+			fmt.Println("Invalid input, please enter a valid number.")
+			continue
+		}
+
+		for _, p := range printers {
+			if p.Id == id {
+				fmt.Printf("Selected printer: %s (ID: %d)\n", p.Name, p.Id)
+				return &p
+			}
+		}
+
+		fmt.Println("Printer with that ID doesn't exist. Please try again.")
+	}
 }

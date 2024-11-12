@@ -3,17 +3,19 @@
       "id": 1,
       "name": "Prusa MK4",
       "brand": {
-        "printername": "Prusa",
-        "printermodel": "MK4"
-      }
+        "printerName": "Prusa",
+        "printerModel": "MK4"
+      },
+      "usesMarlin": true
     },
     {
       "id": 2,
       "name": "Ender 3",
       "brand": {
-        "printername": "Creality",
-        "printermodel": "Ender 3"
-      }
+        "printerName": "Creality",
+        "printerModel": "Ender 3"
+      },
+      "usesMarlin": true
     }
   ]
   

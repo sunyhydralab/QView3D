@@ -29,7 +29,7 @@ func main() {
 
 // Init function initializes the Extruder and Printer
 func Init(id int, device string, description string, hwid string, name string, status string) (*Extruder, *Printer, error) {
-	fmt.Println("Initializing printer...")
+	//fmt.Println("Initializing printer...")
 
 	position := Vector3{X: 100, Y: 27, Z: 76}
 	extruder := NewExtruder(position, 250, 100, 125)
@@ -46,7 +46,7 @@ func Init(id int, device string, description string, hwid string, name string, s
 		log.Fatal("Failed to create printer:", err)
 	}
 
-	fmt.Println(printer.String())
+	//fmt.Println(printer.String())
 
 	return extruder, printer, nil
 }
