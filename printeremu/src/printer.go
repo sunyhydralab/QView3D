@@ -24,6 +24,7 @@ type Printer struct {
 	LinearAdvanceFactor float64
 	HeatbreakTemp       float64
 	EnabledMotors       map[string]bool
+	Attributes          map[string]string
 }
 
 // DisableMotor disables a motor for a specific axis
@@ -85,6 +86,7 @@ func NewPrinter(id int, device, description, hwid, name, status, date string, ex
 		LinearAdvanceFactor: 0.0,        // Default linear advance factor
 		HeatbreakTemp:       0.0,        // Default heatbreak temp
 		EnabledMotors:       make(map[string]bool),
+		Attributes:          make(map[string]string),
 	}
 
 	return printer, nil
@@ -201,8 +203,16 @@ func (printer *Printer) MoveExtruder(targetPos Vector3) error {
 	return nil
 }
 
+func (printer *Printer) AddAttribute(key string, value string) {
+	printer.Attributes[key] = value
+}
+
+func (printer *Printer) GetAttribute(key string) string {
+	return printer.Attributes[key]
+}
+
 // String provides a formatted string representation of the Printer state
 func (printer *Printer) String() string {
-	return fmt.Sprintf("Printer{Id: %d, Device: %s, Description: %s, Hwid: %s, Name: %s, Status: %s, Date: %s, Extruder: %v, Heatbed: %v, Acceleration: %.2f, LinearAdvanceFactor: %.2f, HeatbreakTemp: %.2f, Units: %s, Progress: %d%%, KeepAliveTime: %v, EnabledMotors: %v}",
-		printer.Id, printer.Device, printer.Description, printer.Hwid, printer.Name, printer.Status, printer.Date, printer.Extruder.String(), printer.Heatbed.String(), printer.Acceleration, printer.LinearAdvanceFactor, printer.HeatbreakTemp, printer.Units, printer.Progress, printer.KeepAliveTime, printer.EnabledMotors)
+	return fmt.Sprintf("Printer{Id: %d, Device: %s, Description: %s, Hwid: %s, Name: %s, Status: %s, Date: %s, Extruder: %v, Heatbed: %v, Acceleration: %.2f, LinearAdvanceFactor: %.2f, HeatbreakTemp: %.2f, Units: %s, Progress: %d%%, KeepAliveTime: %v, EnabledMotors: %v, Attributes: %v}",
+		printer.Id, printer.Device, printer.Description, printer.Hwid, printer.Name, printer.Status, printer.Date, printer.Extruder.String(), printer.Heatbed.String(), printer.Acceleration, printer.LinearAdvanceFactor, printer.HeatbreakTemp, printer.Units, printer.Progress, printer.KeepAliveTime, printer.EnabledMotors, printer.Attributes)
 }

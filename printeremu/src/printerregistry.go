@@ -50,8 +50,11 @@ func LoadPrinters(filePath string) ([]Printer, error) {
 	for _, printerConfig := range printersConfig {
 		_, printer, err := Init(printerConfig.Id, printerConfig.Brand.PrinterName+" "+printerConfig.Brand.PrinterModel, "Marlin GCode", "EMU-"+RandomString(8), printerConfig.Name, "Init")
 
-		// TODO: expand upon marlin gcode and non marlin printers
-		// if printerConfig.UsesMarlin {}
+		printer.AddAttribute("model", printerConfig.Brand.PrinterName)
+
+		if printerConfig.UsesMarlin {
+			printer.AddAttribute("usesMarlin", "true")
+		}
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize printer %d: %v", printerConfig.Id, err)
