@@ -1,0 +1,19 @@
+[
+    {
+      "id": 1,
+      "name": "Prusa MK4",
+      "brand": {
+        "printername": "Prusa",
+        "printermodel": "MK4"
+      }
+    },
+    {
+      "id": 2,
+      "name": "Ender 3",
+      "brand": {
+        "printername": "Creality",
+        "printermodel": "Ender 3"
+      }
+    }
+  ]
+  

@@ -14,6 +14,14 @@ import (
 )
 
 func main() {
+	printers, err := src.LoadPrinters("data/printers.json")
+
+	if err != nil {
+		log.Fatalf("Error loading printers: %v", err)
+	}
+
+	src.PrintPrinters(printers)
+
 	extruder, printer, err := src.Init(1, "Generic", "Marlin GCode", "EMU032uhb3293n2", "Testing Printer 1", "Init")
 
 	if err != nil {
@@ -44,11 +52,17 @@ func main() {
 		}
 
 		if strings.ToLower(command) == "connection" || strings.ToLower(command) == "conn" {
-			fmt.Println("Running command emulator...")
+			fmt.Println("Running connection emulator...")
 
 			handleConnection(extruder, printer)
 
 			break
+		}
+
+		if strings.ToLower(command) == "registry" {
+			fmt.Println("Printer registry...")
+
+			src.PrintPrinters(printers)
 		}
 	}
 
