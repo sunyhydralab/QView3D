@@ -1,6 +1,7 @@
 package src
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -215,12 +216,24 @@ func (printer *Printer) GetAttribute(key string) string {
 	return printer.Attributes[key]
 }
 
-func (printer *Printer) WriteSerial(command string) error {
+func (printer *Printer) WriteSerial(event string, data interface{}) error {
 	if printer.WSConnection == nil {
 		return fmt.Errorf("WebSocket connection not established")
 	}
 
-	err := printer.WSConnection.WriteMessage(websocket.TextMessage, []byte(command))
+	message := map[string]interface{}{
+		"event": event,
+		"data":  data,
+	}
+
+	jsonMessage, err := json.Marshal(message)
+
+	if err != nil {
+		return fmt.Errorf("failed to marshal printer object: %v", err)
+	}
+
+	err = printer.WSConnection.WriteMessage(websocket.TextMessage, []byte(jsonMessage))
+
 	if err != nil {
 		return fmt.Errorf("failed to send command over WebSocket: %v", err)
 	}
