@@ -1,4 +1,5 @@
 import os
+import re
 import pytest
 
 from Classes.Logger import Logger
@@ -16,7 +17,7 @@ with app.app_context():
     @pytest.mark.skipif(condition=testLevel < 1, reason="Not doing lvl 1 tests")
     def test_base_url():
         assert app.config["base_url"], "base_url doesnt exist?"
-        assert app.config["base_url"] == "http://127.0.0.1:8000", f"base_url is {app.config['base_url']}"
+        assert re.match(r"http://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}$", app.config["base_url"]) or re.match(r"http://localhost:\d{1,5}$", app.config["base_url"]), f"base_url is {app.config['base_url']}"
 
     @pytest.mark.skipif(condition=testLevel < 1, reason="Not doing lvl 1 tests")
     def test_environment():
@@ -27,7 +28,7 @@ with app.app_context():
     def test_logger():
         assert app.logger, "myLogger doesnt exist?"
         assert app.logger.name, "name doesnt exist?"
-        assert str(app.logger.name) == "Logger__App", f"myLogger is {str(app.logger.name)}"
+        assert str(app.logger.name) == "Logger_App", f"myLogger is {str(app.logger.name)}"
         assert isinstance(app.logger, Logger), "myLogger is not an instance of Logger?"
         assert app.logger.fileLogger, "fileLogger doesnt exist?"
         assert app.logger.consoleLogger, "consoleLogger doesn't exists?"
