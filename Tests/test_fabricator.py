@@ -128,26 +128,92 @@ def test_gcode_print_time():
         pytest.skip(f"{fabricator.getDescription()} doesn't support printing gcode")
     file = cali_cube_setup()
     # expectedTime = 2040 # for my personal home test, 1072
-    expectedMinutes, expectedSeconds = divmod(expectedTime, 60)
     from Classes.Fabricators.Fabricator import getFileConfig
     config = getFileConfig(file)
+    expectedTime = int(config["estimated_time"])
     fabricator.device.changeFilament(config["filament_type"], float(config["filament_diameter"]))
     fabricator.device.changeNozzle(float(config["nozzle_diameter"]))
+    expectedDays, expectedHours, expectedMinutes, expectedSeconds = 0, 0, 0, 0
+    if expectedTime >= 86400:
+        expectedDays, expectedTime = divmod(expectedTime, 86400)
+    if expectedTime >= 3600:
+        expectedHours, expectedTime = divmod(expectedTime, 3600)
+    if expectedTime >= 60:
+        expectedMinutes, expectedTime = divmod(expectedTime, 60)
     time = datetime.now()
     with open(file, "r") as f:
-        fabricator.queue.addToFront \
-            (Job(f.read(), "xyz cali cube", fabricator.dbID, "ready", file, False, 1, fabricator.name)
-             , fabricator.dbID)
+        fabricator.queue.addToFront(Job(f.read(), "xyz cali cube", fabricator.dbID, "ready", file, False, 1, fabricator.name))
+        time = datetime.now()
         fabricator.begin()
     time = datetime.now() - time
-    minutes, seconds = divmod(time.seconds, 60)
     fabricator.device.serialConnection.write(b"M31\n")
     line = ""
     while not re.search(r"\d+m \d+s", line):
         line = fabricator.device.serialConnection.readline().decode("utf-8")
-    printMinutes, printSeconds = map(int, re.findall(r"\d+", line))
-    printTime = printMinutes * 60 + printSeconds
+    minutes, seconds = divmod(time.seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    days, hours = divmod(hours, 24)
+    measuredTimeList = []
+    if days > 0:
+        measuredTimeList.append(f"{days:02}")
+        measuredTimeList.append(f"{hours:02}")
+        measuredTimeList.append(f"{minutes:02}")
+        measuredTimeList.append(f"{seconds:02}")
+    elif hours > 0:
+        measuredTimeList.append(f"{hours:02}")
+        measuredTimeList.append(f"{minutes:02}")
+        measuredTimeList.append(f"{seconds:02}")
+    elif minutes > 0:
+        measuredTimeList.append(f"{minutes:02}")
+        measuredTimeList.append(f"{seconds:02}")
+    else:
+        measuredTimeList.append(f"{seconds:02}")
+    measuredTimeString = ":".join(measuredTimeList)
 
-    timeBoundary = max(120, expectedTime // 5)
-    assert printTime - expectedTime < timeBoundary, f"Failed to print within time boundary of expected time on {fabricator.getDescription()}. Expected: {int(expectedMinutes):02}:{int(expectedSeconds):02}, Actual: {int(printMinutes):02}:{int(printSeconds):02}"
-    assert time.seconds - expectedTime < timeBoundary, f"Failed to print within time boundary of expected time on {fabricator.getDescription()}. Expected: {int(expectedMinutes):02}:{int(expectedSeconds):02}, Actual: {int(minutes):02}:{int(seconds):02}"
+    actualTimeList = re.findall(r"\d+", line)
+    printDays, printHours, printMinutes, printSeconds = 0, 0, 0, 0
+    if len(actualTimeList) == 1:
+        printSeconds = int(actualTimeList[0])
+    elif len(actualTimeList) == 2:
+        printMinutes, printSeconds = map(int, actualTimeList)
+    elif len(actualTimeList) == 3:
+        printHours, printMinutes, printSeconds = map(int, actualTimeList)
+    elif len(actualTimeList) == 4:
+        printDays, printHours, printMinutes, printSeconds = map(int, actualTimeList)
+    printTime = printDays * 86400 + printHours * 3600 + printMinutes * 60 + printSeconds
+    printList = []
+    if printDays > 0:
+        printList.append(f"{printDays:02}")
+        printList.append(f"{printHours:02}")
+        printList.append(f"{printMinutes:02}")
+        printList.append(f"{printSeconds:02}")
+    elif printHours > 0:
+        printList.append(f"{printHours:02}")
+        printList.append(f"{printMinutes:02}")
+        printList.append(f"{printSeconds:02}")
+    elif printMinutes > 0:
+        printList.append(f"{printMinutes:02}")
+        printList.append(f"{printSeconds:02}")
+    else:
+        printList.append(f"{printSeconds:02}")
+    printString = ":".join(map(str, printList))
+    expectedList = []
+    if expectedDays > 0:
+        expectedList.append(f"{expectedDays:02}")
+        expectedList.append(f"{expectedHours:02}")
+        expectedList.append(f"{expectedMinutes:02}")
+        expectedList.append(f"{expectedSeconds:02}")
+    elif expectedHours > 0:
+        expectedList.append(f"{expectedHours:02}")
+        expectedList.append(f"{expectedMinutes:02}")
+        expectedList.append(f"{expectedSeconds:02}")
+    elif expectedMinutes > 0:
+        expectedList.append(f"{expectedMinutes:02}")
+        expectedList.append(f"{expectedSeconds:02}")
+    else:
+        expectedList.append(f"{expectedSeconds:02}")
+    expectedString = ":".join(map(str, expectedList))
+
+    timeBoundary = 120
+    assert printTime - expectedTime < timeBoundary, f"Failed to print within time boundary of expected time on {fabricator.getDescription()}. Expected: {expectedString}, Actual: {printString}"
+    assert time.seconds - expectedTime < timeBoundary, f"Failed to print within time boundary of measured time on {fabricator.getDescription()}. Expected: {expectedString}, Actual: {measuredTimeString}"
