@@ -14,3 +14,6 @@ server/dist
 .DS_Store
 /qodana.yaml
 /Tests/logs/
+/Tests/server/
+/logs/
+/server/logs/
