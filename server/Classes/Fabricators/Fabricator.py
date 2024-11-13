@@ -124,23 +124,26 @@ class Fabricator(db.Model):
 
     def begin(self):
         """starts the fabrication process"""
-        assert self.status == "idle"
-        assert self.queue is not None
-        assert len(self.queue) > 0
+        try:
+            assert self.status == "idle"
+            assert self.queue is not None
+            assert len(self.queue) > 0
+            self.job = self.queue.getNext()
+            assert self.job is not None, "Job is None"
+            self.checkValidJob()
+            assert self.status != "error", "Invalid job"
+            # if isinstance(self.device, hasStartupSequence):
+            #     self.device.startupSequence()
+            assert self.setStatus("printing"), "Failed to set status to printing"
+            assert self.device.parseGcode(self.job.file_name_original), f"Failed to parse Gcode, status: {self.status}, verdict: {self.device.verdict}, file: {self.job.file_name_original}" # this is the actual command to read the file and fabricate.
+            self.handleVerdict()
+            return True
+        except Exception as e:
+            from app import app
+            with app.app_context():
+                app.handle_error_and_logging(e, self)
+            return e
 
-        self.job = self.queue.getNext()
-        if self.job is None:
-            return # TODO: return error message
-
-        #TODO: check filament type
-        self.checkValidJob()
-
-        # if isinstance(self.device, hasStartupSequence):
-        #     self.device.startupSequence()
-
-        assert self.setStatus("printing"), "Failed to set status to printing"
-        assert self.device.parseGcode(self.job.file_name_original), f"Failed to parse Gcode, status: {self.status}, verdict: {self.device.verdict}, file: {self.job.file_name_original}" # this is the actual command to read the file and fabricate.
-        self.handleVerdict()
 
     def pause(self):
         """pauses the fabrication process if the fabricator supports it"""
@@ -173,11 +176,9 @@ class Fabricator(db.Model):
             self.setStatus("cancelled")
             return self.status == self.device.status == "cancelled"
         except Exception as e:
-            if self.device is None:
-                print(e)
-            else:
-                self.device.logger.error("Error cancelling job:")
-                self.device.logger.error(e)
+            from app import app
+            with app.app_context():
+                app.handle_error_and_logging(e, self)
             return False
 
     def getStatus(self):
@@ -201,11 +202,8 @@ class Fabricator(db.Model):
             # )
             return True
         except Exception as e:
-            if self.device is None:
-                print(e)
-            else:
-                self.device.logger.error("Error setting status:")
-                self.device.logger.error(e)
+            from app import app
+            app.handle_error_and_logging(e, self)
             return False
 
     def resetToIdle(self):
@@ -257,38 +255,62 @@ class Fabricator(db.Model):
 
     def checkValidJob(self):
         """checks if the job is valid for the fabricator"""
-        settingsDict = getFileConfig(self.job.file_name_original)
-        from Classes.Fabricators.Printers.Printer import Printer
-        from Classes.Fabricators.CNCMachines.CNCMachine import CNCMachine
-        from Classes.Fabricators.LaserCutters.LaserCutter import LaserCutter
-        if isinstance(self.device, Printer):
-            assert self.device.filamentType is not None, "Filament type not set"
-            assert self.device.filamentDiameter is not None, "Filament diameter not set"
-            assert self.device.nozzleDiameter is not None, "Nozzle diameter not set"
-            assert self.device.filamentType == settingsDict["filament_type"], f"Filament type mismatch: {self.device.filamentType} != {settingsDict['filament_type']}"
-            assert self.device.filamentDiameter == float(settingsDict["filament_diameter"]), f"Filament diameter mismatch: {self.device.filamentDiameter} != {float(settingsDict['filament_diameter'])}, subtraction test: {self.device.nozzleDiameter - float(settingsDict['nozzle_diameter'])} != 0"
-            assert self.device.nozzleDiameter == float(settingsDict["nozzle_diameter"]), f"Nozzle diameter mismatch: {self.device.nozzleDiameter} != {float(settingsDict['nozzle_diameter'])}, subtraction test: {self.device.nozzleDiameter - float(settingsDict['nozzle_diameter'])} != 0.0"
-
-        elif isinstance(self.device, CNCMachine):
-            # if self.device.bitDiameter is not None and self.device.bitDiameter != float(settingsDict["bit_diameter"]):
-            #     return False
-            pass
-        elif isinstance(self.device, LaserCutter):
-            # if self.device.laserPower is not None and self.device.laserPower != int(settingsDict["laser_power"]):
-            #     return False
-            pass
+        try:
+            settingsDict = getFileConfig(self.job.file_name_original)
+            from Classes.Fabricators.Printers.Printer import Printer
+            from Classes.Fabricators.CNCMachines.CNCMachine import CNCMachine
+            from Classes.Fabricators.LaserCutters.LaserCutter import LaserCutter
+            if isinstance(self.device, Printer):
+                assert self.device.filamentType is not None, "Filament type not set"
+                assert self.device.filamentDiameter is not None, "Filament diameter not set"
+                assert self.device.nozzleDiameter is not None, "Nozzle diameter not set"
+                assert self.device.filamentType == settingsDict["filament_type"], f"Filament type mismatch: {self.device.filamentType} != {settingsDict['filament_type']}"
+                assert self.device.filamentDiameter == float(settingsDict["filament_diameter"]), f"Filament diameter mismatch: {self.device.filamentDiameter} != {float(settingsDict['filament_diameter'])}, subtraction test: {self.device.nozzleDiameter - float(settingsDict['nozzle_diameter'])} != 0"
+                assert self.device.nozzleDiameter == float(settingsDict["nozzle_diameter"]), f"Nozzle diameter mismatch: {self.device.nozzleDiameter} != {float(settingsDict['nozzle_diameter'])}, subtraction test: {self.device.nozzleDiameter - float(settingsDict['nozzle_diameter'])} != 0.0"
+            elif isinstance(self.device, CNCMachine):
+                # if self.device.bitDiameter is not None and self.device.bitDiameter != float(settingsDict["bit_diameter"]):
+                #     return False
+                pass
+            elif isinstance(self.device, LaserCutter):
+                # if self.device.laserPower is not None and self.device.laserPower != int(settingsDict["laser_power"]):
+                #     return False
+                pass
+        except AssertionError as e:
+            self.device.logger.error(f"Invalid job: {e}")
+            self.setStatus("error")
+            self.queue.removeJob()
+            self.job = None
 
 
 def getFileConfig(file):
     """Get the config lines from the job file."""
     with open(file, 'r') as f:
         lines = f.readlines()
-    comment_lines = [line.lstrip('; ').strip() for line in lines if line.startswith(';')]
-    if "prusaslicer" in comment_lines[0].lower():
-        return {line.split('=')[0].strip(): line.split('=')[1].strip() for line in comment_lines[-358:] if '=' in line}
-    elif "cura" in comment_lines[11].lower():
-        settingsDict = {line.split('=')[0].strip(): line.split('=')[1].strip() for line in comment_lines if '=' in line}
+    comment_lines = [line.lstrip(';').strip() for line in lines if line.startswith(';') or ':' in line]
+    if len(comment_lines) > 0 and "prusaslicer" in comment_lines[0].lower():
+        settingsDict = {line.split('=')[0].strip(): line.split('=')[1].strip() for line in comment_lines[-358:] if '=' in line}
+        import re
+        days, hours, minutes, seconds = 0, 0, 0, 0
+        timeList = re.findall(r"\d+", settingsDict["estimated printing time (normal mode)"])
+        if len(timeList) == 1:
+            seconds = map(int, timeList)
+        elif len(timeList) == 2:
+            minutes, seconds = map(int, timeList)
+        elif len(timeList) == 3:
+            hours, minutes, seconds = map(int, timeList)
+        elif len(timeList) == 4:
+            days, hours, minutes, seconds = map(int, timeList)
+        settingsDict["expected_time"] = str(days * 86400 + hours * 3600 + (minutes + 2) * 60 + seconds)
+    elif len(comment_lines) >= 12 and "cura" in comment_lines[11].lower():
+        equalsDict = {line.split('=')[0].strip(): line.split('=')[1].strip() for line in comment_lines if '=' in line}
+        colonDict = {line.split(':')[0].strip(): line.split(':')[1].strip() for line in comment_lines if ':' in line}
+        settingsDict = {**equalsDict, **colonDict}
+        settingsDict["expected_time"] = str(int(settingsDict["TIME"]) + 120)
         settingsDict["filament_type"] = settingsDict["material_type"]
         settingsDict["filament_diameter"] = settingsDict["material_diameter"]
         settingsDict["nozzle_diameter"] = settingsDict["machine_nozzle_size"]
-        return settingsDict
+    else:
+        equalsDict = {line.split('=')[0].strip(): line.split('=')[1].strip() for line in comment_lines if '=' in line}
+        colonDict = {line.split(':')[0].strip(): line.split(':')[1].strip() for line in comment_lines if ':' in line}
+        settingsDict = {**equalsDict, **colonDict}
+    return settingsDict
