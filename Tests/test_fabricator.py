@@ -3,14 +3,8 @@ import sys
 from datetime import datetime
 import re
 import pytest
-
-from Classes.Fabricators.Printers.Ender.Ender3 import Ender3
-from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
-from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
-from Classes.Ports import Ports
 from Classes.Jobs import Job
 from Classes.Fabricators.Fabricator import Fabricator
-from Mixins.canPause import canPause
 from parallel_test_runner import testLevel
 
 testLevelToRun = testLevel
@@ -37,6 +31,7 @@ def cali_cube_setup():
 
 def fabricator_setup(port):
     if not port: return None
+    from Classes.Ports import Ports
     return Fabricator(Ports.getPortByName(port), "Test Printer", addToDB=False, consoleLogger=sys.stdout)
 
 @pytest.fixture(scope="module", autouse=True)
@@ -73,6 +68,7 @@ def test_add_job():
 @pytest.mark.dependency(depends=["test_device.py::test_home", "test_fabricator.py::test_add_job"], scope="session")
 @pytest.mark.skipif(condition=testLevelToRun < 9, reason="Not doing lvl 9 tests")
 def test_pause_and_resume():
+    from Mixins.canPause import canPause
     if not isinstance(fabricator.device, canPause):
         pytest.skip(f"{fabricator.getDescription()} doesn't support pausing")
 
