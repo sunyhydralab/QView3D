@@ -2,7 +2,8 @@ import logging
 import os
 import sys
 import traceback
-from _pytest._code.code import ExceptionChainRepr
+from _pytest._code.code import ExceptionChainRepr, ReprEntry, ReprEntryNative
+from typing_extensions import Sequence
 
 
 class Logger(logging.Logger):
@@ -12,8 +13,13 @@ class Logger(logging.Logger):
     ERROR = logging.ERROR
     CRITICAL = logging.CRITICAL
 
-    def __init__(self, port, deviceName, consoleLogger=None, fileLogger=None, loggingLevel=logging.INFO, showFile=True, showLevel=True, showDate=True):
-        super().__init__(f"_".join(["Logger", port, deviceName]))
+    def __init__(self, deviceName, port=None, consoleLogger=None, fileLogger=None, loggingLevel=logging.INFO, showFile=True, showLevel=True, showDate=True):
+        title = []
+        if port:
+            title.append(port)
+        if deviceName:
+            title.append(deviceName)
+        super().__init__(f"_".join(["Logger"] + title))
         self.setLevel(loggingLevel)
         info = []
         if showDate:
@@ -109,6 +115,39 @@ class Logger(logging.Logger):
             self.critical(msg, stacklevel=stacklevel, *args, **kwargs)
         for handler, formatter in zip(self.handlers, oldFormatters):
             handler.setFormatter(formatter)
+
+    def logException(self, reprentries: list[ExceptionChainRepr] | ExceptionChainRepr | list[ReprEntry | ReprEntryNative] | Sequence[ReprEntry | ReprEntryNative] | ReprEntry | str):
+        if isinstance(reprentries, ExceptionChainRepr) or isinstance(reprentries, ReprEntry):
+            reprentries = [reprentries]
+        if isinstance(reprentries, list):
+            for index, reprentry in enumerate(reprentries):
+                if isinstance(reprentry, ReprEntry):
+                    if reprentry.reprfuncargs is not None:
+                        things = list(reprentry.reprfuncargs.args)
+                        for args in things:
+                            self.logMessageOnly(f"{args[0]} = {args[1]}")
+                            self.logMessageOnly("")
+                    for line in list(reprentry.lines):
+                        if line.startswith("E") or line.startswith(">"):
+                            self.logMessageOnly(line.__str__(), logLevel=self.ERROR)
+                        else:
+                            self.logMessageOnly(line.__str__())
+                    loc = reprentry.reprfileloc
+                    self.logMessageOnly("\n" + loc.path + ":" + loc.lineno.__str__() + ": " + loc.message, logLevel=self.ERROR)
+                elif isinstance(reprentry, ExceptionChainRepr):
+                    chain = reprentry.chain
+                    for link in chain:
+                        self.logException(link[0].reprentries)
+
+                if index < len(reprentries) - 1:
+                    from conftest import line_separator
+                    self.logMessageOnly(line_separator("", symbol="- "), logLevel=self.INFO)
+        elif isinstance(reprentries, str):
+            for line in reprentries.split("\n"):
+                if line.startswith("E") or line.startswith(">"):
+                    self.logMessageOnly(line, logLevel=self.ERROR)
+                else:
+                    self.logMessageOnly(line)
 
 class CustomFormatter(logging.Formatter):
     # ANSI escape codes for colors
