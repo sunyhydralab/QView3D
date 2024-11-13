@@ -21,7 +21,7 @@ class Device(ABC):
     def __init__(self, serialPort: ListPortInfo | SysFS, consoleLogger=None, fileLogger=None):
         self.serialPort: ListPortInfo | SysFS | None = serialPort
         self.serialID: str | None = serialPort.serial_number
-        self.logger = Logger(self.serialPort.device, self.DESCRIPTION, consoleLogger=consoleLogger, fileLogger=fileLogger)
+        self.logger = Logger(self.DESCRIPTION, port=self.serialPort.device, consoleLogger=consoleLogger, fileLogger=fileLogger)
         self.status = "idle"
         self.verdict = ""
 
@@ -34,13 +34,9 @@ class Device(ABC):
             self.serialConnection.reset_input_buffer()
             return True
         except Exception as e:
-            if self.logger is None:
-                print(e)
-            else:
-                self.logger.error("Error connecting:")
-                self.logger.error(e)
-            return False
-
+            from app import app
+            with app.app_context():
+                return app.handle_error_and_logging(e, self)
     def disconnect(self):
         if self.serialConnection:
             self.serialConnection.close()
