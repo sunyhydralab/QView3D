@@ -7,6 +7,14 @@ import time
 import pluggy
 import pytest
 
+from Classes.Logger import Logger
+
+intLogger = Logger("Internal Errors", consoleLogger=sys.stdout, fileLogger="internal_errors.log", loggingLevel=Logger.INFO)
+
+def pytest_internalerror(excrepr, excinfo):
+    # This hook is called when pytest encounters an internal error
+    intLogger.error(f"Internal pytest error:\n{excrepr}")
+
 def pytest_addoption(parser):
     parser.addoption(
         "--myVerbose",
@@ -37,8 +45,6 @@ def setup_logger(port):
     subfolder = os.path.join(log_folder, timestamp)
     os.makedirs(subfolder, exist_ok=True)
     log_file_path = os.path.join(subfolder, f"test_{port}.log")
-
-    from Classes.Logger import Logger
     return Logger(port, "Test Printer", consoleLogger=sys.stdout, fileLogger=log_file_path, showFile=False, showLevel=False)
 
 @pytest.hookimpl(tryfirst=True)
@@ -89,6 +95,18 @@ def pytest_sessionfinish(session, exitstatus) -> None:
     xpasses = session.config.xpassed_count
     logger  = session.config.logger
 
+    if hasattr(session.config, "_capturemanager"):
+        capture_manager = session.config._capturemanager
+        # Suspend capturing to retrieve the output
+        captured = capture_manager.read_global_and_disable()
+
+        # Print the captured stdout and stderr
+        print("\nCaptured output during tests:\n")
+        print(captured)
+
+        # Re-enable capture if needed for further use
+        capture_manager.resume_global_capture()
+
     stats = []
     if passes > 0: stats.append(f"\033[32m\033[1m{passes} passed")
     if fails > 0: stats.append(f"\033[31m\033[1m{fails} failed")
@@ -110,21 +128,7 @@ def pytest_sessionfinish(session, exitstatus) -> None:
         logger.logMessageOnly(headerText, logLevel=logger.ERROR)
         for failTest in session.config.failNames:
             logger.logMessageOnly(line_separator(failTest, symbol="_"), end="\n", logLevel=logger.ERROR)
-            #todo: break this out into something that can be called anywhere for the Logger class
-            for reprentry in session.config.fails[failTest].reprtraceback.reprentries:
-                if reprentry.reprfuncargs is not None:
-                    things = list(reprentry.reprfuncargs.args)
-                    for args in things:
-                        logger.logMessageOnly(f"{args[0]} = {args[1]}")
-                logger.logMessageOnly("")
-                for line in list(reprentry.lines):
-                    if line.startswith("E") or line.startswith(">"):
-                        logger.logMessageOnly(line.__str__(), logLevel=logger.ERROR)
-                    else:
-                        logger.logMessageOnly(line.__str__())
-                loc = reprentry.reprfileloc
-                logger.logMessageOnly("\n" + loc.path + ":" + loc.lineno.__str__() + ": " + loc.message, logLevel=logger.ERROR)
-                logger.logMessageOnly(line_separator("", symbol="- "), logLevel=logger.info)
+            logger.logException(session.config.fails[failTest].reprtraceback.reprentries)
     logger.logMessageOnly("\n\033[32m" + line_separator(summary, symbol="="))
 
 visited_modules = set()
@@ -207,8 +211,20 @@ def pytest_runtest_logreport(report):
             if report.passed:
                 logger.info(f"{testString} \033[32mPASSED\033[0m")
             elif report.failed:
-                logger.info(f"{testString} \033[31mFAILED\033[0m:\n\n {report.longrepr}")
+                logger.info(f"{testString} \033[31mFAILED\033[0m:\n\n")
+                logger.logException(report.longrepr.reprtraceback.reprentries)
             elif report.skipped:
                 logger.info(f"{testString} \033[33mSKIPPED\033[0m: {report.longrepr[-1].split('Skipped: ')[-1]}")
             else:
                 logger.info(f"{testString} IDK what happened!?!?: {report}")
+
+def pytest_collectreport(report):
+    if report.failed:
+        intLogger.logMessageOnly(f"Collection failed:", logLevel=intLogger.ERROR)
+        if not hasattr(report.longrepr, "reprtraceback"):
+            intLogger.logException(report.longrepr.longrepr)
+            return
+        if not hasattr(report.longrepr.reprtraceback, "reprentries"):
+            intLogger.logException(report.longrepr.reprtraceback)
+            return
+        else: intLogger.logException(report.longrepr.reprtraceback.reprentries)
