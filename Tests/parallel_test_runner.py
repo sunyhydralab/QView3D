@@ -30,25 +30,23 @@ else:
     PORTS = glob.glob("/dev/tty[A-Za-z]*")
 
 # Function to run pytest for a specific port
-testLevel = 10
+testLevel = 1
 verbosity = 2
-showAnything = False
-verbosityCommand = "-p no:terminal" if not showAnything else "-vvv"
+runFlags = 0b00 # 0b01: -s, 0b10: -vvv or -p no:terminal
+
 def run_tests_for_port(comm_port):
     env = os.environ.copy()
     env["PORT"] = comm_port
-    subprocess.Popen(["pytest", ".", verbosityCommand, f"--myVerbose={verbosity}", f"--port={comm_port}"], env=env).wait()
+    args = ["pytest", ".", f"--myVerbose={verbosity}", f"--port={comm_port}"]
+    if runFlags & 0b1: args.append("-s")
+    if runFlags & 0b10: args.append("-vvv")
+    else: args.append("-p no:terminal")
+    subprocess.Popen(args, env=env).wait()
 
 if __name__ == "__main__":
-    # Create and start a thread for each port
-    threads = []
-    for port in PORTS:
-        if Ports.getPortByName(port) is None:
-            continue
-        thread = threading.Thread(target=run_tests_for_port, args=(port,))
-        thread.start()
-        threads.append(thread)
+    from concurrent.futures import ThreadPoolExecutor, as_completed
 
-    # Wait for all threads to complete
-    for thread in threads:
-        thread.join()
+    with ThreadPoolExecutor(max_workers=len(PORTS)) as executor:
+        futures = [executor.submit(run_tests_for_port, port) for port in PORTS if Ports.getPortByName(port) is not None]
+        for future in as_completed(futures):
+            future.result()
