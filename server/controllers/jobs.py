@@ -4,7 +4,7 @@ import io
 import shutil
 import tempfile
 from flask import Blueprint, Response, jsonify, request, make_response, send_file
-from models.jobs import Job
+from Classes.Jobs import Job
 from models.printers import Printer
 from app import printer_status_service
 import json 
@@ -96,9 +96,9 @@ def add_job_to_queue():
         priority = request.form['priority']
         # if priotiry is '1' then add to front of queue, else add to back
         if priority == 'true':
-            findPrinterObject(printer_id).getQueue().addToFront(job, printer_id)
+            findPrinterObject(printer_id).getQueue().addToFront(job)
         else:
-            findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
+            findPrinterObject(printer_id).getQueue().addToBack(job)
 
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
 
