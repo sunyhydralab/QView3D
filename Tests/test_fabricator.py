@@ -66,44 +66,59 @@ def test_add_job():
     assert len(fabricator.queue.getQueue()) == 0, f"Failed to remove job on {fabricator.getDescription()}"
 
 @pytest.mark.dependency(depends=["test_device.py::test_home", "test_fabricator.py::test_add_job"], scope="session")
-@pytest.mark.skipif(condition=testLevelToRun < 9, reason="Not doing lvl 9 tests")
+@pytest.mark.skipif(condition=testLevelToRun < 7, reason="Not doing lvl 7 tests")
 def test_pause_and_resume():
     from Mixins.canPause import canPause
     if not isinstance(fabricator.device, canPause):
         pytest.skip(f"{fabricator.getDescription()} doesn't support pausing")
 
-    from time import sleep
-    import threading
-
     def parse_gcode():
-        fabricator.queue.addToFront \
-            (Job("../server/pauseAndResumeTest.gcode", "pauseAndResumeTest", fabricator.dbID, "ready",
-                 "../server/pauseAndResumeTest.gcode", False, 1, fabricator.name), fabricator.dbID)
-        fabricator.begin()
+        file = "../server/pauseAndResumeTest.gcode"
+        from Classes.Fabricators.Fabricator import getFileConfig
+        config = getFileConfig(file)
+        from Classes.Fabricators.Printers.Printer import Printer
+        if isinstance(fabricator.device, Printer):
+            assert config["filament_type"] is not None, "Failed to get filament_type from {file}"
+            assert config["filament_diameter"] is not None, f"Failed to get filament_diameter from {file}"
+            assert config["nozzle_diameter"] is not None, f"Failed to get nozzle_diameter from {file}"
+            fabricator.device.changeFilament(config["filament_type"], float(config["filament_diameter"]))
+            fabricator.device.changeNozzle(float(config["nozzle_diameter"]))
+        with open(file, "r") as f:
+            job = Job(f.read(), "pauseAndResumeTest", fabricator.dbID, "ready", file, False, 1, fabricator.name)
+        fabricator.queue.addToFront(job)
+        result = fabricator.begin()
+        import traceback
+        assert not isinstance(result, Exception), f"Failed to begin on {fabricator.getDescription()}: {result}:\n{''.join(traceback.format_exception(None, result, result.__traceback__))}"
         assert fabricator.getStatus() == fabricator.device.status == "cancelled", f"Failed to cancel on {fabricator.getDescription()}, expected cancel, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
         assert fabricator.job is None, f"Failed to complete on {fabricator.getDescription()}, expected job to be None, got {fabricator.job}"
 
     def pause_and_resume_fabricator():
-        sleep(2)
+        from time import sleep
+        while fabricator.getStatus() != "printing":
+            assert fabricator.getStatus() != "error", f"Failed to print on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
+            sleep(1)
         assert fabricator.pause(), f"Failed to pause on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
-        sleep(20)
+        sleep(30)
         assert fabricator.resume(), f"Failed to resume on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
         sleep(1)
         assert fabricator.cancel(), f"Failed to cancel on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
         assert fabricator.getStatus() == "cancelled", f"Failed to cancel on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
-        sleep(20)
+        sleep(10)
 
         fabricator.resetToIdle()
         assert fabricator.getStatus() == "idle", f"Failed to reset to idle on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
 
-    parse_thread = threading.Thread(target=parse_gcode)
-    pause_thread = threading.Thread(target=pause_and_resume_fabricator)
+    assert fabricator.device.home(), f"Failed to home on {fabricator.getDescription()}"
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        parse_future = executor.submit(parse_gcode)
+        pause_future = executor.submit(pause_and_resume_fabricator)
 
-    parse_thread.start()
-    pause_thread.start()
-
-    parse_thread.join()
-    pause_thread.join()
+        for future in as_completed([parse_future, pause_future]):
+            try:
+                future.result()
+            except Exception as e:
+                raise e
 
 @pytest.mark.dependency(depends=["test_device.py::test_home", "test_fabricator.py::test_add_job"], scope="session")
 @pytest.mark.skipif(condition=testLevelToRun < 9, reason="Not doing lvl 9 tests")
