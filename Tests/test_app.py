@@ -1,7 +1,6 @@
 import os
 import re
 import pytest
-
 from Classes.Logger import Logger
 from parallel_test_runner import testLevel
 from app import app

@@ -57,9 +57,7 @@ def test_status():
 def test_add_job():
     file = cali_cube_setup()
     with open(file, "r") as f:
-        assert fabricator.queue.addToFront(
-            Job(f.read(), "xyz cali cube", 3, "ready", file, False, 1, fabricator.name),
-            3), f"Failed to add job on {fabricator.getDescription()}"
+        assert fabricator.queue.addToFront(Job(f.read(), "xyz cali cube", 3, "ready", file, False, 1, fabricator.name)), f"Failed to add job on {fabricator.getDescription()}"
     for job in fabricator.queue.getQueue():
         assert job.status == "ready", f"Job status incorrect on {fabricator.getDescription()}"
     fabricator.queue.removeJob()
@@ -140,7 +138,6 @@ def test_gcode_print_time():
         expectedHours, expectedTime = divmod(expectedTime, 3600)
     if expectedTime >= 60:
         expectedMinutes, expectedTime = divmod(expectedTime, 60)
-    time = datetime.now()
     with open(file, "r") as f:
         fabricator.queue.addToFront(Job(f.read(), "xyz cali cube", fabricator.dbID, "ready", file, False, 1, fabricator.name))
         time = datetime.now()
