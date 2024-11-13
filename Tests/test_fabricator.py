@@ -19,6 +19,22 @@ fabricator = Fabricator(None, "Test Printer", addToDB=False, consoleLogger=sys.s
 
 def __desc__(): return "Fabricator Tests"
 def __repr__(): return f"test_fabricator.py running on port {os.getenv('PORT')}"
+
+def cali_cube_setup():
+    file = "../server/xyz-cali-cube"
+    from Classes.Fabricators.Printers.Ender.Ender3 import Ender3
+    from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
+    from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
+    if shortTest:
+        file = file + "-mini"
+    if isinstance(fabricator.device, Ender3):
+        file = file + "_ENDER3.gcode"
+    elif isinstance(fabricator.device, PrusaMK4S):
+        file = file + "_MK4S.gcode"
+    elif isinstance(fabricator.device, PrusaMK4):
+        file = file + "_MK4.gcode"
+    return file
+
 def fabricator_setup(port):
     if not port: return None
     return Fabricator(Ports.getPortByName(port), "Test Printer", addToDB=False, consoleLogger=sys.stdout)
@@ -44,15 +60,7 @@ def test_status():
 @pytest.mark.dependency(depends=["test_device.py::test_connection"], scope="session")
 @pytest.mark.skipif(condition=testLevelToRun < 1, reason="Not doing lvl 1 tests")
 def test_add_job():
-    file = "../server/xyz-cali-cube"
-    if shortTest:
-        file = file + "-mini"
-    if isinstance(fabricator.device, Ender3):
-        file = file + "_ENDER3.gcode"
-    elif isinstance(fabricator.device, PrusaMK4S):
-        file = file + "_MK4S.gcode"
-    elif isinstance(fabricator.device, PrusaMK4):
-        file = file + "_MK4.gcode"
+    file = cali_cube_setup()
     with open(file, "r") as f:
         assert fabricator.queue.addToFront(
             Job(f.read(), "xyz cali cube", 3, "ready", file, False, 1, fabricator.name),
@@ -104,19 +112,10 @@ def test_pause_and_resume():
 @pytest.mark.dependency(depends=["test_device.py::test_home", "test_fabricator.py::test_add_job"], scope="session")
 @pytest.mark.skipif(condition=testLevelToRun < 9, reason="Not doing lvl 9 tests")
 def test_gcode_print_time():
-    expectedTime = 3 * 60
-    file = "../server/xyz-cali-cube"
-    if shortTest:
-        file = file + "-mini"
-    if isinstance(fabricator.device, Ender3):
-        file = file + "_ENDER3.gcode"
-        expectedTime = 14 * 60 + 15 if shortTest else 28 * 60
-    elif isinstance(fabricator.device, PrusaMK4S):
-        file = file + "_MK4S.gcode"
-        expectedTime = 8 * 60 + 45 if shortTest else 1800
-    elif isinstance(fabricator.device, PrusaMK4):
-        file = file + "_MK4.gcode"
-        expectedTime = 10 * 60 if shortTest else 1800
+    from Classes.Fabricators.Printers.Printer import Printer
+    if not isinstance(fabricator.device, Printer):
+        pytest.skip(f"{fabricator.getDescription()} doesn't support printing gcode")
+    file = cali_cube_setup()
     # expectedTime = 2040 # for my personal home test, 1072
     expectedMinutes, expectedSeconds = divmod(expectedTime, 60)
     from Classes.Fabricators.Fabricator import getFileConfig
