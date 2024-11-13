@@ -3,31 +3,26 @@ from app import app
 from Classes.Fabricators.Device import Device
 
 class Printer(Device, metaclass=ABCMeta):
-    filamentType: str | None = None
-    filamentDiameter: float | None = None
-    nozzleDiameter: float | None = None
     bedTemperature: int | None = None
     nozzleTemperature: int | None = None
+
+    def __init__(self, serialPort, consoleLogger=None, fileLogger=None):
+        super().__init__(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+        self.filamentType = None
+        self.filamentDiameter = None
+        self.nozzleDiameter = None
 
     def changeFilament(self, filamentType: str, filamentDiameter: float):
         if not isinstance(filamentDiameter, float):
             filamentDiameter = float(filamentDiameter)
         try:
-            if self.status is "idle":
-                self.filamentType = filamentType
-                self.filamentDiameter = filamentDiameter
-            else:
-                raise Exception("Printer is not idle")
+            assert self.status is "idle", "Printer is not idle"
+            self.filamentType = filamentType
+            self.filamentDiameter = filamentDiameter
         except Exception as e:
-            if self.logger is None:
-                with app.app_context():
-                    app.logger.error("Error changing filament:")
-                    app.logger.error(e)
-            else:
-                self.logger.error("Error changing filament:")
-                self.logger.error(e)
-        self.filamentType = filamentType
-        self.filamentDiameter = filamentDiameter
+            with app.app_context():
+                app.logger.error("Error changing filament:")
+                app.logger.error(e)
 
     def changeNozzle(self, nozzleDiameter: float):
         if not isinstance(nozzleDiameter, float):
