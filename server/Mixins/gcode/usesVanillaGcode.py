@@ -11,11 +11,6 @@ class usesVanillaGcode:
     homeCMD: Buffer = b"G28\n"
 
     callablesHashtable = {
-        "G0": [alwaysTrue, checkOK],  # rapid positioning
-        "G1": [alwaysTrue, checkOK],  # linear interpolation
-        "G2": [alwaysTrue, checkOK],  # clockwise arc
-        "G3": [alwaysTrue, checkOK],  # counter-clockwise arc
-        "G4": [alwaysTrue, checkOK],  # dwell
         "G28": [alwaysTrue, checkXYZ],  # Home
     }
 
@@ -24,7 +19,6 @@ class usesVanillaGcode:
         assert isinstance(isVerbose, bool)
         assert isinstance(self, Device)
         self.sendGcode(f"G0 X{loc.x} Y{loc.y} Z{loc.z} F36000\n".encode("utf-8"), isVerbose=isVerbose)
-        return loc == self.getToolHeadLocation()
 
     def home(self, isVerbose: bool = False):
         try:

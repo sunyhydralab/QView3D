@@ -33,9 +33,6 @@ class usesMarlinGcode(usesVanillaGcode, canPause, hasResponsecodes, metaclass=AB
     getMachineNameCMD: Buffer = b"M997\n"
 
     callablesHashtable = {
-        "G29 P1": [alwaysTrue, checkOK], # Auto bed leveling
-        "G29 P9": [checkOK, checkOK], # Auto bed leveling
-        "M73": [alwaysTrue, checkOK], # Set build percentage
         "M104": [alwaysTrue, alwaysTrue], # Set hotend temp
         "M109": [alwaysTrue, checkExtruderTemp], # Wait for hotend to reach target temp
         "M114": [alwaysTrue, checkXYZ], # Get current position
@@ -102,18 +99,14 @@ class usesMarlinGcode(usesVanillaGcode, canPause, hasResponsecodes, metaclass=AB
         assert isinstance(gcode, bytes)
         self.serialConnection.write(gcode)
         hashIndex = gcode.decode("utf-8").split("\n")[0].split(" ")[0]
-        if hashIndex == "G29":
-            g29addon = gcode.decode("utf-8").split("\n")[0].split(" ")[1]
-            if g29addon == "P9":
-                hashIndex += " " + g29addon
-            else:
-                hashIndex += " P1"
-        elif hashIndex == "M109" or hashIndex == "M190":
+        if hashIndex == "M109" or hashIndex == "M190":
             self.logger.info("Waiting for temperature to stabilize...")
         callables = usesMarlinGcode.callablesHashtable.get(gcode.decode("utf-8").split("\n")[0].split(" ")[0], [alwaysTrue, checkOK])
         if callables[0] != alwaysTrue:
-            while not callables[0](self.serialConnection.readline()):
-                pass
+            line = ""
+            while not callables[0](line):
+                line = self.serialConnection.readline()
+                if isVerbose: self.logger.debug(line)
         if callables[1] != alwaysTrue:
             while True:
                 try:
@@ -198,16 +191,14 @@ class usesMarlinGcode(usesVanillaGcode, canPause, hasResponsecodes, metaclass=AB
     def connect(self: Device):
         Device.connect(self)
         try:
-            if self.serialConnection:
+            if self.serialConnection and self.serialConnection.is_open:
                 self.serialConnection.write(b"M155 S1\n")
                 return True
         except Exception as e:
-            if self.logger is None:
-                print(e)
-            else:
-                self.logger.error("Error connecting:")
-                self.logger.error(e)
-            return False
+            from app import app
+            with app.app_context():
+                return app.handle_error_and_logging(e, self)
+
 
 
     def disconnect(self: Device):
