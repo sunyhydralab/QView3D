@@ -1,4 +1,6 @@
 from abc import ABCMeta
+from time import sleep
+
 from typing_extensions import Buffer
 from Classes.Fabricators.Printers.Printer import Printer
 from Classes.Vector3 import Vector3
@@ -11,7 +13,9 @@ class EnderPrinter(Printer, hasEndingSequence, usesMarlinGcode, metaclass=ABCMet
     homePosition = Vector3(-3.0,-10.0,0.0)
 
     def connect(self):
-        return usesMarlinGcode.connect(self)
+        ret = usesMarlinGcode.connect(self)
+        sleep(7)
+        return ret
 
     def disconnect(self):
         return usesMarlinGcode.disconnect(self)
