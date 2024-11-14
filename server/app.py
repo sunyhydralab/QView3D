@@ -63,7 +63,7 @@ def handle_errors_and_logging(e: Exception, fabricator = None):
     else:
         device.logger.error("Error:")
         device.logger.error(e)
-    return True
+    return False
 
 app.handle_error_and_logging = handle_errors_and_logging
 
@@ -107,33 +107,31 @@ def handle_ping():
 # own thread
 with app.app_context():
     try:
-        # Create in-memory uploads folder
-        uploads_folder = os.path.join('../uploads')
-        tempcsv = os.path.join('../tempcsv')
+        # Define directory paths for uploads and tempcsv
+        uploads_folder = os.path.abspath('../uploads')
+        tempcsv = os.path.abspath('../tempcsv')
 
-        # Creating printer threads from registered printers on server start 
-        res = getRegisteredFabricators() # gets registered fabricators from DB
-        data = res[0].get_json() # converts to JSON 
-        printers_data = data.get("printers", []) # gets the values w/ printer data
-        printer_status_service.create_printer_threads(printers_data)
+        # Create printer threads from registered printers on server start
+        from Classes.FabricatorList import FabricatorList
+        printer_status_service.create_printer_threads(FabricatorList.fabricators)
 
-        if os.path.exists(uploads_folder):
-            # Remove the uploads folder and all its contents
-            shutil.rmtree(uploads_folder)
-            shutil.rmtree(tempcsv)
+        # Check if directories exist and handle them accordingly
+        for folder in [uploads_folder, tempcsv]:
+            if os.path.exists(folder):
+                # Remove the folder and all its contents
+                import shutil
+                shutil.rmtree(folder)
+                app.logger.info(f"{folder} removed and will be recreated.")
+            # Recreate the folder
+            os.makedirs(folder)
+            app.logger.info(f"{folder} recreated as an empty directory.")
 
-            # Recreate it as an empty directory
-            os.makedirs(uploads_folder)
-            os.makedirs(tempcsv)
-
-            app.logger.info("Uploads folder recreated as an empty directory.")
-        else:
-            # Create the uploads folder if it doesn't exist
-            os.makedirs(uploads_folder)
-            os.makedirs(tempcsv)
-            app.logger.info("Uploads folder created successfully.")
     except Exception as e:
+        # Log any exceptions for troubleshooting
+        import traceback
         app.logger.error(f"Unexpected error: {e}")
+        app.logger.error(traceback.format_exception(e))
+
             
 
 if __name__ == "__main__":
