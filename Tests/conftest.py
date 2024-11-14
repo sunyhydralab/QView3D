@@ -119,9 +119,9 @@ def pytest_sessionfinish(session, exitstatus) -> None:
 
     summary += f"\033[32m in {session_duration:.2f}s"
     if session_duration > 3600:
-        summary += f" ({session_duration // 3600:.0f}:{session_duration % 3600 // 60:.0f}:{session_duration % 60:.2f})"
+        summary += f" ({session_duration // 3600:02.0f}:{session_duration % 3600 // 60:02.0f}:{(session_duration % 60)//1:02.0f}.{(session_duration % 1).__round__(2) * 100 // 1:02.0f})"
     elif session_duration > 60:
-        summary += f" ({session_duration // 60:02.0f}:{session_duration % 60:02.2f})"
+        summary += f" ({session_duration // 60:02.0f}:{(session_duration % 60)//1:02.0f}.{(session_duration % 1).__round__(2) * 100 // 1:02.0f})"
 
     if session.config.failed_count > 0:
         headerText = "\n" + line_separator("FAILURES", symbol="=")
