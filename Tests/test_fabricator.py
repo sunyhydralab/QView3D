@@ -5,6 +5,7 @@ import re
 import pytest
 from Classes.Jobs import Job
 from Classes.Fabricators.Fabricator import Fabricator
+from Classes.Logger import Logger
 from parallel_test_runner import testLevel
 
 testLevelToRun = testLevel
@@ -16,23 +17,17 @@ def __repr__(): return f"test_fabricator.py running on port {os.getenv('PORT')}"
 
 def cali_cube_setup():
     file = "../server/xyz-cali-cube"
-    from Classes.Fabricators.Printers.Ender.Ender3 import Ender3
-    from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
-    from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
-    if shortTest:
-        file = file + "-mini"
-    if isinstance(fabricator.device, Ender3):
-        file = file + "_ENDER3.gcode"
-    elif isinstance(fabricator.device, PrusaMK4S):
-        file = file + "_MK4S.gcode"
-    elif isinstance(fabricator.device, PrusaMK4):
-        file = file + "_MK4.gcode"
+    if shortTest: file = file + "-mini"
+    file = file + f"_{fabricator.device.MODEL}.gcode"
     return file
 
 def fabricator_setup(port):
     if not port: return None
     from Classes.Ports import Ports
-    return Fabricator(Ports.getPortByName(port), "Test Printer", addToDB=False, consoleLogger=sys.stdout)
+    fab = Fabricator(Ports.getPortByName(port), "Test Printer", addToDB=False, consoleLogger=sys.stdout)
+    if os.getenv("LEVEL") == "DEBUG":
+        fab.device.logger.setLevel(fab.device.logger.DEBUG)
+    return fab
 
 @pytest.fixture(scope="module", autouse=True)
 def function_setup(request):
@@ -71,37 +66,50 @@ def test_pause_and_resume():
         pytest.skip(f"{fabricator.getDescription()} doesn't support pausing")
 
     def parse_gcode():
-        file = "../server/pauseAndResumeTest.gcode"
-        from Classes.Fabricators.Fabricator import getFileConfig
-        config = getFileConfig(file)
-        from Classes.Fabricators.Printers.Printer import Printer
-        if isinstance(fabricator.device, Printer):
-            assert config["filament_type"] is not None, "Failed to get filament_type from {file}"
-            assert config["filament_diameter"] is not None, f"Failed to get filament_diameter from {file}"
-            assert config["nozzle_diameter"] is not None, f"Failed to get nozzle_diameter from {file}"
-            fabricator.device.changeFilament(config["filament_type"], float(config["filament_diameter"]))
-            fabricator.device.changeNozzle(float(config["nozzle_diameter"]))
-        with open(file, "r") as f:
-            job = Job(f.read(), "pauseAndResumeTest", fabricator.dbID, "ready", file, False, 1, fabricator.name)
-        fabricator.queue.addToFront(job)
-        result = fabricator.begin()
-        import traceback
-        assert not isinstance(result, Exception), f"Failed to begin on {fabricator.getDescription()}: {result}:\n{''.join(traceback.format_exception(None, result, result.__traceback__))}"
-        assert fabricator.getStatus() == fabricator.device.status == "cancelled", f"Failed to cancel on {fabricator.getDescription()}, expected cancel, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
-        assert fabricator.job is None, f"Failed to complete on {fabricator.getDescription()}, expected job to be None, got {fabricator.job}"
+        try:
+            file = "../server/pauseAndResumeTest.gcode"
+            from Classes.Fabricators.Fabricator import getFileConfig
+            config = getFileConfig(file)
+            from Classes.Fabricators.Printers.Printer import Printer
+            if isinstance(fabricator.device, Printer):
+                assert config["filament_type"] is not None, "Failed to get filament_type from {file}"
+                assert config["filament_diameter"] is not None, f"Failed to get filament_diameter from {file}"
+                assert config["nozzle_diameter"] is not None, f"Failed to get nozzle_diameter from {file}"
+                fabricator.device.changeFilament(config["filament_type"], float(config["filament_diameter"]))
+                fabricator.device.changeNozzle(float(config["nozzle_diameter"]))
+            with open(file, "r") as f:
+                job = Job(f.read(), "pauseAndResumeTest", fabricator.dbID, "ready", file, False, 1, fabricator.name)
+            fabricator.queue.addToFront(job)
+            print("Beginning")
+            result = fabricator.begin()
+            print("Finished")
+            import traceback
+            assert not isinstance(result, Exception), f"Failed to begin on {fabricator.getDescription()}: {result}:\n{''.join(traceback.format_exception(None, result, result.__traceback__))}"
+            assert fabricator.getStatus() == fabricator.device.status == "cancelled", f"Failed to cancel on {fabricator.getDescription()}, expected cancel, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
+            assert fabricator.job is None, f"Failed to complete on {fabricator.getDescription()}, expected job to be None, got {fabricator.job}"
+        except Exception as f:
+            fabricator.setStatus("error")
+            raise f
 
     def pause_and_resume_fabricator():
-        from time import sleep
-        while fabricator.getStatus() != "printing":
-            assert fabricator.getStatus() != "error", f"Failed to print on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
+        try:
+            from time import sleep
+            while fabricator.getStatus() != "printing":
+                assert fabricator.getStatus() != "error", f"Failed to print on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
+                sleep(1)
+            print("Pausing")
+            assert fabricator.pause(), f"Failed to pause on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
+            sleep(30)
+            print("Resuming")
+            assert fabricator.resume(), f"Failed to resume on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
             sleep(1)
-        assert fabricator.pause(), f"Failed to pause on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
-        sleep(30)
-        assert fabricator.resume(), f"Failed to resume on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
-        sleep(1)
-        assert fabricator.cancel(), f"Failed to cancel on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
-        assert fabricator.getStatus() == "cancelled", f"Failed to cancel on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
-        sleep(10)
+            print("Cancelling")
+            assert fabricator.cancel(), f"Failed to cancel on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
+            assert fabricator.getStatus() == "cancelled", f"Failed to cancel on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
+            sleep(10)
+        except Exception as f:
+            fabricator.setStatus("error")
+            raise f
 
         fabricator.resetToIdle()
         assert fabricator.getStatus() == "idle", f"Failed to reset to idle on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
@@ -113,13 +121,10 @@ def test_pause_and_resume():
         pause_future = executor.submit(pause_and_resume_fabricator)
 
         for future in as_completed([parse_future, pause_future]):
-            try:
-                future.result()
-            except Exception as e:
-                raise e
+            future.result()
 
-@pytest.mark.dependency(depends=["test_device.py::test_home", "test_fabricator.py::test_add_job"], scope="session")
-@pytest.mark.skipif(condition=testLevelToRun < 9, reason="Not doing lvl 9 tests")
+#@pytest.mark.dependency(depends=["test_device.py::test_home", "test_fabricator.py::test_add_job"], scope="session")
+#@pytest.mark.skipif(condition=testLevelToRun < 9, reason="Not doing lvl 9 tests")
 def test_gcode_print_time():
     from Classes.Fabricators.Printers.Printer import Printer
     if not isinstance(fabricator.device, Printer):
@@ -128,20 +133,21 @@ def test_gcode_print_time():
     # expectedTime = 2040 # for my personal home test, 1072
     from Classes.Fabricators.Fabricator import getFileConfig
     config = getFileConfig(file)
-    expectedTime = int(config["estimated_time"])
+    expectedTime = int(config["expected_time"])
     fabricator.device.changeFilament(config["filament_type"], float(config["filament_diameter"]))
     fabricator.device.changeNozzle(float(config["nozzle_diameter"]))
     expectedDays, expectedHours, expectedMinutes, expectedSeconds = 0, 0, 0, 0
-    if expectedTime >= 86400:
-        expectedDays, expectedTime = divmod(expectedTime, 86400)
-    if expectedTime >= 3600:
-        expectedHours, expectedTime = divmod(expectedTime, 3600)
     if expectedTime >= 60:
-        expectedMinutes, expectedTime = divmod(expectedTime, 60)
+        expectedMinutes, expectedSeconds = divmod(expectedTime, 60)
+    if expectedMinutes >= 60:
+        expectedHours, expectedMinutes = divmod(expectedMinutes, 60)
+    if expectedHours >= 24:
+        expectedDays, expectedHours = divmod(expectedHours, 24)
+
     with open(file, "r") as f:
         fabricator.queue.addToFront(Job(f.read(), "xyz cali cube", fabricator.dbID, "ready", file, False, 1, fabricator.name))
         time = datetime.now()
-        fabricator.begin()
+        fabricator.begin(isVerbose=True)
     time = datetime.now() - time
     fabricator.device.serialConnection.write(b"M31\n")
     line = ""
@@ -212,5 +218,7 @@ def test_gcode_print_time():
     expectedString = ":".join(map(str, expectedList))
 
     timeBoundary = 120
-    assert printTime - expectedTime < timeBoundary, f"Failed to print within time boundary of expected time on {fabricator.getDescription()}. Expected: {expectedString}, Actual: {printString}"
-    assert time.seconds - expectedTime < timeBoundary, f"Failed to print within time boundary of measured time on {fabricator.getDescription()}. Expected: {expectedString}, Actual: {measuredTimeString}"
+    expectedTimeBool = (printTime - expectedTime) < timeBoundary
+    measuredTimeBool = (time.seconds - expectedTime) < timeBoundary
+    assert expectedTimeBool, f"Failed to print within time boundary of expected time on {fabricator.getDescription()}. Expected: {expectedString}, Actual: {printString}"
+    assert measuredTimeBool, f"Failed to print within time boundary of measured time on {fabricator.getDescription()}. Expected: {expectedString}, Actual: {measuredTimeString}"

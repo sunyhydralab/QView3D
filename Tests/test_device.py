@@ -8,6 +8,9 @@ from Classes.Vector3 import Vector3
 
 def device_setup(port):
     if not port: return None
+    dev = Fabricator.createDevice(Ports.getPortByName(port), consoleLogger=sys.stdout)
+    if os["LEVEL"] == "DEBUG":
+        dev.logger.setLevel(dev.logger.DEBUG)
     return Fabricator.createDevice(Ports.getPortByName(port), consoleLogger=sys.stdout)
 
 

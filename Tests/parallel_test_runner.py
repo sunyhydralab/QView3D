@@ -31,15 +31,15 @@ else:
 # Function to run pytest for a specific port
 testLevel = 1
 verbosity = 2
-runFlags = 0b00 # 0b01: -s, 0b10: -vvv or -p no:terminal
+runFlags = 0b000 # 0b001: -s, 0b010: -vvv or -p no:terminal, 0b100: debug or info
 
 def run_tests_for_port(comm_port):
     env = os.environ.copy()
     env["PORT"] = comm_port
     args = ["pytest", ".", f"--myVerbose={verbosity}", f"--port={comm_port}"]
     if runFlags & 0b1: args.append("-s")
-    if runFlags & 0b10: args.append("-vvv")
-    else: args.append("-p no:terminal")
+    args.append("-vvv") if runFlags & 0b10 else args.append("-p no:terminal")
+    env["LEVEL"] = "DEBUG" if runFlags & 0b100 else "INFO"
     subprocess.Popen(args, env=env).wait()
 
 if __name__ == "__main__":
