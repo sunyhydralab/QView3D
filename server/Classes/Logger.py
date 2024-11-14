@@ -59,7 +59,8 @@ class Logger(logging.Logger):
         if isinstance(msg, str):
             pass
         elif isinstance(msg, Exception):
-            msg = traceback.format_exception(msg.__traceback__)
+            msg = traceback.format_exception(msg)
+            msg = "".join(msg)
         elif isinstance(msg, ExceptionChainRepr):
             msg = msg.reprtraceback.__repr__()
         elif isinstance(msg, list) or isinstance(msg, tuple):
