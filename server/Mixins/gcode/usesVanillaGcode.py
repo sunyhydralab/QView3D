@@ -4,21 +4,21 @@ from typing_extensions import Buffer
 
 from Classes.Fabricators.Device import Device
 from Classes.Vector3 import Vector3
-from Mixins.hasResponseCodes import alwaysTrue, checkOK, checkXYZ, checkExtruderTemp, checkBedTemp
+from Mixins.hasResponseCodes import checkXYZ
 
 
 class usesVanillaGcode:
     homeCMD: Buffer = b"G28\n"
 
     callablesHashtable = {
-        "G28": [alwaysTrue, checkXYZ],  # Home
+        "G28": [checkXYZ],  # Home
     }
 
     def goTo(self: Device, loc: Vector3, isVerbose: bool = False):
         assert isinstance(loc, Vector3)
         assert isinstance(isVerbose, bool)
         assert isinstance(self, Device)
-        self.sendGcode(f"G0 X{loc.x} Y{loc.y} Z{loc.z} F36000\n".encode("utf-8"), isVerbose=isVerbose)
+        self.sendGcode(f"G0 X{loc.x} Y{loc.y} Z{loc.z} F{str(self.MAXFEEDRATE)}\n".encode("utf-8"), isVerbose=isVerbose)
 
     def home(self, isVerbose: bool = False):
         try:

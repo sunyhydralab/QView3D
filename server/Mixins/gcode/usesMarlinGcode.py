@@ -12,14 +12,14 @@ from Mixins.hasResponseCodes import checkOK, checkXYZ, alwaysTrue, checkBedTemp,
 import re
 class LocationResponse:
     def __init__(self, response: str):
-        loc = [item for item in re.split(r'X:| Y:| Z:| E:| Count X:|\n', response) if item and item.strip()]
+        loc = [item.strip() for item in re.split(r'X:| Y:| Z:| E:| Count X:|\n', response) if item]
         self.x = float(loc[0])
         self.y = float(loc[1])
         self.z = float(loc[2])
         self.e = float(loc[3])
-        self.count_x = int(loc[4])
-        self.count_y = int(loc[5])
-        self.count_z = int(loc[6])
+        self.count_x = float(loc[4]) if '.' in loc[4] else int(loc[4])
+        self.count_y = float(loc[5]) if '.' in loc[5] else int(loc[5])
+        self.count_z = float(loc[6]) if '.' in loc[6] else int(loc[6])
 
 
 class usesMarlinGcode(usesVanillaGcode, canPause, hasResponsecodes, metaclass=ABCMeta):
@@ -33,12 +33,12 @@ class usesMarlinGcode(usesVanillaGcode, canPause, hasResponsecodes, metaclass=AB
     getMachineNameCMD: Buffer = b"M997\n"
 
     callablesHashtable = {
-        "M104": [alwaysTrue, alwaysTrue], # Set hotend temp
-        "M109": [alwaysTrue, checkExtruderTemp], # Wait for hotend to reach target temp
-        "M114": [alwaysTrue, checkXYZ], # Get current position
-        "M140": [alwaysTrue, alwaysTrue], # Set bed temp
-        "M155": [alwaysTrue, alwaysTrue], # Set temperature auto report
-        "M190": [alwaysTrue, checkBedTemp], # Wait for bed to reach target temp
+        "M104": [], # Set hotend temp
+        "M109": [checkExtruderTemp], # Wait for hotend to reach target temp
+        "M114": [checkXYZ], # Get current position
+        "M140": [], # Set bed temp
+        "M155": [], # Set temperature auto report
+        "M190": [checkBedTemp], # Wait for bed to reach target temp
     }
 
     callablesHashtable = {**usesVanillaGcode.callablesHashtable, **callablesHashtable}
@@ -47,7 +47,7 @@ class usesMarlinGcode(usesVanillaGcode, canPause, hasResponsecodes, metaclass=AB
         assert isinstance(loc, Vector3)
         assert isinstance(isVerbose, bool)
         assert isinstance(self, Device)
-        self.sendGcode(f"G0 X{loc.x} Y{loc.y} Z{loc.z} F{int(self.MAXFEEDRATE)}\n".encode("utf-8"), isVerbose=isVerbose)
+        self.sendGcode(f"G0 X{loc.x} Y{loc.y} Z{loc.z} F{str(self.MAXFEEDRATE)}\n".encode("utf-8"), isVerbose=isVerbose)
         self.sendGcode(f'M114\n'.encode("utf-8"), isVerbose=isVerbose)
         return loc == self.getToolHeadLocation()
 
@@ -101,20 +101,18 @@ class usesMarlinGcode(usesVanillaGcode, canPause, hasResponsecodes, metaclass=AB
         hashIndex = gcode.decode("utf-8").split("\n")[0].split(" ")[0]
         if hashIndex == "M109" or hashIndex == "M190":
             self.logger.info("Waiting for temperature to stabilize...")
-        callables = usesMarlinGcode.callablesHashtable.get(gcode.decode("utf-8").split("\n")[0].split(" ")[0], [alwaysTrue, checkOK])
-        if callables[0] != alwaysTrue:
-            line = ""
-            while not callables[0](line):
-                line = self.serialConnection.readline()
-                if isVerbose: self.logger.debug(line)
-        if callables[1] != alwaysTrue:
+        elif hashIndex == "G28":
+            self.logger.info("Homing...")
+        callables = usesMarlinGcode.callablesHashtable.get(gcode.decode("utf-8").split("\n")[0].split(" ")[0], [checkOK])
+        for func in callables:
             while True:
+                if self.status == "cancelled": return True
                 try:
                     line = self.serialConnection.readline()
                     if "processing" in line.decode("utf-8"):
                         continue
                     if isVerbose: self.logger.debug(line)
-                    if callables[1](line):
+                    if func(line):
                         self.logger.info(gcode.decode().strip() + ": " + line.decode().strip())
                         return True
                 except UnicodeDecodeError as e:
@@ -139,14 +137,12 @@ class usesMarlinGcode(usesVanillaGcode, canPause, hasResponsecodes, metaclass=AB
             assert isinstance(isVerbose, bool)
             assert isinstance(self, Device)
             self.sendGcode(usesMarlinGcode.homeCMD, isVerbose=isVerbose)
-            return self.getHomePosition() == self.getToolHeadLocation()
+            assert self.getHomePosition() == self.getToolHeadLocation(), f"Failed to home, expected {self.getHomePosition()} but got {self.getToolHeadLocation()}"
+            return True
         except Exception as e:
-            if self.logger is None:
-                print(e)
-            else:
-                self.logger.error("Error homing:")
-                self.logger.error(e)
-            return
+            from app import app
+            with app.app_context():
+                return app.handle_error_and_logging(e, self)
 
 
     def pause(self):
