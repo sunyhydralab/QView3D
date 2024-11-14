@@ -288,7 +288,7 @@ def getFileConfig(file):
         lines = f.readlines()
     comment_lines = [line.lstrip(';').strip() for line in lines if line.startswith(';') or ':' in line]
     if len(comment_lines) > 0 and "prusaslicer" in comment_lines[0].lower():
-        settingsDict = {line.split('=')[0].strip(): line.split('=')[1].strip() for line in comment_lines[-358:] if '=' in line}
+        settingsDict = {line.split('=')[0].strip(): line.split('=')[1].strip() for line in comment_lines if '=' in line}
         import re
         days, hours, minutes, seconds = 0, 0, 0, 0
         timeList = re.findall(r"\d+", settingsDict["estimated printing time (normal mode)"])
