@@ -27,7 +27,8 @@ type Printer struct {
 	LinearAdvanceFactor float64
 	HeatbreakTemp       float64
 	EnabledMotors       map[string]bool
-	Attributes          map[string]string
+	Attributes          map[string]interface{}
+	Data                map[string]interface{}
 	WSConnection        *websocket.Conn
 }
 
@@ -90,7 +91,8 @@ func NewPrinter(id int, device, description, hwid, name, status, date string, ex
 		LinearAdvanceFactor: 0.0,        // Default linear advance factor
 		HeatbreakTemp:       0.0,        // Default heatbreak temp
 		EnabledMotors:       make(map[string]bool),
-		Attributes:          make(map[string]string),
+		Attributes:          make(map[string]interface{}),
+		Data:                make(map[string]interface{}),
 		WSConnection:        nil, // Default will be offline emulator
 	}
 
@@ -208,12 +210,20 @@ func (printer *Printer) MoveExtruder(targetPos Vector3) error {
 	return nil
 }
 
-func (printer *Printer) AddAttribute(key string, value string) {
+func (printer *Printer) AddAttribute(key string, value interface{}) {
 	printer.Attributes[key] = value
 }
 
-func (printer *Printer) GetAttribute(key string) string {
+func (printer *Printer) GetAttribute(key string) interface{} {
 	return printer.Attributes[key]
+}
+
+func (printer *Printer) AddData(key string, value interface{}) {
+	printer.Data[key] = value
+}
+
+func (printer *Printer) GetData(key string) interface{} {
+	return printer.Data[key]
 }
 
 func (printer *Printer) WriteSerial(event string, data interface{}) error {

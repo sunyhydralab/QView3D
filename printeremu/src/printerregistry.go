@@ -11,10 +11,11 @@ import (
 )
 
 type PrinterConfig struct {
-	Id         int          `json:"id"`
-	Name       string       `json:"name"`
-	Brand      PrinterBrand `json:"brand"`
-	UsesMarlin bool         `json:"usesMarlin"`
+	Id         int                    `json:"id"`
+	Name       string                 `json:"name"`
+	Brand      PrinterBrand           `json:"brand"`
+	Data       map[string]interface{} `json:"data"`
+	Attributes map[string]interface{} `json:"attributes"`
 }
 
 type PrinterBrand struct {
@@ -50,15 +51,22 @@ func LoadPrinters(filePath string) ([]Printer, error) {
 	for _, printerConfig := range printersConfig {
 		_, printer, err := Init(printerConfig.Id, printerConfig.Brand.PrinterName+" "+printerConfig.Brand.PrinterModel, "Marlin GCode", "EMU-"+RandomString(8), printerConfig.Name, "Init")
 
+		// always add the model as an attribute so we always know what the model is
 		printer.AddAttribute("model", printerConfig.Brand.PrinterName)
 
-		if printerConfig.UsesMarlin {
-			printer.AddAttribute("usesMarlin", "true")
+		for key, value := range printerConfig.Attributes {
+			printer.AddAttribute(key, value)
+		}
+
+		for key, value := range printerConfig.Data {
+			printer.AddData(key, value)
 		}
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize printer %d: %v", printerConfig.Id, err)
 		}
+
+		PostRegistry(printer)
 
 		printers = append(printers, *printer)
 	}

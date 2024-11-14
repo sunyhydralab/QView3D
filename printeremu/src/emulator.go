@@ -51,6 +51,12 @@ func Init(id int, device string, description string, hwid string, name string, s
 	return extruder, printer, nil
 }
 
+func PostRegistry(printer *Printer) {
+	printer.Heatbed.Length = printer.GetData("length").(float64)
+	printer.Heatbed.Width = printer.GetData("width").(float64)
+	printer.Extruder.MaxZHeight = printer.GetData("height").(float64)
+}
+
 func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, settings *EmulatorSettings) {
 	loadedAddress := func() string {
 		if settings.DefaultAddress != "" && settings.DefaultPort != 0 {
