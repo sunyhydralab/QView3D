@@ -122,7 +122,7 @@ class Fabricator(db.Model):
         db.session.add(self)
         db.session.commit()
 
-    def begin(self):
+    def begin(self, isVerbose: bool = False):
         """starts the fabrication process"""
         try:
             assert self.status == "idle"
@@ -135,7 +135,7 @@ class Fabricator(db.Model):
             # if isinstance(self.device, hasStartupSequence):
             #     self.device.startupSequence()
             assert self.setStatus("printing"), "Failed to set status to printing"
-            assert self.device.parseGcode(self.job.file_name_original), f"Failed to parse Gcode, status: {self.status}, verdict: {self.device.verdict}, file: {self.job.file_name_original}" # this is the actual command to read the file and fabricate.
+            assert self.device.parseGcode(self.job.file_name_original, isVerbose=isVerbose), f"Failed to parse Gcode, status: {self.status}, verdict: {self.device.verdict}, file: {self.job.file_name_original}" # this is the actual command to read the file and fabricate.
             self.handleVerdict()
             return True
         except Exception as e:
