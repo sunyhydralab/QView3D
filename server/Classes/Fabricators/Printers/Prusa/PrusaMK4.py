@@ -2,7 +2,7 @@ from Classes.Fabricators.Printers.Prusa.PrusaPrinter import PrusaPrinter
 from Classes.Vector3 import Vector3
 
 class PrusaMK4(PrusaPrinter):
-    MODEL = "Prusa MK4"
+    MODEL = "MK4"
     PRODUCTID = 0x000D
     DESCRIPTION = "Original Prusa MK4 - CDC"
     MAXFEEDRATE = 36000

@@ -7,7 +7,7 @@ from Mixins.hasResponseCodes import alwaysTrue, checkOK
 
 
 class PrusaMK3(PrusaPrinter):
-    MODEL = "Prusa MK3"
+    MODEL = "MK3"
     PRODUCTID = 0x0002
     DESCRIPTION = "Original Prusa MK3 - CDC"
     MAXFEEDRATE = 12000
