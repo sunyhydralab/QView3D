@@ -5,7 +5,6 @@ from serial.tools.list_ports_linux import SysFS
 from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import SQLAlchemyError
 from Classes.Fabricators.Fabricator import Fabricator
-from Classes.Fabricators.Device import Device
 from Classes.serialCommunication import sendGcode
 
 class Ports:
@@ -124,7 +123,7 @@ def deleteFabricator():
 
         if fabricator:
             Fabricator.query.filter_by(dbID=fabricator_id).delete()
-            Fabricator.addToDB()
+            Fabricator.updateDB()
             return jsonify({"success": True, "message": "Fabricator deleted successfully"})
         else:
             return jsonify({"error": "Fabricator not found"}), 404
