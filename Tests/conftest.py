@@ -101,8 +101,8 @@ def pytest_sessionfinish(session, exitstatus) -> None:
         captured = capture_manager.read_global_and_disable()
 
         # Print the captured stdout and stderr
-        print("\nCaptured output during tests:\n")
-        print(captured)
+        logger.logMessageOnly("\nCaptured output during tests:\n")
+        logger.logMessageOnly(captured)
 
         # Re-enable capture if needed for further use
         capture_manager.resume_global_capture()
