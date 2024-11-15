@@ -5,12 +5,12 @@ import re
 import pytest
 from Classes.Jobs import Job
 from Classes.Fabricators.Fabricator import Fabricator
-from Classes.Logger import Logger
 from parallel_test_runner import testLevel
 
 testLevelToRun = testLevel
 shortTest = True
 fabricator = Fabricator(None, "Test Printer", addToDB=False, consoleLogger=sys.stdout)
+isVerbose = False
 
 def __desc__(): return "Fabricator Tests"
 def __repr__(): return f"test_fabricator.py running on port {os.getenv('PORT')}"
@@ -33,6 +33,8 @@ def fabricator_setup(port):
 def function_setup(request):
     global fabricator
     fabricator = fabricator_setup(request.session.config.port)
+    global isVerbose
+    isVerbose = fabricator.device.logger.level <= fabricator.device.logger.DEBUG
     if fabricator is None:
         pytest.skip("No port specified")
     yield
@@ -126,6 +128,8 @@ def test_pause_and_resume():
 #@pytest.mark.dependency(depends=["test_device.py::test_home", "test_fabricator.py::test_add_job"], scope="session")
 #@pytest.mark.skipif(condition=testLevelToRun < 9, reason="Not doing lvl 9 tests")
 def test_gcode_print_time():
+    print("Testing gcode print time")
+    print(fabricator.device.logger.level)
     from Classes.Fabricators.Printers.Printer import Printer
     if not isinstance(fabricator.device, Printer):
         pytest.skip(f"{fabricator.getDescription()} doesn't support printing gcode")
@@ -143,35 +147,19 @@ def test_gcode_print_time():
         expectedHours, expectedMinutes = divmod(expectedMinutes, 60)
     if expectedHours >= 24:
         expectedDays, expectedHours = divmod(expectedHours, 24)
-
+    if isVerbose: fabricator.device.logger.debug(f"Expected print time: {expectedDays:02}:{expectedHours:02}:{expectedMinutes:02}:{expectedSeconds:02}")
     with open(file, "r") as f:
         fabricator.queue.addToFront(Job(f.read(), "xyz cali cube", fabricator.dbID, "ready", file, False, 1, fabricator.name))
         time = datetime.now()
-        fabricator.begin(isVerbose=True)
+        fabricator.begin(isVerbose=isVerbose)
     time = datetime.now() - time
+    if isVerbose: fabricator.device.logger.debug(f"Actual print time: {time}")
     fabricator.device.serialConnection.write(b"M31\n")
     line = ""
-    while not re.search(r"\d+m \d+s", line):
+    from Mixins.hasResponseCodes import checkTime
+    while not checkTime(line):
         line = fabricator.device.serialConnection.readline().decode("utf-8")
-    minutes, seconds = divmod(time.seconds, 60)
-    hours, minutes = divmod(minutes, 60)
-    days, hours = divmod(hours, 24)
-    measuredTimeList = []
-    if days > 0:
-        measuredTimeList.append(f"{days:02}")
-        measuredTimeList.append(f"{hours:02}")
-        measuredTimeList.append(f"{minutes:02}")
-        measuredTimeList.append(f"{seconds:02}")
-    elif hours > 0:
-        measuredTimeList.append(f"{hours:02}")
-        measuredTimeList.append(f"{minutes:02}")
-        measuredTimeList.append(f"{seconds:02}")
-    elif minutes > 0:
-        measuredTimeList.append(f"{minutes:02}")
-        measuredTimeList.append(f"{seconds:02}")
-    else:
-        measuredTimeList.append(f"{seconds:02}")
-    measuredTimeString = ":".join(measuredTimeList)
+    if isVerbose: fabricator.device.logger.debug(f"not stuck in print time loop: time: {line}")
 
     actualTimeList = re.findall(r"\d+", line)
     printDays, printHours, printMinutes, printSeconds = 0, 0, 0, 0
@@ -200,6 +188,29 @@ def test_gcode_print_time():
     else:
         printList.append(f"{printSeconds:02}")
     printString = ":".join(map(str, printList))
+
+
+    minutes, seconds = divmod(time.seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    days, hours = divmod(hours, 24)
+    measuredTimeList = []
+    if days > 0:
+        measuredTimeList.append(f"{days:02}")
+        measuredTimeList.append(f"{hours:02}")
+        measuredTimeList.append(f"{minutes:02}")
+        measuredTimeList.append(f"{seconds:02}")
+    elif hours > 0:
+        measuredTimeList.append(f"{hours:02}")
+        measuredTimeList.append(f"{minutes:02}")
+        measuredTimeList.append(f"{seconds:02}")
+    elif minutes > 0:
+        measuredTimeList.append(f"{minutes:02}")
+        measuredTimeList.append(f"{seconds:02}")
+    else:
+        measuredTimeList.append(f"{seconds:02}")
+    measuredTimeString = ":".join(measuredTimeList)
+
+
     expectedList = []
     if expectedDays > 0:
         expectedList.append(f"{expectedDays:02}")
