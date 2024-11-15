@@ -3,7 +3,7 @@ from serial.tools.list_ports_linux import SysFS
 
 from Classes.Fabricators.Printers.Prusa.PrusaPrinter import PrusaPrinter
 from Classes.Vector3 import Vector3
-from Mixins.hasResponseCodes import alwaysTrue, checkOK
+from Mixins.hasResponseCodes import checkOK, checkTime, checkXYZ
 
 
 class PrusaMK3(PrusaPrinter):
@@ -13,10 +13,16 @@ class PrusaMK3(PrusaPrinter):
     MAXFEEDRATE = 12000
     homePosition = Vector3(0.2, -3.78, 0.15)
     cancelCMD = b"M603\n"
+    homeCMD = b"G28 W\n"
 
-    def __init__(self, serialPort: ListPortInfo | SysFS, consoleLogger=None, fileLogger=None):
-        super().__init__(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
-        self.callablesHashtable["G28"] = [checkOK, checkOK]
+    callablesHashtable = {
+        "M31": [checkTime, checkOK],  # Print time
+        "G28": [checkOK],
+        "G29.02": [checkOK, checkOK],
+        "G29.01": [checkOK, checkXYZ, checkXYZ, checkOK],  # Auto bed leveling
+    }
+
+    callablesHashtable = {**PrusaPrinter.callablesHashtable, **callablesHashtable}
 
     def endSequence(self):
         self.sendGcode(b"M104 S0\n") # turn off extruder
@@ -34,9 +40,9 @@ class PrusaMK3(PrusaPrinter):
             self.serialConnection = serial.Serial(self.serialPort.device, 115200, timeout=60)
             self.serialConnection.reset_input_buffer()
             from time import sleep
-            sleep(7)
+            sleep(4)
             if self.serialConnection and self.serialConnection.is_open:
-                self.serialConnection.write(b"M155 S1\n")
+                self.sendGcode(b"M155 S1\n")
                 return True
         except Exception as e:
             from app import app
