@@ -136,7 +136,9 @@ class Fabricator(db.Model):
             #     self.device.startupSequence()
             assert self.setStatus("printing"), "Failed to set status to printing"
             assert self.device.parseGcode(self.job.file_name_original, isVerbose=isVerbose), f"Failed to parse Gcode, status: {self.status}, verdict: {self.device.verdict}, file: {self.job.file_name_original}" # this is the actual command to read the file and fabricate.
+            if isVerbose: self.device.logger.debug(f"Job complete, verdict: {self.device.verdict}")
             self.handleVerdict()
+            if isVerbose: self.device.logger.debug(f"Verdict handled, status: {self.status}")
             return True
         except Exception as e:
             from app import app
