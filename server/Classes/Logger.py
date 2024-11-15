@@ -20,7 +20,7 @@ class Logger(logging.Logger):
         if deviceName:
             title.append(deviceName)
         super().__init__(f"_".join(["Logger"] + title))
-        self.setLevel(loggingLevel)
+        super().setLevel(loggingLevel)
         info = []
         if showDate:
             info.append("%(asctime)s")
@@ -149,6 +149,11 @@ class Logger(logging.Logger):
                     self.logMessageOnly(line, logLevel=self.ERROR)
                 else:
                     self.logMessageOnly(line)
+
+    def setLevel(self, level):
+        super().setLevel(level)
+        self.consoleLogger.setLevel(level)
+        self.fileLogger.setLevel(level)
 
 class CustomFormatter(logging.Formatter):
     # ANSI escape codes for colors
