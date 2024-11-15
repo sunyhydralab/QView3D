@@ -1,18 +1,14 @@
 import re
 from models.db import db
-from datetime import datetime, timezone
-from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
 from sqlalchemy.exc import SQLAlchemyError
 from flask import jsonify, current_app
 from Classes.Queue import Queue
 import serial
 import serial.tools.list_ports
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from tzlocal import get_localzone
 import os
-import json
 import requests
 from dotenv import load_dotenv
 
@@ -342,10 +338,11 @@ class Printer(db.Model):
         self.sendGcode("G92 E0")
 
     # Function to send gcode commands
-    def sendGcode(self, message):
+    def sendGcode(self, message, logger=None):
         try:
             # Encode and send the message to the printer.
             self.ser.write(f"{message}\n".encode("utf-8"))
+            logger.debug(f"Command: {message}")
             # Sleep the printer to give it enough time to get the instruction.
             # time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
@@ -354,6 +351,7 @@ class Printer(db.Model):
                     return 
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
+                logger.debug(f"Received: {response}")
                 if response == "": 
                     if self.prevMes == "M602":
                         self.responseCount = 0
@@ -378,6 +376,7 @@ class Printer(db.Model):
                         self.setTemps(temp_t.group(1), temp_b.group(1))
 
                 if "ok" in response:
+                    logger.info(f"Command: {message}, Received: {response}")
                     break
 
                 print(f"Command: {message}, Received: {response}")
@@ -420,8 +419,37 @@ class Printer(db.Model):
             with open(path, "r") as g:
                 # Read the file and store the lines in a list
                 if(self.terminated==1): 
-                    return 
-                
+                    return
+                import logging
+                import colorlog
+
+                logFile = f"Printer_{self.id}_job_{job.id}"
+                logger = logging.getLogger(logFile)
+
+                console_handler = colorlog.StreamHandler()
+                console_formatter = colorlog.ColoredFormatter(
+                    "%(log_color)s%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s",
+                    log_colors={
+                        'DEBUG': 'cyan',
+                        'INFO': 'white',
+                        'WARNING': 'yellow',
+                        'ERROR': 'red',
+                        'CRITICAL': 'red,bg_white',
+                    }
+                )
+                console_handler.setFormatter(console_formatter)
+                logger.addHandler(console_handler)
+                info_file_handler = logging.FileHandler(logFile + "_INFO.log", mode="w")
+                info_file_handler.setLevel(logging.INFO)
+                debug_file_handler = logging.FileHandler(logFile + "_DEBUG.log", mode="w")
+                debug_file_handler.setLevel(logging.DEBUG)
+                for(file_handler) in [info_file_handler, debug_file_handler]:
+                    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'))
+                    logger.addHandler(file_handler)
+                    logger.addHandler(file_handler)
+
+                logger.info(f"Starting job {job.id} on printer {self.id}")
+
                 lines = g.readlines()
 
                 #  Time handling
@@ -493,7 +521,7 @@ class Printer(db.Model):
                         job.setTime(job.calculateEta(), 1)
                         job.setTime(datetime.now(), 2)
                  
-                    res = self.sendGcode(line)
+                    res = self.sendGcode(line, logger)
                     
                     if(job.getFilePause() == 1):
                         # self.setStatus("printing")
