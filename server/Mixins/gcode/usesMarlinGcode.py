@@ -7,7 +7,7 @@ from Classes.Vector3 import Vector3
 from Mixins.canPause import canPause
 from Mixins.gcode.usesVanillaGcode import usesVanillaGcode
 from Mixins.hasEndingSequence import hasEndingSequence
-from Mixins.hasResponseCodes import checkOK, checkXYZ, alwaysTrue, checkBedTemp, checkExtruderTemp, hasResponsecodes
+from Mixins.hasResponseCodes import checkOK, checkXYZ, checkBedTemp, checkExtruderTemp, hasResponsecodes, checkTime
 
 import re
 class LocationResponse:
@@ -33,11 +33,11 @@ class usesMarlinGcode(usesVanillaGcode, canPause, hasResponsecodes, metaclass=AB
     getMachineNameCMD: Buffer = b"M997\n"
 
     callablesHashtable = {
+        "M31": [checkTime], # Print time
         "M104": [], # Set hotend temp
         "M109": [checkExtruderTemp], # Wait for hotend to reach target temp
         "M114": [checkXYZ], # Get current position
         "M140": [], # Set bed temp
-        "M155": [], # Set temperature auto report
         "M190": [checkBedTemp], # Wait for bed to reach target temp
     }
 
@@ -80,6 +80,8 @@ class usesMarlinGcode(usesVanillaGcode, canPause, hasResponsecodes, metaclass=AB
                         self.verdict = "cancelled"
                         self.logger.info("Job cancelled")
                         return True
+                    if ";" in line:
+                        line = line.split(";")[0].strip() + "\n"
                     self.sendGcode(line.encode("utf-8"), isVerbose=isVerbose)
             self.verdict = "complete"
             self.logger.info("Job complete")
