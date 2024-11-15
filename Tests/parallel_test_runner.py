@@ -2,7 +2,6 @@ import os
 import re
 import subprocess
 import platform
-
 from server.Classes.Ports import Ports
 
 PORTS = []
@@ -29,7 +28,7 @@ else:
     PORTS = glob.glob("/dev/tty[A-Za-z]*")
 
 # Function to run pytest for a specific port
-testLevel = 1
+testLevel = 10
 verbosity = 2
 runFlags = 0b000 # 0b001: -s, 0b010: -vvv or -p no:terminal, 0b100: debug or info
 
