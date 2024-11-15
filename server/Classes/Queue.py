@@ -1,5 +1,5 @@
 from collections import deque
-from flask import jsonify, current_app
+#from flask import jsonify, current_app
 
 
 class Queue:
@@ -23,17 +23,20 @@ class Queue:
         print("Adding job to back of queue ", printerid)
 
         if self.__queue.count(job) > 0:
-            raise Exception("Job ID already in queue.")
+            #raise Exception("Job ID already in queue.")
+            return False
         self.__queue.append(
             job
         )  # appending on the right is the "front" because popping takes out from right d
-        current_app.socketio.emit(
-            "queue_update", {"queue": self.convertQueueToJson(), "printerid": printerid}
-        )
+        # current_app.socketio.emit(
+        #     "queue_update", {"queue": self.convertQueueToJson(), "printerid": printerid}
+        # )
+        return True
 
-    def addToFront(self, job, printerid):
+    def addToFront(self, job):
         if self.__queue.count(job) > 0:
-            raise Exception("Job ID already in queue.")
+            #raise Exception("Job ID already in queue.")
+            return False
         # If the queue has at least one job and the first job is printing,
         # insert at the second position because we don't want to interrupt it.
         if len(self.__queue) >= 1 and self.__queue[0].status == "printing":
@@ -42,9 +45,10 @@ class Queue:
         # add the job to the front
         else:
             self.__queue.appendleft(job)
-        current_app.socketio.emit(
-            "queue_update", {"queue": self.convertQueueToJson(), "printerid": printerid}
-        )
+        # current_app.socketio.emit(
+        #     "queue_update", {"queue": self.convertQueueToJson(), "printerid": printerid}
+        # )
+        return True
 
     def bump(self, up, jobid):  # up = boolean. if up = true bump up, else bump down
         index = next(
@@ -81,10 +85,10 @@ class Queue:
             if job.getJobId() == jobid:
                 deletedjob = job
                 self.__queue.remove(job)
-                current_app.socketio.emit(
-                    "queue_update",
-                    {"queue": self.convertQueueToJson(), "printerid": printerid},
-                )
+                # current_app.socketio.emit(
+                #     "queue_update",
+                #     {"queue": self.convertQueueToJson(), "printerid": printerid},
+                # )
                 return deletedjob
         return "Job not found in queue."
 
@@ -97,7 +101,7 @@ class Queue:
                 "name": job.name,
                 "status": job.status,
                 "date": job.date.strftime('%a, %d %b %Y %H:%M:%S'),
-                "printerid": job.printer_id, 
+                "printerid": job.fabricator_id,
                 "errorid": job.error_id,
                 "file_name_original": job.file_name_original, 
                 "progress": job.progress,
