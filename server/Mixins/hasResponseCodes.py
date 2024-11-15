@@ -1,3 +1,5 @@
+import re
+import traceback
 from abc import ABCMeta, abstractmethod
 from Classes.Vector3 import Vector3
 
@@ -13,37 +15,47 @@ class hasResponsecodes(metaclass=ABCMeta):
         pass
 
 def checkOK(line):
-    return line == b'ok\n'
+    line = (line.decode() if isinstance(line, bytes) else line).strip()
+    return line == "ok"
 
 def checkXYZ(line):
-    line = line.decode("utf-8")
+    line = (line.decode() if isinstance(line, bytes) else line).strip()
     return ("X:" in line) and ("Y:" in line) and ("Z:" in line)
 
-def alwaysTrue(line):
-    return True
-
-def anyResponse(line):
-    return line != b''
-
 def checkEcho(line):
-    return line.decode("utf-8").startswith("echo")
+    line = (line.decode() if isinstance(line, bytes) else line).strip()
+    return line.startswith("echo")
 
 def checkBedTemp(line):
+    line = (line.decode() if isinstance(line, bytes) else line).strip()
     try:
-        temps = line.decode("utf-8").split("B:")[1].split("X:")[0].split("/")
-        if len(temps) == 2:
-            if float(temps[1]) == 0.0: return True
-            return float(temps[1]) - float(temps[0]) < 0.25
-        return True
+        return checkTemp([temp.strip() for temp in line.split("B:")[1].split("T0:")[0].split("X:")[0].split("/")])
+    except IndexError as e:
+        return False
     except Exception as e:
+        traceback.print_exc()
         return False
 
 def checkExtruderTemp(line):
+    line = (line.decode() if isinstance(line, bytes) else line).strip()
     try:
-        temps = line.decode("utf-8").split("T:")[1].split("B:")[0].split("/")
+        return checkTemp([temp.strip() for temp in line.split("T:")[1].split("B:")[0].split("/")])
+    except IndexError as e:
+        return False
+    except Exception as e:
+        traceback.print_exc()
+        return False
+
+def checkTemp(temps):
+    try:
         if len(temps) == 2:
             if float(temps[1]) == 0.0: return True
             return float(temps[1]) - float(temps[0]) < 0.25
-        return True
-    except Exception as e:
         return False
+    except Exception as e:
+        traceback.print_exc()
+        return False
+
+def checkTime(line):
+    line = (line.decode() if isinstance(line, bytes) else line).strip()
+    return re.search(r"\d+m \d+s", line) or re.search(r"\d+ min, \d+ sec", line)
