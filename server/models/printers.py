@@ -1,3 +1,4 @@
+import logging
 import re
 from models.db import db
 from sqlalchemy.exc import SQLAlchemyError
@@ -342,7 +343,7 @@ class Printer(db.Model):
         try:
             # Encode and send the message to the printer.
             self.ser.write(f"{message}\n".encode("utf-8"))
-            logger.debug(f"Command: {message}")
+            if logger: logger.debug(f"Command: {message}")
             # Sleep the printer to give it enough time to get the instruction.
             # time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
@@ -351,7 +352,7 @@ class Printer(db.Model):
                     return 
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
-                logger.debug(f"Received: {response}")
+                if logger: logger.debug(f"Received: {response}")
                 if response == "": 
                     if self.prevMes == "M602":
                         self.responseCount = 0
@@ -376,11 +377,11 @@ class Printer(db.Model):
                         self.setTemps(temp_t.group(1), temp_b.group(1))
 
                 if "ok" in response:
-                    logger.info(f"Command: {message}, Received: {response}")
+                    if logger: logger.info(f"Command: {message}, Received: {response}")
+                    else: print(f"Command: {message}, Received: {response}")
                     break
-
-                print(f"Command: {message}, Received: {response}")
-        except Exception as e: 
+        except Exception as e:
+            if logger: logger.error(e)
             self.setError(e)
             return "error"
 
@@ -421,27 +422,19 @@ class Printer(db.Model):
                 if(self.terminated==1): 
                     return
                 import logging
-                import colorlog
-
-                logFile = f"Printer_{self.id}_job_{job.id}"
+                import sys
+                jobName = str(job.file_name_original)
+                if jobName:
+                    jobName = " ".join(("-".join(jobName.split(".")[0].split("_"))).split("-"))
+                logFile = f"Printer_{self.name}_job_{jobName}"
                 logger = logging.getLogger(logFile)
-
-                console_handler = colorlog.StreamHandler()
-                console_formatter = colorlog.ColoredFormatter(
-                    "%(log_color)s%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s",
-                    log_colors={
-                        'DEBUG': 'cyan',
-                        'INFO': 'white',
-                        'WARNING': 'yellow',
-                        'ERROR': 'red',
-                        'CRITICAL': 'red,bg_white',
-                    }
-                )
+                console_handler = logging.StreamHandler(sys.stdout)
+                console_formatter = CustomFormatter("%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s")
                 console_handler.setFormatter(console_formatter)
                 logger.addHandler(console_handler)
-                info_file_handler = logging.FileHandler(logFile + "_INFO.log", mode="w")
+                info_file_handler = logging.FileHandler("../logs" + logFile + "_INFO.log", mode="w")
                 info_file_handler.setLevel(logging.INFO)
-                debug_file_handler = logging.FileHandler(logFile + "_DEBUG.log", mode="w")
+                debug_file_handler = logging.FileHandler("../logs" + logFile + "_DEBUG.log", mode="w")
                 debug_file_handler.setLevel(logging.DEBUG)
                 for(file_handler) in [info_file_handler, debug_file_handler]:
                     file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'))
@@ -600,6 +593,7 @@ class Printer(db.Model):
 
             return "complete"
         except Exception as e:
+            if logger: logger.error(e)
             # self.setStatus("error")
             self.setError(e)
             return "error"
@@ -853,6 +847,23 @@ class Printer(db.Model):
         self.colorbuff = buff
         current_app.socketio.emit('color_buff', {'printerid': self.id, 'colorChangeBuffer': buff})
 
+
+class CustomFormatter(logging.Formatter):
+    # ANSI escape codes for colors
+    COLOR_CODES = {
+        "DEBUG": "\033[94m",  # Blue
+        "INFO": "\033[0m",  # white
+        "WARNING": "\033[93m",  # Yellow
+        "ERROR": "\033[91m",  # Red
+        "CRITICAL": "\033[95m"  # Magenta
+    }
+    RESET_CODE = "\033[0m"  # Reset to default color
+
+    def format(self, record):
+        # Apply color based on log level
+        color = self.COLOR_CODES.get(record.levelname, self.RESET_CODE)
+        message = super().format(record)
+        return f"{color}{message}{self.RESET_CODE}"
 
             
             
