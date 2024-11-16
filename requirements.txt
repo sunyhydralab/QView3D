@@ -11,3 +11,4 @@ tzlocal==2.1
 Werkzeug==3.0.3
 eventlet==0.37.0
 gunicorn==23.0.0
+colorlog==6.7.0
