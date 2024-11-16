@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import SQLAlchemyError
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.serialCommunication import sendGcode
+from Classes.Fabricators.FabricatorList import FabricatorList
 
 class Ports:
     @staticmethod
@@ -36,7 +37,7 @@ class Ports:
     @staticmethod
     def getRegisteredFabricators() -> list[Fabricator]:
         """Get a list of all registered fabricators."""
-        fabricators = Fabricator.queryAll()  # Assuming Fabricator has a method to query all instances
+        fabricators = Fabricator.queryAll()
         registered_fabricators = []
         for fab in fabricators:
             port = Ports.getPortByName(fab.devicePort)
@@ -48,12 +49,12 @@ class Ports:
     def diagnosePort(port: ListPortInfo | SysFS) -> str:
         """Diagnose a port to check if it is functional by sending basic G-code commands."""
         try:
-            device = Fabricator.createDevice(port)  # Create a Device instance using Fabricator logic
+            device = Fabricator.createDevice(port)
             if not device:
                 return "Device creation failed."
 
             device.connect()
-            sendGcode("M115")  # Standard G-code command to get firmware information
+            sendGcode("M115")
             response = device.getSerialConnection().readline().decode("utf-8").strip()
             device.disconnect()
 
@@ -100,7 +101,6 @@ def registerFabricator():
         hwid = data['fabricator']['hwid']
         name = data['fabricator']['name']
 
-        # Create a new fabricator instance using the Fabricator class
         new_fabricator = Fabricator(Ports.getPortByName(device), name, addToDB=True)
         new_fabricator.description = description
         new_fabricator.hwid = hwid
@@ -188,11 +188,10 @@ def moveHead():
 def moveFabricatorList():
     """Change the order of fabricators."""
     try:
-        from app import printer_status_service  # Ensure integration aligns with the new naming convention
         data = request.get_json()
         fabricator_ids = data['fabricator_ids']
 
-        result = printer_status_service.moveFabricatorList(fabricator_ids)
+        result = FabricatorList.moveFabricatorList(fabricator_ids)
         return jsonify({"success": True, "message": "Fabricator list successfully updated"}) if result != "none" else jsonify({"success": False, "message": "Fabricator list not updated"})
     except Exception as e:
         print(f"Error moving fabricator list: {e}")

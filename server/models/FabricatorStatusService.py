@@ -4,7 +4,7 @@ from flask import jsonify
 
 from Classes.Fabricators.Fabricator import Fabricator
 
-
+# DEAD JUST MOVED HERE BC I DONT TRUST MYSELF
 class FabricatorThread(Thread):
     def __init__(self, fabricator, *args, **kwargs):
         super().__init__(*args, **kwargs)
