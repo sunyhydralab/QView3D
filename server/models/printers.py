@@ -160,6 +160,7 @@ class Printer(db.Model):
     @classmethod
     def getConnectedPorts(cls, retries=3, delay=2):
         """Detects all available printer ports with retries."""
+        ports = []
         for _ in range(retries):
             ports = serial.tools.list_ports.comports()
             if ports:
@@ -182,6 +183,7 @@ class Printer(db.Model):
             if (
                     "2C99:0002" in hwid  # Prusa MK3
                     or "2C99:000D" in hwid  # Prusa MK4
+                    or "2C99:001A" in hwid  # Prusa MK4S
                     or "1A86:7523" in hwid  # Ender 3 and Ender 3 Pro
                     or "prusa" in port.description.lower()  # Fallback for Prusa in description
                     or "ender" in port.description.lower()  # Fallback for Ender in description
@@ -416,32 +418,34 @@ class Printer(db.Model):
             return "error"
 
     def parseGcode(self, path, job):
+        from ANSI_Remover import remove_ansi_codes_with_progress
         try:
             with open(path, "r") as g:
                 # Read the file and store the lines in a list
                 if(self.terminated==1): 
                     return
-                import logging
                 import sys
                 jobName = str(job.file_name_original)
                 if jobName:
-                    jobName = " ".join(("-".join(jobName.split(".")[0].split("_"))).split("-"))
-                logFile = f"Printer_{self.name}_job_{jobName}"
+                    jobName = "-".join(jobName.split(".")[0].split("_"))
+                logFile = f"../logs/{self.name}/{jobName}/{job.date.strftime('%m-%d-%Y_%H-%M-%S')}/color"
+                os.makedirs(logFile, exist_ok=True)
                 logger = logging.getLogger(logFile)
+                logger.setLevel(logging.DEBUG)
                 console_handler = logging.StreamHandler(sys.stdout)
-                console_formatter = CustomFormatter("%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s")
+                console_formatter = CustomFormatter("%(asctime)s - %(levelname)s - %(module)s.py:%(lineno)d - %(message)s")
                 console_handler.setFormatter(console_formatter)
+                console_handler.setLevel(logging.INFO)
                 logger.addHandler(console_handler)
-                info_file_handler = logging.FileHandler("../logs" + logFile + "_INFO.log", mode="w")
+                info_file_handler = logging.FileHandler(logFile + "/INFO.log", mode="w")
                 info_file_handler.setLevel(logging.INFO)
-                debug_file_handler = logging.FileHandler("../logs" + logFile + "_DEBUG.log", mode="w")
+                debug_file_handler = logging.FileHandler(logFile + "/DEBUG.log", mode="w")
                 debug_file_handler.setLevel(logging.DEBUG)
                 for(file_handler) in [info_file_handler, debug_file_handler]:
-                    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'))
-                    logger.addHandler(file_handler)
+                    file_handler.setFormatter(console_formatter)
                     logger.addHandler(file_handler)
 
-                logger.info(f"Starting job {job.id} on printer {self.id}")
+                logger.info(f"Starting {job.name} on {self.name}")
 
                 lines = g.readlines()
 
@@ -483,7 +487,13 @@ class Printer(db.Model):
                 # Replace file with the path to the file. "r" means read mode. 
                 # now instead of reading from 'g', we are reading line by line
                 for line in lines:
-                    if(self.terminated==1): 
+                    if(self.terminated==1):
+                        if logger:
+                            for handler in logger.handlers:
+                                handler.close()
+                                logger.removeHandler(handler)
+                            # remove_ansi_codes_with_progress(f"{logFile}/DEBUG.log")
+                            # remove_ansi_codes_with_progress(f"{logFile}/INFO.log")
                         return 
                     
                     # print("LINE: ", line, " STATUS: ", self.status, " FILE PAUSE: ", job.getFilePause())
@@ -582,18 +592,28 @@ class Printer(db.Model):
 
                     # Call the setProgress method
                     job.setProgress(progress)
-                
-                    
+
                     # if self.getStatus() == "complete" and job.extruded != 0:
                     if self.getStatus() == "complete":
                         return "cancelled"
 
                     if self.getStatus() == "error":
                         return "error"
-
+            if logger:
+                for handler in logger.handlers:
+                    handler.close()
+                    logger.removeHandler(handler)
+                # remove_ansi_codes_with_progress(f"{logFile}/DEBUG.log")
+                # remove_ansi_codes_with_progress(f"{logFile}/INFO.log")
             return "complete"
         except Exception as e:
-            if logger: logger.error(e)
+            if logger:
+                logger.error(e)
+                for handler in logger.handlers:
+                    handler.close()
+                    logger.removeHandler(handler)
+                # remove_ansi_codes_with_progress(f"{logFile}/DEBUG.log")
+                # remove_ansi_codes_with_progress(f"{logFile}/INFO.log")
             # self.setStatus("error")
             self.setError(e)
             return "error"
@@ -850,6 +870,13 @@ class Printer(db.Model):
 
 class CustomFormatter(logging.Formatter):
     # ANSI escape codes for colors
+    lvlHash = {
+        "DEBUG": "DBUG",
+        "INFO": "INFO",
+        "WARNING": "WARN",
+        "ERROR": "EROR",
+        "CRITICAL": "CRIT"
+    }
     COLOR_CODES = {
         "DEBUG": "\033[94m",  # Blue
         "INFO": "\033[0m",  # white
@@ -862,6 +889,7 @@ class CustomFormatter(logging.Formatter):
     def format(self, record):
         # Apply color based on log level
         color = self.COLOR_CODES.get(record.levelname, self.RESET_CODE)
+        record.levelname = self.lvlHash.get(record.levelname, record.levelname)
         message = super().format(record)
         return f"{color}{message}{self.RESET_CODE}"
 
