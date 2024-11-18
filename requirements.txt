@@ -12,3 +12,4 @@ Werkzeug==3.0.3
 eventlet==0.37.0
 gunicorn==23.0.0
 colorlog==6.7.0
+discord.py==2.4.0

@@ -1,3 +1,4 @@
+import asyncio
 from flask import Flask, jsonify, request, Response, url_for, send_from_directory
 from threading import Thread
 from flask_cors import CORS 
@@ -14,8 +15,12 @@ from datetime import datetime, timedelta
 from sqlalchemy import text
 import json
 from models.config import Config
+import discord
+import threading
+from discord.ext import commands
+import certifi
 
-
+os.environ["SSL_CERT_FILE"] = certifi.where()
 
 # moved this up here so we can pass the app to the PrinterStatusService
 # Basic app setup 
@@ -83,6 +88,70 @@ app.register_blueprint(issue_bp)
 @app.socketio.on('ping')
 def handle_ping():
     app.socketio.emit('pong')
+
+# Set up the bot with the necessary intents
+intents = discord.Intents.default()
+intents.messages = True  # Enable messages
+intents.message_content = True  # Enable message content
+
+bot = commands.Bot(Config['command_prefix'], intents=intents)
+
+class DiscordBot(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+def run_discord_bot():
+    loop = asyncio.new_event_loop()  # Create a new event loop for this thread
+    asyncio.set_event_loop(loop)  # Set it as the current event loop for this thread
+
+    # Add the bot cog
+    @bot.event
+    async def on_ready():
+        print(f'Logged in as {bot.user.name}')
+        if Config['discord_enabled']:
+            channel = bot.get_channel(int(Config['discord_issues_channel']))
+            #await channel.send("Discord bot is online and ready!")
+    
+    @bot.command()
+    async def testissue(ctx):
+        embed = discord.Embed(title='New Issue Created',
+                description='A issue occurred when running a job',
+                color=discord.Color.red())
+            
+        embed.add_field(name='Issue', value="Issue details here...", inline=False)
+        embed.add_field(name='ID', value="Issue id here...", inline=False)
+            
+        embed.timestamp = datetime.utcnow()
+            
+        await ctx.send(embed=embed)
+
+    # Start the bot
+    bot.run(Config['discord_token'])
+    
+def start_discord_bot():
+    discord_thread = Thread(target=run_discord_bot)
+    discord_thread.start()
+
+async def send_discord_message(message):
+    if bot.is_ready():
+        channel = bot.get_channel(int(Config['discord_issues_channel']))
+        
+        if channel is not None:
+            await channel.send(message)
+        else:
+            print("Discord channel not found.")
+
+async def send_discord_embed(embed):
+    if bot.is_ready():
+        channel = bot.get_channel(int(Config['discord_issues_channel']))
+        
+        if channel is not None:
+            await channel.send(embed=embed)
+        else:
+            print("Discord channel not found.")
+
+if Config['discord_enabled']:
+    start_discord_bot()
 
 # own thread
 with app.app_context():

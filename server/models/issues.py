@@ -15,6 +15,8 @@ from io import BytesIO
 from werkzeug.datastructures import FileStorage
 import time
 import gzip
+import discord
+from models.config import Config
 
 class Issue(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -45,9 +47,24 @@ class Issue(db.Model):
     @classmethod
     def create_issue(cls, issue):
         try:
+            from app import send_discord_embed
+            
             new_issue = cls(issue)
             db.session.add(new_issue)
             db.session.commit()
+            
+            embed = discord.Embed(title='New Issue Created',
+                                description='A issue occurred when running a job',
+                                color=discord.Color.red())
+            
+            embed.add_field(name='Issue', value=issue, inline=False)
+            embed.add_field(name='ID', value=new_issue.id, inline=False)
+            
+            embed.timestamp = datetime.utcnow()
+            
+            if Config['discord_enabled']:
+                send_discord_embed(embed)
+            
             return {"success": True, "message": "Issue successfully created"}
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
