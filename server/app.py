@@ -150,6 +150,28 @@ async def send_discord_embed(embed):
         else:
             print("Discord channel not found.")
 
+# this gets called like
+# await send_discord_file(channel, file_path, "Here's an important file:")
+async def send_discord_file(channel: discord.TextChannel, file_path: str, message: str = None):
+    """
+    Sends a file to a specified Discord channel with an optional message.
+    
+    :param channel: The channel where the file will be sent.
+    :param file_path: The path to the file to be uploaded.
+    :param message: The optional message to send with the file.
+    """
+    try:
+        # Open the file in binary read mode
+        with open(file_path, 'rb') as f:
+            file = discord.File(f, filename=file_path.split("/")[-1]) 
+        
+        # Send the file to the channel with the optional message
+        await channel.send(message or "Log file:", file=file)
+    except FileNotFoundError:
+        await channel.send(f"Sorry, the file '{file_path.split('/')[-1]}' was not found.")
+    except Exception as e:
+        await channel.send(f"An error occurred: {str(e)}")
+
 if Config['discord_enabled']:
     start_discord_bot()
 
