@@ -21,6 +21,7 @@ discord_enabled = discord_config.get('enabled', False)
 discord_token = discord_config.get('token', None)
 discord_prefix = discord_config.get('command_prefix', '!')
 discord_issues_channel = discord_config.get('issues_channel', None)
+discord_issues_role = discord_config.get('issues_role', None)
 
 Config = {
     'base_url': base_url(),
@@ -31,5 +32,6 @@ Config = {
     'discord_enabled': discord_enabled,
     'discord_token': discord_token,
     'command_prefix': discord_prefix,
-    'discord_issues_channel': discord_issues_channel
+    'discord_issues_channel': discord_issues_channel,
+    'discord_issues_role': discord_issues_role
 }

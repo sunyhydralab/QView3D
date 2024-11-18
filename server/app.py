@@ -124,6 +124,13 @@ def run_discord_bot():
         embed.timestamp = datetime.utcnow()
             
         await ctx.send(embed=embed)
+    
+    @bot.command()
+    async def testfile(ctx):
+        roleid = Config['discord_issues_role']
+        role_message = '<@&{role_id}>'.format(role_id=roleid)
+        
+        await send_discord_file(ctx.channel, "../INFO.log", role_message)
 
     # Start the bot
     bot.run(Config['discord_token'])
