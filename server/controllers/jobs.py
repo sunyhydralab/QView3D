@@ -618,8 +618,67 @@ def refetch_time():
 
     except Exception as e:
         print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500    
-    
+        return jsonify({"error": "Unexpected error occurred"}), 500
+
+@jobs_bp.route('/getlogfile', methods=["GET"])
+def getLogFile():
+    cwd = os.getcwd()
+    logBase = cwd.replace("server", "logs")
+    job_id = request.args.get('jobid', default=-1, type=int)
+
+    # Validate the job object
+    job: Job | None = Job.findJob(job_id)
+    if job is None:
+        return jsonify({"error": "Job not found"}), 404
+
+    printer = job.printer.name
+    if printer is None:
+        return jsonify({"error": "Printer not found"}), 404
+
+    fileName = job.file_name_original
+    fileName = fileName.replace(".gcode", "")
+    fileName = fileName.replace("_", "-")
+
+    # Construct log file path
+    try:
+        logFile = os.path.join(
+            logBase,
+            printer,
+            fileName,
+            job.date.strftime('%m-%d-%Y_%H-%M-%S'),
+            "color",
+            "INFO.log"
+        )
+
+        # Ensure the log file exists
+        if not os.path.isfile(logFile):
+            return jsonify({"error": f"Log file not found at path: {logFile}"}), 404
+
+        # Compress the file in memory
+        with open(logFile, "rb") as f_in:
+            buffer = BytesIO()
+            with gzip.GzipFile(fileobj=buffer, mode="wb") as gz:
+                gz.write(f_in.read())
+
+            # Get the compressed data as bytes
+            compressed_data = buffer.getvalue()
+
+        # Encode the compressed data in base64
+        encoded_data = base64.b64encode(compressed_data).decode('utf-8')
+
+        # Return the compressed file in JSON
+        return jsonify({
+            "success": True,
+            "filename": os.path.basename(logFile) + ".gz",
+            "file": encoded_data
+        })
+
+    except Exception as e:
+        # Log the exception for debugging
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
+
+
 def findPrinterObject(printer_id): 
     threads = printer_status_service.getThreadArray()
     return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer  

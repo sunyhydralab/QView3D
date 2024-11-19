@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers, type Device } from '../model/ports'
-import { pageSize, useGetJobs, type Job, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useDownloadCsv, useRemoveIssue, isLoading } from '../model/jobs';
+import { pageSize, useGetJobs, type Job, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useGetLogFile, useAssignComment, useDownloadCsv, useRemoveIssue, isLoading } from '../model/jobs';
 import { computed, onMounted, onBeforeUnmount, ref, watchEffect, onUnmounted } from 'vue';
 import { type Issue, useGetIssues, useAssignIssue } from '../model/issues'
 import { useRouter } from 'vue-router';
@@ -12,6 +12,7 @@ import '@vuepic/vue-datepicker/dist/main.css';
 const { jobhistory, getFavoriteJobs } = useGetJobs()
 const { getFileDownload } = useGetJobFile()
 const { getFile } = useGetFile()
+const { getLogFile } = useGetLogFile()
 const { deleteJob } = useDeleteJob()
 const { clearSpace } = useClearSpace()
 const { favorite } = useFavoriteJob()
@@ -854,7 +855,15 @@ const onlyNumber = ($event: KeyboardEvent) => {
                                             @click="getFileDownload(job.id)"
                                             :disabled="job.file_name_original.includes('.gcode:')">
                                             <i class="fas fa-download"></i>
-                                            <span class="ms-2">Download</span>
+                                            <span class="ms-2">Download Gcode</span>
+                                        </a>
+                                    </li>
+                                  <li>
+                                        <a class="dropdown-item d-flex align-items-center"
+                                            @click="getLogFile(job.id)"
+                                            :disabled="job.file_name_original.includes('.gcode:')">
+                                            <i class="fas fa-download"></i>
+                                            <span class="ms-2">Download Log</span>
                                         </a>
                                     </li>
                                     <li>
