@@ -3,6 +3,7 @@ import base64
 from operator import or_
 import os
 import re
+
 from models.db import db
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
@@ -45,26 +46,37 @@ class Issue(db.Model):
             )
 
     @classmethod
-    def create_issue(cls, issue):
+    def create_issue(cls, issue, exception=None):
+        print("made it to create_issue method")
         try:
-            from app import send_discord_embed
+            from app import sync_send_discord_embed
+            print("imported send_discord_embed")
             
             new_issue = cls(issue)
+            print("created new issue")
             db.session.add(new_issue)
+            print("added new issue")
             db.session.commit()
+            print("commit new issue")
             
             embed = discord.Embed(title='New Issue Created',
                                 description='A issue occurred when running a job',
                                 color=discord.Color.red())
+            print("created embed")
             
             embed.add_field(name='Issue', value=issue, inline=False)
-            embed.add_field(name='ID', value=new_issue.id, inline=False)
-            
-            embed.timestamp = datetime.utcnow()
+            print("added field: Issue")
+            if exception:
+                import traceback
+                embed.add_field(name='Exception', value="".join(traceback.format_exception(None, exception, exception.__traceback__)), inline=False)
+            print("added field: ID")
+            embed.timestamp = datetime.now()
+            print("set timestamp")
             
             if Config['discord_enabled']:
-                send_discord_embed(embed)
-            
+                print("discord enabled")
+                sync_send_discord_embed(embed=embed)
+                print("sent discord embed")
             return {"success": True, "message": "Issue successfully created"}
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
