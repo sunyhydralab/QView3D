@@ -10,7 +10,8 @@ def load_config(file_path):
         config = json.load(config_file)
     return config
 
-config = load_config('./config/config.json')
+configFileLoc = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config', 'config.json'))
+config = load_config(configFileLoc)
 environment = config.get('environment', 'development')
 ip = config.get('ip', '127.0.0.1')
 database_uri = config.get('databaseURI', 'hvamc') + ".db"
