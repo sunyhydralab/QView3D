@@ -11,81 +11,127 @@ from threading import Thread
 import time
 
 class FabricatorThread(Thread):
-    def __init__(self, fabricator, *args, **kwargs):
+    def __init__(self, fabricator, app=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fabricator = fabricator
+        if app:
+            self.app = app
+        else:
+            from app import app
+            self.app = app
 
-class FabricatorList():
-    fabricators: [Fabricator] = []
-    fabricator_threads = []
-    ping_thread = None
+    def run(self):
+        with self.app.app_context():
+            while True:
+                time.sleep(2)
+                status = self.fabricator.getStatus()
+                queueSize = self.fabricator.getQueue().getSize()
+                self.fabricator.responseCount = 0
+                if status == "ready" and queueSize > 0:
+                    time.sleep(2)
+                    if status != "offline":
+                        self.fabricator.printNextInQueue()
 
-    @staticmethod
-    def __iter__():
-        return iter(FabricatorList.fabricators)
+    def stop(self):
+        self.fabricator.terminated = 1
 
-    @staticmethod
-    def __len__():
-        return len(FabricatorList.fabricators)
+class FabricatorList:
+    def __init__(self, app=None):
+        self.app = app
+        with self.app.app_context():
+            self.fabricators = Fabricator.queryAll()
+            self.fabricator_threads = []
+            self.ping_thread = None
+            for fabricator in self.fabricators:
+                self.fabricator_threads.append(self.start_fabricator_thread(fabricator))
 
-    @staticmethod
-    def init():
-        """initialize the list of printers"""
-        FabricatorList.fabricators = Fabricator.queryAll()
+    def __iter__(self):
+        return iter(self.fabricators)
 
-    @staticmethod
-    def addFabricator(serialPortName: str, name: str = ""):
-        """add a printer to the list, and to the database"""
+    def __len__(self):
+        return len(self.fabricators)
+
+    def __getitem__(self, key):
+        return self.fabricators[key]
+
+    def teardown(self):
+        """stop all fabricator threads"""
+        [thread.stop() for thread in self.fabricator_threads]
+        self.fabricator_threads = []
+
+    def addFabricator(self, serialPortName: str, name: str = ""):
+        """add a fabricator to the list, and to the database, then start a thread for it"""
         serialPort: ListPortInfo | SysFS | None = Ports.getPortByName(serialPortName)
-        dbFab: Fabricator | None = next((fabricator for fabricator in Fabricator.queryAll() if fabricator.hwid == serialPort.hwid.split(' LOCATION=')[0]), None)
-        listFab: Fabricator | None = next((fabricator for fabricator in FabricatorList.fabricators if fabricator.getHwid() == serialPort.hwid.split(' LOCATION=')[0]), None)
+        dbFab: Fabricator | None = next((fabricator for fabricator in Fabricator.queryAll() if fabricator.getHwid() == serialPort.hwid.split(' LOCATION=')[0]), None)
+        listFab: Fabricator | None = next((fabricator for fabricator in self if fabricator.getHwid() == serialPort.hwid.split(' LOCATION=')[0]), None)
+        newFab: Fabricator | None = None
         if dbFab is not None: # means that the fabricator is in the db
             if listFab is not None: # means that the fabricator is in the list and the db
-                print("Fabricator is already in the list and the db")
+                from app import handle_errors_and_logging
+                handle_errors_and_logging(Exception(f"Fabricator {dbFab.getname()} already exists in the list"), listFab)
             else: # means that the fabricator is in the db but not in the list
-                FabricatorList.fabricators.append(Fabricator(serialPort, name=dbFab.getname()))
+                newFab = Fabricator(serialPort, name=dbFab.getname())
+                self.fabricators.append(newFab)
         else: # means that the fabricator is not in the db
             if listFab is not None: # means that the fabricator is in the list but not in the db
-                listFab.addToDB()
+                newFab = listFab
+                newFab.addToDB()
             else: # means that the fabricator is not in the list or the db
-                FabricatorList.fabricators.append(Fabricator(serialPort, name=name, addToDB=True))
-        dbPrinters = Fabricator.queryAll()
-        assert(len(FabricatorList.fabricators) == len(dbPrinters))
-        assert all(printer in FabricatorList.fabricators for printer in dbPrinters)
+                newFab = Fabricator(serialPort, name=name, addToDB=True)
+                self.fabricators.append(newFab)
+        dbfabricators = Fabricator.queryAll()
+        assert(len(self) == len(dbfabricators))
+        assert all(fabricator in self for fabricator in dbfabricators)
+        if newFab: self.start_fabricator_thread(newFab)
 
-    @staticmethod
-    def deleteFabricator(printerid):
-        """delete a printer from the list, and from the database"""
+
+    def deleteFabricator(self, fabricatorid):
+        """delete a fabricator from the list, and from the database"""
         # TODO: Implement deleteFabricator
         pass
 
-    @staticmethod
-    def getFabricatorByName(name) -> Fabricator | None:
-        """find the first printer with the given name"""
-        return next((fabricator for fabricator in FabricatorList.fabricators if fabricator.getName() == name), None)
 
-    @staticmethod
-    def getPrinterByHwid(hwid) -> Fabricator | None:
-        """find the first printer with the given hwid"""
-        return next((fabricator for fabricator in FabricatorList.fabricators if fabricator.getHwid() == hwid), None)
+    def getFabricatorByName(self, name) -> Fabricator | None:
+        """find the first fabricator with the given name"""
+        return next((fabricator for fabricator in self if fabricator.getName() == name), None)
 
-    @staticmethod
-    def diagnose(device: Device):
+
+    def getFabricatorByHwid(self, hwid) -> Fabricator | None:
+        """find the first fabricator with the given hwid"""
+        return next((fabricator for fabricator in self if fabricator.getHwid() == hwid), None)
+
+    def getFabricatorById(self, id) -> Fabricator | None:
+        """find the first fabricator with the given id"""
+        return next((fabricator for fabricator in self if fabricator.dbID == id), None)
+    
+
+    def getFabricatorByPort(self, port) -> Fabricator | None:
+        """find the first fabricator with the given port"""
+        for fabricator in self:
+            if fabricator.getSerialPort().device == port:
+                return fabricator
+        return next((fabricator for fabricator in self.fabricators if fabricator.devicePort == port), None)
+
+
+    def diagnose(self, device: Device | Fabricator):
+        """diagnose a fabricator"""
+        if isinstance(device, Fabricator):
+            device = device.device
         try:
             diagnoseString = ""
             for port in serial.tools.list_ports.comports():
                 if port.device == device.getSerialPort().device:
                     diagnoseString += f"The system has found a <b>matching port</b> with the following details: <br><br> <b>Device:</b> {port.device}, <br> <b>Description:</b> {port.description}, <br> <b>HWID:</b> {port.hwid}"
                     hwid = device.getHWID()
-                    printerExists = FabricatorList.getPrinterByHwid(hwid)
-                    if printerExists:
-                        printer = FabricatorList.getPrinterByHwid(hwid)
-                        diagnoseString += f"<hr><br>Device <b>{port.device}</b> is registered with the following details: <br><br> <b>Name:</b> {printer.name} <br> <b>Device:</b> {printer.device}, <br> <b>Description:</b> {printer.description}, <br><b> HWID:</b> {printer.hwid}"
+                    fabricatorExists = self.getFabricatorByHwid(hwid)
+                    if fabricatorExists:
+                        fabricator = self.getFabricatorByHwid(hwid)
+                        diagnoseString += f"<hr><br>Device <b>{port.device}</b> is registered with the following details: <br><br> <b>Name:</b> {fabricator.name} <br> <b>Device:</b> {fabricator.device}, <br> <b>Description:</b> {fabricator.description}, <br><b> HWID:</b> {fabricator.hwid}"
             if diagnoseString == "":
-                diagnoseString = "The port this printer is registered under is <b>not found</b>. Please check the connection and try again."
+                diagnoseString = "The port this fabricator is registered under is <b>not found</b>. Please check the connection and try again."
             return {
                 "success": True,
-                "message": "Printer successfully diagnosed.",
+                "message": "fabricator successfully diagnosed.",
                 "diagnoseString": diagnoseString,
             }
 
@@ -93,66 +139,56 @@ class FabricatorList():
             print(f"Unexpected error: {e}")
             return jsonify({"error": "Unexpected error occurred"}), 500
 
-    @staticmethod
-    def start_fabricator_thread(fabricator, app):
-        thread = FabricatorThread(fabricator, target=FabricatorList.update_thread, args=(fabricator, app))
+
+    def start_fabricator_thread(self, fabricator: Fabricator):
+        thread = FabricatorThread(fabricator, app=self.app, target=self.update_thread, args=(fabricator,))
         thread.daemon = True
         thread.start()
         return thread
 
-    @staticmethod
-    def create_fabricator_threads(fabricators_data, app):
-        for fabricator_info in fabricators_data:
-            fabricator = Fabricator(
-                id=fabricator_info["id"],
-                device=fabricator_info["device"],
-                description=fabricator_info["description"],
-                hwid=fabricator_info["hwid"],
-                name=fabricator_info["name"],
-                status='configuring',
-            )
+
+    def create_fabricator_threads(self):
+        for fabricator in self:
             fabricator.setQueue(Queue())  # Ensure each fabricator has its own queue
-            fabricator_thread = FabricatorList.start_fabricator_thread(fabricator, app)
-            FabricatorList.fabricator_threads.append(fabricator_thread)
+            fabricator_thread = self.start_fabricator_thread(fabricator)
+            self.fabricator_threads.append(fabricator_thread)
+        self.ping_thread = Thread(target=self.pingForStatus)
 
-        FabricatorList.ping_thread = Thread(target=FabricatorList.pingForStatus)
+    def get_fabricator_thread(self, fabricator):
+        assert fabricator in self
+        thread = next(thread for thread in self.fabricator_threads if thread.fabricator == fabricator)
+        assert thread.is_alive()
+        assert thread.daemon
+        return thread
 
-    @staticmethod
-    def queue_restore(fabricators_data, status, queue, app):
-        for fabricator_info in fabricators_data:
-            fabricator = Fabricator(
-                id=fabricator_info["id"],
-                device=fabricator_info["device"],
-                description=fabricator_info["description"],
-                hwid=fabricator_info["hwid"],
-                name=fabricator_info["name"],
-            )
+
+
+    def queue_restore(self, status, queue):
+        for fabricator in self.fabricators:
             for job in queue:
                 if job.status != 'inqueue':
                     job.setStatus('inqueue')
                     job.setDBstatus(job.id, 'inqueue')
             fabricator.setQueue(queue)
             fabricator.setStatus(status)
-            fabricator_thread = FabricatorList.start_fabricator_thread(fabricator, app)
-            FabricatorList.fabricator_threads.append(fabricator_thread)
+            fabricator_thread = self.start_fabricator_thread(fabricator)
+            self.fabricator_threads.append(fabricator_thread)
 
-    @staticmethod
-    def update_thread(fabricator, app):
-        with app.app_context():
-            while True:
+    def update_thread(self, fabricator):
+        # thread = next(thread for thread in self.fabricator_threads if thread.fabricator.id == fabricator.id)
+        while True:
+            time.sleep(2)
+            status = fabricator.getStatus()
+            queueSize = fabricator.getQueue().getSize()
+            fabricator.responseCount = 0
+            if status == "ready" and queueSize > 0:
                 time.sleep(2)
-                status = fabricator.getStatus()
-                queueSize = fabricator.getQueue().getSize()
-                fabricator.responseCount = 0
-                if status == "ready" and queueSize > 0:
-                    time.sleep(2)
-                    if status != "offline":
-                        fabricator.printNextInQueue()
+                if status != "offline":
+                    fabricator.printNextInQueue()
 
-    @staticmethod
-    def resetThread(fabricator_id, app):
+    def resetThread(self, fabricator_id):
         try:
-            for thread in FabricatorList.fabricator_threads:
+            for thread in self.fabricator_threads:
                 if thread.fabricator.id == fabricator_id:
                     fabricator = thread.fabricator
                     fabricator.terminated = 1
@@ -163,18 +199,17 @@ class FabricatorList():
                         "hwid": fabricator.hwid,
                         "name": fabricator.name,
                     }
-                    FabricatorList.fabricator_threads.remove(thread)
-                    FabricatorList.create_fabricator_threads([thread_data], app)
+                    self.fabricator_threads.remove(thread)
+                    self.create_fabricator_threads()
                     break
             return jsonify({"success": True, "message": "Fabricator thread reset successfully"})
         except Exception as e:
             print(f"Unexpected error: {e}")
             return jsonify({"success": False, "error": "Unexpected error occurred"}), 500
 
-    @staticmethod
-    def queueRestore(fabricator_id, status, app):
+    def queueRestore(self, fabricator_id, status):
         try:
-            for thread in FabricatorList.fabricator_threads:
+            for thread in self.fabricator_threads:
                 if thread.fabricator.id == fabricator_id:
                     fabricator = thread.fabricator
                     fabricator.terminated = 1
@@ -185,109 +220,44 @@ class FabricatorList():
                         "hwid": fabricator.hwid,
                         "name": fabricator.name,
                     }
-                    FabricatorList.fabricator_threads.remove(thread)
-                    FabricatorList.queue_restore([thread_data], status, fabricator.getQueue(), app)
+                    self.fabricator_threads.remove(thread)
+                    self.queue_restore(status, fabricator.getQueue())
                     break
             return jsonify({"success": True, "message": "Fabricator thread reset successfully"})
         except Exception as e:
             print(f"Unexpected error: {e}")
             return jsonify({"success": False, "error": "Unexpected error occurred"}), 500
 
-    @staticmethod
-    def deleteThread(fabricator_id):
+
+    def deleteThread(self, fabricator_id):
         try:
-            for thread in FabricatorList.fabricator_threads:
+            for thread in self.fabricator_threads:
                 if thread.fabricator.id == fabricator_id:
                     fabricator = thread.fabricator
-                    thread_data = {
-                        "id": fabricator.id,
-                        "device": fabricator.device,
-                        "description": fabricator.description,
-                        "hwid": fabricator.hwid,
-                        "name": fabricator.name
-                    }
-                    FabricatorList.fabricator_threads.remove(thread)
+                    if fabricator.getStatus() == "ready":
+                        fabricator.terminated = 1
+                    self.fabricator_threads.remove(thread)
                     break
             return jsonify({"success": True, "message": "Fabricator thread reset successfully"})
         except Exception as e:
             print(f"Unexpected error: {e}")
             return jsonify({"success": False, "error": "Unexpected error occurred"}), 500
 
-    @staticmethod
-    def editName(fabricator_id, name):
-        try:
-            for thread in FabricatorList.fabricator_threads:
-                if thread.fabricator.id == fabricator_id:
-                    fabricator = thread.fabricator
-                    fabricator.name = name
-                    break
-            return jsonify({"success": True, "message": "Fabricator name updated successfully"})
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-            return jsonify({"success": False, "error": "Unexpected error occurred"}), 500
 
-    @staticmethod
-    def retrieve_fabricator_info():
-        fabricator_info_list = []
-        for thread in FabricatorList.fabricator_threads:
-            fabricator = thread.fabricator
-            fabricator_info = {
-                "device": fabricator.device,
-                "description": fabricator.description,
-                "hwid": fabricator.hwid,
-                "name": fabricator.name,
-                "status": fabricator.status,
-                "id": fabricator.id,
-                "error": fabricator.error,
-                "canPause": fabricator.canPause,
-                "queue": [],
-                "colorChangeBuffer": fabricator.colorbuff
-            }
-            queue = fabricator.getQueue()
-            for job in queue:
-                job_info = {
-                    "id": job.id,
-                    "name": job.name,
-                    "status": job.status,
-                    "date": job.date.strftime('%a, %d %b %Y %H:%M:%S'),
-                    "fabricatorid": job.fabricator_id,
-                    "errorid": job.error_id,
-                    "file_name_original": job.file_name_original,
-                    "progress": job.progress,
-                    "sent_lines": job.sent_lines,
-                    "favorite": job.favorite,
-                    "released": job.released,
-                    "file_pause": job.filePause,
-                    "comments": job.comments,
-                    "extruded": job.extruded,
-                    "td_id": job.td_id,
-                    "time_started": job.time_started,
-                    "fabricator_name": job.fabricator_name,
-                    "max_layer_height": job.max_layer_height,
-                    "current_layer_height": job.current_layer_height,
-                    "filament": job.filament,
-                }
-                fabricator_info['queue'].append(job_info)
+    def getThreadArray(self):
+        return self.fabricator_threads
 
-            fabricator_info_list.append(fabricator_info)
 
-        return fabricator_info_list
-
-    @staticmethod
-    def getThreadArray():
-        return FabricatorList.fabricator_threads
-
-    @staticmethod
-    def pingForStatus():
+    def pingForStatus(self):
         pass
 
-    @staticmethod
-    def moveFabricatorList(fabricator_ids):
+
+    def moveFabricatorList(self, fabricator_ids):
         new_thread_list = []
         for id in fabricator_ids:
-            for thread in FabricatorList.fabricator_threads:
+            for thread in self.fabricator_threads:
                 if thread.fabricator.id == id:
                     new_thread_list.append(thread)
                     break
-        FabricatorList.fabricator_threads = new_thread_list
+        self.fabricator_threads = new_thread_list
         return jsonify({"success": True, "message": "Fabricator list reordered successfully"})
