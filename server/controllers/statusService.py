@@ -1,9 +1,6 @@
-from flask import Blueprint, jsonify
-from app import printer_status_service  # import the instance from app.py
 from flask import Blueprint, jsonify, request
-from models.jobs import Job 
 import os
-
+from app import fabricator_list
 status_bp = Blueprint("status", __name__)
 
 @status_bp.route('/ping', methods=["GET"])
@@ -18,7 +15,7 @@ def getOpenThreads():
 @status_bp.route('/getprinterinfo', methods=["GET"])
 def getPrinterInfo():
     try: 
-        printer_info = printer_status_service.retrieve_printer_info()  # call the method on the instance
+        printer_info = fabricator_list.fabricators  # call the method on the instance
         return jsonify(printer_info)
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -29,7 +26,7 @@ def hardreset():
     try: 
         data = request.get_json() # get json data 
         id = data['printerid']
-        res = printer_status_service.resetThread(id)
+        res = fabricator_list.resetThread(id)
         return res 
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -41,7 +38,7 @@ def queueRestore():
         data = request.get_json() # get json data 
         id = data['printerid']
         status = data['status']
-        res = printer_status_service.queueRestore(id, status)
+        res = fabricator_list.queueRestore(id, status)
         return res 
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -52,7 +49,7 @@ def removeThread():
     try:
         data = request.get_json() # get json data
         printerid = data['printerid']
-        res = printer_status_service.deleteThread(printerid)
+        res = fabricator_list.deleteThread(printerid)
         return res 
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -64,7 +61,8 @@ def editName():
         data = request.get_json() 
         printerid = data['printerid']
         name = data['newname']
-        res = printer_status_service.editName(printerid, name)
+        fabricator_list.getFabricatorByHwid()
+        res = fabricator_list.editName(printerid, name)
         return res 
     except Exception as e:
         print(f"Unexpected error: {e}")
