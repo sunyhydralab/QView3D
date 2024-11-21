@@ -6,6 +6,36 @@ import sys
 import time
 import pluggy
 import pytest
+from app import fabricator_list
+
+@pytest.fixture(scope="session")
+def fabricator(request, app):
+    port = request.session.config.port
+    if not port: return None
+    from serial.tools.list_ports_common import ListPortInfo
+    from serial.tools.list_ports_linux import SysFS
+    if isinstance(port, str):
+        fabricator = fabricator_list.getFabricatorByPort(port)
+    elif isinstance(port, ListPortInfo) or isinstance(port, SysFS):
+        fabricator = fabricator_list.getFabricatorByPort(port.device)
+    else:
+        fabricator = None
+    if fabricator is None:
+        pytest.skip("No port specified")
+    if os.getenv("LEVEL") == "DEBUG":
+        fabricator.device.logger.setLevel(fabricator.device.logger.DEBUG)
+    fabricator.device.connect()
+    yield fabricator
+    fabricator.device.disconnect()
+
+@pytest.fixture(scope="session")
+def app():
+    from app import app
+    app = app
+    with app.app_context():
+        yield app
+        fabricator_list.teardown()
+
 
 from Classes.Logger import Logger
 
@@ -29,7 +59,7 @@ def pytest_addoption(parser):
         help="port to test"
     )
 
-def line_separator(interrupter: str, symbol: str = "-", length: int = 104) -> str:
+def line_separator(interrupter: str, symbol: str = "-", length: int = 136) -> str:
     if not interrupter:
         return symbol * (length//len(symbol))
     interrupterNoColor = re.sub(r'\033\[[0-9;]*m', '', interrupter)
@@ -85,6 +115,19 @@ def pytest_sessionstart(session) -> None:
 
 def pytest_collection_modifyitems(session, config, items):
     session.config.logger.logMessageOnly(f"\033[1m...collected {len(items)} items...")
+    file_order = [
+        "test_app.py",
+        "test_fabricator_list.py",
+        "test_device.py",
+        "test_fabricator.py",
+    ]
+
+    def get_file_order(item):
+        file_name = item.location[0]
+        return file_order.index(file_name) if file_name in file_order else len(file_order)
+
+    # Sort the items based on the file order
+    items.sort(key=get_file_order)
 
 def pytest_sessionfinish(session, exitstatus) -> None:
     session_duration = time.time() - session.config.start_time
@@ -128,7 +171,18 @@ def pytest_sessionfinish(session, exitstatus) -> None:
         logger.logMessageOnly(headerText, logLevel=logger.ERROR)
         for failTest in session.config.failNames:
             logger.logMessageOnly(line_separator(failTest, symbol="_"), end="\n", logLevel=logger.ERROR)
-            logger.logException(session.config.fails[failTest].reprtraceback.reprentries)
+            if not hasattr(session.config.fails[failTest], "reprtraceback"):
+                if not hasattr(session.config.fails[failTest], "longrepr"):
+                    if hasattr(session.config.fails[failTest], "errorstring"):
+                        logger.error(session.config.fails[failTest].errorstring)
+                    else:
+                        logger.error(session.config.fails[failTest])
+                else:
+                    logger.error(session.config.fails[failTest].longrepr)
+            elif not hasattr(session.config.fails[failTest].reprtraceback, "reprentries"):
+                logger.error(session.config.fails[failTest].reprtraceback)
+            else:
+                logger.logException(session.config.fails[failTest].reprtraceback.reprentries)
     logger.logMessageOnly("\n\033[32m" + line_separator(summary, symbol="="))
 
 visited_modules = set()
@@ -192,7 +246,7 @@ def pytest_runtest_logreport(report):
                 logger.info(f"IDK what happened!?!?: {report}")
         elif verbosity == 1:
             loc = report.nodeid.split("::")[-1]
-            testString = f"{loc}[{port}]{' ' * (27 - len(loc) - len(str(port)) - 2)}"
+            testString = f"{loc}[{port}]{' ' * (59 - len(loc) - len(str(port)) - 2)}"
             if report.passed:
                 logger.info(f"{testString} \033[32mPASSED\033[0m")
             elif report.failed:
@@ -207,11 +261,22 @@ def pytest_runtest_logreport(report):
                 logger.info(f"{testString} IDK what happened!?!?: {report}")
         elif verbosity >= 2:
             loc = report.nodeid
-            testString = f"{loc}[{port}]{' ' * (47 - len(loc) - len(str(port)) - 2)}"
+            testString = f"{loc}[{port}]{' ' * (79 - len(loc) - len(str(port)) - 2)}"
             if report.passed:
                 logger.info(f"{testString} \033[32mPASSED\033[0m")
             elif report.failed:
                 logger.info(f"{testString} \033[31mFAILED\033[0m:\n\n")
+                if not hasattr(report, "longrepr"):
+                    if hasattr(report, "errorstring"):
+                        logger.error(report.errorstring)
+                    else:
+                        logger.error(report)
+                elif not hasattr(report.longrepr, "reprtraceback"):
+                    logger.error(report.longrepr)
+                elif not hasattr(report.longrepr.reprtraceback, "reprentries"):
+                    logger.error(report.longrepr.reprtraceback)
+                else:
+                    logger.logException(report.longrepr.reprtraceback.reprentries)
                 logger.logException(report.longrepr.reprtraceback.reprentries)
             elif report.skipped:
                 logger.info(f"{testString} \033[33mSKIPPED\033[0m: {report.longrepr[-1].split('Skipped: ')[-1]}")

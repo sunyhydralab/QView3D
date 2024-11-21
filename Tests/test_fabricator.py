@@ -1,49 +1,28 @@
 import os
-import sys
 from datetime import datetime
 import re
 import pytest
+from app import fabricator_list
 from Classes.Jobs import Job
-from Classes.Fabricators.Fabricator import Fabricator
 from parallel_test_runner import testLevel
 
 testLevelToRun = testLevel
 shortTest = True
-fabricator = Fabricator(None, "Test Printer", addToDB=False, consoleLogger=sys.stdout)
-isVerbose = False
 
 def __desc__(): return "Fabricator Tests"
 def __repr__(): return f"test_fabricator.py running on port {os.getenv('PORT')}"
 
-def cali_cube_setup():
+def cali_cube_setup(fabricator=None):
+    if fabricator is None:
+        fabricator = fabricator_list.getFabricatorByPort(os.getenv("PORT"))
     file = "../server/xyz-cali-cube"
     if shortTest: file = file + "-mini"
     file = file + f"_{fabricator.device.MODEL}.gcode"
     return file
 
-def fabricator_setup(port):
-    if not port: return None
-    from Classes.Ports import Ports
-    fab = Fabricator(Ports.getPortByName(port), "Test Printer", addToDB=False, consoleLogger=sys.stdout)
-    if os.getenv("LEVEL") == "DEBUG":
-        fab.device.logger.setLevel(fab.device.logger.DEBUG)
-    return fab
-
-@pytest.fixture(scope="module", autouse=True)
-def function_setup(request):
-    global fabricator
-    fabricator = fabricator_setup(request.session.config.port)
-    global isVerbose
-    isVerbose = fabricator.device.logger.level <= fabricator.device.logger.DEBUG
-    if fabricator is None:
-        pytest.skip("No port specified")
-    yield
-    fabricator.device.disconnect()
-    fabricator = None
-
 @pytest.mark.dependency(depends=["test_device.py::test_connection"], scope="session")
 @pytest.mark.skipif(condition=testLevelToRun < 1, reason="Not doing lvl 1 tests")
-def test_status():
+def test_status(app, fabricator):
     assert fabricator.getStatus() is not None, f"Failed to get status on {fabricator.getDescription()}"
     assert fabricator.device.status is not None, f"Failed to get status on device of {fabricator.getDescription()}"
     assert fabricator.getStatus() == fabricator.device.status, f"Internal status mismatch: fabricator: {fabricator.getDescription()}, device: {fabricator.device.status}"
@@ -51,8 +30,8 @@ def test_status():
 
 @pytest.mark.dependency(depends=["test_device.py::test_connection"], scope="session")
 @pytest.mark.skipif(condition=testLevelToRun < 1, reason="Not doing lvl 1 tests")
-def test_add_job():
-    file = cali_cube_setup()
+def test_add_job(app, fabricator):
+    file = cali_cube_setup(fabricator=fabricator)
     with open(file, "r") as f:
         assert fabricator.queue.addToFront(Job(f.read(), "xyz cali cube", 3, "ready", file, False, 1, fabricator.name)), f"Failed to add job on {fabricator.getDescription()}"
     for job in fabricator.queue.getQueue():
@@ -62,7 +41,7 @@ def test_add_job():
 
 @pytest.mark.dependency(depends=["test_device.py::test_home", "test_fabricator.py::test_add_job"], scope="session")
 @pytest.mark.skipif(condition=testLevelToRun < 7, reason="Not doing lvl 7 tests")
-def test_pause_and_resume():
+def test_pause_and_resume(app, fabricator):
     from Mixins.canPause import canPause
     if not isinstance(fabricator.device, canPause):
         pytest.skip(f"{fabricator.getDescription()} doesn't support pausing")
@@ -82,9 +61,7 @@ def test_pause_and_resume():
             with open(file, "r") as f:
                 job = Job(f.read(), "pauseAndResumeTest", fabricator.dbID, "ready", file, False, 1, fabricator.name)
             fabricator.queue.addToFront(job)
-            print("Beginning")
             result = fabricator.begin()
-            print("Finished")
             import traceback
             assert not isinstance(result, Exception), f"Failed to begin on {fabricator.getDescription()}: {result}:\n{''.join(traceback.format_exception(None, result, result.__traceback__))}"
             assert fabricator.getStatus() == fabricator.device.status == "cancelled", f"Failed to cancel on {fabricator.getDescription()}, expected cancel, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
@@ -99,13 +76,10 @@ def test_pause_and_resume():
             while fabricator.getStatus() != "printing":
                 assert fabricator.getStatus() != "error", f"Failed to print on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
                 sleep(1)
-            print("Pausing")
             assert fabricator.pause(), f"Failed to pause on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
             sleep(30)
-            print("Resuming")
             assert fabricator.resume(), f"Failed to resume on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
             sleep(1)
-            print("Cancelling")
             assert fabricator.cancel(), f"Failed to cancel on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
             assert fabricator.getStatus() == "cancelled", f"Failed to cancel on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
             sleep(10)
@@ -125,15 +99,14 @@ def test_pause_and_resume():
         for future in as_completed([parse_future, pause_future]):
             future.result()
 
-#@pytest.mark.dependency(depends=["test_device.py::test_home", "test_fabricator.py::test_add_job"], scope="session")
-#@pytest.mark.skipif(condition=testLevelToRun < 9, reason="Not doing lvl 9 tests")
-def test_gcode_print_time():
-    print("Testing gcode print time")
-    print(fabricator.device.logger.level)
+@pytest.mark.dependency(depends=["test_device.py::test_home", "test_fabricator.py::test_add_job"], scope="session")
+@pytest.mark.skipif(condition=testLevelToRun < 9, reason="Not doing lvl 9 tests")
+def test_gcode_print_time(app, fabricator):
+    isVerbose = os.getenv("LEVEL") == "DEBUG"
     from Classes.Fabricators.Printers.Printer import Printer
     if not isinstance(fabricator.device, Printer):
         pytest.skip(f"{fabricator.getDescription()} doesn't support printing gcode")
-    file = cali_cube_setup()
+    file = cali_cube_setup(fabricator=fabricator)
     # expectedTime = 2040 # for my personal home test, 1072
     from Classes.Fabricators.Fabricator import getFileConfig
     config = getFileConfig(file)
@@ -189,7 +162,6 @@ def test_gcode_print_time():
         printList.append(f"{printSeconds:02}")
     printString = ":".join(map(str, printList))
 
-
     minutes, seconds = divmod(time.seconds, 60)
     hours, minutes = divmod(minutes, 60)
     days, hours = divmod(hours, 24)
@@ -209,7 +181,6 @@ def test_gcode_print_time():
     else:
         measuredTimeList.append(f"{seconds:02}")
     measuredTimeString = ":".join(measuredTimeList)
-
 
     expectedList = []
     if expectedDays > 0:
