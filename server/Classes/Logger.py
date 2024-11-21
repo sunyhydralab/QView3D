@@ -3,6 +3,7 @@ import os
 import sys
 import traceback
 from _pytest._code.code import ExceptionChainRepr, ReprEntry, ReprEntryNative
+from _pytest.fixtures import FixtureLookupErrorRepr
 from typing_extensions import Sequence
 
 
@@ -32,12 +33,9 @@ class Logger(logging.Logger):
         if consoleLogger is not None:
             consoleLogger = logging.StreamHandler(consoleLogger)
             consoleLogger.setLevel(loggingLevel)
-        else:
-            consoleLogger = logging.StreamHandler(sys.stdout)
-            consoleLogger.setLevel(self.ERROR)
-        consoleLogger.setFormatter(CustomFormatter(formatString))
-        self.consoleLogger = consoleLogger
-        self.addHandler(consoleLogger)
+            consoleLogger.setFormatter(CustomFormatter(formatString))
+            self.consoleLogger = consoleLogger
+            self.addHandler(consoleLogger)
         if fileLogger is None:
             log_folder = "./server/logs"
             os.makedirs(log_folder, exist_ok=True)
@@ -58,16 +56,12 @@ class Logger(logging.Logger):
     def formatLog(self, msg):
         if isinstance(msg, str):
             pass
-        elif isinstance(msg, Exception):
-            msg = traceback.format_exception(msg)
-            msg = "".join(msg)
         elif isinstance(msg, ExceptionChainRepr):
             msg = msg.reprtraceback.__repr__()
+        elif isinstance(msg, Exception):
+            msg = "".join(traceback.format_exception(None, msg, msg.__traceback__))
         elif isinstance(msg, list) or isinstance(msg, tuple):
-            msgList = msg
-            msg = ""
-            for line in msgList:
-                msg += self.formatLog(line)
+            msg = "".join(msg)
         else:
             msg = str(msg)
         return msg
@@ -117,8 +111,8 @@ class Logger(logging.Logger):
         for handler, formatter in zip(self.handlers, oldFormatters):
             handler.setFormatter(formatter)
 
-    def logException(self, reprentries: list[ExceptionChainRepr] | ExceptionChainRepr | list[ReprEntry | ReprEntryNative] | Sequence[ReprEntry | ReprEntryNative] | ReprEntry | str):
-        if isinstance(reprentries, ExceptionChainRepr) or isinstance(reprentries, ReprEntry):
+    def logException(self, reprentries: list[ExceptionChainRepr] | ExceptionChainRepr | list[ReprEntry | ReprEntryNative] | Sequence[ReprEntry | ReprEntryNative]| list[FixtureLookupErrorRepr] | FixtureLookupErrorRepr | ReprEntry | str):
+        if isinstance(reprentries, ExceptionChainRepr) or isinstance(reprentries, ReprEntry) or isinstance(reprentries, FixtureLookupErrorRepr):
             reprentries = [reprentries]
         if isinstance(reprentries, list):
             for index, reprentry in enumerate(reprentries):
@@ -139,6 +133,16 @@ class Logger(logging.Logger):
                     chain = reprentry.chain
                     for link in chain:
                         self.logException(link[0].reprentries)
+                elif isinstance(reprentry, FixtureLookupErrorRepr):
+                    for line in reprentry.tblines:
+                        self.logMessageOnly(line.rstrip())
+                    lines = reprentry.errorstring.split("\n")
+                    if lines:
+                        for line in lines:
+                            if line.startswith("E") or line.startswith(">"):
+                                self.logMessageOnly(line, logLevel=self.ERROR)
+                            else:
+                                self.logMessageOnly(line)
 
                 if index < len(reprentries) - 1:
                     from conftest import line_separator

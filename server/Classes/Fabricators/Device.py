@@ -34,9 +34,10 @@ class Device(ABC):
             self.serialConnection.reset_input_buffer()
             return True
         except Exception as e:
-            from app import app
-            with app.app_context():
-                return app.handle_error_and_logging(e, self)
+            from app import handle_errors_and_logging
+            handle_errors_and_logging(e, self)
+            return False
+
     def disconnect(self):
         if self.serialConnection:
             self.serialConnection.close()

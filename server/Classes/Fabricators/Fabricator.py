@@ -3,7 +3,6 @@ from flask import jsonify, Response
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from sqlalchemy.exc import SQLAlchemyError
-
 from Classes.Fabricators.Device import Device
 from Mixins.canPause import canPause
 from Mixins.hasEndingSequence import hasEndingSequence
@@ -42,14 +41,12 @@ class Fabricator(db.Model):
         self.description = self.device.getDescription()
         self.hwid = self.device.getHWID()
         self.devicePort = self.device.getSerialPort().device
-
-        self.device.connect()
         if addToDB:
             db.session.add(self)
             db.session.commit()
 
     def __repr__(self):
-        return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}"
+        return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}, port open: {self.device.serialConnection.is_open if (self.device is not None and self.device.serialConnection is not None) else None}"
     @staticmethod
     def getModelFromGcodeCommand(serialPort: ListPortInfo | SysFS | None) -> str:
         """returns the model of the printer based on the response to M997"""
@@ -104,8 +101,12 @@ class Fabricator(db.Model):
             return None
 
     @classmethod
-    def queryAll(cls) -> list["Fabricator"]:
-        """return all fabricators in the database"""
+    def queryAll(cls):
+        """
+        Returns all fabricators in the database as a list of the Fabricator objects
+
+        :return (list[Fabricator]): list of Fabricator objects
+        """
         fabList = []
         from Classes.Ports import Ports
         for fab in cls.query.all():
@@ -141,18 +142,19 @@ class Fabricator(db.Model):
             if isVerbose: self.device.logger.debug(f"Verdict handled, status: {self.status}")
             return True
         except Exception as e:
-            from app import app
-            with app.app_context():
-                app.handle_error_and_logging(e, self)
-            return e
+            from app import handle_errors_and_logging
+            return handle_errors_and_logging(e, self)
 
 
     def pause(self):
         """pauses the fabrication process if the fabricator supports it"""
         if not isinstance(self.device, canPause):
-            return # TODO: return error message
+            from app import handle_errors_and_logging
+            return handle_errors_and_logging("Fabricator doesn't support pausing", self)
+        assert isinstance(self.device, Device)
         if self.status != "printing":
-            return # TODO: return error message
+            from app import handle_errors_and_logging
+            return handle_errors_and_logging("Fabricator doesn't support pausing", self)
         self.setStatus("paused")
         assert isinstance(self.device, Device)
         return self.status == self.device.status == "paused"
@@ -178,10 +180,8 @@ class Fabricator(db.Model):
             self.setStatus("cancelled")
             return self.status == self.device.status == "cancelled"
         except Exception as e:
-            from app import app
-            with app.app_context():
-                app.handle_error_and_logging(e, self)
-            return False
+            from app import handle_errors_and_logging
+            return handle_errors_and_logging(e, self)
 
     def getStatus(self):
         return self.status
@@ -204,9 +204,8 @@ class Fabricator(db.Model):
             # )
             return True
         except Exception as e:
-            from app import app
-            app.handle_error_and_logging(e, self)
-            return False
+            from app import handle_errors_and_logging
+            return handle_errors_and_logging(e, self)
 
     def resetToIdle(self):
         #TODO: send message to front end insuring that the print bed is clear and that the job is done
@@ -254,6 +253,13 @@ class Fabricator(db.Model):
     def getDescription(self):
         return self.description
 
+    def getSerialPort(self):
+        if self.device is None:
+            return None
+        return self.device.getSerialPort()
+
+    def getQueue(self):
+        return self.queue
 
     def checkValidJob(self):
         """checks if the job is valid for the fabricator"""
