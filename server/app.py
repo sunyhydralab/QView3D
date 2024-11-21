@@ -9,13 +9,14 @@ from controllers.ports import getRegisteredFabricators
 import shutil
 from flask_socketio import SocketIO
 from models.config import Config
+from Classes.FabricatorList import FabricatorList
 
 
 # moved this up here so we can pass the app to the PrinterStatusService
 # Basic app setup 
 app = Flask(__name__, static_folder='../client/dist')
 app.config.from_object(__name__) # update application instantly
-logs = os.path.join('./logs')
+logs = os.path.join(os.path.dirname(__file__),'logs')
 from Classes.Logger import Logger
 app.logger = Logger("App", consoleLogger=None, fileLogger=os.path.join(logs, "app.log"))
 # start database connection
@@ -37,6 +38,8 @@ db.init_app(app)
 migrate = Migrate(app, db)
 # moved this before importing the blueprints so that it can be accessed by the PrinterStatusService
 printer_status_service = PrinterStatusService(app)
+fabricator_list = FabricatorList(app)
+app.fabricator_list = fabricator_list
 
 # Initialize SocketIO, which will be used to send printer status updates to the frontend
 # and this specific socket it will be used throughout the backend
@@ -49,25 +52,32 @@ else:
 socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False, async_mode=async_mode) # make it eventlet on production!
 app.socketio = socketio  # Add the SocketIO object to the app object
 
-def handle_errors_and_logging(e: Exception, fabricator = None):
+def handle_errors_and_logging(e: Exception | str, fabricator = None):
     from Classes.Fabricators.Fabricator import Fabricator
     device = fabricator
     if isinstance(fabricator, Fabricator):
         device = fabricator.device
-    if device.logger is None:
-        if app.logger is None:
+    if device is not None and device.logger is not None:
+        device.logger.error(e, stacklevel=3)
+    elif app.logger is None:
+        if isinstance(e, str):
             print(e)
         else:
-            app.logger.error("Error:")
-            app.logger.error(e)
+            import traceback
+            print(traceback.format_exception(None, e, e.__traceback__))
     else:
-        device.logger.error("Error:")
-        device.logger.error(e)
+        app.logger.error(e, stacklevel=3)
     return False
 
-app.handle_error_and_logging = handle_errors_and_logging
+app.handle_errors_and_logging = handle_errors_and_logging
 
 CORS(app)
+
+@app.cli.command("test")
+def run_tests():
+    """Run all tests."""
+    import subprocess
+    subprocess.run(["python", "../Tests/parallel_test_runner.py"])
 
 @app.before_request
 def handle_preflight():
@@ -110,10 +120,7 @@ with app.app_context():
         # Define directory paths for uploads and tempcsv
         uploads_folder = os.path.abspath('../uploads')
         tempcsv = os.path.abspath('../tempcsv')
-
-        # Create printer threads from registered printers on server start
-        from Classes.FabricatorList import FabricatorList
-        printer_status_service.create_printer_threads(FabricatorList.fabricators)
+        app.FabricatorList = fabricator_list
 
         # Check if directories exist and handle them accordingly
         for folder in [uploads_folder, tempcsv]:
