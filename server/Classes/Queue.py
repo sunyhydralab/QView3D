@@ -1,49 +1,44 @@
 from collections import deque
 from flask import current_app
 
-class Queue:
-    def __init__(self):
-        self.__queue = deque()  # use Python double-ended queue
+from Classes.Jobs import Job
 
-    def __iter__(self):  # iterate over queue
-        return iter(self.__queue)
-
-    def __len__(self):
-        return len(self.__queue)
-    
+class Queue(deque):
     def setToInQueue(self): 
-        for job in self.__queue: 
+        for job in self:
             job.status = "inqueue"
 
-    def addToBack(self, job, printerid):
+    def addToBack(self, job: Job, printerid):
+        assert isinstance(job, Job)
         print("Adding job to back of queue ", job.id)
         print("Adding job to back of queue ", printerid)
 
-        if self.__queue.count(job) > 0:
+        if self.count(job) > 0:
             return False
-        self.__queue.append(job)
-        current_app.socketio.emit(
-            "queue_update", {"queue": self.convertQueueToJson(), "printerid": printerid}
-        )
+        self.append(job)
+        # current_app.socketio.emit(
+        #     "queue_update", {"queue": self.convertQueueToJson(), "printerid": printerid}
+        # )
         return True
 
     def addToFront(self, job):
-        if self.__queue.count(job) > 0:
+        assert isinstance(job, Job)
+        if self.count(job) > 0:
             return False
-        if len(self.__queue) >= 1 and self.__queue[0].status == "printing":
-            self.__queue.insert(1, job)
+        if len(self) >= 1 and self[0].status == "printing":
+            self.insert(1, job)
         else:
-            self.__queue.appendleft(job)
-        current_app.socketio.emit(
-            "queue_update", {"queue": self.convertQueueToJson(), "printerid": job.fabricator_id}
-        )
+            self.appendleft(job)
+        # current_app.socketio.emit(
+        #     "queue_update", {"queue": self.convertQueueToJson(), "printerid": job.fabricator_id}
+        # )
         return True
 
     def bump(self, up, jobid):
         index = next(
             (
                 index
-                for index, queued_job in enumerate(self.__queue)
+                for index, queued_job in enumerate(self)
                 if queued_job.id == jobid
             ),
             -1,
@@ -51,34 +46,36 @@ class Queue:
         if index == -1:
             print("Job not found in queue.")
             return
-        job_to_move = self.__queue[index]
-        self.__queue.remove(job_to_move)
+        job_to_move = self[index]
+        self.remove(job_to_move)
         if up and index > 0:
-            self.__queue.insert(index - 1, job_to_move)
-        elif not up and index < len(self.__queue):
-            self.__queue.insert(index + 1, job_to_move)
-        current_app.socketio.emit(
-            "queue_update", {"queue": self.convertQueueToJson(), "printerid": job_to_move.fabricator_id}
-        )
+            self.insert(index - 1, job_to_move)
+        elif not up and index < len(self):
+            self.insert(index + 1, job_to_move)
+        # current_app.socketio.emit(
+        #     "queue_update", {"queue": self.convertQueueToJson(), "printerid": job_to_move.fabricator_id}
+        # )
 
     def reorder(self, arr):
         new_queue = deque()
         for jobid in arr:
-            for job in self.__queue:
+            for job in self:
                 if job.getJobId() == jobid:
                     new_queue.append(job)
                     break
-        self.__queue = new_queue
-        current_app.socketio.emit(
-            "queue_update", {"queue": self.convertQueueToJson(), "printerid": arr[0].fabricator_id if arr else None}
-        )
+        self.clear()
+        self.extend(new_queue)
+
+        # current_app.socketio.emit(
+        #     "queue_update", {"queue": self.convertQueueToJson(), "printerid": arr[0].fabricator_id if arr else None}
+        # )
     
     def deleteJob(self, jobid, printerid):
         deletedjob = None
-        for job in self.__queue:
+        for job in self:
             if job.getJobId() == jobid:
                 deletedjob = job
-                self.__queue.remove(job)
+                self.remove(job)
                 current_app.socketio.emit(
                     "queue_update",
                     {"queue": self.convertQueueToJson(), "printerid": printerid},
@@ -88,7 +85,7 @@ class Queue:
 
     def convertQueueToJson(self):
         queue = []
-        for job in self.__queue:
+        for job in self:
             job_info = {
                 "id": job.id,
                 "name": job.name,
@@ -118,7 +115,7 @@ class Queue:
         index = next(
             (
                 index
-                for index, queued_job in enumerate(self.__queue)
+                for index, queued_job in enumerate(self)
                 if queued_job.id == jobid
             ),
             -1,
@@ -126,46 +123,47 @@ class Queue:
         if index == -1:
             print("Job not found in queue.")
             return
-        job_to_move = self.__queue[index]
-        self.__queue.remove(job_to_move)
+        job_to_move = self[index]
+        self.remove(job_to_move)
         if front:
-            if len(self.__queue) >= 1 and self.__queue[0].status == "printing":
-                self.__queue.insert(1, job_to_move)
+            if len(self) >= 1 and self[0].status == "printing":
+                self.insert(1, job_to_move)
             else:
-                self.__queue.insert(0, job_to_move)
+                self.insert(0, job_to_move)
         else:
             self.addToBack(job_to_move, printerid)
-        current_app.socketio.emit(
-            "queue_update", {"queue": self.convertQueueToJson(), "printerid": printerid}
-        )
+        # current_app.socketio.emit(
+        #     "queue_update", {"queue": self.convertQueueToJson(), "printerid": printerid}
+        # )
 
     def getJob(self, job_to_find):
-        for job in self.__queue:
+        for job in self:
             if job.getJobId() == job_to_find.getJobId():
                 return job
         return None
 
     def getJobById(self, job_to_find):
-        for job in self.__queue:
+        for job in self:
             if job.getJobId() == job_to_find:
                 return job
         return None
 
     def jobExists(self, jobid):
-        for job in self.__queue:
+        for job in self:
+
             if job.id == jobid:
                 return True
         return False
 
     def getQueue(self):
-        return self.__queue
+        return self
 
     def getNext(self):
-        return self.__queue[0]
+        return self[0]
 
     def getSize(self):
-        return len(self.__queue)
+        return len(self)
 
     def removeJob(self):
-        self.__queue.pop()
-        current_app.socketio.emit('job_removed', {'queue': list(self.__queue)}, broadcast=True)
+        self.pop()
+        # current_app.socketio.emit('job_removed', {'queue': list(self)}, broadcast=True)
