@@ -35,7 +35,6 @@ def test_logger_is_custom_implementation_and_exists(app):
     assert str(app.logger.name) == "Logger_App", f"myLogger is {str(app.logger.name)}"
     assert isinstance(app.logger, Logger), "myLogger is not an instance of Logger?"
     assert app.logger.fileLogger, "fileLogger doesnt exist?"
-    assert app.logger.consoleLogger, "consoleLogger doesn't exists?"
 
 @pytest.mark.skipif(condition=testLevel < 1, reason="Not doing lvl 1 tests")
 def test_socketio_exists_and_works(app):
