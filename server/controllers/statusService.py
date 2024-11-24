@@ -4,12 +4,21 @@ from app import fabricator_list
 status_bp = Blueprint("status", __name__)
 
 @status_bp.route('/ping', methods=["GET"])
-def getStatus(Printer):
-    pass
+def getStatus():
+    try:
+        return jsonify({"status": "pong"}), 200
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
 
-@status_bp.route('/getopenthreads')
+@status_bp.route('/getopenthreads', methods=["GET"])
 def getOpenThreads():
-    pass 
+    try:
+        open_threads = fabricator_list.getOpenThreads()
+        return jsonify(open_threads), 200
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
 
 # this is the route that will be called by the UI to get the printers that have threads information
 @status_bp.route('/getprinterinfo', methods=["GET"])
