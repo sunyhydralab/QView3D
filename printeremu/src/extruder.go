@@ -13,12 +13,13 @@ type Vector3 struct {
 
 // Extruder struct to handle extruder settings, including temperature and fan speed.
 type Extruder struct {
-	Position            Vector3
-	FanSpeed            float64
-	ExtruderTemp        float64
-	TargetTemp          float64 // Desired temperature for the extruder.
-	AbsolutePositioning bool
-	MaxZHeight          float64 // Maximum height of the extruder
+    Position            Vector3
+    FanSpeed            float64
+    ExtruderTemp        float64
+    TargetTemp          float64 // Desired temperature for the extruder.
+    AbsolutePositioning bool
+    MaxZHeight          float64 // Maximum height of the extruder
+    AllowColdExtrusion  bool    // Allow cold extrusion
 }
 
 // Heatbed struct to handle heatbed temperature.

@@ -152,8 +152,8 @@ func (printer *Printer) UpdateBedTemperature(currentTemp float64) {
 
 // SetFanSpeed sets the fan speed on the extruder
 func (printer *Printer) SetFanSpeed(speed float64) error {
-	if speed < 0 || speed > 100 {
-		return fmt.Errorf("invalid fan speed: %.2f. Valid range: 0 to 100", speed)
+	if speed < 0 || speed > 255 {
+		return fmt.Errorf("invalid fan speed: %.2f. Valid range: 0 to 255", speed)
 	}
 
 	printer.Extruder.SetFanSpeed(speed)
@@ -178,13 +178,12 @@ func (printer *Printer) Resume() {
 
 // UpdateProgress updates the progress of the print job
 func (printer *Printer) UpdateProgress(progress int) error {
-	if progress >= 0 && progress <= 100 {
-		printer.Progress = progress
-	} else {
-		return fmt.Errorf("invalid progress: %d. Valid range: 0 to 100", progress)
-	}
-
-	return nil
+    if progress >= 0 && progress <= 100 {
+        printer.Progress = progress
+    } else {
+        return fmt.Errorf("invalid progress: %d. Valid range: 0 to 100", progress)
+    }
+    return nil
 }
 
 // MoveExtruder moves the extruder to the specified position.
