@@ -454,6 +454,24 @@ export function useGetJobFile() {
   }
 }
 
+export  function useGetLogFile() {
+    return {
+        async getLogFile(jobid: number) {
+        try {
+            const response = await api(`getlogfile?jobid=${jobid}`)
+            const decodedData = atob(response.file);
+            const byteArray = new Uint8Array(decodedData.split('').map(char => char.charCodeAt(0)));
+            const file = new Blob([byteArray], { type: 'text/plain' });
+            const file_name = response.filename
+            saveAs(file, file_name)
+        } catch (error) {
+            console.error(error)
+            toast.error('An error occurred while retrieving the file')
+        }
+        }
+    }
+}
+
 export function useGetFile() {
   return {
     async getFile(job: Job): Promise<File | undefined> {

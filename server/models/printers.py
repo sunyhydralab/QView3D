@@ -1,18 +1,15 @@
+import logging
 import re
 from models.db import db
-from datetime import datetime, timezone
-from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
 from sqlalchemy.exc import SQLAlchemyError
 from flask import jsonify, current_app
 from Classes.Queue import Queue
 import serial
 import serial.tools.list_ports
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from tzlocal import get_localzone
 import os
-import json
 import requests
 from dotenv import load_dotenv
 
@@ -21,6 +18,7 @@ from models.config import Config
 load_dotenv()
 # model for Printer table
 class Printer(db.Model):
+    __allow_unmapped__ = True
     id = db.Column(db.Integer, primary_key=True)
     device = db.Column(db.String(50), nullable=False)
     description = db.Column(db.String(50), nullable=False)
@@ -37,7 +35,7 @@ class Printer(db.Model):
     status = None
     # stopPrint = False
     responseCount = 0  # if count == 10 & no response, set error
-    error = ""
+    error: Exception | None = None
     extruder_temp = 0
     bed_temp = 0
     canPause = 0
@@ -163,6 +161,7 @@ class Printer(db.Model):
     @classmethod
     def getConnectedPorts(cls, retries=3, delay=2):
         """Detects all available printer ports with retries."""
+        ports = []
         for _ in range(retries):
             ports = serial.tools.list_ports.comports()
             if ports:
@@ -185,6 +184,7 @@ class Printer(db.Model):
             if (
                     "2C99:0002" in hwid  # Prusa MK3
                     or "2C99:000D" in hwid  # Prusa MK4
+                    or "2C99:001A" in hwid  # Prusa MK4S
                     or "1A86:7523" in hwid  # Ender 3 and Ender 3 Pro
                     or "prusa" in port.description.lower()  # Fallback for Prusa in description
                     or "ender" in port.description.lower()  # Fallback for Ender in description
@@ -342,10 +342,11 @@ class Printer(db.Model):
         self.sendGcode("G92 E0")
 
     # Function to send gcode commands
-    def sendGcode(self, message):
+    def sendGcode(self, message, logger=None):
         try:
             # Encode and send the message to the printer.
             self.ser.write(f"{message}\n".encode("utf-8"))
+            if logger: logger.debug(f"Command: {message}")
             # Sleep the printer to give it enough time to get the instruction.
             # time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
@@ -354,6 +355,7 @@ class Printer(db.Model):
                     return 
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
+                if logger: logger.debug(f"Received: {response}")
                 if response == "": 
                     if self.prevMes == "M602":
                         self.responseCount = 0
@@ -378,10 +380,11 @@ class Printer(db.Model):
                         self.setTemps(temp_t.group(1), temp_b.group(1))
 
                 if "ok" in response:
+                    if logger: logger.info(f"Command: {message}, Received: {response}")
+                    else: print(f"Command: {message}, Received: {response}")
                     break
-
-                print(f"Command: {message}, Received: {response}")
-        except Exception as e: 
+        except Exception as e:
+            if logger: logger.error(e)
             self.setError(e)
             return "error"
 
@@ -416,12 +419,37 @@ class Printer(db.Model):
             return "error"
 
     def parseGcode(self, path, job):
+        from ANSI_Remover import remove_ansi_codes_with_progress, compress_with_gzip
         try:
+
             with open(path, "r") as g:
                 # Read the file and store the lines in a list
                 if(self.terminated==1): 
-                    return 
-                
+                    return
+                import sys
+                jobName = str(job.file_name_original)
+                if jobName:
+                    jobName = "-".join(jobName.split(".")[0].split("_"))
+                cwd = os.getcwd()
+                logBase = cwd.split("server")[0] + "logs"
+                logFile = os.path.join(logBase, self.name, jobName, job.date.strftime('%m-%d-%Y_%H-%M-%S'), "color")
+                os.makedirs(logFile, exist_ok=True)
+                logger = logging.getLogger(logFile)
+                logger.setLevel(logging.DEBUG)
+                console_handler = logging.StreamHandler(sys.stdout)
+                console_formatter = CustomFormatter("%(asctime)s - %(levelname)s - %(module)s.py:%(lineno)d - %(message)s")
+                console_handler.setFormatter(console_formatter)
+                console_handler.setLevel(logging.INFO)
+                logger.addHandler(console_handler)
+                info_file_handler = logging.FileHandler(os.path.join(logFile,"INFO.log"), mode="w")
+                info_file_handler.setLevel(logging.INFO)
+                debug_file_handler = logging.FileHandler(os.path.join(logFile,"DEBUG.log"), mode="w")
+                debug_file_handler.setLevel(logging.DEBUG)
+                for(file_handler) in [info_file_handler, debug_file_handler]:
+                    file_handler.setFormatter(console_formatter)
+                    logger.addHandler(file_handler)
+
+                logger.info(f"Starting {job.name} on {self.name} at {job.date.strftime('%m-%d-%Y %H:%M:%S')}")
                 lines = g.readlines()
 
                 #  Time handling
@@ -462,11 +490,23 @@ class Printer(db.Model):
                 # Replace file with the path to the file. "r" means read mode. 
                 # now instead of reading from 'g', we are reading line by line
                 for line in lines:
-                    if(self.terminated==1): 
+                    if(self.terminated==1):
+                        if logger:
+                            for handler in logger.handlers:
+                                handler.close()
+                                logger.removeHandler(handler)
+                            compress_with_gzip(os.path.join(logFile, "DEBUG.log"))
+                            compress_with_gzip(os.path.join(logFile, "INFO.log"))
+                            # ncLogFile = logFile.replace('color', 'noColor')
+                            # os.mkdir(ncLogFile)
+                            # remove_ansi_codes_with_progress(os.path.join(logFile, "DEBUG.log"))
+                            # remove_ansi_codes_with_progress(os.path.join(logFile, "INFO.log"))
+                            # compress_with_gzip(os.path.join(ncLogFile, "DEBUG.log"))
+                            # compress_with_gzip(os.path.join(ncLogFile, "INFO.log"))
                         return 
                     
                     # print("LINE: ", line, " STATUS: ", self.status, " FILE PAUSE: ", job.getFilePause())
-                    if("layer" in line.lower() and self.status=='colorchange' and job.getFilePause()==0 and self.colorbuff==0):
+                    if "layer" in line.lower() and self.status== 'colorchange' and job.getFilePause()==0 and self.colorbuff==0:
                         self.setColorChangeBuffer(1)
 
                     # if line contains ";LAYER_CHANGE", do job.currentLayerHeight(the next line)
@@ -488,12 +528,12 @@ class Printer(db.Model):
                     if len(line) == 0 or line.startswith(";"):
                         continue
 
-                    if("M569" in line) and job.getTimeStarted()==0:
+                    if("M569" in line or "M107" in line) and job.getTimeStarted()==0:
                         job.setTimeStarted(1)
                         job.setTime(job.calculateEta(), 1)
                         job.setTime(datetime.now(), 2)
                  
-                    res = self.sendGcode(line)
+                    res = self.sendGcode(line, logger)
                     
                     if(job.getFilePause() == 1):
                         # self.setStatus("printing")
@@ -561,17 +601,42 @@ class Printer(db.Model):
 
                     # Call the setProgress method
                     job.setProgress(progress)
-                
-                    
+
                     # if self.getStatus() == "complete" and job.extruded != 0:
                     if self.getStatus() == "complete":
                         return "cancelled"
 
                     if self.getStatus() == "error":
                         return "error"
-
+            if logger:
+                for handler in logger.handlers:
+                    handler.close()
+                    logger.removeHandler(handler)
+                compress_with_gzip(os.path.join(logFile, "DEBUG.log"))
+                compress_with_gzip(os.path.join(logFile, "INFO.log"))
+                # ncLogFile = logFile.replace('color', 'noColor')
+                # os.mkdir(ncLogFile)
+                # remove_ansi_codes_with_progress(os.path.join(logFile, "DEBUG.log"))
+                # remove_ansi_codes_with_progress(os.path.join(logFile, "INFO.log"))
+                # compress_with_gzip(os.path.join(ncLogFile, "DEBUG.log"))
+                # compress_with_gzip(os.path.join(ncLogFile, "INFO.log"))
             return "complete"
         except Exception as e:
+            if logger:
+                import traceback
+                logger.error(e)
+                logger.error("".join(traceback.format_exception(None, e, e.__traceback__)))
+                for handler in logger.handlers:
+                    handler.close()
+                    logger.removeHandler(handler)
+                compress_with_gzip(os.path.join(logFile, "DEBUG.log"))
+                compress_with_gzip(os.path.join(logFile, "INFO.log"))
+                # ncLogFile = logFile.replace('color', 'noColor')
+                # os.mkdir(ncLogFile)
+                # remove_ansi_codes_with_progress(os.path.join(logFile, "DEBUG.log"))
+                # remove_ansi_codes_with_progress(os.path.join(logFile, "INFO.log"))
+                # compress_with_gzip(os.path.join(ncLogFile, "DEBUG.log"))
+                # compress_with_gzip(os.path.join(ncLogFile, "INFO.log"))
             # self.setStatus("error")
             self.setError(e)
             return "error"
@@ -669,10 +734,10 @@ class Printer(db.Model):
             # self.handleVerdict("error", job)
 
     def setErrorMessage(self, error):
-        self.error = str(error)
+        self.error = error
         self.setStatus("error")
         current_app.socketio.emit(
-            "error_update", {"printerid": self.id, "error": self.error}
+            "error_update", {"printerid": self.id, "error": str(self.error)}
         )
             
     def beginPrint(self, job): 
@@ -684,13 +749,34 @@ class Printer(db.Model):
                 return False 
             
     def handleVerdict(self, verdict, job):
-        # self.disconnect()
         if verdict == "complete":
             self.disconnect()
             self.setStatus("complete")
             self.sendStatusToJob(job, job.id, "complete")
-            
         elif verdict == "error":
+            print("made it to handleVerdict")
+
+            # create issue
+            from models.issues import Issue
+            print("made it to create issue")
+            job = self.getQueue().getJob(job)
+            Issue.create_issue(f"Print Failed: {self.name} - {job.file_name_original}", self.error)
+            print("made it past create issue")
+            print("verify discord is enabled")
+            # send log to discord
+            if Config['discord_enabled']:
+                print("made it past discord enabled")
+                cwd = os.getcwd()
+                printFile = job.file_name_original.split(".gcode")[0]
+                printFile = "-".join(printFile.split("_"))
+                logBase = cwd.split("server")[0] + "logs"
+                logFile = os.path.join(logBase, self.name, printFile, job.date.strftime('%m-%d-%Y_%H-%M-%S'), "color", "INFO.log.gz")
+                roleid = Config['discord_issues_role']
+                role_message = '<@&{role_id}>'.format(role_id=roleid)
+                print("made it to send_discord_file")
+                from app import sync_send_discord_file
+                sync_send_discord_file(logFile, role_message)
+                print("made it past send_discord_file")
             self.disconnect()
             self.getQueue().deleteJob(job.id, self.id)
             self.setStatus("error")
@@ -768,10 +854,10 @@ class Printer(db.Model):
 
     def setError(self, error):
         self.disconnect()
-        self.error = str(error)
+        self.error = error
         self.setStatus("error")
         current_app.socketio.emit(
-            "error_update", {"printerid": self.id, "error": self.error}
+            "error_update", {"printerid": self.id, "error": str(self.error)}
         )
 
     def sendStatusToJob(self, job, job_id, status):
@@ -825,6 +911,31 @@ class Printer(db.Model):
         self.colorbuff = buff
         current_app.socketio.emit('color_buff', {'printerid': self.id, 'colorChangeBuffer': buff})
 
+
+class CustomFormatter(logging.Formatter):
+    # ANSI escape codes for colors
+    lvlHash = {
+        "DEBUG": "DBUG",
+        "INFO": "INFO",
+        "WARNING": "WARN",
+        "ERROR": "EROR",
+        "CRITICAL": "CRIT"
+    }
+    COLOR_CODES = {
+        "DEBUG": "\033[94m",  # Blue
+        "INFO": "\033[0m",  # white
+        "WARNING": "\033[93m",  # Yellow
+        "ERROR": "\033[91m",  # Red
+        "CRITICAL": "\033[95m"  # Magenta
+    }
+    RESET_CODE = "\033[0m"  # Reset to default color
+
+    def format(self, record):
+        # Apply color based on log level
+        color = self.COLOR_CODES.get(record.levelname, self.RESET_CODE)
+        record.levelname = self.lvlHash.get(record.levelname, record.levelname)
+        message = super().format(record)
+        return f"{color}{message}{self.RESET_CODE}"
 
             
             

@@ -38,9 +38,14 @@ onMounted(async () => {
             extrusionColor: getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9',
             backgroundColor: 'black',
             buildVolume: { x: 250, y: 210, z: 220 },
+            lineWidth: 0.2,
+            lineHeight: 0.2,
+            extrusionWidth: 0.2,
+            renderExtrusion: false,
+            renderTubes: true,
         });
 
-        preview.camera.position.set(0, 410, 365);
+        preview.camera.position.set(-200, 232, 200);
         preview.camera.lookAt(0, 0, 0);
 
         if (canvas.value) {

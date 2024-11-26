@@ -1,4 +1,11 @@
 {
     "environment": "development",
-    "databaseURI": "hvamc"
+    "databaseURI": "hvamc",
+    "discord": {
+        "enabled": false,
+        "token": "<token>",
+        "command_prefix": "!",
+        "issues_channel": "<issues_channel>",
+        "issues_role": "<issues_role>"
+    }
 }
