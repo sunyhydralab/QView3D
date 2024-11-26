@@ -16,6 +16,7 @@ The project is maintained by computer science students at SUNY New Paltz, under 
 - [**Ari Yeger**](https://github.com/L10nhunter)
 - [**CJ Jenks**](https://github.com/iron768)
 
+
 ## Features
 
 - **Concurrent Communication**: Manage multiple 3D printers simultaneously.
@@ -25,7 +26,7 @@ The project is maintained by computer science students at SUNY New Paltz, under 
   - Storage management for purging old files while retaining essential data.
   - Job prioritization and favoring.
   - Comprehensive job filtering and history tracking.
-  - initiate printer pauses and filament color changes.
+  - Initiate printer pauses and filament color changes.
 - **Error Logging**: Assign comments and track issues for past jobs to analyze job success and error rates.
 - **Advanced Viewing**:
   - Real-time 3D model previews before and during printing.
@@ -49,7 +50,7 @@ The software is currently designed to run on Ubuntu 20.04 LTS and later. MacOS a
 Clone the repository:
 
 ```bash
-git clone https://github.com/sunyhyralab/QView3D.git
+git clone https://github.com/sunyhydralab/QView3D.git
 ```
 
 ### Run Locally:

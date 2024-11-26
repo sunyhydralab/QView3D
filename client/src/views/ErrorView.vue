@@ -75,6 +75,8 @@ let searchCriteria = ref('');
 const isOnlyJobNameChecked = computed(() => searchByJobName.value && !searchByFileName.value);
 const isOnlyFileNameChecked = computed(() => !searchByJobName.value && searchByFileName.value);
 
+const charLimit = 500;
+
 // computed property that returns the filtered list of jobs. 
 let filteredJobs = computed(() => {
     if (filter.value) {
@@ -239,7 +241,7 @@ const ensureOneCheckboxChecked = () => {
 
 const doCreateIssue = async () => {
     isLoading.value = true
-    await createIssue(newIssue.value)
+    await createIssue(newIssue.value.slice(0, charLimit))
     const newIssues = await issues()
     issuelist.value = newIssues
     resetIssueValues()
@@ -502,7 +504,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
                             <label for="issue" class="form-label">Select Issue</label>
                             <select name="issue" id="issue" v-model="selectedIssueId" class="form-select" required>
                                 <option disabled value="undefined">Select Issue</option>
-                                <option v-for="issue in issuelist" :value="issue.id">
+                                <option v-for="issue in issuelist" :key="issue.id" :value="issue.id">
                                     {{ issue.issue }}
                                 </option>
                                 <option disabled class="separator">----------------</option>

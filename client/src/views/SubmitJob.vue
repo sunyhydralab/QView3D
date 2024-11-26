@@ -341,7 +341,7 @@ const getFilament = (file: File) => {
                         <label class="form-label" v-else-if="selectedPrinters.length === 1">Selected printer:</label>
                         <label class="form-label" v-else>Selected printers:</label>
                         <ul class="list-group" style="max-height: 200px; overflow-y: auto;">
-                            <li v-for="printer in selectedPrinters" class="list-group-item">
+                            <li v-for="printer in selectedPrinters" :key="printer.id" class="list-group-item">
                                 <b>{{ printer.name }}</b> status: {{ printer.status }}
                             </li>
                         </ul>
