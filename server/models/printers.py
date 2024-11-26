@@ -52,7 +52,7 @@ class Printer(db.Model):
         self.date = datetime.now(get_localzone())
         self.queue = Queue()
         self.stopPrint = False
-        self.error = ""
+        self.error = None
         self.extruder_temp = 0
         self.bed_temp = 0
         self.canPause = 0
@@ -316,7 +316,7 @@ class Printer(db.Model):
             # logic here about time elapsed since last response
 
         response = ser.readline().decode("utf-8").strip()
-        if("error" in response):
+        if "error" in response:
             return "none"
             # if "ok" in response:
             #     break
@@ -351,18 +351,18 @@ class Printer(db.Model):
             # time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
             while True:
-                if(self.terminated==1): 
+                if self.terminated==1:
                     return 
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
                 if logger: logger.debug(f"Received: {response}")
-                if response == "": 
+                if response == "":
                     if self.prevMes == "M602":
                         self.responseCount = 0
                         # break
                     else: 
                         self.responseCount+=1 
-                        if(self.responseCount>=10):
+                        if self.responseCount>=10:
                             self.setError("No response from printer")
                             raise Exception("No response from printer")
 
@@ -393,7 +393,7 @@ class Printer(db.Model):
             self.ser.write(f"{message}\n".encode("utf-8"))
             # Save and print out the response from the printer. We can use this for error handling and status updates.
             while True:
-                if(self.terminated==1): 
+                if self.terminated==1:
                     return 
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
@@ -419,12 +419,12 @@ class Printer(db.Model):
             return "error"
 
     def parseGcode(self, path, job):
-        from ANSI_Remover import remove_ansi_codes_with_progress, compress_with_gzip
+        from ANSI_Remover import compress_with_gzip
         try:
 
             with open(path, "r") as g:
                 # Read the file and store the lines in a list
-                if(self.terminated==1): 
+                if self.terminated==1:
                     return
                 import sys
                 jobName = str(job.file_name_original)
@@ -490,7 +490,7 @@ class Printer(db.Model):
                 # Replace file with the path to the file. "r" means read mode. 
                 # now instead of reading from 'g', we are reading line by line
                 for line in lines:
-                    if(self.terminated==1):
+                    if self.terminated==1:
                         if logger:
                             for handler in logger.handlers:
                                 handler.close()
@@ -535,17 +535,17 @@ class Printer(db.Model):
                  
                     res = self.sendGcode(line, logger)
                     
-                    if(job.getFilePause() == 1):
+                    if job.getFilePause() == 1:
                         # self.setStatus("printing")
                         job.setTime(job.colorEta(), 1)
                         job.setTime(job.calculateColorChangeTotal(), 0)
                         job.setTime(datetime.min, 3)
                         job.setFilePause(0)
-                        if(self.getStatus()=="complete"):
+                        if self.getStatus()== "complete":
                             return "cancelled"
                         self.setStatus("printing")
                     
-                    if("M600" in line):
+                    if "M600" in line:
                         job.setTime(datetime.now(), 3)
                         # job.setTime(job.calculateTotalTime(), 0)
                         # job.setTime(job.updateEta(), 1)
@@ -561,14 +561,14 @@ class Printer(db.Model):
                         self.prevMes=""
                              
                 #  software pausing        
-                    if (self.getStatus()=="paused"):
+                    if self.getStatus()== "paused":
                         # self.prevMes = "M601"
                         self.sendGcode("M601") # pause command for prusa
                         job.setTime(datetime.now(), 3)
-                        while(True):
+                        while True:
                             time.sleep(1)
                             stat = self.getStatus()
-                            if(stat=="printing"):
+                            if stat== "printing":
                                 self.prevMes = "M602"
 
                                 self.sendGcode("M602") # resume command for prusa
@@ -580,7 +580,7 @@ class Printer(db.Model):
                                 break
                     
                     # software color change
-                    if (self.getStatus()=="colorchange" and job.getFilePause()==0 and self.colorbuff==1):
+                    if self.getStatus()== "colorchange" and job.getFilePause()==0 and self.colorbuff==1:
                         job.setTime(datetime.now(), 3)
                         # job.setTime(job.calculateTotalTime(), 0)
                         # job.setTime(job.updateEta(), 1)
@@ -670,7 +670,7 @@ class Printer(db.Model):
             self.gcodeEnding("M140 S0")# ; turn off heatbed
             self.gcodeEnding("M107")# ; turn off fan
 
-            if(job and job.getExtruded()==1):
+            if job and job.getExtruded()==1:
                 self.gcodeEnding("G1 X241 Y170 F3600")# ; park
             # self.gcodeEnding("{if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+23, max_print_height)} F300")# ; Move print head up{endif}
                 self.gcodeEnding("G4")# ; wait
@@ -760,7 +760,7 @@ class Printer(db.Model):
             from models.issues import Issue
             print("made it to create issue")
             job = self.getQueue().getJob(job)
-            Issue.create_issue(f"Print Failed: {self.name} - {job.file_name_original}", self.error)
+            Issue.create_issue(f"CODE ISSUE: Print Failed: {self.name} - {job.file_name_original}", self.error)
             print("made it past create issue")
             print("verify discord is enabled")
             # send log to discord
@@ -838,7 +838,7 @@ class Printer(db.Model):
     def setStatus(self, newStatus):
         try:
             print("SETTING STATUS TO:", newStatus)
-            if(self.status == "error" and newStatus!="error"): 
+            if self.status == "error" and newStatus!= "error":
                 Printer.hardReset(self.id, newStatus)
             else: 
                 self.status = newStatus
@@ -937,5 +937,5 @@ class CustomFormatter(logging.Formatter):
         message = super().format(record)
         return f"{color}{message}{self.RESET_CODE}"
 
-            
+
             

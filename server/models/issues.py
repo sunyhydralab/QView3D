@@ -47,36 +47,26 @@ class Issue(db.Model):
 
     @classmethod
     def create_issue(cls, issue, exception=None):
-        print("made it to create_issue method")
         try:
             from app import sync_send_discord_embed
-            print("imported send_discord_embed")
             
             new_issue = cls(issue)
-            print("created new issue")
             db.session.add(new_issue)
-            print("added new issue")
             db.session.commit()
-            print("commit new issue")
             
             embed = discord.Embed(title='New Issue Created',
                                 description='A issue occurred when running a job',
                                 color=discord.Color.red())
-            print("created embed")
             
             embed.add_field(name='Issue', value=issue, inline=False)
-            print("added field: Issue")
             if exception:
                 import traceback
                 embed.add_field(name='Exception', value="".join(traceback.format_exception(None, exception, exception.__traceback__)), inline=False)
-            print("added field: ID")
             embed.timestamp = datetime.now()
-            print("set timestamp")
             
             if Config['discord_enabled']:
-                print("discord enabled")
-                sync_send_discord_embed(embed=embed)
-                print("sent discord embed")
+                if issue.startswith("CODE ISSUE: Print Failed:"):
+                    sync_send_discord_embed(embed=embed)
             return {"success": True, "message": "Issue successfully created"}
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
