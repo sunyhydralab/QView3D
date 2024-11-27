@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ref, watch, watchEffect, onMounted, onBeforeUnmount} from 'vue';
+import {ref, watchEffect, onMounted, onBeforeUnmount} from 'vue';
 import {Vue3ColorPicker} from '@cyhnkckali/vue3-color-picker';
 import {vOnClickOutside} from '@vueuse/components'
 import "@/assets/base.css";
@@ -240,7 +240,6 @@ const brightness = (rgb: string) => {
 
 const fontColor = (rgb: string) => {
     const bright = brightness(rgb);
-    console.log("rgb", rgb, "brightness", bright);
     return bright < 155 ? getComputedStyle(document.documentElement, null).getPropertyValue('--vt-c-text-dark-1') : getComputedStyle(document.documentElement, null).getPropertyValue('--vt-c-text-light-1');
 }
 

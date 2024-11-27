@@ -1,13 +1,11 @@
-import { useRouter } from 'vue-router'
-import { ref, computed, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import * as myFetch from './myFetch'
 import { toast } from './toast'
 import { type Job } from './jobs'
-import { socket } from './myFetch'
 
 export function api(action: string, body?: unknown, method?: string, headers?: any) {
   headers = headers ?? {}
-  return myFetch.api(`${action}`, body, method, headers).catch((err) => console.log(err))
+  return myFetch.api(`${action}`, body, method, headers).catch((err) => console.error(err))
 }
 
 export interface Device {
@@ -28,14 +26,13 @@ export interface Device {
   colorChangeBuffer?: number
 }
 
-export let printers = ref<Device[]>([])
+export const printers = ref<Device[]>([])
 
 export function useGetPorts() {
   return {
     async ports() {
       try {
-        const response = await api('getports')
-        return response
+        return await api('getports')
       } catch (error) {
         console.error(error)
       }
@@ -87,8 +84,7 @@ export function useRetrievePrintersInfo() {
   return {
     async retrieveInfo() {
       try {
-        const response = await api('getprinterinfo')
-        return response // return the response directly
+        return await api('getprinterinfo')
       } catch (error) {
         console.error(error)
       }
@@ -100,8 +96,7 @@ export function useSetStatus() {
   return {
     async setStatus(printerid: number | undefined, status: string) {
       try {
-        const response = await api('setstatus', { printerid, status })
-        return response
+        return await api('setstatus', { printerid, status })
       } catch (error) {
         console.error(error)
       }
@@ -165,7 +160,7 @@ export function useDeletePrinter() {
   return {
     async deletePrinter(printerid: number | undefined) {
       try {
-        const response = await api('deleteprinter', { printerid })
+       return await api('deleteprinter', { printerid })
         // if (response) {
         //   if (response.success == false) {
         //     toast.error(response.message)
@@ -179,7 +174,7 @@ export function useDeletePrinter() {
         //   console.error('Response is undefined or null')
         //   toast.error('Failed to delete printer. Unexpected response')
         // }
-        return response
+        // return response
       } catch (error) {
         console.error(error)
       }
@@ -243,8 +238,7 @@ export function useEditThread() {
   return {
     async editThread(printerid: number | undefined, newname: string) {
       try {
-        const response = await api('editNameInThread', { printerid, newname })
-        return response
+        return await api('editNameInThread', { printerid, newname })
       } catch (error) {
         console.error(error)
       }
@@ -336,8 +330,7 @@ export function useMovePrinterList() {
       try {
         // make new array of printer id's in the order they are in the printers array
         const printersIds = printers.map((printer) => printer.id)
-        const response = await api('moveprinterlist', { printersIds })
-        return response
+        return await api('moveprinterlist', { printersIds })
       } catch (error) {
         console.error(error)
       }
