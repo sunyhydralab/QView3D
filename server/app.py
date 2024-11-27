@@ -4,7 +4,6 @@ from threading import Thread
 from flask_cors import CORS 
 import os 
 from models.db import db
-from models.printers import Printer
 from models.PrinterStatusService import PrinterStatusService
 from flask_migrate import Migrate
 from dotenv import load_dotenv, set_key
@@ -251,16 +250,11 @@ def sync_send_discord_file(file_path: str, message: str = None):
         print(f"Channel with ID {channel_id} not found or inaccessible.")
         return
 
-    print(f"Channel {channel_id} found. Attempting to send the file...")
-
     try:
         with open(file_path, 'rb') as f:
-            print("opened file")
             file = discord.File(f, filename=file_path.split("/")[-1])
-            print("created discord file")
             # Submit the coroutine to the bot's event loop
-            asyncio.run_coroutine_threadsafe(channel.send(message or "Log file:", file=file), bot.loop)
-            print("File sent successfully!")
+            asyncio.run_coroutine_threadsafe(channel.send(message or "", file=file), bot.loop)
     except Exception as e:
         print(f"An error occurred while sending the embed: {type(e).__name__} - {e}")
 
