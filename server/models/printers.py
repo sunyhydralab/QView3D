@@ -14,6 +14,7 @@ import requests
 from dotenv import load_dotenv
 
 from models.config import Config
+from models.jobs import Job
 
 load_dotenv()
 # model for Printer table
@@ -419,20 +420,15 @@ class Printer(db.Model):
             return "error"
 
     def parseGcode(self, path, job):
-        from ANSI_Remover import compress_with_gzip
         try:
-
             with open(path, "r") as g:
                 # Read the file and store the lines in a list
                 if self.terminated==1:
                     return
                 import sys
-                jobName = str(job.file_name_original)
-                if jobName:
-                    jobName = "-".join(jobName.split(".")[0].split("_"))
-                cwd = os.getcwd()
+                cwd = os.path.dirname(__file__)
                 logBase = cwd.split("server")[0] + "logs"
-                logFile = os.path.join(logBase, self.name, jobName, job.date.strftime('%m-%d-%Y_%H-%M-%S'), "color")
+                logFile = str(os.path.join(logBase, self.name, job.getName(), job.date.strftime('%m-%d-%Y_%H-%M-%S'), "color"))
                 os.makedirs(logFile, exist_ok=True)
                 logger = logging.getLogger(logFile)
                 logger.setLevel(logging.DEBUG)
@@ -491,19 +487,8 @@ class Printer(db.Model):
                 # now instead of reading from 'g', we are reading line by line
                 for line in lines:
                     if self.terminated==1:
-                        if logger:
-                            for handler in logger.handlers:
-                                handler.close()
-                                logger.removeHandler(handler)
-                            compress_with_gzip(os.path.join(logFile, "DEBUG.log"))
-                            compress_with_gzip(os.path.join(logFile, "INFO.log"))
-                            # ncLogFile = logFile.replace('color', 'noColor')
-                            # os.mkdir(ncLogFile)
-                            # remove_ansi_codes_with_progress(os.path.join(logFile, "DEBUG.log"))
-                            # remove_ansi_codes_with_progress(os.path.join(logFile, "INFO.log"))
-                            # compress_with_gzip(os.path.join(ncLogFile, "DEBUG.log"))
-                            # compress_with_gzip(os.path.join(ncLogFile, "INFO.log"))
-                        return 
+                        self.handle_end_of_print(logFile, logger)
+                        return "cancelled"
                     
                     # print("LINE: ", line, " STATUS: ", self.status, " FILE PAUSE: ", job.getFilePause())
                     if "layer" in line.lower() and self.status== 'colorchange' and job.getFilePause()==0 and self.colorbuff==0:
@@ -528,12 +513,15 @@ class Printer(db.Model):
                     if len(line) == 0 or line.startswith(";"):
                         continue
 
-                    if("M569" in line or "M107" in line) and job.getTimeStarted()==0:
+                    if("M569" in line or "M75" in line) and job.getTimeStarted()==0:
                         job.setTimeStarted(1)
                         job.setTime(job.calculateEta(), 1)
                         job.setTime(datetime.now(), 2)
                  
                     res = self.sendGcode(line, logger)
+
+                    if res == "error":
+                        raise self.error
                     
                     if job.getFilePause() == 1:
                         # self.setStatus("printing")
@@ -608,37 +596,12 @@ class Printer(db.Model):
 
                     if self.getStatus() == "error":
                         return "error"
-            if logger:
-                for handler in logger.handlers:
-                    handler.close()
-                    logger.removeHandler(handler)
-                compress_with_gzip(os.path.join(logFile, "DEBUG.log"))
-                compress_with_gzip(os.path.join(logFile, "INFO.log"))
-                # ncLogFile = logFile.replace('color', 'noColor')
-                # os.mkdir(ncLogFile)
-                # remove_ansi_codes_with_progress(os.path.join(logFile, "DEBUG.log"))
-                # remove_ansi_codes_with_progress(os.path.join(logFile, "INFO.log"))
-                # compress_with_gzip(os.path.join(ncLogFile, "DEBUG.log"))
-                # compress_with_gzip(os.path.join(ncLogFile, "INFO.log"))
+            self.handle_end_of_print(logFile, logger)
             return "complete"
         except Exception as e:
-            if logger:
-                import traceback
-                logger.error(e)
-                logger.error("".join(traceback.format_exception(None, e, e.__traceback__)))
-                for handler in logger.handlers:
-                    handler.close()
-                    logger.removeHandler(handler)
-                compress_with_gzip(os.path.join(logFile, "DEBUG.log"))
-                compress_with_gzip(os.path.join(logFile, "INFO.log"))
-                # ncLogFile = logFile.replace('color', 'noColor')
-                # os.mkdir(ncLogFile)
-                # remove_ansi_codes_with_progress(os.path.join(logFile, "DEBUG.log"))
-                # remove_ansi_codes_with_progress(os.path.join(logFile, "INFO.log"))
-                # compress_with_gzip(os.path.join(ncLogFile, "DEBUG.log"))
-                # compress_with_gzip(os.path.join(ncLogFile, "INFO.log"))
-            # self.setStatus("error")
             self.setError(e)
+            self.handle_end_of_print(logFile, logger)
+            # self.setStatus("error")
             return "error"
 
     # Function to send "ending" gcode commands
@@ -746,37 +709,54 @@ class Printer(db.Model):
             if job.getReleased()==1: 
                 return True 
             if self.getStatus() == "complete": 
-                return False 
-            
-    def handleVerdict(self, verdict, job):
+                return False
+
+    def handle_end_of_print(self, logFile, logger = None):
+        from ANSI_Remover import compress_with_gzip
+        if not logger:
+            return
+        if logger:
+            while logger.handlers:
+                handler = logger.handlers[0]
+                handler.flush()
+                logger.removeHandler(handler)
+                handler.close()
+            for file in os.listdir(logFile):
+                try:
+                    if self.status == "error" or self.error is not None: compress_with_gzip(os.path.join(logFile, file))
+                    os.remove(os.path.join(logFile, file))
+                except Exception:
+                    pass
+            if not os.listdir(logFile):
+                os.rmdir(logFile)
+                parent_dir = os.path.dirname(logFile)
+                while parent_dir and not os.listdir(parent_dir):
+                    os.rmdir(parent_dir)
+                    parent_dir = os.path.dirname(parent_dir)
+
+    def handleVerdict(self, verdict, job: Job):
+        cwd = os.getcwd()
+        logBase = cwd.split("server")[0] + "logs"
+        logFile = os.path.join(logBase, self.name, job.getName(), job.date.strftime('%m-%d-%Y_%H-%M-%S'), "color")
+        infoFile = os.path.join(logFile, "INFO.log.gz")
+        debugFile = os.path.join(logFile, "DEBUG.log.gz")
         if verdict == "complete":
             self.disconnect()
             self.setStatus("complete")
             self.sendStatusToJob(job, job.id, "complete")
-        elif verdict == "error":
-            print("made it to handleVerdict")
 
+        elif verdict == "error":
             # create issue
             from models.issues import Issue
-            print("made it to create issue")
             job = self.getQueue().getJob(job)
             Issue.create_issue(f"CODE ISSUE: Print Failed: {self.name} - {job.file_name_original}", self.error)
-            print("made it past create issue")
-            print("verify discord is enabled")
             # send log to discord
             if Config['discord_enabled']:
-                print("made it past discord enabled")
-                cwd = os.getcwd()
-                printFile = job.file_name_original.split(".gcode")[0]
-                printFile = "-".join(printFile.split("_"))
-                logBase = cwd.split("server")[0] + "logs"
-                logFile = os.path.join(logBase, self.name, printFile, job.date.strftime('%m-%d-%Y_%H-%M-%S'), "color", "INFO.log.gz")
                 roleid = Config['discord_issues_role']
                 role_message = '<@&{role_id}>'.format(role_id=roleid)
-                print("made it to send_discord_file")
                 from app import sync_send_discord_file
-                sync_send_discord_file(logFile, role_message)
-                print("made it past send_discord_file")
+                sync_send_discord_file(infoFile, role_message)
+                sync_send_discord_file(debugFile)
             self.disconnect()
             self.getQueue().deleteJob(job.id, self.id)
             self.setStatus("error")
@@ -842,10 +822,10 @@ class Printer(db.Model):
                 Printer.hardReset(self.id, newStatus)
             else: 
                 self.status = newStatus
-
-            current_app.socketio.emit(
-                "status_update", {"printer_id": self.id, "status": newStatus}
-            )
+            if current_app:
+                current_app.socketio.emit(
+                    "status_update", {"printer_id": self.id, "status": newStatus}
+                )
         except Exception as e:
             print("Error setting status:", e)
 
@@ -856,9 +836,10 @@ class Printer(db.Model):
         self.disconnect()
         self.error = error
         self.setStatus("error")
-        current_app.socketio.emit(
-            "error_update", {"printerid": self.id, "error": str(self.error)}
-        )
+        if current_app:
+            current_app.socketio.emit(
+                "error_update", {"printerid": self.id, "error": str(self.error)}
+            )
 
     def sendStatusToJob(self, job, job_id, status):
         try:
@@ -868,7 +849,6 @@ class Printer(db.Model):
                 "jobid": job_id,
                 "status": status,  # Assuming status is accessible here
             }
-            
             response = requests.post(f"{Config.get('base_url')}/updatejobstatus", json=data)
             if response.status_code == 200:
                 print("Status sent successfully")
@@ -896,20 +876,23 @@ class Printer(db.Model):
     def setTemps(self, extruder_temp, bed_temp):
         self.extruder_temp = extruder_temp
         self.bed_temp = bed_temp
-        current_app.socketio.emit(
-            'temp_update', {'printerid': self.id, 'extruder_temp': self.extruder_temp, 'bed_temp': self.bed_temp})
+        if current_app:
+            current_app.socketio.emit(
+                'temp_update', {'printerid': self.id, 'extruder_temp': self.extruder_temp, 'bed_temp': self.bed_temp})
 
 
     def setCanPause(self, canPause):
         try:
             self.canPause = canPause
-            current_app.socketio.emit('can_pause', {'printerid': self.id, 'canPause': canPause})
+            if current_app:
+                current_app.socketio.emit('can_pause', {'printerid': self.id, 'canPause': canPause})
         except Exception as e:
             print('Error setting canPause:', e)
 
     def setColorChangeBuffer(self, buff): 
         self.colorbuff = buff
-        current_app.socketio.emit('color_buff', {'printerid': self.id, 'colorChangeBuffer': buff})
+        if current_app:
+            current_app.socketio.emit('color_buff', {'printerid': self.id, 'colorChangeBuffer': buff})
 
 
 class CustomFormatter(logging.Formatter):
