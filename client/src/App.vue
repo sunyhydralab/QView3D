@@ -7,21 +7,7 @@ import NavBar from '@/components/NavBar.vue'
 import ThemePanel from '@/components/ThemePanel.vue'
 import SettingsPanel from '@/components/SettingsPanel.vue'
 import { onMounted } from 'vue';
-import {
-    setupPortRepairSocket,
-    setupErrorSocket,
-    setupJobStatusSocket,
-    setupPauseFeedbackSocket,
-    setupProgressSocket,
-    setupQueueSocket,
-    setupReleaseSocket,
-    setupStatusSocket,
-    setupTempSocket,
-    setupGCodeViewerSocket,
-    setupExtrusionSocket,
-    setupCurrentLayerHeightSocket,
-    setupMaxLayerHeightSocket
-} from '@/model/sockets';
+import { setupSockets } from '@/model/sockets';
 import {useRetrievePrintersInfo, printers} from '@/model/ports';
 import {setupTimeSocket, isLoading} from '@/model/jobs';
 
@@ -29,22 +15,8 @@ const { retrieveInfo } = useRetrievePrintersInfo();
 
 onMounted(async () => {
     printers.value = await retrieveInfo()
-
-    // sockets
-    setupStatusSocket(printers)
-    setupQueueSocket(printers)
-    setupProgressSocket(printers)
-    setupJobStatusSocket(printers)
-    setupErrorSocket(printers)
+    setupSockets(printers)
     setupTimeSocket(printers)
-    setupTempSocket(printers)
-    setupGCodeViewerSocket(printers)
-    setupPauseFeedbackSocket(printers) //not sure if needed
-    setupReleaseSocket(printers)
-    setupPortRepairSocket(printers)
-    setupExtrusionSocket(printers)
-    setupMaxLayerHeightSocket(printers)
-    setupCurrentLayerHeightSocket(printers)
 })
 </script>
 

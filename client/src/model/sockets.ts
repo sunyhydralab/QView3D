@@ -1,6 +1,24 @@
 import { socket } from './myFetch'
 import type { Device } from './ports'
-import { jobTime } from './jobs'
+
+export function setupSockets(printers: any) {
+    setupTempSocket(printers)
+    setupStatusSocket(printers)
+    setupQueueSocket(printers)
+    setupErrorSocket(printers)
+    setupCanPauseSocket(printers)
+    setupPauseFeedbackSocket(printers)
+    setupTimeStartedSocket(printers)
+    setupProgressSocket(printers)
+    setupReleaseSocket(printers)
+    setupJobStatusSocket(printers)
+    setupPortRepairSocket(printers)
+    setupGCodeViewerSocket(printers)
+    setupExtrusionSocket(printers)
+    setupColorChangeBuffer(printers)
+    setupMaxLayerHeightSocket(printers)
+    setupCurrentLayerHeightSocket(printers)
+}
 
 // *** PORTS ***
 export function setupTempSocket(printers: any) {
@@ -65,7 +83,6 @@ export function setupCanPauseSocket(printers: any) {
       console.error('printers or printers.value is undefined')
     }
   })
-  console.log('queue socket set up')
 }
 
 // *** JOBS ***
