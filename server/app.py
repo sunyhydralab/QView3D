@@ -110,7 +110,15 @@ def run_discord_bot():
         if Config['discord_enabled']:
             channel = bot.get_channel(int(Config['discord_issues_channel']))
             #await channel.send("Discord bot is online and ready!")
-    
+
+    @bot.command()
+    async def testembedformatting(ctx):
+        from models.issues import Issue
+        try:
+            raise Exception("Test issue")
+        except Exception as e:
+            Issue.create_issue("CODE ISSUE: Print Failed: Test Issue", e)
+
     @bot.command()
     async def testissue(ctx):
         embed = discord.Embed(title='New Issue Created',
@@ -219,7 +227,6 @@ def sync_send_discord_embed(embed):
     try:
         # Submit the coroutine to the bot's event loop
         asyncio.run_coroutine_threadsafe(channel.send(embed=embed), bot.loop)
-        print("Embed sent successfully!")
     except Exception as e:
         print(f"An error occurred while sending the embed: {type(e).__name__} - {e}")
 

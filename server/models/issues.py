@@ -1,21 +1,7 @@
-import asyncio
-import base64
-from operator import or_
-import os
-import re
-
 from models.db import db
-from datetime import datetime, timezone, timedelta
-from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
-from flask import jsonify, current_app
+from flask import jsonify
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
-from tzlocal import get_localzone
-from io import BytesIO
-from werkzeug.datastructures import FileStorage
-import time
-import gzip
 import discord
 from models.config import Config
 
@@ -49,21 +35,23 @@ class Issue(db.Model):
     def create_issue(cls, issue, exception=None):
         try:
             from app import sync_send_discord_embed
-            
             new_issue = cls(issue)
-            db.session.add(new_issue)
-            db.session.commit()
-            
+            from flask import current_app
+            if current_app:
+                db.session.add(new_issue)
+                db.session.commit()
+
             embed = discord.Embed(title='New Issue Created',
-                                description='A issue occurred when running a job',
-                                color=discord.Color.red())
-            
+                                  description='A issue occurred when running a job',
+                                  color=discord.Color.red())
+
             embed.add_field(name='Issue', value=issue, inline=False)
             if exception:
                 import traceback
-                embed.add_field(name='Exception', value="".join(traceback.format_exception(None, exception, exception.__traceback__)), inline=False)
+                exceptionFormatted = "".join(traceback.format_exception(None, exception, exception.__traceback__)).replace("  ", "‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ")
+                embed.add_field(name='Exception', value=exceptionFormatted, inline=False)
             embed.timestamp = datetime.now()
-            
+
             if Config['discord_enabled']:
                 if issue.startswith("CODE ISSUE: Print Failed:"):
                     sync_send_discord_embed(embed=embed)
@@ -74,7 +62,7 @@ class Issue(db.Model):
                 jsonify({"error": "Failed to add job. Database error"}),
                 500,
             )
-            
+
     @classmethod
     def delete_issue(cls, issue_id):
         try:
