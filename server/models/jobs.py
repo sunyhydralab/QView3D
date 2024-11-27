@@ -1,30 +1,18 @@
-import asyncio
-import base64
 from operator import or_
 import os
 import re
 from models.db import db
-from models.printers import Printer 
-
 from models.issues import Issue  # assuming the Issue model is defined in the issue.py file in the models directory
-from datetime import datetime, timezone, timedelta
-from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
+from datetime import timezone, timedelta
 from flask import jsonify, current_app
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
 from tzlocal import get_localzone
-from io import BytesIO
-from werkzeug.datastructures import FileStorage
-import time
 import gzip
 import csv
 from flask import send_file
 
-from app import printer_status_service
 # model for job history table
-
-
 class Job(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     file = db.Column(db.LargeBinary(16777215), nullable=True)
@@ -214,6 +202,8 @@ class Job(db.Model):
             except OSError:
                 compressed_data = gzip.compress(file_data)
 
+            from models.printers import Printer
+
             printer = Printer.query.get(printer_id)
 
             job = cls(
@@ -291,6 +281,7 @@ class Job(db.Model):
 
     @classmethod
     def findPrinterObject(self, printer_id):
+        from app import printer_status_service
         threads = printer_status_service.getThreadArray()
         return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer
 
@@ -339,14 +330,6 @@ class Job(db.Model):
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
             return jsonify({"error": "Failed to clear space. Database error"}), 500
-
-    @classmethod 
-    def setDBstatus(cls, jobid, status):
-        cls.update_job_status(jobid, status)
-
-    @classmethod 
-    def getPathForDelete(cls, file_name):
-        return os.path.join('../uploads', file_name)
    
     @classmethod
     def getFavoriteJobs(cls):
@@ -495,9 +478,6 @@ class Job(db.Model):
         self.favorite = favorite
         db.session.commit()
         return {"success": True, "message": "Favorite status updated successfully."}
-    
-    def getPrinterId(self): 
-        return self.printer_id
 
     def getJobId(self):
         return self.id
