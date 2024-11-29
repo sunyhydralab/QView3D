@@ -1,24 +1,18 @@
 from abc import ABCMeta
 from time import sleep
-
-from typing_extensions import Buffer
 from Classes.Fabricators.Printers.Printer import Printer
 from Classes.Vector3 import Vector3
 from Mixins.hasEndingSequence import hasEndingSequence
-from Mixins.gcode.usesMarlinGcode import usesMarlinGcode
 
 
-class EnderPrinter(Printer, hasEndingSequence, usesMarlinGcode, metaclass=ABCMeta):
+class EnderPrinter(Printer, hasEndingSequence, metaclass=ABCMeta):
     VENDORID = 0x1A86
     homePosition = Vector3(-3.0,-10.0,0.0)
 
     def connect(self):
-        ret = usesMarlinGcode.connect(self)
+        ret = super().connect()
         sleep(7)
         return ret
-
-    def disconnect(self):
-        return usesMarlinGcode.disconnect(self)
 
     def endSequence(self):
         self.sendGcode(b"G91\n")  # Relative positioning
@@ -33,20 +27,5 @@ class EnderPrinter(Printer, hasEndingSequence, usesMarlinGcode, metaclass=ABCMet
         self.sendGcode(b"M140 S0\n")  # Turn-off bed
         self.sendGcode(b"M84 X Y E\n")  # Disable all steppers but Z
 
-    def goTo(self, loc: Vector3, isVerbose: bool = False):
-        return usesMarlinGcode.goTo(self, loc, isVerbose)
-
     def getPrintTime(self):
         pass
-
-    def getToolHeadLocation(self) -> Vector3:
-        return usesMarlinGcode.getToolHeadLocation(self)
-
-    def parseGcode(self, file, isVerbose: bool = False):
-        return usesMarlinGcode.parseGcode(self, file, isVerbose)
-
-    def sendGcode(self, gcode: Buffer, isVerbose: bool = False):
-        usesMarlinGcode.sendGcode(self, gcode, isVerbose)
-
-    def home(self, isVerbose: bool = False):
-        return usesMarlinGcode.home(self, isVerbose)

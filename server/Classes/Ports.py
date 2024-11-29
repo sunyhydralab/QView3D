@@ -6,7 +6,6 @@ from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import SQLAlchemyError
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.serialCommunication import sendGcode
-from Classes.Fabricators.FabricatorList import FabricatorList
 
 class Ports:
     @staticmethod
@@ -17,7 +16,7 @@ class Ports:
     @staticmethod
     def getPortByName(name: str) -> ListPortInfo | SysFS | None:
         """Get a specific port by its device name."""
-        assert isinstance(name, str)
+        assert isinstance(name, str), f"Name must be a string: {name} : {type(name)}"
         ports = Ports.getPorts()
         for port in ports:
             if port.device == name:
@@ -27,7 +26,7 @@ class Ports:
     @staticmethod
     def getPortByHwid(hwid: str) -> ListPortInfo | SysFS | None:
         """Get a specific port by its hardware ID."""
-        assert isinstance(hwid, str)
+        assert isinstance(hwid, str), f"HWID must be a string: {hwid} : {type(hwid)}"
         ports = Ports.getPorts()
         for port in ports:
             if hwid in port.hwid:
@@ -101,7 +100,7 @@ def registerFabricator():
         hwid = data['fabricator']['hwid']
         name = data['fabricator']['name']
 
-        new_fabricator = Fabricator(Ports.getPortByName(device), name, addToDB=True)
+        new_fabricator = Fabricator(Ports.getPortByName(device), name)
         new_fabricator.description = description
         new_fabricator.hwid = hwid
 
@@ -190,8 +189,8 @@ def moveFabricatorList():
     try:
         data = request.get_json()
         fabricator_ids = data['fabricator_ids']
-
-        result = FabricatorList.moveFabricatorList(fabricator_ids)
+        from app import fabricator_list
+        result = fabricator_list.moveFabricatorList(fabricator_ids)
         return jsonify({"success": True, "message": "Fabricator list successfully updated"}) if result != "none" else jsonify({"success": False, "message": "Fabricator list not updated"})
     except Exception as e:
         print(f"Error moving fabricator list: {e}")

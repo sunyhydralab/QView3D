@@ -1,39 +1,40 @@
-from abc import ABCMeta, abstractmethod
-from typing_extensions import Buffer
-from Classes.Vector3 import Vector3
+from abc import ABCMeta
 from Classes.Fabricators.Printers.Printer import Printer
-from Mixins.gcode.usesPrusaGcode import usesPrusaGcode
 from Mixins.hasEndingSequence import hasEndingSequence
+from Mixins.hasResponseCodes import checkXYZ, checkOK, checkTime
 
 
-class PrusaPrinter(Printer, hasEndingSequence, usesPrusaGcode, metaclass=ABCMeta):
+class PrusaPrinter(Printer, hasEndingSequence, metaclass=ABCMeta):
     VENDORID = 0x2C99
+    cancelCMD: bytes = b"M112\n"
+    keepAliveCMD: bytes = b"M113 S1\n"
+    doNotKeepAliveCMD: bytes = b"M113 S0\n"
+    statusCMD: bytes = b"M115\n"
+    getLocationCMD: bytes = b"M114\n"
+    pauseCMD: bytes = b"M601\n"
+    resumeCMD: bytes = b"M602\n"
 
-    def sendGcode(self, gcode: Buffer, isVerbose: bool = False):
-        return usesPrusaGcode.sendGcode(self, gcode, isVerbose)
+    callablesHashtable = {
+        "G28": [checkXYZ, checkOK],  # Home
+        "G29.01": [checkXYZ, checkOK],  # Auto bed leveling
+        "G29.02": [checkOK],  # Auto bed leveling
+        "M31": [checkOK, checkTime, checkOK],  # Print time
+        "M73": [checkOK],  # Set build percentage
+    }
 
-    def parseGcode(self, file, isVerbose=False):
-        return usesPrusaGcode.parseGcode(self, file, isVerbose)
+    callablesHashtable = {**Printer.callablesHashtable, **callablesHashtable}
 
-    def connect(self):
-        return usesPrusaGcode.connect(self)
 
-    def disconnect(self):
-        usesPrusaGcode.disconnect(self)
-
-    def home(self, isVerbose: bool = False):
-        return usesPrusaGcode.home(self, isVerbose)
-
-    def goTo(self, loc: Vector3, isVerbose: bool = False):
-        return usesPrusaGcode.goTo(self, loc, isVerbose)
-
-    @abstractmethod
-    def endSequence(self):
-        pass
-
-    @abstractmethod
-    def getPrintTime(self):
-        pass
-
-    def getToolHeadLocation(self) -> Vector3:
-        return usesPrusaGcode.getToolHeadLocation(self)
+    def extractIndex(self, gcode: bytes) -> str:
+        hashIndex = gcode.decode().split("\n")[0].split(" ")[0]
+        if hashIndex == "G29":
+            try:
+                g29addon = gcode.decode().split("\n")[0].split(" ")[1]
+                hashIndex += ".01" if g29addon == "P1" else ".02"
+            except IndexError as e:
+                hashIndex += ".01"
+        if hashIndex == "M109" or hashIndex == "M190":
+            self.logger.info("Waiting for temperature to stabilize...")
+        elif hashIndex == "G28":
+            self.logger.info("Homing...")
+        return hashIndex

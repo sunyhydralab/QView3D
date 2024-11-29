@@ -20,6 +20,14 @@ class FabricatorThread(Thread):
             from app import app
             self.app = app
 
+    def __to_JSON__(self):
+        return {
+            "fabricator": self.fabricator,
+            "app": self.app,
+            "running": self.is_alive(),
+            "daemon": self.daemon,
+        }
+
     def run(self):
         with self.app.app_context():
             while True:
@@ -38,11 +46,13 @@ class FabricatorThread(Thread):
 class FabricatorList:
     def __init__(self, app=None):
         self.app = app
+        assert self.app is not None, "app is None"
         with self.app.app_context():
             self.fabricators = Fabricator.queryAll()
             self.fabricator_threads = []
             self.ping_thread = None
             for fabricator in self.fabricators:
+                fabricator.device.connect()
                 self.fabricator_threads.append(self.start_fabricator_thread(fabricator))
 
     def __iter__(self):
@@ -53,6 +63,25 @@ class FabricatorList:
 
     def __getitem__(self, key):
         return self.fabricators[key]
+
+    def __to_JSON__(self):
+        """
+        Convert the FabricatorList to a JSON object
+        :return: JSON object
+        :rtype: dict
+        """
+        fab_list = []
+        for fabricator in self:
+            fab_list.append(fabricator.__to_JSON__())
+        thread_list = []
+        for thread in self.fabricator_threads:
+            thread_list.append(thread.__to_JSON__())
+        return {
+            "fabricators": fab_list,
+            "fabricator_threads": thread_list,
+            "ping_thread": self.ping_thread,
+            "app": self.app,
+        }
 
     def teardown(self):
         """stop all fabricator threads"""
@@ -77,18 +106,18 @@ class FabricatorList:
                 newFab = listFab
                 newFab.addToDB()
             else: # means that the fabricator is not in the list or the db
-                newFab = Fabricator(serialPort, name=name, addToDB=True)
+                newFab = Fabricator(serialPort, name=name)
                 self.fabricators.append(newFab)
-        dbfabricators = Fabricator.queryAll()
-        assert(len(self) == len(dbfabricators))
-        assert all(fabricator in self for fabricator in dbfabricators)
+        dbFabricators = Fabricator.queryAll()
+        assert(len(self) == len(dbFabricators)), f"len(self)={len(self)}, len(dbFabricators)={len(dbFabricators)}"
+        assert all(fabricator in self for fabricator in dbFabricators), f"self={self}, dbFabricators={dbFabricators}"
         if newFab: self.start_fabricator_thread(newFab)
 
 
     def deleteFabricator(self, fabricatorid):
         """delete a fabricator from the list, and from the database"""
         # TODO: Implement deleteFabricator
-        pass
+        raise NotImplementedError("deleteFabricator is not implemented")
 
 
     def getFabricatorByName(self, name) -> Fabricator | None:
@@ -107,8 +136,11 @@ class FabricatorList:
 
     def getFabricatorByPort(self, port) -> Fabricator | None:
         """find the first fabricator with the given port"""
+        assert isinstance(port, str), f"port={port}, type(port)={type(port)}"
         for fabricator in self:
-            if fabricator.getSerialPort().device == port:
+            assert isinstance(fabricator.devicePort, str), f"fabricator.devicePort={fabricator.devicePort}, type(fabricator.devicePort)={type(fabricator.devicePort)}"
+            print(fabricator.devicePort + " ?= " + port)
+            if fabricator.devicePort == port:
                 return fabricator
         return next((fabricator for fabricator in self.fabricators if fabricator.devicePort == port), None)
 
@@ -155,10 +187,10 @@ class FabricatorList:
         self.ping_thread = Thread(target=self.pingForStatus)
 
     def get_fabricator_thread(self, fabricator):
-        assert fabricator in self
+        assert fabricator in self, f"fabricator {fabricator} not in self"
         thread = next(thread for thread in self.fabricator_threads if thread.fabricator == fabricator)
-        assert thread.is_alive()
-        assert thread.daemon
+        assert thread.is_alive(), f"thread {thread} is not alive"
+        assert thread.daemon, f"thread {thread} is not daemon"
         return thread
 
 

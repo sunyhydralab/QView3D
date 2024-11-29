@@ -77,5 +77,5 @@ class usesVanillaGcode:
         assert self.serialConnection.is_open
         assert isinstance(gcode, bytes)
         self.serialConnection.write(gcode)
-        self.logger.debug(gcode.decode("utf-8"))
+        if isVerbose: self.logger.debug(gcode.decode("utf-8"))
         return True

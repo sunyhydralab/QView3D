@@ -9,7 +9,7 @@ export function api(action: string, body?: unknown, method?: string, headers?: a
 }
 
 export interface Device {
-  device: string
+  device: Record<string, any>
   description: string
   hwid: string
   name?: string
@@ -70,8 +70,7 @@ export function useRetrievePrinters() {
   return {
     async retrieve() {
       try {
-        const response = await api('getprinters')
-        return response.printers
+        return await api('getprinterinfo')
       } catch (error) {
         console.error(error)
       }
@@ -84,8 +83,7 @@ export function useRetrievePrintersInfo() {
   return {
     async retrieveInfo() {
       try {
-        const response = await api('getprinterinfo')
-        return response // return the response directly
+        return await api('getprinterinfo')
       } catch (error) {
         console.error(error)
       }

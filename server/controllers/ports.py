@@ -1,7 +1,9 @@
 from sqlalchemy.exc import SQLAlchemyError
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.Ports import Ports
+from app import handle_errors_and_logging
+from traceback import format_exc
 
 # Blueprint for ports routes
 ports_bp = Blueprint("ports", __name__)
@@ -12,16 +14,10 @@ def getRegisteredFabricators():
     """Get a list of all registered fabricators."""
     try:
         fabricators = Fabricator.queryAll()
-        return jsonify([{
-            "name": fab.name,
-            "description": fab.description,
-            "hwid": fab.hwid,
-            "devicePort": fab.devicePort,
-            "status": fab.getStatus()
-        } for fab in fabricators])
+        return jsonify([fab.__to_JSON__() for fab in fabricators])
     except Exception as e:
-        print(f"Error getting registered fabricators: {e}")
-        return jsonify({"error": "Failed to retrieve registered fabricators"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/register", methods=["POST"])
 def registerFabricator():
@@ -32,14 +28,14 @@ def registerFabricator():
         name = data['fabricator']['name']
 
         # Create a new fabricator instance using the Fabricator class
-        new_fabricator = Fabricator(Ports.getPortByName(device), name, addToDB=True)
+        new_fabricator = Fabricator(Ports.getPortByName(device), name)
         return jsonify({"success": True, "message": "Fabricator registered successfully", "fabricator_id": new_fabricator.dbID})
     except SQLAlchemyError as db_err:
         print(f"Database error during registration: {db_err}")
         return jsonify({"error": "Database error occurred"}), 500
     except Exception as e:
-        print(f"Error registering fabricator: {e}")
-        return jsonify({"error": "Failed to register fabricator"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/deletefabricator", methods=["POST"])
 def deleteFabricator():
@@ -56,8 +52,8 @@ def deleteFabricator():
         else:
             return jsonify({"error": "Fabricator not found"}), 404
     except Exception as e:
-        print(f"Error deleting fabricator: {e}")
-        return jsonify({"error": "Failed to delete fabricator"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/editname", methods=["POST"])
 def editName():
@@ -74,8 +70,8 @@ def editName():
         else:
             return jsonify({"error": "Fabricator not found"}), 404
     except Exception as e:
-        print(f"Error editing fabricator name: {e}")
-        return jsonify({"error": "Failed to edit fabricator name"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/diagnose", methods=["POST"])
 def diagnoseFabricator():
@@ -86,7 +82,7 @@ def diagnoseFabricator():
         port = Ports.getPortByName(device_name)
 
         if port:
-            fabricator = Fabricator.createDevice(port)  # Ensure the Fabricator has this method
+            fabricator = Fabricator(port)  # Ensure the Fabricator has this method
             if fabricator:
                 diagnosis_result = fabricator.diagnose()
                 return jsonify({"success": True, "message": diagnosis_result})
@@ -95,8 +91,8 @@ def diagnoseFabricator():
         else:
             return jsonify({"error": "Device not found"}), 404
     except Exception as e:
-        print(f"Error diagnosing fabricator: {e}")
-        return jsonify({"error": "Failed to diagnose fabricator"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/repair", methods=["POST"])
 def repairFabricator():
@@ -116,37 +112,43 @@ def repairFabricator():
         else:
             return jsonify({"error": "Device not found"}), 404
     except Exception as e:
-        print(f"Error repairing fabricator: {e}")
-        return jsonify({"error": "Failed to repair fabricator"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/movehead", methods=["POST"])
 def moveHead():
     """Move the head of a fabricator. Deprecated if no longer needed."""
     try:
         data = request.get_json()
-        device_name = data['port']
-        port = Ports.getPortByName(device_name)
-
+        port = data['port']
         if port:
-            fabricator = Fabricator(port)
-            result = fabricator.device.home()  # Use home() method from Device
-            return jsonify({"success": True, "message": "Head move successful"}) if result else jsonify({"success": False, "message": "Head move unsuccessful"})
+            if current_app:
+                with current_app.app_context():
+                    fabricator = current_app.fabricator_list.getFabricatorByPort(port)
+                    if fabricator:
+                        result = fabricator.device.home()  # Use home() method from Device
+                        return jsonify({"success": True, "message": "Head move successful"}) if result else jsonify({"success": False, "message": "Head move unsuccessful"})
+                    else:
+                        return jsonify({"error": "Fabricator not found", "line number": 136}), 404
+            else:
+                fabricator = Fabricator(port)
+                result = fabricator.device.home()  # Use home() method from Device
+                return jsonify({"success": True, "message": "Head move successful"}) if result else jsonify({"success": False, "message": "Head move unsuccessful"})
         else:
             return jsonify({"error": "Device not found"}), 404
     except Exception as e:
-        print(f"Error moving head: {e}")
-        return jsonify({"error": "Failed to move fabricator head"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/movefabricatorlist", methods=["POST"])
 def moveFabricatorList():
     """Change the order of fabricators."""
     try:
-        from app import printer_status_service
         data = request.get_json()
         fabricator_ids = data['fabricator_ids']
-
-        result = printer_status_service.moveFabricatorList(fabricator_ids)
+        from app import app
+        result = app.fabricator_list.moveFabricatorList(fabricator_ids)
         return jsonify({"success": True, "message": "Fabricator list successfully updated"}) if result != "none" else jsonify({"success": False, "message": "Fabricator list not updated"})
     except Exception as e:
-        print(f"Error moving fabricator list: {e}")
-        return jsonify({"error": "Failed to move fabricator list"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500

@@ -14,7 +14,7 @@ class Logger(logging.Logger):
     ERROR = logging.ERROR
     CRITICAL = logging.CRITICAL
 
-    def __init__(self, deviceName, port=None, consoleLogger=None, fileLogger=None, loggingLevel=logging.INFO, showFile=True, showLevel=True, showDate=True):
+    def __init__(self, deviceName, port=None, consoleLogger=sys.stdout, fileLogger=None, loggingLevel=logging.INFO, showFile=True, showLevel=True, showDate=True):
         title = []
         if port:
             title.append(port)
@@ -36,19 +36,21 @@ class Logger(logging.Logger):
             consoleLogger.setFormatter(CustomFormatter(formatString))
             self.consoleLogger = consoleLogger
             self.addHandler(consoleLogger)
+        else: self.consoleLogger = None
         if fileLogger is None:
-            log_folder = "./server/logs"
+            from app import root_path
+            log_folder = os.path.abspath(os.path.join(root_path, "server","logs"))
             os.makedirs(log_folder, exist_ok=True)
             subfolder = os.path.join(log_folder, deviceName)
             os.makedirs(subfolder, exist_ok=True)
             from datetime import datetime
-            fileLogger = logging.FileHandler(os.path.join(subfolder, f"{datetime.now().strftime('%m-%d-%Y__%H-%M-%S')}.log"))
+            fileLogger = CustomFileHandler(os.path.join(subfolder, f"{datetime.now().strftime('%m-%d-%Y__%H-%M-%S')}.log"))
         else:
             if not os.path.exists(fileLogger):
-                fileLogger = logging.FileHandler(fileLogger, mode='w')
+                fileLogger = CustomFileHandler(fileLogger, mode='w')
             else:
-                fileLogger = logging.FileHandler(fileLogger)
-        fileLogger.setFormatter(logging.Formatter(formatString))
+                fileLogger = CustomFileHandler(fileLogger)
+        fileLogger.setFormatter(CustomFormatter(formatString))
         fileLogger.setLevel(loggingLevel)
         self.fileLogger = fileLogger
         self.addHandler(fileLogger)
@@ -156,7 +158,7 @@ class Logger(logging.Logger):
 
     def setLevel(self, level):
         super().setLevel(level)
-        self.consoleLogger.setLevel(level)
+        if self.consoleLogger is not None: self.consoleLogger.setLevel(level)
         self.fileLogger.setLevel(level)
 
 class CustomFormatter(logging.Formatter):
@@ -175,3 +177,12 @@ class CustomFormatter(logging.Formatter):
         color = self.COLOR_CODES.get(record.levelname, self.RESET_CODE)
         message = super().format(record)
         return f"{color}{message}{self.RESET_CODE}"
+
+class CustomFileHandler(logging.FileHandler):
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            self.stream.write(msg + "\n")
+            self.flush()
+        except RecursionError:
+            pass

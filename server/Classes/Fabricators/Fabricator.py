@@ -4,7 +4,7 @@ from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from sqlalchemy.exc import SQLAlchemyError
 from Classes.Fabricators.Device import Device
-from Mixins.canPause import canPause
+from typing_extensions import TextIO
 from Mixins.hasEndingSequence import hasEndingSequence
 from models.db import db
 from datetime import datetime, timezone
@@ -22,31 +22,60 @@ class Fabricator(db.Model):
     devicePort = db.Column(db.String(50), nullable=False)
 
 
-    def __init__(self, port: ListPortInfo | SysFS | None, name: str = "", addToDB: bool = False, consoleLogger=None, fileLogger=None):
+    def __init__(self, port: ListPortInfo | SysFS | None, name: str = "", consoleLogger=None, fileLogger=None):
         if port is None:
             return
-        assert isinstance(port, ListPortInfo) or isinstance(port, SysFS)
-        assert isinstance(name, str)
-
+        assert isinstance(port, ListPortInfo) or isinstance(port, SysFS), f"Invalid port type: {type(port)}"
+        assert isinstance(name, str), f"Invalid name type: {type(name)}"
         from Classes.Queue import Queue
         from Classes.Jobs import Job
 
-        self.device: Device = Fabricator.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger)
+        self.dbID = None  # Initialize dbID
         self.job: Job | None = None
-
         self.queue: Queue = Queue()
         self.status: str = "idle"
-
+        self.hwid = port.hwid.split(" LOCATION=")[0]
+        self.description = "New Fabricator"
         self.name: str = name
-        self.description = self.device.getDescription()
-        self.hwid = self.device.getHWID()
-        self.devicePort = self.device.getSerialPort().device
-        if addToDB:
+        self.devicePort = port.device
+        dbFab = Fabricator.query.filter_by(hwid=self.hwid).first()
+        if dbFab is None:
             db.session.add(self)
             db.session.commit()
+            self.dbID = self.dbID  # Set dbID after committing to the database
+        else:
+            self.name = dbFab.name
+            self.description = dbFab.description
+            self.hwid = dbFab.hwid
+            self.devicePort = dbFab.devicePort
+            self.date = dbFab.date
+            self.dbID = dbFab.dbID
+
+        self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger)
+        if self.description == "New Fabricator": self.description = self.device.getDescription()
+        db.session.commit()
 
     def __repr__(self):
         return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}, port open: {self.device.serialConnection.is_open if (self.device is not None and self.device.serialConnection is not None) else None}"
+
+    def __to_JSON__(self):
+        """
+        Converts the Fabricator object to a JSON object
+        :return: JSON object
+        :rtype: dict
+        """
+        return {
+            "name": self.name,
+            "description": self.description,
+            "hwid": self.hwid,
+            "status": self.status,
+            "id": self.dbID,
+            "date": self.date.strftime("%a, %d %b %Y %H:%M:%S"),
+            "queue": self.queue.convertQueueToJson(),
+            "job": self.job.__to_JSON__() if self.job is not None else None,
+            "device": self.device.__to_JSON__(),
+        }
+
     @staticmethod
     def getModelFromGcodeCommand(serialPort: ListPortInfo | SysFS | None) -> str:
         """returns the model of the printer based on the response to M997"""
@@ -61,12 +90,22 @@ class Fabricator(db.Model):
         response = response.decode("utf-8")
         return response
 
-
-    @staticmethod
-    def createDevice(serialPort: ListPortInfo | SysFS | None, consoleLogger=None, fileLogger=None) -> Device | None:
-        """creates the correct printer object based on the serial port info"""
+    def createDevice(self, serialPort: ListPortInfo | SysFS | None, consoleLogger=None, fileLogger=None):
+        """
+        creates the correct printer object based on the serial port info
+        :param serialPort: the serial port info
+        :type serialPort: ListPortInfo | SysFS | None
+        :param consoleLogger: the console stream to output to
+        :type consoleLogger: TextIO | None
+        :param fileLogger: the file path to output file logs to
+        :type fileLogger: str | None
+        :return: the printer object
+        :rtype: Device | None
+        """
         if serialPort is None:
             return None
+        assert isinstance(self, Fabricator), f"self is not a Fabricator object: {self}"
+        assert self.dbID is not None, "dbID is None, so there is no way to add the fabricator to the database"
         from Classes.Fabricators.Printers.Ender.EnderPrinter import EnderPrinter
         from Classes.Fabricators.Printers.MakerBot.MakerBotPrinter import MakerBotPrinter
         from Classes.Fabricators.Printers.Prusa.PrusaPrinter import PrusaPrinter
@@ -75,11 +114,11 @@ class Fabricator(db.Model):
             from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
             from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
             if serialPort.pid == PrusaMK4.PRODUCTID:
-                return PrusaMK4(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return PrusaMK4(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
             elif serialPort.pid == PrusaMK4S.PRODUCTID:
-                return PrusaMK4S(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return PrusaMK4S(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
             elif serialPort.pid == PrusaMK3.PRODUCTID:
-                return PrusaMK3(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return PrusaMK3(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
             else:
                 return None
         elif serialPort.vid == EnderPrinter.VENDORID:
@@ -87,15 +126,15 @@ class Fabricator(db.Model):
             from Classes.Fabricators.Printers.Ender.Ender3Pro import Ender3Pro
             model = Fabricator.getModelFromGcodeCommand(serialPort)
             if "Ender-3 Pro" in model:
-                return Ender3Pro(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return Ender3Pro(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
             elif "Ender-3" in model:
-                return Ender3(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return Ender3(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
             else:
                 return None
         elif serialPort.vid == MakerBotPrinter.VENDORID:
             from Classes.Fabricators.Printers.MakerBot.Replicator2 import Replicator2
             if serialPort.pid == Replicator2.PRODUCTID:
-                return Replicator2(serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return Replicator2(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
         else:
             #TODO: assume generic printer, do stuff
             return None
@@ -104,8 +143,8 @@ class Fabricator(db.Model):
     def queryAll(cls):
         """
         Returns all fabricators in the database as a list of the Fabricator objects
-
-        :return (list[Fabricator]): list of Fabricator objects
+        :return: list of Fabricator objects
+        :rtype: list[Fabricator]
         """
         fabList = []
         from Classes.Ports import Ports
@@ -120,15 +159,25 @@ class Fabricator(db.Model):
         db.session.commit()
 
     def addToDB(self):
+        """adds the fabricator to the db"""
         db.session.add(self)
         db.session.commit()
 
     def begin(self, isVerbose: bool = False):
-        """starts the fabrication process"""
+        """
+        starts the fabrication process
+        :param isVerbose: whether to print verbose output
+        :type isVerbose: bool
+        :return: whether the fabrication process was successful
+        :rtype: bool
+        """
+        from flask import current_app
+        if current_app is not None:
+            current_app.logger.critical(f"current app: {current_app}")
         try:
-            assert self.status == "idle"
-            assert self.queue is not None
-            assert len(self.queue) > 0
+            assert self.status == "idle", f"Fabricator is not idle, status: {self.status}"
+            assert self.queue is not None, "Queue is None"
+            assert len(self.queue) > 0, "Queue is empty"
             self.job = self.queue.getNext()
             assert self.job is not None, "Job is None"
             self.checkValidJob()
@@ -136,7 +185,7 @@ class Fabricator(db.Model):
             # if isinstance(self.device, hasStartupSequence):
             #     self.device.startupSequence()
             assert self.setStatus("printing"), "Failed to set status to printing"
-            assert self.device.parseGcode(self.job.file_name_original, isVerbose=isVerbose), f"Failed to parse Gcode, status: {self.status}, verdict: {self.device.verdict}, file: {self.job.file_name_original}" # this is the actual command to read the file and fabricate.
+            assert self.device.parseGcode(self.job, isVerbose=isVerbose), f"Failed to parse Gcode, status: {self.status}, verdict: {self.device.verdict}, file: {self.job.file_name_original}" # this is the actual command to read the file and fabricate.
             if isVerbose: self.device.logger.debug(f"Job complete, verdict: {self.device.verdict}")
             self.handleVerdict()
             if isVerbose: self.device.logger.debug(f"Verdict handled, status: {self.status}")
@@ -148,35 +197,38 @@ class Fabricator(db.Model):
 
     def pause(self):
         """pauses the fabrication process if the fabricator supports it"""
-        if not isinstance(self.device, canPause):
+        if not self.device.pauseCMD:
             from app import handle_errors_and_logging
             return handle_errors_and_logging("Fabricator doesn't support pausing", self)
-        assert isinstance(self.device, Device)
+        assert isinstance(self.device, Device), f"Device is not a Device object or subclass: {self.device}"
         if self.status != "printing":
             from app import handle_errors_and_logging
-            return handle_errors_and_logging("Fabricator doesn't support pausing", self)
+            return handle_errors_and_logging("Nothing to pause, Fabricator isn't printing", self)
+        assert isinstance(self.device, Device), f"Device is not a Device object or subclass: {self.device}"
+        assert self.device.pause(), "Failed to pause"
         self.setStatus("paused")
-        assert isinstance(self.device, Device)
         return self.status == self.device.status == "paused"
 
     def resume(self):
         """resumes the fabrication process if the fabricator supports it"""
-        if not isinstance(self.device, canPause):
-            return #TODO: return error message
+        if not self.device.resumeCMD:
+            from app import handle_errors_and_logging
+            return handle_errors_and_logging("Fabricator doesn't support pausing", self)
         if self.status != "paused":
-            return #TODO: return error message
+            from app import handle_errors_and_logging
+            return handle_errors_and_logging("Nothing to resume, Fabricator isn't paused", self)
         self.setStatus("printing")
-        assert isinstance(self.device, Device)
+        assert isinstance(self.device, Device), f"Device is not a Device object or subclass: {self.device}"
         return self.status == self.device.status == "printing"
 
     def cancel(self):
         """cancels the fabrication process"""
         try:
-            assert self.job is not None
-            assert self.device is not None
+            assert self.job is not None, "Job is None"
+            assert self.device is not None, "Device is None"
             if self.status != "printing" and self.status != "paused":
-                self.device.logger.error(f"Fabricator isn't in the middle of a job: current status: {self.status}")
-                return #TODO: return error message
+                from app import handle_errors_and_logging
+                return handle_errors_and_logging("Nothing to cancel, Fabricator isn't printing", self)
             self.setStatus("cancelled")
             return self.status == self.device.status == "cancelled"
         except Exception as e:
@@ -188,8 +240,8 @@ class Fabricator(db.Model):
 
     def setStatus(self, newStatus):
         try:
-            assert newStatus in ["idle", "printing", "paused", "complete", "error", "cancelled", "misprint"]
-            assert self.device is not None
+            assert newStatus in ["idle", "printing", "paused", "complete", "error", "cancelled", "misprint"], f"Invalid status: {newStatus}"
+            assert self.device is not None, "Device is None"
 
             if self.status == "error" and newStatus!= "error":
                 self.device.hardReset(newStatus)
@@ -198,10 +250,11 @@ class Fabricator(db.Model):
             if self.job is not None:
                 self.job.status = newStatus
 
-
-            # current_app.socketio.emit(
-            #     "status_update", {"fabricator_id": self.dbID, "status": newStatus}
-            # )
+            from flask import current_app
+            if current_app:
+                current_app.socketio.emit(
+                    "status_update", {"fabricator_id": self.dbID, "status": newStatus}
+                )
             return True
         except Exception as e:
             from app import handle_errors_and_logging
@@ -213,7 +266,7 @@ class Fabricator(db.Model):
 
     def handleVerdict(self):
         assert self.device.verdict in ["complete", "error", "cancelled", "misprint"], f"Invalid verdict: {self.device.verdict}"
-        assert self.job is not None
+        assert self.job is not None, "Job is None"
         if self.device.verdict == "complete":
             #self.device.disconnect()
             self.setStatus("complete")

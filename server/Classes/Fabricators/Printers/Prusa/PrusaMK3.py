@@ -1,6 +1,3 @@
-from serial.tools.list_ports_common import ListPortInfo
-from serial.tools.list_ports_linux import SysFS
-
 from Classes.Fabricators.Printers.Prusa.PrusaPrinter import PrusaPrinter
 from Classes.Vector3 import Vector3
 from Mixins.hasResponseCodes import checkOK, checkTime, checkXYZ
@@ -13,13 +10,16 @@ class PrusaMK3(PrusaPrinter):
     MAXFEEDRATE = 12000
     homePosition = Vector3(0.2, -3.78, 0.15)
     cancelCMD = b"M603\n"
-    homeCMD = b"G28 W\n"
+    homeCMD = b"G28\n"
+    keepAliveCMD = None
+    doNotKeepAliveCMD = None
 
     callablesHashtable = {
         "M31": [checkTime, checkOK],  # Print time
         "G28": [checkOK],
         "G29.02": [checkOK, checkOK],
         "G29.01": [checkOK, checkXYZ, checkXYZ, checkOK],  # Auto bed leveling
+        "M601": [] # Pause
     }
 
     callablesHashtable = {**PrusaPrinter.callablesHashtable, **callablesHashtable}

@@ -10,6 +10,9 @@ class Vector3:
     def __repr__(self):
         return f"X:{self.x:.2f} Y:{self.y:.2f} Z:{self.z:.2f}"
 
+    def __to_JSON__(self):
+        return {"x": self.x, "y": self.y, "z": self.z}
+
     # Adding two vectors
     def __add__(self, other):
         return Vector3(self.x + other.x, self.y + other.y, self.z + other.z)

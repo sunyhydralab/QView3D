@@ -310,7 +310,7 @@ const handleDragEnd = async () => {
                   <!-- <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
                 Change filament
               </p> -->
-                  <p v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0" style="color: #ad6060"
+                  <p v-if="printer.status === 'idle' && printer.queue?.[0]?.released === 0" style="color: #ad6060"
                     class="mb-0 me-2">
                     Waiting release
                   </p>
@@ -342,13 +342,13 @@ const handleDragEnd = async () => {
                   </button>
 
                   <button class="btn btn-danger"
-                    v-if="printer.status == 'configuring' || printer.status == 'ready' || printer.status == 'error' || printer.status == 'complete'"
+                    v-if="printer.status == 'configuring' || printer.status == 'ready' || printer.status == 'error' || printer.status == 'complete' || printer.status == 'idle'"
                     @click="setPrinterStatus(printer, 'offline')">
                     Turn Offline
                   </button>
 
                   <button class="btn btn-secondary"
-                    v-if="printer.status == 'printing' && printer.queue?.[0].released == 0"
+                    v-if="printer.status == 'idle' && printer.queue?.[0].released == 0"
                     @click="startPrint(printer.id, printer.queue[0].id)">
                     Start Print
                   </button>
@@ -568,7 +568,7 @@ const handleDragEnd = async () => {
           </div>
           <tr v-else :id="printer.id">
             <td
-              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' || printer.status == 'idle' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0].td_id }}
             </td>
             <td v-else><i>idle</i></td>
@@ -587,7 +587,7 @@ const handleDragEnd = async () => {
                 <!-- <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
                 Change filament
               </p> -->
-                <p v-if="printer.status === 'printing' && printer.queue?.[0]?.released === 0" style="color: #ad6060"
+                <p v-if="printer.status === 'idle' && printer.queue?.[0]?.released === 0" style="color: #ad6060"
                   class="mb-0 me-2">
                   Waiting release
                 </p>
@@ -598,7 +598,7 @@ const handleDragEnd = async () => {
             </td>
 
             <td class="truncate" :title="printer.queue?.[0]?.name"
-              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' || printer.status == 'idle' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0]?.name }}
             </td>
             <td v-else></td>
@@ -619,12 +619,12 @@ const handleDragEnd = async () => {
                 </button>
 
                 <button class="btn btn-danger"
-                  v-if="printer.status == 'configuring' || printer.status == 'ready' || printer.status == 'error' || printer.status == 'complete'"
+                  v-if="printer.status == 'configuring' || printer.status == 'ready' || printer.status == 'error' || printer.status == 'complete' || printer.status == 'idle'"
                   @click="setPrinterStatus(printer, 'offline')">
                   Turn Offline
                 </button>
 
-                <button class="btn btn-secondary" v-if="printer.status == 'printing' && printer.queue?.[0].released == 0"
+                <button class="btn btn-secondary" v-if="printer.status == 'idle' && printer.queue?.[0].released == 0"
                   @click="startPrint(printer.id, printer.queue[0].id)">
                   Start Print
                 </button>

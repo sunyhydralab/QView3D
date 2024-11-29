@@ -6,13 +6,13 @@ from models.db import db
 from models.issues import Issue  # assuming the Issue model is defined in the issue.py file in the models directory
 from datetime import timezone, timedelta
 from flask import jsonify, current_app
+from traceback import format_exc
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
 from tzlocal import get_localzone
 import gzip
 import csv
 from flask import send_file
-# from app import printer_status_service
 # model for job history table
 
 class Job(db.Model):
@@ -80,6 +80,29 @@ class Job(db.Model):
     def __repr__(self):
         return f"Job(id={self.id}, name={self.name}, printer_id={self.fabricator_id}, status={self.status})"
 
+    def __to_JSON__(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "status": self.status,
+            "date": self.date.strftime('%a, %d %b %Y %H:%M:%S'),
+            "printerid": self.fabricator_id,
+            "errorid": self.error_id,
+            "file_name_original": self.file_name_original,
+            "progress": self.progress,
+            "sent_lines": self.sent_lines,
+            "favorite": self.favorite,
+            "released": self.released,
+            "file_pause": self.filePause,
+            "comments": self.comments,
+            "extruded": self.extruded,
+            "td_id": self.td_id,
+            "time_started": self.time_started,
+            "printer_name": self.fabricator_name,
+            "max_layer_height": self.max_layer_height,
+            "current_layer_height": self.current_layer_height,
+            "filament": self.filament,
+        }
     def getPrinterId(self):
         return self.fabricator_id
 
@@ -159,21 +182,7 @@ class Job(db.Model):
             pagination = query.paginate(page=page, per_page=pageSize, error_out=False)
             jobs = pagination.items
 
-            jobs_data = [
-                {
-                    "id": job.id,
-                    "name": job.name,
-                    "status": job.status,
-                    "date": job.date.strftime("%a, %d %b %Y %H:%M:%S"),
-                    "printerid": job.fabricator_id,
-                    "errorid": job.error_id,
-                    "file_name_original": job.file_name_original,
-                    "comments": job.comments,
-                    "td_id": job.td_id,
-                    "printer": job.printer.name if job.printer else "None",
-                    "error": job.error.issue if job.error else 'None',
-                    "printer_name": job.printer_name
-                }
+            jobs_data = [job.__to_JSON__()
                 for job in jobs
             ]
             if countOnly == 0:
@@ -182,11 +191,14 @@ class Job(db.Model):
                 return pagination.total
 
         except SQLAlchemyError as e:
-            print(f"Database error: {e}")
-            return jsonify({"error": "Failed to retrieve jobs. Database error"}), 500
+            if current_app:
+                current_app.handle_errors_and_logging(e)
+            else:
+                print(f"Database error: {e}")
+            return jsonify({"error": format_exc()}), 500
 
     @classmethod
-    def jobHistoryInsert(cls, name, fabricator_id, status, file, file_name_original, favorite, td_id):
+    def jobHistoryInsert(cls, name, fabricator_id, status, file, file_name_original, favorite=False, td_id=0):
         try:
             if isinstance(file, bytes):
                 file_data = file
@@ -219,11 +231,11 @@ class Job(db.Model):
 
             return {"success": True, "message": "Job added to collection.", "id": job.id}
         except SQLAlchemyError as e:
-            print(f"Database error: {e}")
-            return (
-                jsonify({"error": "Failed to add job. Database error"}),
-                500,
-            )
+            if current_app:
+                current_app.handle_errors_and_logging(e)
+            else:
+                print(f"Database error: {e}")
+            return jsonify({"error": format_exc()}), 500
 
     @classmethod
     def update_job_status(cls, job_id, new_status):
@@ -234,20 +246,20 @@ class Job(db.Model):
                 # Update the status attribute of the job
                 job.status = new_status
                 # Commit the changes to the database
-                db.session.commit()
-
-                # current_app.socketio.emit('job_status_update', {
-                #     'job_id': job_id, 'status': new_status})
+                if current_app:
+                    db.session.commit()
+                    current_app.socketio.emit('job_status_update', {
+                        'job_id': job_id, 'status': new_status})
 
                 return {"success": True, "message": f"Job {job_id} status updated successfully."}
             else:
                 return {"success": False, "message": f"Job {job_id} not found."}, 404
         except SQLAlchemyError as e:
-            print(f"Database error: {e}")
-            return (
-                jsonify({"error": "Failed to update job status. Database error"}),
-                500,
-            )
+            if current_app:
+                current_app.handle_errors_and_logging(e)
+            else:
+                print(f"Database error: {e}")
+            return jsonify({"error": format_exc()}), 500
 
     @classmethod
     def delete_job(cls, job_id):
@@ -260,12 +272,15 @@ class Job(db.Model):
             else:
                 return {"error": f"Job with ID {job_id} not found in the database."}
         except Exception as e:
-            print(f"Unexpected error: {e}")
             # When an error occurs or an exception is raised during a database operation (such as adding,
             # updating, or deleting records), it may leave the database in an inconsistent state. To handle such
             # situations, a rollback is performed to revert any changes made within the current session to maintain the integrity of the database.
-            db.session.rollback()
-            return {"error": "Unexpected error occurred during job deletion."}
+            if current_app:
+                db.session.rollback()
+                current_app.handle_errors_and_logging(e)
+            else:
+                print(f"Unexpected error: {e}")
+            return jsonify({"error": format_exc()}), 500
 
     @classmethod
     def findJob(cls, job_id):
@@ -273,8 +288,11 @@ class Job(db.Model):
             job = cls.query.filter_by(id=job_id).first()
             return job
         except SQLAlchemyError as e:
-            print(f"Database error: {e}")
-            return jsonify({"error": "Failed to retrieve job. Database error"}), 500
+            if current_app:
+                current_app.handle_errors_and_logging(e)
+            else:
+                print(f"Database error: {e}")
+            return jsonify({"error": format_exc()}), 500
 
     # @classmethod
     # def findPrinterObject(self, printer_id):
@@ -304,8 +322,11 @@ class Job(db.Model):
             db.session.commit()
             return {"success": True, "message": "Printer ID nullified successfully."}
         except SQLAlchemyError as e:
-            print(f"Database error: {e}")
-            return jsonify({"error": "Failed to nullify printer ID. Database error"}), 500
+            if current_app:
+                current_app.handle_errors_and_logging(e)
+            else:
+                print(f"Database error: {e}")
+            return jsonify({"error": format_exc()}), 500
 
     @classmethod
     def clearSpace(cls):
@@ -324,28 +345,23 @@ class Job(db.Model):
             db.session.commit()  # Commit the changes
             return {"success": True, "message": "Space cleared successfully."}
         except SQLAlchemyError as e:
-            print(f"Database error: {e}")
-            return jsonify({"error": "Failed to clear space. Database error"}), 500
+            if current_app:
+                current_app.handle_errors_and_logging(e)
+            else:
+                print(f"Database error: {e}")
+            return jsonify({"error": format_exc()}), 500
 
     @classmethod
     def getFavoriteJobs(cls):
         try:
             jobs = cls.query.filter_by(favorite=True).all()
-
-            jobs_data = [{
-                "id": job.id,
-                "name": job.name,
-                "status": job.status,
-                "date": f"{job.date.strftime('%a, %d %b %Y %H:%M:%S')} {get_localzone().tzname(job.date)}",
-                "printer": job.printer.name if job.printer else 'None',
-                "file_name_original": job.file_name_original,
-                "favorite": job.favorite
-            } for job in jobs]
-
-            return jobs_data
+            return [job.__to_JSON__() for job in jobs]
         except SQLAlchemyError as e:
-            print(f"Database error: {e}")
-            return jsonify({"error": "Failed to retrieve favorite jobs. Database error"}), 500
+            if current_app:
+                current_app.handle_errors_and_logging(e)
+            else:
+                print(f"Database error: {e}")
+            return jsonify({"error": format_exc()}), 500
 
     @classmethod
     def setIssue(cls, job_id, issue_id):
@@ -362,9 +378,12 @@ class Job(db.Model):
             db.session.commit()
             return {"success": True, "message": "Issue assigned successfully."}
         except Exception as e:
-            db.session.rollback()
-            print(f"Error setting issue: {e}")
-            return None
+            if current_app:
+                db.session.rollback()
+                current_app.handle_errors_and_logging(e)
+            else:
+                print(f"Database error: {e}")
+            return jsonify({"error": format_exc()}), 500
 
     @classmethod
     def unsetIssue(cls, job_id):
@@ -381,9 +400,12 @@ class Job(db.Model):
             db.session.commit()
             return {"success": True, "message": "Issue removed successfully."}
         except Exception as e:
-            db.session.rollback()
-            print(f"Error unsetting issue: {e}")
-            return None
+            if current_app:
+                db.session.rollback()
+                current_app.handle_errors_and_logging(e)
+            else:
+                print(f"Database error: {e}")
+            return jsonify({"error": format_exc()}), 500
 
     @classmethod
     def setComment(cls, job_id, comments):
@@ -400,9 +422,12 @@ class Job(db.Model):
             db.session.commit()
             return {"success": True, "message": "Comments added successfully."}
         except Exception as e:
-            db.session.rollback()
-            print(f"Error setting comments: {e}")
-            return None
+            if current_app:
+                db.session.rollback()
+                current_app.handle_errors_and_logging(e)
+            else:
+                print(f"Database error: {e}")
+            return jsonify({"error": format_exc()}), 500
 
     @classmethod
     def downloadCSV(cls, alljobs, jobids=None):
@@ -439,8 +464,11 @@ class Job(db.Model):
 
 
         except Exception as e:
-            print(f"Error downloading CSV: {e}")
-            return {"status": "error", "message": f"Error downloading CSV: {e}"}
+            if current_app:
+                current_app.handle_errors_and_logging(e)
+            else:
+                print(f"Error downloading CSV: {e}")
+            return jsonify({"error": format_exc()}), 500
 
     def saveToFolder(self):
         file_data = self.getFile()
@@ -486,16 +514,18 @@ class Job(db.Model):
 
     def setFilePause(self, pause):
         self.filePause = pause
-        # current_app.socketio.emit('file_pause_update', {
-        #     'job_id': self.id, 'file_pause': self.filePause})
+        if current_app:
+            current_app.socketio.emit('file_pause_update', {
+                'job_id': self.id, 'file_pause': self.filePause})
 
     def getExtruded(self):
         return self.extruded
 
     def setExtruded(self, extruded):
         self.extruded = extruded
-        # current_app.socketio.emit('extruded_update', {
-        #     'job_id': self.id, 'extruded': self.extruded})
+        if current_app:
+            current_app.socketio.emit('extruded_update', {
+                'job_id': self.id, 'extruded': self.extruded})
 
         # setters
 
@@ -508,9 +538,10 @@ class Job(db.Model):
     def setProgress(self, progress):
         if self.status == 'printing':
             self.progress = progress
-            # # Emit a 'progress_update' event with the new progress
-            # current_app.socketio.emit(
-            #     'progress_update', {'job_id': self.id, 'progress': self.progress})
+            # Emit a 'progress_update' event with the new progress
+            if current_app:
+                current_app.socketio.emit(
+                    'progress_update', {'job_id': self.id, 'progress': self.progress})
 
     # added a getProgress method to get the progress of a job
     def getProgress(self):
@@ -533,7 +564,9 @@ class Job(db.Model):
             time_seconds = int(time_line.split(":")[1])
         else:
             # search for the line that contains "printing time", then the time estimate is in the format of "; estimated printing time (normal mode) = minutes seconds"
-            time_line = next(line for line in comment_lines if "time" in line)
+            time_line = next((line for line in comment_lines if "time" in line), None)
+            if not time_line:
+                return 0
             time_values = re.findall(r'\d+', time_line)
 
             # Initialize all time units to 0
@@ -609,12 +642,14 @@ class Job(db.Model):
 
     def setMaxLayerHeight(self, max_layer_height):
         self.max_layer_height = max_layer_height
-        # current_app.socketio.emit('max_layer_height', {'job_id': self.id, 'max_layer_height': self.max_layer_height})
+        if current_app:
+            current_app.socketio.emit('max_layer_height', {'job_id': self.id, 'max_layer_height': self.max_layer_height})
 
     def setCurrentLayerHeight(self, current_layer_height):
         print("Current Layer Height: ", current_layer_height)
         self.current_layer_height = current_layer_height
-        # current_app.socketio.emit('current_layer_height', {'job_id': self.id, 'current_layer_height': self.current_layer_height})
+        if current_app:
+            current_app.socketio.emit('current_layer_height', {'job_id': self.id, 'current_layer_height': self.current_layer_height})
 
     def setFilament(self, filament):
         self.filament = filament
@@ -630,17 +665,20 @@ class Job(db.Model):
 
     def setReleased(self, released):
         self.released = released
-        # current_app.socketio.emit('release_job', {'job_id': self.id, 'released': released})
+        if current_app:
+            current_app.socketio.emit('release_job', {'job_id': self.id, 'released': released})
 
     def setTimeStarted(self, time_started):
         self.time_started = time_started
-        # current_app.socketio.emit('set_time_started', {'job_id': self.id, 'started': time_started})
+        if current_app:
+            current_app.socketio.emit('set_time_started', {'job_id': self.id, 'started': time_started})
 
     def setTime(self, timeData, index):
         # timeData = datetime(y, m, d, h, min, s)
         # print("TimeData: ", timeData, " Index: ", index)
         self.job_time[index] = timeData
-        # if index == 0:
-        #     current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData, 'index': index})
-        # else:
-        #     current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData.isoformat(), 'index': index})
+        if current_app:
+            if index == 0:
+                current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData, 'index': index})
+            else:
+                current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData.isoformat(), 'index': index})

@@ -44,8 +44,13 @@ onMounted(async () => {
         try {
             // Extract the thumbnail from the metadata
             const { metadata } = preview.parser.parseGCode(gcode);
-            if (metadata.thumbnails && metadata.thumbnails['640x480']) {
-                const thumbnailData = metadata.thumbnails['640x480'];
+            console.debug('GCode metadata:', metadata);
+            let thumbnailData = null;
+            if (metadata.thumbnails) {
+                if(metadata.thumbnails['640x480']) thumbnailData = metadata.thumbnails['640x480'];
+                else if(metadata.thumbnails['320x240']) thumbnailData = metadata.thumbnails['320x240'];
+                else if(metadata.thumbnails['160x120']) thumbnailData = metadata.thumbnails['160x120'];
+                else thumbnailData = metadata.thumbnails[Object.keys(metadata.thumbnails)[0]];
                 thumbnailSrc.value = thumbnailData.src;
             }
         } catch (error) {

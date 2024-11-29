@@ -62,12 +62,17 @@ onMounted(async () => {
         if (canvas.value) {
             preview = GCodePreview.init({
                 canvas: canvas.value,
-                extrusionColor: getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9',
+                extrusionColor: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#7561A9',
                 backgroundColor: 'black',
                 buildVolume: { x: 250, y: 210, z: 220 },
+                lineWidth: 1,
+                lineHeight: 1,
+                extrusionWidth: 1,
+                renderExtrusion: true,
+                renderTubes: true,
             });
 
-            preview.camera.position.set(0, 475, 0);
+            preview.camera.position.set(-200, 232, 200);
             preview.camera.lookAt(0, 0, 0);
 
             if (job.value?.current_layer_height && preview) {

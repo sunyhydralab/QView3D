@@ -1,19 +1,14 @@
-import base64
-from io import BytesIO
-import io
 import shutil
-import tempfile
-from flask import Blueprint, Response, jsonify, request, make_response, send_file
+from flask import Blueprint, jsonify, request
 from Classes.Jobs import Job
 from models.printers import Printer
-from app import printer_status_service
-import json 
-from werkzeug.utils import secure_filename
+import json
 import os 
 import gzip
-from flask import current_app
 import serial
 import serial.tools.list_ports
+from app import handle_errors_and_logging
+from traceback import format_exc
 
 # get data for jobs 
 jobs_bp = Blueprint("jobs", __name__)
@@ -50,8 +45,8 @@ def getJobs():
         res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, searchTicketId, favoriteOnly, issueIds, startdate, enddate, fromError, countOnly)
         return jsonify(res)
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 # add job to queue
 @jobs_bp.route('/addjobtoqueue', methods=["POST"])
@@ -96,15 +91,15 @@ def add_job_to_queue():
         priority = request.form['priority']
         # if priotiry is '1' then add to front of queue, else add to back
         if priority == 'true':
-            findPrinterObject(printer_id).getQueue().addToFront(job)
+            findPrinterObject(printer_id).getQueue().addToFront(job, printer_id)
         else:
-            findPrinterObject(printer_id).getQueue().addToBack(job)
+            findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
 
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
 
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/autoqueue', methods=["POST"])
 def auto_queue():
@@ -150,8 +145,8 @@ def auto_queue():
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
 
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/rerunjob', methods=["POST"])
 def rerun_job():
@@ -163,8 +158,8 @@ def rerun_job():
         rerunjob(printerpk, jobpk, "back")
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 # route to insert job into database
 @jobs_bp.route('/jobdbinsert', methods=["POST"])
@@ -178,16 +173,16 @@ def job_db_insert():
         name = jobdata.get('name')
         printer_id = jobdata.get('printer_id')
         status = jobdata.get('status')
-        # file_name=jobdata.get("file_name")
+        file_name=jobdata.get("file_name")
         file_path=jobdata.get("file_path")
 
         # Insert the job data into the database
-        res = Job.jobHistoryInsert(name, printer_id, status, file_path)
+        res = Job.jobHistoryInsert(name, printer_id, status, file_path, file_name)
 
         return "success"
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
  # cancel queued job
 @jobs_bp.route('/canceljob', methods=["POST"])
@@ -217,8 +212,8 @@ def remove_job():
 
         return jsonify({"success": True, "message": "Job removed from printer queue."}), 200
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 
  # cancel queued job
@@ -251,8 +246,8 @@ def remove_job_from_queue():
 
         return jsonify({"success": True, "message": "Job removed from printer queue."}), 200
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 
 @jobs_bp.route('/releasejob', methods=["POST"])
@@ -291,8 +286,8 @@ def releasejob():
         return jsonify({"success": True, "message": "Job released successfully."}), 200
 
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/bumpjob', methods=["POST"])
 def bumpjob():
@@ -317,8 +312,8 @@ def bumpjob():
 
         return jsonify({"success": True, "message": "Job bumped up in printer queue."}), 200
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/movejob', methods=["POST"])
 def moveJob():
@@ -331,8 +326,8 @@ def moveJob():
         printerobject.queue.reorder(arr)
         return jsonify({"success": True, "message": "Queue updated successfully."}), 200
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/updatejobstatus', methods=["POST"])
 def updateJobStatus():
@@ -352,8 +347,8 @@ def updateJobStatus():
 
         return jsonify(res), 200
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/assigntoerror', methods=["POST"])
 def assignToError():
@@ -373,8 +368,8 @@ def assignToError():
 
         return jsonify(res), 200
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/deletejob', methods=["POST"])
 def delete_job():
@@ -401,8 +396,8 @@ def delete_job():
         return jsonify({"success": True, "message": f"Job with ID {job_id} deleted successfully."}), 200
 
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route("/setstatus", methods=["POST"])
 def setStatus():
@@ -418,8 +413,8 @@ def setStatus():
         return jsonify({"success": True, "message": "Status updated successfully."}), 200
 
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/getfile', methods=["GET"])
 def getFile():
@@ -431,8 +426,8 @@ def getFile():
 
         return jsonify({"file": decompressed_file, "file_name": job.getFileNameOriginal()}), 200
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/nullifyjobs', methods=["POST"])
 def nullifyJobs():
@@ -442,8 +437,8 @@ def nullifyJobs():
         res = Job.nullifyPrinterId(printerid)
         return res
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/clearspace', methods=["GET"])
 def clearSpace():
@@ -451,8 +446,8 @@ def clearSpace():
         res = Job.clearSpace()
         return res
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/getfavoritejobs', methods=["GET"])
 def getFavoriteJobs():
@@ -460,8 +455,8 @@ def getFavoriteJobs():
         res = Job.getFavoriteJobs()
         return jsonify(res)
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/favoritejob', methods=["POST"])
 def favoriteJob():
@@ -473,8 +468,8 @@ def favoriteJob():
         res = job.setFileFavorite(favorite)
         return res
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/assignissue', methods=["POST"])
 def assignIssue():
@@ -487,8 +482,8 @@ def assignIssue():
         res = job.setIssue(jobid, issueid)
         return res
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/removeissue', methods=["POST"])
 def removeIssue():
@@ -500,8 +495,8 @@ def removeIssue():
         res = job.unsetIssue(jobid)
         return res
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/startprint', methods=["POST"])
 def startPrint():
@@ -514,11 +509,13 @@ def startPrint():
         inmemjob = queue.getJobById(jobid)
         print(inmemjob)
         inmemjob.setReleased(1)
+        printerobject.setStatus("printing")
+
 
         return jsonify({"success": True, "message": "Job started successfully."}), 200
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected ersetupPortRepairSocketror occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/savecomment', methods=["POST"])
 def saveComment():
@@ -532,8 +529,8 @@ def saveComment():
         return res
 
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/downloadcsv', methods=["GET", "POST"])
 def downloadCSV():
@@ -553,9 +550,8 @@ def downloadCSV():
         return res
 
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route('/removeCSV', methods=["GET", "POST"])
 def removeCSV():
@@ -574,8 +570,8 @@ def removeCSV():
         return jsonify({"success": True, "message": "CSV file removed successfully."}), 200
 
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route("/repairports", methods=["POST", "GET"])
 def repair_ports():
@@ -592,8 +588,8 @@ def repair_ports():
                     printerthread.setDevice(port.device)
         return {"success": True, "message": "Printer port(s) successfully updated."}
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @jobs_bp.route("/refetchtimedata", methods=['POST', 'GET'])
 def refetch_time():
@@ -617,15 +613,16 @@ def refetch_time():
         return jsonify(timejson)
 
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 def findPrinterObject(printer_id):
-    threads = printer_status_service.getThreadArray()
-    return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer
+    from app import fabricator_list
+    threads = fabricator_list.getThreadArray()
+    return list(filter(lambda thread: thread.fabricator.dbID == printer_id, threads))[0].fabricator
 
 def getSmallestQueue():
-    threads = printer_status_service.getThreadArray()
+    from app import fabricator_list
+    threads = fabricator_list.getThreadArray()
     smallest_queue_thread = min(threads, key=lambda thread: thread.printer.queue.getSize())
     return smallest_queue_thread.printer.id
 
@@ -637,7 +634,7 @@ def rerunjob(printerpk, jobpk, position):
     favorite = job.getFileFavorite() # get favorite status
     td_id = job.getTdId()
     # Insert new job into DB and return new PK
-    res = Job.jobHistoryInsert(name=job.getName(), printer_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original, favorite=favorite, td_id=td_id) # insert into DB
+    res = Job.jobHistoryInsert(name=job.getName(), fabricator_id=printerpk, status=status, file=job.getFile(), file_name_original=file_name_original, favorite=favorite, td_id=td_id) # insert into DB
 
     id = res['id']
     file_name_pk = file_name_original + f"_{id}" # append id to file name to make it unique
