@@ -33,7 +33,7 @@ def test_status(app, fabricator):
 def test_add_job(app, fabricator):
     file = cali_cube_setup(fabricator=fabricator)
     with open(file, "r") as f:
-        assert fabricator.queue.addToFront(Job(f.read(), "xyz cali cube", 3, "ready", file, False, 1, fabricator.name)), f"Failed to add job on {fabricator.getDescription()}"
+        assert fabricator.queue.addToFront(Job(f.read(), "xyz cali cube", fabricator.dbID, "ready", file, False, 1, fabricator.name)), f"Failed to add job on {fabricator.getDescription()}"
     for job in fabricator.queue.getQueue():
         assert job.status == "ready", f"Job status incorrect on {fabricator.getDescription()}"
     fabricator.queue.removeJob()
@@ -42,8 +42,7 @@ def test_add_job(app, fabricator):
 @pytest.mark.dependency(depends=["test_device.py::test_home", "test_fabricator.py::test_add_job"], scope="session")
 @pytest.mark.skipif(condition=testLevelToRun < 7, reason="Not doing lvl 7 tests")
 def test_pause_and_resume(app, fabricator):
-    from Mixins.canPause import canPause
-    if not isinstance(fabricator.device, canPause):
+    if not fabricator.device.pauseCMD or not fabricator.device.resumeCMD:
         pytest.skip(f"{fabricator.getDescription()} doesn't support pausing")
 
     def parse_gcode():
@@ -79,7 +78,7 @@ def test_pause_and_resume(app, fabricator):
             assert fabricator.pause(), f"Failed to pause on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
             sleep(30)
             assert fabricator.resume(), f"Failed to resume on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
-            sleep(1)
+            sleep(10)
             assert fabricator.cancel(), f"Failed to cancel on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
             assert fabricator.getStatus() == "cancelled", f"Failed to cancel on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
             sleep(10)
@@ -89,15 +88,22 @@ def test_pause_and_resume(app, fabricator):
 
         fabricator.resetToIdle()
         assert fabricator.getStatus() == "idle", f"Failed to reset to idle on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
-
-    assert fabricator.device.home(), f"Failed to home on {fabricator.getDescription()}"
+    from flask import current_app
+    fabricator.device.logger.critical(f"app: ,{current_app}")
+    fabricator.device.logger.critical(f"app.socketio: ,{current_app.socketio}")
+    from Classes.Fabricators.Printers.Prusa.PrusaMK3 import PrusaMK3
+    if isinstance(fabricator.device, PrusaMK3):
+        fabricator.device.sendGcode(b"G28 W\n")
+    else:
+        assert fabricator.device.home(), f"Failed to home on {fabricator.getDescription()}"
     from concurrent.futures import ThreadPoolExecutor, as_completed
     with ThreadPoolExecutor(max_workers=2) as executor:
-        parse_future = executor.submit(parse_gcode)
-        pause_future = executor.submit(pause_and_resume_fabricator)
+        with current_app.app_context():
+            parse_future = executor.submit(parse_gcode)
+            pause_future = executor.submit(pause_and_resume_fabricator)
 
-        for future in as_completed([parse_future, pause_future]):
-            future.result()
+            for future in as_completed([parse_future, pause_future]):
+                future.result()
 
 @pytest.mark.dependency(depends=["test_device.py::test_home", "test_fabricator.py::test_add_job"], scope="session")
 @pytest.mark.skipif(condition=testLevelToRun < 9, reason="Not doing lvl 9 tests")

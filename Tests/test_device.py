@@ -13,7 +13,7 @@ def __desc__():
 def __repr__():
     return f"test_device.py running on port {Ports.getPortByName(os.getenv('PORT'))}"
 
-@pytest.mark.dependency()
+@pytest.mark.dependency(depends=["test_app.py::test_main_view_response_is_200"], scope="session")
 @pytest.mark.skipif(condition=testLevelToRun < 1, reason="Not doing lvl 1 tests")
 def test_connection(app, fabricator):
     assert fabricator.device is not None, f"No printer connected on {fabricator.device.DESCRIPTION}"

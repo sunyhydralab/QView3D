@@ -6,6 +6,7 @@ from parallel_test_runner import testLevel
 
 def __desc__(): return "App Tests"
 
+@pytest.mark.dependency()
 @pytest.mark.skipif(condition=testLevel < 1, reason="Not doing lvl 1 tests")
 def test_db_to_make_sure_it_has_valid_file_path(app):
     db_file_no_path = app.config["SQLALCHEMY_DATABASE_URI"].split("/")[-1].split("\\")[-1]
@@ -15,6 +16,7 @@ def test_db_to_make_sure_it_has_valid_file_path(app):
                               -1]), f"Database file {app.config["SQLALCHEMY_DATABASE_URI"].split("sqlite:///")[-1]} does not exist"
 
 
+@pytest.mark.dependency(depends=["test_db_to_make_sure_it_has_valid_file_path"])
 @pytest.mark.skipif(condition=testLevel < 1, reason="Not doing lvl 1 tests")
 def test_base_url_for_http_responses_has_valid_format(app):
     assert app.config["base_url"], "base_url doesnt exist?"
@@ -22,12 +24,14 @@ def test_base_url_for_http_responses_has_valid_format(app):
         r"http://localhost:\d{1,5}$", app.config["base_url"]), f"base_url is {app.config['base_url']}"
 
 
+@pytest.mark.dependency(depends=["test_base_url_for_http_responses_has_valid_format"])
 @pytest.mark.skipif(condition=testLevel < 1, reason="Not doing lvl 1 tests")
 def test_environment_for_development(app):
     assert app.config["environment"], "environment doesnt exist?"
     assert app.config["environment"] == "development", f"environment is {app.config['environment']}"
 
 
+@pytest.mark.dependency(depends=["test_environment_for_development"])
 @pytest.mark.skipif(condition=testLevel < 1, reason="Not doing lvl 1 tests")
 def test_logger_is_custom_implementation_and_exists(app):
     assert app.logger, "myLogger doesnt exist?"
@@ -36,6 +40,8 @@ def test_logger_is_custom_implementation_and_exists(app):
     assert isinstance(app.logger, Logger), "myLogger is not an instance of Logger?"
     assert app.logger.fileLogger, "fileLogger doesnt exist?"
 
+
+@pytest.mark.dependency(depends=["test_logger_is_custom_implementation_and_exists"])
 @pytest.mark.skipif(condition=testLevel < 1, reason="Not doing lvl 1 tests")
 def test_socketio_exists_and_works(app):
     assert app.socketio, "socketio doesnt exist?"
@@ -47,22 +53,30 @@ def test_socketio_exists_and_works(app):
     received = socketio_test_client.get_received()
     assert len(received) == 0, "Response received from socketio"
 
+
+@pytest.mark.dependency(depends=["test_socketio_exists_and_works"])
 @pytest.mark.skipif(condition=testLevel < 1, reason="Not doing lvl 1 tests")
 def test_handle_errors_and_logging(app):
     assert app.handle_errors_and_logging, "handle_errors_and_logging doesnt exist?"
     assert callable(app.handle_errors_and_logging), "handle_errors_and_logging is not callable?"
     assert app.handle_errors_and_logging(Exception("Test Exception")) is False, "handle_errors_and_logging did not return False?"
 
+
+@pytest.mark.dependency(depends=["test_handle_errors_and_logging"])
 @pytest.mark.skipif(condition=testLevel < 1, reason="Not doing lvl 1 tests")
 def test_static_loading_for_client(app):
     assert app.static_folder, "static_folder doesnt exist?"
-    assert "../client/dist" in app.static_folder, f"static_folder is {app.static_folder}"
+    assert os.path.join("client","dist") in app.static_folder, f"static_folder is {app.static_folder}"
     assert os.path.exists(app.static_folder), f"static_folder {app.static_folder} does not exist"
 
+
+@pytest.mark.dependency(depends=["test_static_loading_for_client"])
 @pytest.mark.skipif(condition=testLevel < 1, reason="Not doing lvl 1 tests")
 def test_index_html_exists_in_the_static_files(app):
     assert os.path.exists(os.path.join(app.static_folder, "index.html")), f"index.html does not exist in {app.static_folder}"
 
+
+@pytest.mark.dependency(depends=["test_index_html_exists_in_the_static_files"])
 @pytest.mark.skipif(condition=testLevel < 1, reason="Not doing lvl 1 tests")
 def test_main_view_response_is_200(app):
     with app.test_client() as client:

@@ -5,13 +5,13 @@ import subprocess
 import platform
 
 # Add test root to sys.path if needed
-rootpath=os.path.abspath(os.path.join(os.path.dirname(__file__).split("QView3D")[0], 'QView3D'))
-if rootpath not in sys.path:
-    sys.path.append(rootpath)
-serverpath = os.path.join(rootpath, "server")
+from app import root_path
+if root_path not in sys.path:
+    sys.path.append(root_path)
+serverpath = os.path.join(root_path, "server")
 if serverpath not in sys.path:
     sys.path.append(serverpath)
-testpath = os.path.join(rootpath, "Tests")
+testpath = os.path.join(root_path, "Tests")
 if testpath not in sys.path:
     sys.path.append(testpath)
 
@@ -41,8 +41,10 @@ else:
     import glob
     PORTS = glob.glob("/dev/tty[A-Za-z]*")
 
+
+
 # Function to run pytest for a specific port
-testLevel = 0
+testLevel = 10
 verbosity = 2
 runFlags = 0b010 # 0b001: -s, 0b010: -vvv or -p no:terminal, 0b100: debug or info
 
@@ -57,13 +59,13 @@ def run_tests_for_port(comm_port):
 
 if __name__ == "__main__":
     from concurrent.futures import ThreadPoolExecutor, as_completed
-    with app.app_context():
-        if len(PORTS) != 0:
-            with ThreadPoolExecutor(max_workers=len(PORTS)) as executor:
-                futures = [executor.submit(run_tests_for_port, port) for port in PORTS if Ports.getPortByName(port) is not None]
-                for future in as_completed(futures):
-                    try:
-                        future.result()
-                    except Exception as e:
-                        from app import handle_errors_and_logging
-                        handle_errors_and_logging(e)
+    if len(PORTS) != 0:
+        with ThreadPoolExecutor(max_workers=len(PORTS)) as executor:
+            futures = [executor.submit(run_tests_for_port, port) for port in PORTS if
+                       Ports.getPortByName(port) is not None]
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    from app import handle_errors_and_logging
+                    handle_errors_and_logging(e)

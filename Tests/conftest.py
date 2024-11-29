@@ -36,8 +36,12 @@ def pytest_configure(config):
 
             try:
                 if log:
-                    self.logLine = " ".join([self.logLine, log])
+                    if self.logLine == "":
+                        self.logLine = msg
+                    else:
+                        self.logLine = " ".join([self.logLine, msg])
                     if flush:
+                        self.logLine = self.logLine.strip()
                         if "red" in markup and markup["red"] == True:
                             logger.error(self.logLine)
                         elif "yellow" in markup and markup["yellow"] == True:
@@ -61,17 +65,19 @@ def pytest_configure(config):
     else:
         config.pluginmanager.register(myTR, "terminalreporter")
 
+    config.terminalReporter = myTR
 
-@pytest.fixture(scope="session")
+
+@pytest.fixture(scope="session", autouse=True)
 def fabricator(request, app):
     port = request.session.config.port
     if not port: return None
     from serial.tools.list_ports_common import ListPortInfo
     from serial.tools.list_ports_linux import SysFS
     if isinstance(port, str):
-        fabricator = fabricator_list.getFabricatorByPort(port)
+        fabricator = app.fabricator_list.getFabricatorByPort(port)
     elif isinstance(port, ListPortInfo) or isinstance(port, SysFS):
-        fabricator = fabricator_list.getFabricatorByPort(port.device)
+        fabricator = app.fabricator_list.getFabricatorByPort(port.device)
     else:
         fabricator = None
     if fabricator is None:
@@ -82,10 +88,20 @@ def fabricator(request, app):
     yield fabricator
     fabricator.device.disconnect()
 
-@pytest.fixture(scope="session")
+# @pytest.fixture(scope="session", autouse=True)
+# def client(request, app):
+#     client = Client(logger=True)
+#     port = request.session.config.port
+#     portNum = int(port.split("COM")[-1])
+#     clientPort = portNum + 5000
+#     client.connect(f"http://localhost:{clientPort}")
+#     app.client = client
+#     yield client
+#     client.disconnect()
+
+@pytest.fixture(scope="session", autouse=True)
 def app():
     from app import app
-    app = app
     with app.app_context():
         yield app
         fabricator_list.teardown()
@@ -131,14 +147,15 @@ def line_separator(interrupter: str, symbol: str = "-", length: int = 136, color
 
 def setup_logger(port):
     # set up fie location for output logs
-    log_folder = "logs"
+    from app import root_path
+    log_folder = os.path.join(root_path,"Tests", "logs")
     os.makedirs(log_folder, exist_ok=True)
     from datetime import datetime
     timestamp = datetime.now().strftime("%m-%d-%Y__%H-%M-%S")
     subfolder = os.path.join(log_folder, timestamp)
     os.makedirs(subfolder, exist_ok=True)
     log_file_path = os.path.join(subfolder, f"test_{port}.log")
-    return Logger(port, "Test Printer", fileLogger=log_file_path, showFile=False, showLevel=False)
+    return Logger(port, "Test Printer", consoleLogger=None, fileLogger=log_file_path, showFile=False, showLevel=False)
 
 # @pytest.hookimpl(tryfirst=True)
 # def pytest_sessionstart(session) -> None:
@@ -248,40 +265,15 @@ def pytest_collection_modifyitems(session, config, items):
 #                 logger.logException(session.config.fails[failTest].reprtraceback.reprentries)
 #     logger.logMessageOnly("\n\033[32m" + line_separator(summary, symbol="="))
 #
-# visited_modules = set()
-#
-# @pytest.hookimpl(tryfirst=True, hookwrapper=True)
-# def pytest_runtest_makereport(item, call):
-#     outcome = yield
-#     report = outcome.get_result()  # Retrieve the TestReport object
-#     # Only check the outcome after the "call" phase (i.e., after the test ran)
-#     if (report.when == "setup" and not report.passed) or (report.when == "call"):
-#         if report.passed:
-#             if hasattr(report, "wasxfail"):
-#                 report.outcome = "xpassed"
-#                 report.xpassed = True
-#                 item.config.xpassed_count += 1
-#             else:
-#                 item.config.passed_count += 1
-#         elif report.failed:
-#             item.config.failed_count += 1
-#             failName = report.nodeid.split("::")[1] + "." + item.name
-#             item.config.failNames.append(failName)
-#             item.config.fails[failName] = report.longrepr
-#         elif report.skipped:
-#             if hasattr(report, "wasxfail"):
-#                 report.outcome = "xfailed"
-#                 report.xfailed = True
-#                 item.config.xfailed_count += 1
-#             else:
-#                 item.config.skipped_count += 1
-#     report.port = item.config.port
-#     report.verbosity = item.config.verbosity
-#     report.logger = item.config.logger
-#     module_name = item.module.__name__
-#     if module_name not in visited_modules:
-#         visited_modules.add(module_name)
-#         report.logger.logMessageOnly("\n" + line_separator(item.module.__desc__(), symbol="-"))
+visited_modules = set()
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_protocol(item, nextitem):
+    module_name = item.module.__name__
+    if module_name not in visited_modules:
+        visited_modules.add(module_name)
+        item.config.terminalReporter.write("\n" + line_separator(item.module.__desc__(), symbol="-", length=item.config.terminalReporter._tw.fullwidth - 1), flush=True)
+    yield
 #
 # @pytest.hookimpl(hookwrapper=True)
 # def pytest_runtest_logreport(report):

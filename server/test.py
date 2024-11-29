@@ -1,6 +1,5 @@
-#import re
+import time
 from datetime import datetime
-#from Classes.FabricatorList import FabricatorList
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.Jobs import Job
 from Classes.Vector3 import Vector3
@@ -111,51 +110,58 @@ patterns = [
      Vector3(200.0, 150.0, 2.0), Vector3(150.0, 200.0, 2), Vector3(100.0, 200.0, 2.0), Vector3(50.0, 150.0, 2.0)],
     # octagon
     ]
-# with app.app_context():
-PrusaMK4S = None
-PrusaMK4 = None
-PrusaMK3 = None
-Ender3 = None
-MakerBot = None
-EnderPro = None
+from app import app
+with app.app_context():
+    PrusaMK4S = None
+    PrusaMK4 = None
+    PrusaMK3 = None
+    Ender3 = None
+    MakerBot = None
+    EnderPro = None
 
-# FabricatorList.init()
-# for printer in FabricatorList.fabricators:
-#     runTests(printer)
+    # FabricatorList.init()
+    # for printer in FabricatorList.fabricators:
+    #     runTests(printer)
 
-# ari's MK4S
-if Ports.getPortByName("COM5") is not None:
-    PrusaMK4S = Fabricator(Ports.getPortByName("COM5"), "Prusa MK4S", addToDB=False)
+    # ari's MK4S
+    if Ports.getPortByName("COM5") is not None:
+        PrusaMK4S = Fabricator(Ports.getPortByName("COM5"), "Prusa MK4S")
 
-# nate's Ender 3 Pro
-if Ports.getPortByName("COM6") is not None:
-    EnderPro = Fabricator(Ports.getPortByName("COM6"), "Ender 3 Pro", addToDB=False)
+    # nate's Ender 3 Pro
+    if Ports.getPortByName("COM6") is not None:
+        EnderPro = Fabricator(Ports.getPortByName("COM6"), "Ender 3 Pro")
 
-# school prusa mk4
-if Ports.getPortByName("COM3") is not None:
-    PrusaMK4 = Fabricator(Ports.getPortByName("COM3"), "Prusa MK4", addToDB=False)
-    # PrusaMK4.device.logger.setLevel(PrusaMK4.device.logger.DEBUG)
-    # PrusaMK4.device.sendGcode(b'G29 A\n', isVerbose=True)
+    # school prusa mk4
+    if Ports.getPortByName("COM3") is not None:
+        PrusaMK4 = Fabricator(Ports.getPortByName("COM3"), "Prusa MK4")
+        # PrusaMK4.device.logger.setLevel(PrusaMK4.device.logger.DEBUG)
+        # PrusaMK4.device.sendGcode(b'G29 A\n', isVerbose=True)
 
-# school Ender 3
-if Ports.getPortByName("COM4") is not None:
-    Ender3 = Fabricator(Ports.getPortByName("COM4"), "Ender 3", addToDB=False)
-    # Ender3.device.sendGcode(b"M109 S50\n", isVerbose=True)
+    # school Ender 3
+    if Ports.getPortByName("COM4") is not None:
+        Ender3 = Fabricator(Ports.getPortByName("COM4"), "Ender 3")
+        # Ender3.device.sendGcode(b"M109 S50\n", isVerbose=True)
 
-# school Makerbot
-if Ports.getPortByName("COM7") is not None:
-    MakerBot = Fabricator(Ports.getPortByName("COM7"), "MakerBot", addToDB=False)
+    # school Makerbot
+    if Ports.getPortByName("COM7") is not None:
+        MakerBot = Fabricator(Ports.getPortByName("COM7"), "MakerBot")
 
-# school MK3
-if Ports.getPortByName("COM9") is not None:
-    PrusaMK3 = Fabricator(Ports.getPortByName("COM9"), "PrusaMK3", addToDB=False)
-    PrusaMK3.device.logger.setLevel(PrusaMK3.device.logger.DEBUG)
-    PrusaMK3.device.sendGcode(b'G28\n', isVerbose=True)
+    # school MK3
+    if Ports.getPortByName("COM9") is not None:
+        PrusaMK3 = Fabricator(Ports.getPortByName("COM9"), "Prusa MK3")
+        # PrusaMK3.device.connect()
+        # PrusaMK3.device.logger.setLevel(PrusaMK3.device.logger.DEBUG)
+        # PrusaMK3.device.sendGcode(PrusaMK3.device.pauseCMD, isVerbose=True)
+        # time.sleep(5)
+        # PrusaMK3.device.sendGcode(PrusaMK3.device.resumeCMD, isVerbose=True)
+        # time.sleep(5)
+        # PrusaMK3.device.sendGcode(PrusaMK3.device.cancelCMD, isVerbose=True)
+        # print(PrusaMK3.device.home(isVerbose=True))
 
-# for fab in [PrusaMK4S, PrusaMK4, PrusaMK3, Ender3, MakerBot, EnderPro]:
-#     if fab is not None:
-#         runTests(fab)
+    # for fab in [PrusaMK4S, PrusaMK4, PrusaMK3, Ender3, MakerBot, EnderPro]:
+    #     if fab is not None:
+    #         runTests(fab)
 
-for fab in [PrusaMK4S, PrusaMK4, PrusaMK3, Ender3, MakerBot, EnderPro]:
-    if fab is not None and fab.device.serialConnection.is_open:
-        fab.device.disconnect()
+    for fab in [PrusaMK4S, PrusaMK4, PrusaMK3, Ender3, MakerBot, EnderPro]:
+        if fab is not None and fab.device is not None and fab.device.serialConnection is not None and fab.device.serialConnection.is_open:
+            fab.device.disconnect()
