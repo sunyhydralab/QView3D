@@ -20,6 +20,7 @@ uploads_folder = os.path.abspath(os.path.join(root_path, 'uploads'))
 app = Flask(__name__, static_folder=os.path.abspath(os.path.join(root_path, "client", "dist")))
 app.config.from_object(__name__) # update application instantly
 logs = os.path.join(root_path,"server", "logs")
+if not os.path.exists(logs): os.makedirs(logs)
 from Classes.Logger import Logger
 app.logger = Logger("App", consoleLogger=None, fileLogger=os.path.abspath(os.path.join(logs, "app.log")))
 # start database connection
