@@ -46,9 +46,13 @@ const observer = new MutationObserver(() => {
     const colorSecondary = getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary').trim();
 
     const svgElementPrimary = document.getElementById('cls-1');
-    svgElementPrimary.style.fill = colorPrimary;
+    if (svgElementPrimary) {
+        svgElementPrimary.style.fill = colorPrimary;
+    }
     const svgElementSecondary = document.getElementById('cls-2');
-    svgElementSecondary.style.stroke = colorSecondary;
+    if (svgElementSecondary) {
+        svgElementSecondary.style.stroke = colorSecondary;
+    }
 });
 
 observer.observe(document.documentElement, {attributes: true, attributeFilter: ['style']});

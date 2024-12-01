@@ -38,7 +38,7 @@ class FabricatorThread(Thread):
                 if status == "ready" and queueSize > 0:
                     time.sleep(2)
                     if status != "offline":
-                        self.fabricator.printNextInQueue()
+                        self.fabricator.begin()
 
     def stop(self):
         self.fabricator.terminated = 1

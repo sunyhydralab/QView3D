@@ -1,6 +1,4 @@
 from flask import Flask
-
-
 def defineRoutes(app: Flask):
     # IMPORTING BLUEPRINTS
     from controllers.ports import ports_bp

@@ -95,8 +95,7 @@ export function useSetStatus() {
   return {
     async setStatus(printerid: number | undefined, status: string) {
       try {
-        const response = await api('setstatus', { printerid, status })
-        return response
+        return await api('setstatus', { printerid, status })
       } catch (error) {
         console.error(error)
       }

@@ -8,6 +8,7 @@ import gzip
 import serial
 import serial.tools.list_ports
 from app import handle_errors_and_logging
+from flask import current_app
 from traceback import format_exc
 
 # get data for jobs 
@@ -405,11 +406,12 @@ def setStatus():
         data = request.get_json() # get json data
         printer_id = data['printerid']
         newstatus = data['status']
-
-        printerobject = findPrinterObject(printer_id)
-
+        from Classes.Fabricators.Fabricator import Fabricator
+        printerobject: Fabricator | None = findPrinterObject(printer_id)
+        if printerobject is None:
+            return jsonify({"error": "Printer not found."}), 404
         printerobject.setStatus(newstatus)
-
+        print(printerobject.status)
         return jsonify({"success": True, "message": "Status updated successfully."}), 200
 
     except Exception as e:

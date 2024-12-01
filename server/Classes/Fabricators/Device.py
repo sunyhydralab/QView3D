@@ -1,3 +1,5 @@
+import io
+import os.path
 import sys
 from abc import ABC
 from time import sleep
@@ -125,15 +127,16 @@ class Device(ABC):
         """
         Parse a G-code file and send the commands to the device.
         :param job: The Job object, with file name to parse.
-        :param isVerbose: Whether to log the commands
         :type job: Job
+        :param isVerbose: Whether to log the commands
         :type isVerbose: bool
         :raises AssertionError: if the file is not a string or if isVerbose is not a bool
         """
-        assert isinstance(job, Job)
-        file = job.file_name_original
-        assert isinstance(file, str)
-        assert isinstance(isVerbose, bool)
+        assert isinstance(job, Job), f"Expected Job object, got {type(job)}"
+        file = job.file_path
+        assert os.path.exists(file), f"File {file} does not exist"
+        assert isinstance(file, str), f"Expected string, got {type(file)}"
+        assert isinstance(isVerbose, bool), f"Expected bool, got {type(isVerbose)}"
         try:
             with open(file, "r") as f:
                 self.logger.info(f"Printing {file}")

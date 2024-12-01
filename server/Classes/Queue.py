@@ -172,6 +172,4 @@ class Queue(deque):
     def removeJob(self):
         self.pop()
         if current_app:
-            current_app.socketio.emit(
-                "job_removed", {"queue": list(self)}, broadcast=True
-            )
+            current_app.socketio.emit("job_removed", {"queue": list(self)})

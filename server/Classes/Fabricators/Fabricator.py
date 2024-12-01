@@ -1,3 +1,6 @@
+import io
+from sqlite3 import Blob
+
 import serial
 from flask import jsonify, Response
 from serial.tools.list_ports_common import ListPortInfo
@@ -33,7 +36,7 @@ class Fabricator(db.Model):
         self.dbID = None  # Initialize dbID
         self.job: Job | None = None
         self.queue: Queue = Queue()
-        self.status: str = "idle"
+        self.status: str = "configuring"
         self.hwid = port.hwid.split(" LOCATION=")[0]
         self.description = "New Fabricator"
         self.name: str = name
@@ -171,11 +174,8 @@ class Fabricator(db.Model):
         :return: whether the fabrication process was successful
         :rtype: bool
         """
-        from flask import current_app
-        if current_app is not None:
-            current_app.logger.critical(f"current app: {current_app}")
         try:
-            assert self.status == "idle", f"Fabricator is not idle, status: {self.status}"
+            assert self.status == "ready" or "printing", f"Fabricator is not ready or printing, status: {self.status}"
             assert self.queue is not None, "Queue is None"
             assert len(self.queue) > 0, "Queue is empty"
             self.job = self.queue.getNext()
@@ -240,9 +240,8 @@ class Fabricator(db.Model):
 
     def setStatus(self, newStatus):
         try:
-            assert newStatus in ["idle", "printing", "paused", "complete", "error", "cancelled", "misprint"], f"Invalid status: {newStatus}"
+            assert newStatus in ["idle", "printing", "paused", "complete", "error", "cancelled", "misprint", "ready", "offline"], f"Invalid status: {newStatus}"
             assert self.device is not None, "Device is None"
-
             if self.status == "error" and newStatus!= "error":
                 self.device.hardReset(newStatus)
             self.status = newStatus
@@ -255,6 +254,8 @@ class Fabricator(db.Model):
                 current_app.socketio.emit(
                     "status_update", {"fabricator_id": self.dbID, "status": newStatus}
                 )
+            else:
+                print(f"current app is None, status: {newStatus}")
             return True
         except Exception as e:
             from app import handle_errors_and_logging
@@ -268,22 +269,17 @@ class Fabricator(db.Model):
         assert self.device.verdict in ["complete", "error", "cancelled", "misprint"], f"Invalid verdict: {self.device.verdict}"
         assert self.job is not None, "Job is None"
         if self.device.verdict == "complete":
-            #self.device.disconnect()
             self.setStatus("complete")
             self.queue.removeJob()
             self.job = None
-            # todo: reset to idle
         elif self.device.verdict == "error":
-            #self.device.disconnect()
             self.setStatus("error")
         elif self.device.verdict == "cancelled":
             if isinstance(self.device, hasEndingSequence): self.device.endSequence()
             else: self.device.home()
-            #self.device.disconnect()
             self.setStatus("cancelled")
             self.queue.removeJob()
             self.job = None
-            #todo: reset to idle
         elif self.device.verdict== "misprint":
             self.setStatus("misprint")
 
@@ -317,14 +313,17 @@ class Fabricator(db.Model):
     def checkValidJob(self):
         """checks if the job is valid for the fabricator"""
         try:
-            settingsDict = getFileConfig(self.job.file_name_original)
+            assert self.job is not None, "Job is None"
+            assert self.device is not None, "Device is None"
+            self.job.saveToFolder()
+            settingsDict = getFileConfig(self.job.file_path)
             from Classes.Fabricators.Printers.Printer import Printer
             from Classes.Fabricators.CNCMachines.CNCMachine import CNCMachine
             from Classes.Fabricators.LaserCutters.LaserCutter import LaserCutter
             if isinstance(self.device, Printer):
-                assert self.device.filamentType is not None, "Filament type not set"
-                assert self.device.filamentDiameter is not None, "Filament diameter not set"
-                assert self.device.nozzleDiameter is not None, "Nozzle diameter not set"
+                if self.device.filamentType is None: self.device.filamentType = settingsDict["filament_type"]
+                if self.device.filamentDiameter is None: self.device.filamentDiameter = float(settingsDict["filament_diameter"])
+                if self.device.nozzleDiameter is None: self.device.nozzleDiameter = float(settingsDict["nozzle_diameter"])
                 assert self.device.filamentType == settingsDict["filament_type"], f"Filament type mismatch: {self.device.filamentType} != {settingsDict['filament_type']}"
                 assert self.device.filamentDiameter == float(settingsDict["filament_diameter"]), f"Filament diameter mismatch: {self.device.filamentDiameter} != {float(settingsDict['filament_diameter'])}, subtraction test: {self.device.nozzleDiameter - float(settingsDict['nozzle_diameter'])} != 0"
                 assert self.device.nozzleDiameter == float(settingsDict["nozzle_diameter"]), f"Nozzle diameter mismatch: {self.device.nozzleDiameter} != {float(settingsDict['nozzle_diameter'])}, subtraction test: {self.device.nozzleDiameter - float(settingsDict['nozzle_diameter'])} != 0.0"

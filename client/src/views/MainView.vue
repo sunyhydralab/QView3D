@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watchEffect } from 'vue';
+import { nextTick, onMounted, ref } from 'vue';
 import { printers, useSetStatus, useMovePrinterList, type Device } from '@/model/ports';
 import draggable from 'vuedraggable'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
@@ -23,23 +23,22 @@ const router = useRouter()
 
 const selectedIssue = ref<Issue>()
 const selectedJob = ref<Job>()
-let jobComments = ref('')
+const jobComments = ref('')
 
-let currentJob = ref<Job>();
-let currentPrinter = ref<Device>();
+const currentJob = ref<Job>();
+const currentPrinter = ref<Device>();
 
-let issuelist = ref<Array<Issue>>([])
+const issuelist = ref<Array<Issue>>([])
 
-let isGcodeImageVisible = ref(false)
+const isGcodeImageVisible = ref(false)
 const isImageVisible = ref(true)
 
-let isGcodeLiveViewVisible = ref(false)
+const isGcodeLiveViewVisible = ref(false)
 
 let expandedState: (string | undefined)[] = [];
 
 onMounted(async () => {
-  const retrieveissues = await issues()
-  issuelist.value = retrieveissues
+  issuelist.value = await issues()
 
   const imageModal = document.getElementById('gcodeImageModal')
 
@@ -289,10 +288,10 @@ const handleDragEnd = async () => {
         @end="restoreExpandedState">
         <template #item="{ element: printer }">
           <div v-if="printer.isInfoExpanded" class="expanded-info">
-            <tr :id="printer.id">
+            <tr :id="printer.id" style="vertical-align: middle">
               <td
                 v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
-                {{ printer.queue?.[0].td_id }}
+                {{ printer.queue?.[0]?.td_id }}
               </td>
               <td v-else><i>idle</i></td>
 
@@ -310,7 +309,7 @@ const handleDragEnd = async () => {
                   <!-- <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
                 Change filament
               </p> -->
-                  <p v-if="printer.status === 'idle' && printer.queue?.[0]?.released === 0" style="color: #ad6060"
+                  <p v-if="(printer.status === 'idle' || printer.status === 'ready') && printer.queue?.[0]?.released === 0" style="color: #ad6060"
                     class="mb-0 me-2">
                     Waiting release
                   </p>
@@ -321,13 +320,13 @@ const handleDragEnd = async () => {
               </td>
 
               <td class="truncate" :title="printer.queue?.[0]?.name"
-                v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+                v-if="(printer.status === 'ready' || printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
                 {{ printer.queue?.[0]?.name }}
               </td>
               <td v-else></td>
 
               <td class="truncate" :title="printer.queue?.[0]?.file_name_original"
-                v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+                v-if="(printer.queue && printer.queue.length > 0 && (printer.status === 'ready' || printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
                 {{ printer.queue?.[0]?.file_name_original }}
               </td>
               <td v-else></td>
@@ -348,7 +347,7 @@ const handleDragEnd = async () => {
                   </button>
 
                   <button class="btn btn-secondary"
-                    v-if="printer.status == 'idle' && printer.queue?.[0].released == 0"
+                    v-if="printer.status == 'ready' && printer.queue?.[0]?.released == 0"
                     @click="startPrint(printer.id, printer.queue[0].id)">
                     Start Print
                   </button>
@@ -376,11 +375,11 @@ const handleDragEnd = async () => {
                   </button>
 
                   <div
-                    v-if="printer.status == 'colorchange' && (printer.colorbuff == 1 || printer.queue[0].file_pause == 1)"
+                    v-if="printer.status == 'colorchange' && (printer.colorbuff == 1 || printer.queue[0]?.file_pause == 1)"
                     class="mt-2">
                     Ready for color change.
                   </div>
-                  <div v-else-if="printer.status == 'colorchange' && printer.queue[0].file_pause == 0" class="mt-2">
+                  <div v-else-if="printer.status == 'colorchange' && printer.queue[0]?.file_pause == 0" class="mt-2">
                     Finishing current layer...
                   </div>
 
@@ -394,20 +393,17 @@ const handleDragEnd = async () => {
                   <!-- Display the elapsed time -->
                   <div class="progress" style="position: relative;">
                     <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
-                      :style="{ width: (printer.queue?.[0].progress || 0) + '%' }"
-                      :aria-valuenow="printer.queue?.[0].progress" aria-valuemin="0" aria-valuemax="100">
+                      :style="{ width: (printer.queue?.[0]?.progress || 0) + '%' }"
+                      :aria-valuenow="printer.queue?.[0]?.progress" aria-valuemin="0" aria-valuemax="100">
                     </div>
                     <!-- job progress set to 2 decimal places -->
-                    <p style="position: absolute; width: 100%; text-align: center; color: var(--color-background-font);">{{
-              printer.queue?.[0].progress
-                ?
-                `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
+                    <p style="position: absolute; width: 100%; text-align: center; color: var(--color-background-font);">{{printer.queue?.[0]?.progress ? `${printer.queue?.[0]?.progress.toFixed(2)}%` : '0.00%' }}</p>
                   </div>
                   <!-- </div> -->
                 </div>
 
                 <div
-                  v-else-if="printer.queue?.[0] && (printer.queue?.[0].status == 'complete' || printer.queue?.[0].status == 'cancelled')">
+                  v-else-if="printer.queue?.[0] && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')">
                   <div class="buttons-progress">
                     <div type="button" class="btn btn-secondary"
                       @click="releasePrinter(printer.queue?.[0], 1, printer.id)">
@@ -417,9 +413,7 @@ const handleDragEnd = async () => {
                       <div class="btn btn-primary no-wrap" @click="releasePrinter(printer.queue?.[0], 2, printer.id)">
                         Clear/Rerun
                       </div>
-                      <div class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"
-                        aria-expanded="false">
-                      </div>
+                      <div class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false"> </div>
                       <div class="dropdown-menu">
                         <div class="dropdown-item" v-for="printer in printers" :key="printer.id"
                           @click="releasePrinter(printer.queue?.[0], 2, printer.id!)">
@@ -427,15 +421,12 @@ const handleDragEnd = async () => {
                         </div>
                       </div>
                     </div>
-                    <div type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#issueModal"
-                      @click=setJob(printer.queue[0])>
-                      Fail
-                    </div>
+                    <div type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#issueModal" @click=setJob(printer.queue[0])>Fail</div>
                   </div>
                 </div>
 
                 <div
-                  v-else-if="printer.queue?.[0] && (printer.queue?.[0].status == 'printing' && printer.status == 'complete')">
+                  v-else-if="printer.queue?.[0] && printer.queue?.[0]?.status == 'printing' && printer.status == 'complete'">
                   <div style="display: flex; justify-content: center; align-items: center;">
                     <button class="btn btn-primary w-100" type="button" disabled>
                       <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -472,7 +463,7 @@ const handleDragEnd = async () => {
                             <span class="ms-2">GCode Image</span>
                           </a>
                         </li>
-                        <li v-if="printer.queue.length > 0 && (printer.queue[0] && printer.queue[0].extruded)">
+                        <li v-if="printer.queue.length > 0 && (printer.queue[0] && printer.queue[0]?.extruded)">
                           <a class="dropdown-item d-flex align-items-center" data-bs-toggle="modal"
                             data-bs-target="#gcodeLiveViewModal" v-if="printer.queue && printer.queue.length > 0"
                             v-bind:job="printer.queue[0]"
@@ -483,8 +474,8 @@ const handleDragEnd = async () => {
                         </li>
                         <li v-if="printer.queue[0]">
                           <a class="dropdown-item d-flex align-items-center"
-                            @click="getFileDownload(printer.queue[0].id)"
-                            :disabled="printer.queue[0].file_name_original.includes('.gcode:')">
+                            @click="getFileDownload(printer.queue[0]?.id)"
+                            :disabled="printer.queue[0]?.file_name_original.includes('.gcode:')">
                             <i class="fas fa-download"></i>
                             <span class="ms-2">Download</span>
                           </a>
@@ -568,8 +559,8 @@ const handleDragEnd = async () => {
           </div>
           <tr v-else :id="printer.id">
             <td
-              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' || printer.status == 'idle' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
-              {{ printer.queue?.[0].td_id }}
+              v-if="(printer.status === 'ready' || printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' || printer.status == 'idle' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+              {{ printer.queue?.[0]?.td_id }}
             </td>
             <td v-else><i>idle</i></td>
 
@@ -587,7 +578,7 @@ const handleDragEnd = async () => {
                 <!-- <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
                 Change filament
               </p> -->
-                <p v-if="printer.status === 'idle' && printer.queue?.[0]?.released === 0" style="color: #ad6060"
+                <p v-if="(printer.status === 'ready' || printer.status === 'idle') && printer.queue?.[0]?.released === 0" style="color: #ad6060"
                   class="mb-0 me-2">
                   Waiting release
                 </p>
@@ -598,13 +589,13 @@ const handleDragEnd = async () => {
             </td>
 
             <td class="truncate" :title="printer.queue?.[0]?.name"
-              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' || printer.status == 'idle' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+              v-if="(printer.status === 'ready' || printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' || printer.status == 'idle' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0]?.name }}
             </td>
             <td v-else></td>
 
             <td class="truncate" :title="printer.queue?.[0]?.file_name_original"
-              v-if="(printer.queue && printer.queue.length > 0 && (printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+              v-if="(printer.queue && printer.queue.length > 0 && (printer.status === 'ready' || printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange') || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0]?.file_name_original }}
             </td>
             <td v-else></td>
@@ -624,7 +615,7 @@ const handleDragEnd = async () => {
                   Turn Offline
                 </button>
 
-                <button class="btn btn-secondary" v-if="printer.status == 'idle' && printer.queue?.[0].released == 0"
+                <button class="btn btn-secondary" v-if="printer.status == 'ready' && printer.queue?.[0]?.released == 0"
                   @click="startPrint(printer.id, printer.queue[0].id)">
                   Start Print
                 </button>
@@ -647,16 +638,16 @@ const handleDragEnd = async () => {
                 </button>
 
                 <button class="btn btn-danger" @click="setPrinterStatus(printer, 'complete')"
-                  v-if="(printer.status == 'printing' || printer.status == 'colorchange')">
+                  v-if="(printer.status == 'printing' || printer.status == 'colorchange' || printer.status == 'paused')">
                   Stop
                 </button>
 
                 <div
-                  v-if="printer.status == 'colorchange' && (printer.colorbuff == 1 || printer.queue[0].file_pause == 1)"
+                  v-if="printer.status == 'colorchange' && (printer.colorbuff == 1 || printer.queue[0]?.file_pause == 1)"
                   class="mt-2">
                   Ready for color change.
                 </div>
-                <div v-else-if="printer.status == 'colorchange' && printer.queue[0].file_pause == 0" class="mt-2">
+                <div v-else-if="printer.status == 'colorchange' && printer.queue[0]?.file_pause == 0" class="mt-2">
                   Finishing current layer...
                 </div>
 
@@ -665,25 +656,24 @@ const handleDragEnd = async () => {
 
             <td style="width: 250px;">
               <div
-                v-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange') && printer.queue && printer.queue[0].released == 1">
+                v-if="(printer.status === 'printing' || printer.status == 'paused' || printer.status == 'colorchange') && printer.queue && printer.queue[0]?.released == 1">
                 <!-- <div v-for="job in printer.queue" :key="job.id"> -->
                 <!-- Display the elapsed time -->
                 <div class="progress" style="position: relative;">
                   <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
-                    :style="{ width: (printer.queue?.[0].progress || 0) + '%' }"
-                    :aria-valuenow="printer.queue?.[0].progress" aria-valuemin="0" aria-valuemax="100">
+                    :style="{ width: (printer.queue?.[0]?.progress || 0) + '%' }"
+                    :aria-valuenow="printer.queue?.[0]?.progress" aria-valuemin="0" aria-valuemax="100">
                   </div>
                   <!-- job progress set to 2 decimal places -->
                   <p style="position: absolute; width: 100%; text-align: center; color: var(--color-background-font);">{{
-              printer.queue?.[0].progress
+              printer.queue?.[0]?.progress
                 ?
-                `${printer.queue?.[0].progress.toFixed(2)}%` : '0.00%' }}</p>
+                `${printer.queue?.[0]?.progress.toFixed(2)}%` : '0.00%' }}</p>
                 </div>
                 <!-- </div> -->
               </div>
 
-              <div
-                v-else-if="printer.queue?.[0] && (printer.queue?.[0].status == 'complete' || printer.queue?.[0].status == 'cancelled')">
+              <div v-else-if="printer.queue?.[0] && (printer.queue?.[0].status == 'complete' || printer.queue?.[0].status == 'cancelled')">
                 <div class="buttons-progress">
                   <div type="button" class="btn btn-secondary"
                     @click="releasePrinter(printer.queue?.[0], 1, printer.id)">
@@ -759,8 +749,8 @@ const handleDragEnd = async () => {
                         </a>
                       </li>
                       <li v-if="printer.queue[0]">
-                        <a class="dropdown-item d-flex align-items-center" @click="getFileDownload(printer.queue[0].id)"
-                          :disabled="printer.queue[0].file_name_original.includes('.gcode:')">
+                        <a class="dropdown-item d-flex align-items-center" @click="getFileDownload(printer.queue[0]?.id)"
+                          :disabled="printer.queue[0]?.file_name_original.includes('.gcode:')">
                           <i class="fas fa-download"></i>
                           <span class="ms-2">Download</span>
                         </a>

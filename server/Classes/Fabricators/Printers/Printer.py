@@ -38,7 +38,7 @@ class Printer(Device, metaclass=ABCMeta):
 
     def parseGcode(self, job: Job, isVerbose: bool = False):
         assert isinstance(job, Job)
-        file = job.file_name_original
+        file = job.file_path
         assert isinstance(file, str)
         assert isinstance(isVerbose, bool)
         assert self.serialConnection.is_open

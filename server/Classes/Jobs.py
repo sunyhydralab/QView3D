@@ -63,6 +63,7 @@ class Job(db.Model):
         self.file_name_original = file_name_original  # original file name without PK identifier
         self.td_id = td_id
         self.file_name_pk = None
+        self.file_path = None
         self.favorite = favorite
         self.released = 0
         self.filePause = 0
@@ -471,13 +472,14 @@ class Job(db.Model):
             return jsonify({"error": format_exc()}), 500
 
     def saveToFolder(self):
-        file_data = self.getFile()
+        file_data = self.file
         decompressed_data = gzip.decompress(file_data)
-        with open(self.generatePath(), 'wb') as f:
+        self.file_path = self.generatePath()
+        with open(self.file_path, 'wb') as f:
             f.write(decompressed_data)
 
     def generatePath(self):
-        return os.path.join('../uploads', self.getFileNamePk())
+        return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", self.file_name_original)
 
     # getters
     def getName(self):
