@@ -75,7 +75,7 @@ const clearSelectedDevice = () => {
 }
 
 const doMove = async (printer: Device) => {
-    await move(printer.device)
+    await move(printer.device['serialPort'])
 }
 
 </script>
@@ -96,7 +96,7 @@ const doMove = async (printer: Device) => {
                             <label for="ports" class="form-label">Select Device</label>
                             <select class="form-select" id="ports" v-model="selectedDevice" required>
                                 <option disabled value="null">Select Device</option>
-                                <option v-for="printer in devices" :value="printer" :key="printer.device">
+                                <option v-for="printer in devices" :value="printer" :key="printer.device['dbID']">
                                     {{ printer.description }}
                                 </option>
                             </select>
@@ -104,7 +104,7 @@ const doMove = async (printer: Device) => {
                         <div v-if="selectedDevice">
                             <div class="mb-3">
                                 <label class="form-label">Device</label>
-                                <p class="form-text p-1 rounded">{{ selectedDevice.device }}</p>
+                                <p class="form-text p-1 rounded">{{ selectedDevice.device['serialPort'] }}</p>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Description</label>
@@ -144,13 +144,22 @@ const doMove = async (printer: Device) => {
 }
 
 .form-text {
+    color: var(--color-text);
     background: var(--color-background-mute);
     border: 1px solid var(--color-modal-background-inverted);
 }
 
 .form-select {
-    color: var(--color-background-font);
+    color: var(--color-text) !important;
     background-color: var(--color-background-soft) !important;
     border-color: var(--color-modal-background-inverted) !important;
+}
+input {
+    color: var(--color-text) !important;
+    background-color: var(--color-background-soft) !important;
+    border-color: var(--color-modal-background-inverted) !important;
+}
+input::placeholder {
+    color: var(--color-nav-text) !important;
 }
 </style>
