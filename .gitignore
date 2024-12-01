@@ -1,6 +1,5 @@
 /.vscode
 
-
 *.pyc
 __pycache__/
 
@@ -10,6 +9,8 @@ migrations/
 
 server/qview3dserver.egg-info/
 server/dist
+
+printeremu/testserver/node_modules/
 
 .DS_Store
 /qodana.yaml

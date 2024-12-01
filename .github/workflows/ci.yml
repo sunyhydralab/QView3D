@@ -1,0 +1,53 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - development
+  pull_request:
+    branches:
+      - main
+      - development
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install CLI dependencies
+        run: |
+          npm install rollup --save-dev
+          npm ci
+        working-directory: client
+
+      - name: Build client
+        run: |
+          npm run build-only
+        working-directory: client
+
+      - name: Setup server
+        run: |
+          cd ./
+          pip install -r requirements.txt 
+          cd server/
+          flask db init 
+          flask db migrate 
+          flask db upgrade
+
+      - name: Start server
+        run: |
+          nohup npm run start-flask &
+        working-directory: client
+
+      - name: Wait for server to start
+        run: |
+          sleep 5
+
+      - name: Verify server is running
+        run: |
+          curl -f http://localhost:8000

@@ -17,6 +17,7 @@ class PrinterStatusService:
     def __init__(self, app):
         self.ping_thread = None
         self.app = app
+        self.socketio = socketio
         self.printer_threads = []  # array of printer threads
 
     def start_printer_thread(self, printer):
@@ -228,4 +229,10 @@ class PrinterStatusService:
                     break
         self.printer_threads = new_thread_list
         return jsonify({"success": True, "message": "Printer list reordered successfully"})
+    
+    def add_printer(self, printer_data):
+        printer = Printer(**printer_data)
+        # add the printer to the list of printer threads
+        print("Adding printer:", printer)
+        self.printer_threads.append(PrinterThread(printer, target=self.update_thread, args=(printer, self.app)))
 

@@ -1,0 +1,37 @@
+[
+    {
+      "id": 1,
+      "name": "Prusa MK4",
+      "brand": {
+        "printerName": "Prusa",
+        "printerModel": "MK4"
+      },
+      "data": {
+        "length": 250,
+        "width": 210,
+        "height": 220,
+        "startTemp": 0
+      },
+      "attributes": {
+        "marlin": true
+      }
+    },
+    {
+      "id": 2,
+      "name": "Ender 3",
+      "brand": {
+        "printerName": "Creality",
+        "printerModel": "Ender 3"
+      },
+      "data": {
+        "length": 220,
+        "width": 220,
+        "height": 250,
+        "startTemp": 0
+      },
+      "attributes": {
+        "marlin": true
+      }
+    }
+  ]
+  
