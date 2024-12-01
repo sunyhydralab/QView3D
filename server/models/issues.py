@@ -1,20 +1,7 @@
-import asyncio
-import base64
-from operator import or_
-import os
-import re
 from models.db import db
-from datetime import datetime, timezone, timedelta
-from sqlalchemy import Column, String, LargeBinary, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
-from flask import jsonify, current_app
+from flask import jsonify
 from sqlalchemy.exc import SQLAlchemyError
-from datetime import datetime
-from tzlocal import get_localzone
-from io import BytesIO
-from werkzeug.datastructures import FileStorage
-import time
-import gzip
+
 
 class Issue(db.Model):
     id = db.Column(db.Integer, primary_key=True)

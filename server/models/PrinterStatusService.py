@@ -14,7 +14,8 @@ class PrinterThread(Thread):
 
 class PrinterStatusService:
     # in order to access the app context, we need to pass the app to the PrinterStatusService, mainly for the websockets
-    def __init__(self, app, socketio):
+    def __init__(self, app):
+        self.ping_thread = None
         self.app = app
         self.socketio = socketio
         self.printer_threads = []  # array of printer threads
@@ -217,9 +218,6 @@ class PrinterStatusService:
                 GCODE for print status
         """
         pass
-
-    def getThreadArray(self):
-        return self.printer_threads
     
     def movePrinterList(self, printer_ids):
         # printer_ids is a list of printer ids in the order they should be displayed

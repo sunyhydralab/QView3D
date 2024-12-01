@@ -1,5 +1,4 @@
 from flask import Blueprint, jsonify, request
-from flask_cors import cross_origin
 from models.issues import Issue
 
 issue_bp = Blueprint("issues", __name__)

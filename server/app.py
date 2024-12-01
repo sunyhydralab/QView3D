@@ -1,31 +1,52 @@
-from flask import Flask, jsonify, request, Response, url_for, send_from_directory
-from threading import Thread
-from flask_cors import CORS 
-import os 
+from flask import Flask, request, Response, send_from_directory
+from flask_cors import CORS
+import os
 from models.db import db
-from models.printers import Printer
-from models.PrinterStatusService import PrinterStatusService
 from flask_migrate import Migrate
-from dotenv import load_dotenv, set_key
-from controllers.ports import getRegisteredPrinters
+from dotenv import load_dotenv
 import shutil
 from flask_socketio import SocketIO
-from datetime import datetime, timedelta
-from sqlalchemy import text
-import json
 from models.config import Config
+from Classes.FabricatorList import FabricatorList
+from routes import defineRoutes
 
+# Global variables
+root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+uploads_folder = os.path.abspath(os.path.join(root_path, 'uploads'))
 
 
 # moved this up here so we can pass the app to the PrinterStatusService
 # Basic app setup 
-app = Flask(__name__, static_folder='../client/dist')
-app.config.from_object(__name__) # update application instantly 
+app = Flask(__name__, static_folder=os.path.abspath(os.path.join(root_path, "client", "dist")))
+app.config.from_object(__name__) # update application instantly
+logs = os.path.join(root_path,"server", "logs")
+if not os.path.exists(logs): os.makedirs(logs)
+from Classes.Logger import Logger
+app.logger = Logger("App", consoleLogger=None, fileLogger=os.path.abspath(os.path.join(logs, "app.log")))
+# start database connection
+app.config["environment"] = Config.get('environment')
+app.config["ip"] = Config.get('ip')
+app.config["port"] = Config.get('port')
+app.config["base_url"] = Config.get('base_url')
+
+load_dotenv()
+basedir = os.path.abspath(os.path.join(root_path, "server"))
+database_file = os.path.abspath(os.path.join(basedir, Config.get('database_uri')))
+if isinstance(database_file, bytes):
+    database_file = database_file.decode('utf-8')
+databaseuri = 'sqlite:///' + database_file
+app.config['SQLALCHEMY_DATABASE_URI'] = databaseuri
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
+
+migrate = Migrate(app, db)
+# moved this before importing the blueprints so that it can be accessed by the PrinterStatusService
+#printer_status_service = PrinterStatusService(app)
 
 # Initialize SocketIO, which will be used to send printer status updates to the frontend
-# and this specific socketit will be used throughout the backend
+# and this specific socket it will be used throughout the backend
 
-if Config.get('environment') == 'production':
+if app.config["environment"] == 'production':
     async_mode = 'eventlet'  # Use 'eventlet' for production
 else:
     async_mode = 'threading'  # Use 'threading' for development
@@ -33,16 +54,35 @@ else:
 socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False, async_mode=async_mode, transport=['websocket', 'polling']) # make it eventlet on production!
 app.socketio = socketio  # Add the SocketIO object to the app object
 
-# moved this before importing the blueprints so that it can be accessed by the PrinterStatusService
-printer_status_service = PrinterStatusService(app, socketio)
+def handle_errors_and_logging(e: Exception | str, fabricator = None):
+    from Classes.Fabricators.Fabricator import Fabricator
+    device = fabricator
+    if isinstance(fabricator, Fabricator):
+        device = fabricator.device
+    if device is not None and device.logger is not None:
+        device.logger.error(e, stacklevel=3)
+    elif app.logger is None:
+        if isinstance(e, str):
+            print(e.strip())
+        else:
+            import traceback
+            print(traceback.format_exception(None, e, e.__traceback__))
+    else:
+        app.logger.error(e, stacklevel=3)
+    return False
 
-# IMPORTING BLUEPRINTS 
-from controllers.ports import ports_bp
-from controllers.jobs import jobs_bp
-from controllers.statusService import status_bp, getStatus 
-from controllers.issues import issue_bp
+app.handle_errors_and_logging = handle_errors_and_logging
 
 CORS(app)
+
+# Register all routes
+defineRoutes(app)
+
+@app.cli.command("test")
+def run_tests():
+    """Run all tests."""
+    import subprocess
+    subprocess.run(["python", "../Tests/parallel_test_runner.py"])
 
 @app.before_request
 def handle_preflight():
@@ -63,23 +103,6 @@ def serve_static(path='index.html'):
 def serve_assets(filename):
     return send_from_directory(os.path.join(app.static_folder, 'assets'), filename)
 
-# start database connection
-load_dotenv()
-basedir = os.path.abspath(os.path.dirname(__file__))
-database_file = os.path.join(basedir, Config.get('database_uri'))
-databaseuri = 'sqlite:///' + database_file
-app.config['SQLALCHEMY_DATABASE_URI'] = databaseuri
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db.init_app(app)
-
-migrate = Migrate(app, db)
-
-# # Register the display_bp Blueprint
-app.register_blueprint(ports_bp)
-app.register_blueprint(jobs_bp)
-app.register_blueprint(status_bp)
-app.register_blueprint(issue_bp)
-    
 @app.socketio.on('ping')
 def handle_ping():
     app.socketio.emit('pong')
@@ -98,34 +121,30 @@ def handle_emuprintconnect(data):
 # own thread
 with app.app_context():
     try:
-        # Creating printer threads from registered printers on server start 
-        res = getRegisteredPrinters() # gets registered printers from DB 
-        data = res[0].get_json() # converts to JSON 
-        printers_data = data.get("printers", []) # gets the values w/ printer data
-        printer_status_service.create_printer_threads(printers_data)
-        
-        # Create in-memory uploads folder 
-        uploads_folder = os.path.join('../uploads')
-        tempcsv = os.path.join('../tempcsv')
+        # Define directory paths for uploads and tempcsv
+        uploads_folder = os.path.abspath('../uploads')
+        tempcsv = os.path.abspath('../tempcsv')
+        fabricator_list = FabricatorList(app)
+        app.fabricator_list = fabricator_list
 
-        if os.path.exists(uploads_folder):
-            # Remove the uploads folder and all its contents
-            shutil.rmtree(uploads_folder)
-            shutil.rmtree(tempcsv)
+        # Check if directories exist and handle them accordingly
+        for folder in [uploads_folder, tempcsv]:
+            if os.path.exists(folder):
+                # Remove the folder and all its contents
+                import shutil
+                shutil.rmtree(folder)
+                app.logger.info(f"{folder} removed and will be recreated.")
+            # Recreate the folder
+            os.makedirs(folder)
+            app.logger.info(f"{folder} recreated as an empty directory.")
 
-            # Recreate it as an empty directory
-            os.makedirs(uploads_folder)
-            os.makedirs(tempcsv)
-
-            print("Uploads folder recreated as an empty directory.")
-        else:
-            # Create the uploads folder if it doesn't exist
-            os.makedirs(uploads_folder)
-            os.makedirs(tempcsv)
-            print("Uploads folder created successfully.")  
     except Exception as e:
-        print(f"Unexpected error: {e}")
-            
+        # Log any exceptions for troubleshooting
+        app.handle_errors_and_logging(e)
+
+def run_socketio(app):
+    # host=app.config["ip"], port=app.config["port"]
+    socketio.run(app, Debug=True, allow_unsafe_werkzeug=True)
 
 if __name__ == "__main__":
     # If hits last line in GCode file: 
@@ -133,7 +152,4 @@ if __name__ == "__main__":
         # Before sending to printer, query for status. If error, throw error. 
     # since we are using socketio, we need to use socketio.run instead of app.run
     # which passes the app anyways
-    socketio.run(app, debug=True)  # Replace app.run with socketio.run
-    
-def create_app():
-    return app
+    run_socketio(app)  # Replace app.run with socketio.run

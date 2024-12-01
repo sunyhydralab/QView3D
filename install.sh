@@ -1,37 +1,41 @@
 #!/bin/bash
 
-# Add the execute permission to the script.
-chmod +x install.sh
+setup_python() {
+    pip install -r requirements.txt 
+}
 
-# Install the required packages.
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash
+setup_flask() {
+    rm -rf migrations
 
-# Source your bash profile to load changes made by nvm
-source ~/.bashrc
+    rm -f hvamc.db
+    
+    flask db init 
 
-# Install Node.js.
-nvm install node
+    flask db migrate 
 
-# Install Python dependencies. Requirements was created with pipreqs.
-pip install -r requirements.txt 
+    flask db upgrade    
+}
 
-# Change directory to the server.
+setup_client() {
+    npm install --save-dev
+}
+
+build_client() {
+    npm run build-only
+}
+
+echo "Installing dependencies for QView3D"
+
+setup_python
+
 cd server
 
-# Initialize the database. 
-flask db init 
+setup_flask
 
-# Generate a migration script. 
-flask db migrate 
-
-# Apply the migration. 
-flask db upgrade 
-
-# Change directory to the client.
 cd ../client
 
-# Install Node.js dependencies.
-npm install
+setup_client
 
-# Install npm-run-all as a dev dependency
-npm install --save-dev npm-run-all
+build_client
+
+echo "Finished installed dependencies!"

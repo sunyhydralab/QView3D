@@ -1,9 +1,7 @@
-import { useRouter } from 'vue-router'
-import { ref, computed, onUnmounted } from 'vue'
+import {ref} from 'vue'
 import * as myFetch from './myFetch'
-import { toast } from './toast'
-import { type Job } from './jobs'
-import { socket } from './myFetch'
+import {toast} from './toast'
+import {type Job} from './jobs'
 
 export function api(action: string, body?: unknown, method?: string, headers?: any) {
   headers = headers ?? {}
@@ -11,7 +9,7 @@ export function api(action: string, body?: unknown, method?: string, headers?: a
 }
 
 export interface Device {
-  device: string
+  device: Record<string, any>
   description: string
   hwid: string
   name?: string
@@ -28,14 +26,13 @@ export interface Device {
   colorChangeBuffer?: number
 }
 
-export let printers = ref<Device[]>([])
+export const printers = ref<Device[]>([])
 
 export function useGetPorts() {
   return {
     async ports() {
       try {
-        const response = await api('getports')
-        return response
+        return await api('getports')
       } catch (error) {
         console.error(error)
       }
@@ -73,8 +70,7 @@ export function useRetrievePrinters() {
   return {
     async retrieve() {
       try {
-        const response = await api('getprinters')
-        return response.printers
+        return await api('getprinterinfo')
       } catch (error) {
         console.error(error)
       }
@@ -87,8 +83,7 @@ export function useRetrievePrintersInfo() {
   return {
     async retrieveInfo() {
       try {
-        const response = await api('getprinterinfo')
-        return response // return the response directly
+        return await api('getprinterinfo')
       } catch (error) {
         console.error(error)
       }
@@ -100,8 +95,7 @@ export function useSetStatus() {
   return {
     async setStatus(printerid: number | undefined, status: string) {
       try {
-        const response = await api('setstatus', { printerid, status })
-        return response
+        return await api('setstatus', { printerid, status })
       } catch (error) {
         console.error(error)
       }

@@ -113,9 +113,9 @@ const doRepair = async () => {
     isLoading.value = false
 }
 
-const doMove = async (printer: Device) => {
+const doMove = async (port: string) => {
     isLoading.value = true
-    await move(printer.device).then(() => {
+    await move(port).then(() => {
         toast.success('Printer moved to home position')
     }).catch(() => {
         toast.error('Failed to move printer to home position')
@@ -125,9 +125,9 @@ const doMove = async (printer: Device) => {
 
 const doDiagnose = async (printer: Device) => {
     isLoading.value = true
-    message.value = `Diagnosing <b>${printer.name}</b>:<br/><br/>This printer is registered under port <b>${printer.device}</b>.`
+    message.value = `Diagnosing <b>${printer.name}</b>:<br/><br/>This printer is registered under port <b>${printer.device['serialPort']}</b>.`
     showMessage.value = true
-    let str = await diagnose(printer.device)
+    let str = await diagnose(printer.device['serialPort'])
     let resstr = str.diagnoseString
     message.value += "<br><br>" + resstr
     isLoading.value = false
@@ -239,7 +239,7 @@ const doCloseRegisterModal = async () => {
                                             </a>
                                         </li>
                                         <li>
-                                            <a class="dropdown-item d-flex align-items-center" @click="doMove(printer)">
+                                            <a class="dropdown-item d-flex align-items-center" @click="doMove(printer.device['serialPort'])">
                                                 <i class="fas fa-home"></i>
                                                 <span class="ms-2">Home Printer</span>
                                             </a>
@@ -255,7 +255,7 @@ const doCloseRegisterModal = async () => {
                                     @click="editMode = false; editNum = undefined; newName = ''">Cancel</button>
                             </div>
                         </div>
-                        <h6 class="card-text mb-0"> <b>Printer device:</b> {{ printer.device }}</h6>
+                        <h6 class="card-text mb-0"> <b>Printer device:</b> {{ printer.name }}</h6>
                         <h6 class="card-text mb-0"> <b>Printer description:</b> {{ printer.description }}</h6>
                         <h6 class="card-text mb-0"> <b>Date registered:</b> {{ printer.date }}</h6>
                         <h6 class="card-text mt-0"> <b>HWID:</b> {{ printer.hwid }}</h6>

@@ -236,7 +236,6 @@ const brightness = (rgb: string) => {
 
 const fontColor = (rgb: string) => {
     const bright = brightness(rgb);
-    console.log("rgb", rgb, "brightness", bright);
     return bright < 155 ? getComputedStyle(document.documentElement, null).getPropertyValue('--vt-c-text-dark-1') : getComputedStyle(document.documentElement, null).getPropertyValue('--vt-c-text-light-1');
 }
 

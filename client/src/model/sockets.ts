@@ -17,7 +17,7 @@ export function setupTempSocket(printers: any) {
 export function setupStatusSocket(printers: any) {
   socket.value.on('status_update', (data: any) => {
     if (printers) {
-      const printer = printers.value.find((p: Device) => p.id === data.printer_id)
+      const printer = printers.value.find((p: Device) => p.id === data.fabricator_id)
       if (printer) {
         printer.status = data.status
       }
