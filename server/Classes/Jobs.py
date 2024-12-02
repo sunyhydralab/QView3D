@@ -648,7 +648,6 @@ class Job(db.Model):
             current_app.socketio.emit('max_layer_height', {'job_id': self.id, 'max_layer_height': self.max_layer_height})
 
     def setCurrentLayerHeight(self, current_layer_height):
-        print("Current Layer Height: ", current_layer_height)
         self.current_layer_height = current_layer_height
         if current_app:
             current_app.socketio.emit('current_layer_height', {'job_id': self.id, 'current_layer_height': self.current_layer_height})

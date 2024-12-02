@@ -76,7 +76,7 @@ class FabricatorStatusService:
                 time.sleep(2)
                 status = fabricator.getStatus()  # get fabricator status
 
-                queueSize = fabricator.getQueue().getSize()  # get size of queue 
+                queueSize = len(fabricator.getQueue()) # get size of queue
                 fabricator.responseCount = 0
                 if (status == "ready" and queueSize > 0):
                     time.sleep(2)  # wait for 2 seconds to allow the fabricator to process the queue

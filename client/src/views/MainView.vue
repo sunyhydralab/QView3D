@@ -166,10 +166,12 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
   let printer = printers.value.find((printer) => printer.id === printerIdToPrintTo)
   printer!.error = ""
 
-  if (printer) {
-    printer.extruder_temp = 0
-    printer.bed_temp = 0;
-  }
+    if (printer) {
+        printer.extruder_temp = 0
+        printer.bed_temp = 0;
+        printer.queue?.shift(); // Remove the first job in the queue
+        //TODO: marker
+    }
 
   await releaseJob(jobToFind, key, printerIdToPrintTo)
   await nextTick()
@@ -201,7 +203,7 @@ const handleDragEnd = async () => {
               <label for="issue" class="form-label">Select Issue</label>
               <select name="issue" id="issue" v-model="selectedIssue" class="form-select" required>
                 <option disabled value="undefined">Select Issue</option>
-                <option v-for="issue in issuelist" :value="issue">
+                <option v-for="issue in issuelist" :value="issue" :key="issue.id">
                   {{ issue.issue }}
                 </option>
               </select>
@@ -290,7 +292,7 @@ const handleDragEnd = async () => {
           <div v-if="printer.isInfoExpanded" class="expanded-info">
             <tr :id="printer.id" style="vertical-align: middle">
               <td
-                v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+                v-if="(printer.status == 'printing' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
                 {{ printer.queue?.[0]?.td_id }}
               </td>
               <td v-else><i>idle</i></td>
@@ -309,7 +311,7 @@ const handleDragEnd = async () => {
                   <!-- <p class="mb-0 me-2" v-if="printer.status === 'colorchange'" style="color: red">
                 Change filament
               </p> -->
-                  <p v-if="(printer.status === 'idle' || printer.status === 'ready') && printer.queue?.[0]?.released === 0" style="color: #ad6060"
+                  <p v-if="printer.status === 'ready' && printer.queue?.[0]?.released === 0" style="color: #ad6060"
                     class="mb-0 me-2">
                     Waiting release
                   </p>
@@ -540,11 +542,11 @@ const handleDragEnd = async () => {
               </td>
               <td class="borderless-top">
                 <span
-                  v-html="printer?.status === 'colorchange' ? 'Waiting...' : formatTime(printer.queue[0]?.job_client?.elapsed_time)"></span>
+                  v-html="printer?.status === 'colorchange' || printer?.status === 'ready' ? 'Waiting...' : formatTime(printer.queue[0]?.job_client?.elapsed_time)"></span>
               </td>
               <td class="borderless-top">
                 <span v-if="printer.queue[0]?.job_client?.remaining_time !== 0"
-                  v-html="printer?.status === 'colorchange' ? 'Waiting...' : formatTime(printer.queue[0]?.job_client?.remaining_time)"></span>
+                  v-html="printer?.status === 'colorchange' || printer?.status === 'ready' ? 'Waiting...' : formatTime(printer.queue[0]?.job_client?.remaining_time)"></span>
                 <span v-else v-html="'00:00:00'"></span>
               </td>
               <td class="borderless-top">
@@ -559,7 +561,7 @@ const handleDragEnd = async () => {
           </div>
           <tr v-else :id="printer.id">
             <td
-              v-if="(printer.status === 'ready' || printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' || printer.status == 'idle' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
+              v-if="(printer.status == 'printing' || printer.status == 'complete' || printer.status == 'paused' || printer.status == 'colorchange' || (printer.status == 'offline' || printer.status == 'idle' && (printer.queue?.[0]?.status == 'complete' || printer.queue?.[0]?.status == 'cancelled')))">
               {{ printer.queue?.[0]?.td_id }}
             </td>
             <td v-else><i>idle</i></td>
