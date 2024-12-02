@@ -120,6 +120,9 @@ watch([API_IP_ADDRESS, API_PORT], async () => {
                     <li class="nav-item">
                         <router-link to="/error" class="nav-link" active-class="active-tab">ERROR LOG</router-link>
                     </li>
+                    <li class="nav-item">
+                        <router-link to="/emulator" class="nav-link" active-class="active-tab">EMULATOR</router-link>
+                    </li>
                 </ul>
             </div>
         </nav>
