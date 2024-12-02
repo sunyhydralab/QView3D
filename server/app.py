@@ -96,16 +96,6 @@ else:
 socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False, async_mode=async_mode, transport=['websocket', 'polling']) # make it eventlet on production!
 app.socketio = socketio  # Add the SocketIO object to the app object
 
-async def emulator_ws_handler(websocket, path):
-    print(f"Emulator connected: {path}")
-    try:
-        async for message in websocket:
-            # Handle messages from the emulator
-            print(f"Received message from emulator: {message}")
-            # Add your handling logic here, e.g., update the printer status
-    except websockets.exceptions.ConnectionClosed as e:
-        print(f"Emulator connection closed: {e}")
-
 def handle_errors_and_logging(e: Exception | str, fabricator = None):
     from Classes.Fabricators.Fabricator import Fabricator
     device = fabricator
@@ -122,16 +112,6 @@ def handle_errors_and_logging(e: Exception | str, fabricator = None):
     else:
         app.logger.error(e, stacklevel=3)
     return False
-
-async def start_emulator_ws():
-    print("Starting emulator websocket server...")
-    try:
-        # Start the WebSocket server
-        server = await websockets.serve(emulator_ws_handler, 'localhost', 8001)
-        print("WebSocket server started on ws://localhost:8001")
-        await server.wait_closed()  # Keeps the server running
-    except Exception as e:
-        print(f"Error in WebSocket server: {e}")
 
 app.handle_errors_and_logging = handle_errors_and_logging
 
