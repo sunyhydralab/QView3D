@@ -74,11 +74,14 @@ onMounted(async () => {
         const gcode = await fileToString(fileValue);
 
         try {
-          // Process and render G-code
-          gcode.split('\n').forEach((command) => {
-            processGCodeCommand(command); // Update renderTravel dynamically
-            preview?.processGCode(command);
-          });
+          // Process and render G-code with timeout
+          const commands = gcode.split('\n');
+          for (const command of commands) {
+            setTimeout(() => {
+              processGCodeCommand(command); // Update renderTravel dynamically
+              preview?.processGCode(command);
+            }, 2000);
+          }
         } catch (error) {
           console.error('Failed to process GCode:', error);
 
