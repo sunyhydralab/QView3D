@@ -190,6 +190,57 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 				log.Println("Received printer disconnect. Closing connection...")
 
 				conn.Close()
+			case "fake_serial_port":
+				pid := printer.GetData("productId")
+
+				if pid == nil {
+					log.Println("PID not found for this printer!")
+					return
+				}
+
+				vid := printer.GetAttribute("vendorId")
+
+				if vid == nil {
+					log.Println("VID not found for this printer!")
+					return
+				}
+
+				port := printer.GetData("port")
+
+				if port == nil {
+					log.Println("Port not found for this printer!")
+					return
+				}
+
+				hwid := printer.GetHwid()
+
+				if hwid == "" {
+					log.Println("HWID not found for this printer!")
+					return
+				}
+
+				dataMap := map[string]interface{}{
+					"productId": pid,
+					"vendorId":  vid,
+					"port":      port,
+					"hwid":      hwid,
+				}
+
+				message := map[string]interface{}{
+					"event": "printer_connect",
+					"data":  dataMap,
+				}
+
+				jsonMessage, err := json.Marshal(message)
+
+				if err != nil {
+					log.Println("Failed to marshal printer object:", err)
+					return
+				}
+
+				log.Println("Sending fake serial port message...")
+
+				conn.WriteMessage(websocket.TextMessage, []byte(jsonMessage))
 			default:
 				log.Println("Received from server:", string(message))
 			}

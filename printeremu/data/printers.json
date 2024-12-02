@@ -4,13 +4,15 @@
       "name": "Prusa MK4",
       "brand": {
         "printerName": "Prusa",
-        "printerModel": "MK4"
+        "printerModel": "MK4",
+        "vendorId": "2C99"
       },
       "data": {
         "length": 250,
         "width": 210,
         "height": 220,
-        "startTemp": 0
+        "startTemp": 0,
+        "productId": "000D"
       },
       "attributes": {
         "marlin": true
@@ -21,13 +23,15 @@
       "name": "Ender 3",
       "brand": {
         "printerName": "Creality",
-        "printerModel": "Ender 3"
+        "printerModel": "Ender 3",
+        "vendorId": "1A86"
       },
       "data": {
         "length": 220,
         "width": 220,
         "height": 250,
-        "startTemp": 0
+        "startTemp": 0,
+        "productId": "7523"
       },
       "attributes": {
         "marlin": true

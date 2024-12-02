@@ -178,12 +178,12 @@ func (printer *Printer) Resume() {
 
 // UpdateProgress updates the progress of the print job
 func (printer *Printer) UpdateProgress(progress int) error {
-    if progress >= 0 && progress <= 100 {
-        printer.Progress = progress
-    } else {
-        return fmt.Errorf("invalid progress: %d. Valid range: 0 to 100", progress)
-    }
-    return nil
+	if progress >= 0 && progress <= 100 {
+		printer.Progress = progress
+	} else {
+		return fmt.Errorf("invalid progress: %d. Valid range: 0 to 100", progress)
+	}
+	return nil
 }
 
 // MoveExtruder moves the extruder to the specified position.
@@ -223,6 +223,14 @@ func (printer *Printer) AddData(key string, value interface{}) {
 
 func (printer *Printer) GetData(key string) interface{} {
 	return printer.Data[key]
+}
+
+func (printer *Printer) GetHwid() string {
+	return printer.Hwid
+}
+
+func (printer *Printer) SetHwid(hwid string) {
+	printer.Hwid = hwid
 }
 
 func (printer *Printer) WriteSerial(event string, data interface{}) error {

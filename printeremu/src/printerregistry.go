@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"time"
 
 	"golang.org/x/exp/rand"
@@ -21,6 +22,7 @@ type PrinterConfig struct {
 type PrinterBrand struct {
 	PrinterName  string `json:"printerName"`
 	PrinterModel string `json:"printerModel"`
+	VendorId     string `json:"vendorId"`
 }
 
 // LoadPrinters loads a list of printers from the specified JSON file
@@ -53,6 +55,7 @@ func LoadPrinters(filePath string) ([]Printer, error) {
 
 		// always add the model as an attribute so we always know what the model is
 		printer.AddAttribute("model", printerConfig.Brand.PrinterName)
+		printer.AddAttribute("vendorId", printerConfig.Brand.VendorId)
 
 		for key, value := range printerConfig.Attributes {
 			printer.AddAttribute(key, value)
@@ -66,6 +69,30 @@ func LoadPrinters(filePath string) ([]Printer, error) {
 			return nil, fmt.Errorf("failed to initialize printer %d: %v", printerConfig.Id, err)
 		}
 
+		// handle HWID generation
+		pid := printer.GetData("productId")
+
+		if pid == nil {
+			return nil, fmt.Errorf("pid not found for printer %d: %v", printerConfig.Id, err)
+		}
+
+		vid := printer.GetAttribute("vendorId")
+
+		if vid == nil {
+			return nil, fmt.Errorf("vid not found for printer %d: %v", printerConfig.Id, err)
+		}
+
+		hwid := fmt.Sprintf("USB VID:PID=%s:%s SER=2024-QView3DEmulator", vid, pid)
+
+		if hwid == "" {
+			return nil, fmt.Errorf("hwid could not be generated for this printer %d: %v", printerConfig.Id, err)
+		}
+
+		printer.SetHwid(hwid)
+
+		printer.AddData("port", "EMU-"+strconv.Itoa(RandomRange(0, 9)))
+
+		// handle stuff like the bed size and such
 		PostRegistry(printer)
 
 		printers = append(printers, *printer)
@@ -103,4 +130,8 @@ func RandomString(length int) string {
 	}
 
 	return string(result)
+}
+
+func RandomRange(min, max int) int {
+	return rand.Intn(max-min+1) + min
 }
