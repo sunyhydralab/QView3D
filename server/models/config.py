@@ -15,12 +15,14 @@ config = load_config(configFileLoc)
 environment = config.get('environment', 'development')
 ip = config.get('ip', '127.0.0.1')
 database_uri = config.get('databaseURI', 'hvamc') + ".db"
-port = os.environ.get('FLASK_RUN_PORT', 8000)
+port = os.environ.get('FLASK_RUN_PORT', 8000),
+emulator_port = os.environ.get('EMULATOR_PORT', 8001)
 
 Config = {
     'base_url': base_url(),
     'environment': environment,
     'ip': ip,
     'database_uri': database_uri,
-    'port': port
+    'port': port,
+    'emulator_port': emulator_port
 }

@@ -63,7 +63,7 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 		if settings.DefaultAddress != "" && settings.DefaultPort != 0 {
 			return fmt.Sprintf("%s:%d", settings.DefaultAddress, settings.DefaultPort)
 		}
-		return "127.0.0.1:8000" // default address
+		return "127.0.0.1:8001" // default address
 	}()
 
 	serverURL := "ws://" + loadedAddress
@@ -77,8 +77,6 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 	defer conn.Close()
 
 	fmt.Println("Connected to WebSocket server")
-
-	RegisterPrinter(conn, printer)
 
 	pingTicker := time.NewTicker(5 * time.Second)
 	defer pingTicker.Stop()
@@ -148,37 +146,49 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 					log.Println("Error:", data)
 				}
 
-			case "gcode":
+			case "send_gcode":
 				if data != nil {
-					gcodeCommand, ok := data.(string)
-
+					payload, ok := data.(map[string]interface{})
 					if ok {
-						response := CommandHandler(gcodeCommand, printer)
-						fmt.Println("G-code executed:", response)
-
-						gcodeResponse := map[string]interface{}{
-							"event": "gcode_response",
-							"data":  fmt.Sprintf("Response: %s", response),
-						}
-
-						responseMessage, err := json.Marshal(gcodeResponse)
-
-						if err != nil {
-							log.Println("Failed to marshal gcode_response:", err)
-							continue
-						}
-
-						if err := conn.WriteMessage(websocket.TextMessage, responseMessage); err != nil {
-							log.Println("Error sending gcode_response:", err)
-							continue
+						printerID, pidOk := payload["printerid"].(string)
+						gcode, gcodeOk := payload["gcode"].(string)
+			
+						if pidOk && gcodeOk {
+							response := CommandHandler(gcode, printer)
+							
+							fmt.Println("Gcode executed:", response)
+			
+							printerResponse := map[string]interface{}{
+								"printerid": printerID,
+								"response":  response,
+							}
+			
+							responseMessage, err := json.Marshal(printerResponse)
+			
+							if err != nil {
+								log.Println("Failed to marshal printer_response:", err)
+								continue
+							}
+			
+							if err := conn.WriteMessage(websocket.TextMessage, responseMessage); err != nil {
+								log.Println("Error sending printer_response:", err)
+								continue
+							}
+						} else {
+							log.Println("Invalid send_gcode payload")
 						}
 					} else {
-						log.Println("Received G-code command, but data is not a string:", data)
+						log.Println("Received G-code command, but data is not a map")
 					}
 				} else {
 					log.Println("Received G-code command, but no data")
 				}
+			case "printer_connect":
+				RegisterPrinter(conn, printer)
+			case "printer_disconnect":
+				log.Println("Received printer disconnect. Closing connection...")
 
+				conn.Close()
 			default:
 				log.Println("Received from server:", string(message))
 			}
@@ -188,7 +198,7 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 
 func RegisterPrinter(conn *websocket.Conn, printer *Printer) {
 	message := map[string]interface{}{
-		"event": "emuprintconnect",
+		"event": "printer_connect",
 		"data":  printer,
 	}
 

@@ -1,6 +1,3 @@
-import io
-from sqlite3 import Blob
-
 import serial
 from flask import jsonify, Response
 from serial.tools.list_ports_common import ListPortInfo

@@ -13,6 +13,7 @@ import serial
 import serial.tools.list_ports
 from Mixins.hasEndingSequence import hasEndingSequence
 from Mixins.hasResponseCodes import checkXYZ
+from Classes import FabricatorConnection
 
 
 class Device(ABC):
@@ -22,7 +23,7 @@ class Device(ABC):
     PRODUCTID: int | None = None
     DESCRIPTION: str | None = None
     MAXFEEDRATE: int | None = None
-    serialConnection: serial.Serial | None = None
+    serialConnection: FabricatorConnection.FabricatorConnection | None = None
     homePosition: Vector3 | None = None
 
     homeCMD: bytes | None= b"G28\n"

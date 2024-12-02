@@ -1,4 +1,5 @@
 {
     "environment": "development",
-    "databaseURI": "hvamc"
+    "databaseURI": "hvamc",
+    "emulator_port": 8001
 }
