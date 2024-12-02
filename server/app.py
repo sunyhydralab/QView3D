@@ -28,7 +28,7 @@ async def websocket_server():
             while True:
                 message = await websocket.recv()
                 print(f"Received message from {client_id}: {message}")
-                await websocket.send(f"Echo from {client_id}: {message}")
+                #await websocket.send(f"Echo from {client_id}: {message}")
         except websockets.exceptions.ConnectionClosed as e:
             # Handle disconnection gracefully
             print(f"Client {client_id} has been disconnected.")

@@ -120,6 +120,7 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 			var parsedMessage map[string]interface{}
 
 			if err := json.Unmarshal(message, &parsedMessage); err != nil {
+				fmt.Println("Received message:", string(message))
 				log.Println("Error parsing received message:", err)
 				continue
 			}
@@ -152,24 +153,24 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 					if ok {
 						printerID, pidOk := payload["printerid"].(string)
 						gcode, gcodeOk := payload["gcode"].(string)
-			
+
 						if pidOk && gcodeOk {
 							response := CommandHandler(gcode, printer)
-							
+
 							fmt.Println("Gcode executed:", response)
-			
+
 							printerResponse := map[string]interface{}{
 								"printerid": printerID,
 								"response":  response,
 							}
-			
+
 							responseMessage, err := json.Marshal(printerResponse)
-			
+
 							if err != nil {
 								log.Println("Failed to marshal printer_response:", err)
 								continue
 							}
-			
+
 							if err := conn.WriteMessage(websocket.TextMessage, responseMessage); err != nil {
 								log.Println("Error sending printer_response:", err)
 								continue
