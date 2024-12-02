@@ -2,6 +2,9 @@ from abc import ABCMeta
 import re
 from datetime import datetime
 from time import sleep
+
+from flask import current_app
+
 from Classes.Fabricators.Device import Device
 from Classes.Jobs import Job
 from Mixins.hasResponseCodes import checkTime, checkExtruderTemp, checkXYZ, checkBedTemp, checkOK
@@ -120,7 +123,9 @@ class Printer(Device, metaclass=ABCMeta):
 
                     if len(line) == 0 or line.startswith(";"):
                         continue
-
+                    if current_app:
+                        with current_app.app_context():
+                            current_app.socketio.emit("gcode_line", {"line": line.strip("\n"), "printerid": self.dbID})
                     if ("M569" in line) and job.getTimeStarted() == 0:
                         job.setTimeStarted(1)
                         job.setTime(job.calculateEta(), 1)
@@ -235,7 +240,6 @@ class Printer(Device, metaclass=ABCMeta):
                     decLine = line.decode("utf-8").strip()
                     if "processing" in decLine or "echo" in decLine: continue
                     if "T:" in decLine and "B:" in decLine:
-                        self.logger.warning(f"Temperature line: {decLine}")
                         self.handleTempLine(decLine)
                         if func != checkBedTemp and func != checkExtruderTemp:
                             continue

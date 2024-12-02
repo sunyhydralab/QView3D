@@ -3,6 +3,8 @@ import os.path
 import sys
 from abc import ABC
 from time import sleep
+
+from flask import current_app
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 
@@ -144,6 +146,9 @@ class Device(ABC):
                 for line in f:
                     if line.startswith(";") or line == "\n":
                         continue
+                    if current_app:
+                        with current_app.app_context():
+                            current_app.socketio.emit("gcode_line", {"line": line.strip("\n"), "printerid": self.dbID})
                     if isVerbose: self.logger.debug(line.strip("\n"))
                     if self.status == "paused":
                         self.pause()

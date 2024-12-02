@@ -2,6 +2,26 @@ import { socket } from './myFetch'
 import type { Device } from './ports'
 import { jobTime } from './jobs'
 
+export function setupSockets(printers: any) {
+    setupTempSocket(printers)
+    setupStatusSocket(printers)
+    setupQueueSocket(printers)
+    setupErrorSocket(printers)
+    setupCanPauseSocket(printers)
+    setupPauseFeedbackSocket(printers)
+    setupTimeStartedSocket(printers)
+    setupProgressSocket(printers)
+    setupReleaseSocket(printers)
+    setupJobStatusSocket(printers)
+    setupPortRepairSocket(printers)
+    setupGCodeViewerSocket(printers)
+    setupGCodeLineSocket(printers)
+    setupExtrusionSocket(printers)
+    setupColorChangeBuffer(printers)
+    setupMaxLayerHeightSocket(printers)
+    setupCurrentLayerHeightSocket(printers)
+}
+
 // *** PORTS ***
 export function setupTempSocket(printers: any) {
   socket.value.on('temp_update', (data: any) => {
@@ -186,6 +206,23 @@ export function setupGCodeViewerSocket(printers: any) {
       console.error('printers or printers.value is undefined')
     }
   })
+}
+
+export function setupGCodeLineSocket(printers: any) {
+    socket.value.on('gcode_line', (data: any) => {
+        if (printers) {
+        const job = printers.value
+            .flatMap((printer: { queue: any }) => printer.queue)
+            .find((job: { id: any }) => job?.id === data.job_id)
+
+        if (job) {
+            //TODO: add gcode_line to wherever it needs to go
+            job.gcode_line = data.gcode_line
+        }
+        } else {
+        console.error('printers or printers.value is undefined')
+        }
+    })
 }
 
 export function setupExtrusionSocket(printers: any) {
