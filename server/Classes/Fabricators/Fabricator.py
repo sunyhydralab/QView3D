@@ -56,7 +56,7 @@ class Fabricator(db.Model):
         db.session.commit()
 
     def __repr__(self):
-        return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}, port open: {self.device.serialConnection.is_open if (self.device is not None and self.device.serialConnection is not None) else None}"
+        return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}, port open: {self.device.serialConnection.is_open if (self.device is not None and self.device.serialConnection is not None) else None}, queue: {self.queue}, job: {self.job}"
 
     def __to_JSON__(self):
         """
@@ -172,7 +172,7 @@ class Fabricator(db.Model):
         :rtype: bool
         """
         try:
-            assert self.status == "ready" or "printing", f"Fabricator is not ready or printing, status: {self.status}"
+            assert self.status == "printing", f"Fabricator is not printing, status: {self.status}"
             assert self.queue is not None, "Queue is None"
             assert len(self.queue) > 0, "Queue is empty"
             self.job = self.queue.getNext()
@@ -243,14 +243,22 @@ class Fabricator(db.Model):
                 self.device.hardReset(newStatus)
             self.status = newStatus
             self.device.status = newStatus
-            if self.job is not None:
-                self.job.status = newStatus
-
+            if self.job is None and len(self.queue) > 0:
+                self.job = self.queue[0]
+            if len(self.queue) > 0:
+                assert self.job == self.queue[0], "Job is not the first in the queue"
+                if self.job is not None:
+                    self.job.status = newStatus
+                    self.queue[0].status = newStatus
+                    db.session.commit()
             from flask import current_app
             if current_app:
                 current_app.socketio.emit(
                     "status_update", {"fabricator_id": self.dbID, "status": newStatus}
                 )
+                if self.job is not None:
+                    current_app.socketio.emit('job_status_update', {
+                        'job_id': self.job.id, 'status': newStatus})
             else:
                 print(f"current app is None, status: {newStatus}")
             return True

@@ -6,6 +6,7 @@ from serial.tools.list_ports_linux import SysFS
 from Classes.Fabricators.Device import Device
 from Classes.Ports import Ports
 from Classes.Fabricators.Fabricator import Fabricator
+from Classes.Jobs import Job
 from Classes.Queue import Queue
 from threading import Thread
 import time
@@ -13,7 +14,7 @@ import time
 class FabricatorThread(Thread):
     def __init__(self, fabricator, app=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fabricator = fabricator
+        self.fabricator: Fabricator = fabricator
         if app:
             self.app = app
         else:
@@ -33,9 +34,12 @@ class FabricatorThread(Thread):
             while True:
                 time.sleep(2)
                 status = self.fabricator.getStatus()
-                queueSize = self.fabricator.getQueue().getSize()
+                queueSize = len(self.fabricator.queue)
                 self.fabricator.responseCount = 0
-                if status == "ready" and queueSize > 0:
+                if status == "printing":
+                    if queueSize > 0:
+                        assert isinstance(self.fabricator.queue[0], Job), f"self.fabricator.queue[0]={self.fabricator.queue[0]}, type(self.fabricator.queue[0])={type(self.fabricator.queue[0])}, self.fabricator.queue={self.fabricator.queue}, type(self.fabricator.queue)={type(self.fabricator.queue)}"
+                if status == "printing" and queueSize > 0 and self.fabricator.queue[0].released == 1:
                     time.sleep(2)
                     if status != "offline":
                         self.fabricator.begin()
@@ -211,7 +215,7 @@ class FabricatorList:
         while True:
             time.sleep(2)
             status = fabricator.getStatus()
-            queueSize = fabricator.getQueue().getSize()
+            queueSize = len(fabricator)
             fabricator.responseCount = 0
             if status == "ready" and queueSize > 0:
                 time.sleep(2)
@@ -253,7 +257,7 @@ class FabricatorList:
                         "name": fabricator.name,
                     }
                     self.fabricator_threads.remove(thread)
-                    self.queue_restore(status, fabricator.getQueue())
+                    self.queue_restore(status, fabricator)
                     break
             return jsonify({"success": True, "message": "Fabricator thread reset successfully"})
         except Exception as e:

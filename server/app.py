@@ -184,7 +184,6 @@ with app.app_context():
         for folder in [uploads_folder, tempcsv]:
             if os.path.exists(folder):
                 # Remove the folder and all its contents
-                import shutil
                 shutil.rmtree(folder)
                 app.logger.info(f"{folder} removed and will be recreated.")
             # Recreate the folder
@@ -199,11 +198,10 @@ def run_socketio(app):
     # host=app.config["ip"], port=app.config["port"]
     socketio.run(app, Debug=True, allow_unsafe_werkzeug=True)
 
-#if __name__ == "__main__":
+if __name__ == "__main__":
     # If hits last line in GCode file: 
         # query for status ("done printing"), update. Use frontend to update status to "ready" once user removes print from plate. 
         # Before sending to printer, query for status. If error, throw error. 
     # since we are using socketio, we need to use socketio.run instead of app.run
     # which passes the app anyways
-    
-    run_socketio(app) # Replace app.run with socketio.run
+    run_socketio(app)  # Replace app.run with socketio.run

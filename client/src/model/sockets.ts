@@ -47,6 +47,23 @@ export function setupStatusSocket(printers: any) {
   })
 }
 
+export function setupJobStatusSocket(printers: any) {
+  // Always set up the socket connection and event listener
+  socket.value.on('job_status_update', (data: any) => {
+    if (printers) {
+      const job = printers.value
+        .flatMap((printer: { queue: any }) => printer.queue)
+        .find((job: { id: any }) => job?.id === data.job_id)
+
+      if (job) {
+        job.status = data.status
+      }
+    } else {
+      console.error('printers or printers.value is undefined')
+    }
+  })
+}
+
 export function setupQueueSocket(printers: any) {
   socket.value.on('queue_update', (data: any) => {
     if (printers) {
@@ -64,7 +81,6 @@ export function setupErrorSocket(printers: any) {
   socket.value.on('error_update', (data: any) => {
     if (printers) {
       const printer = printers.value.find((p: Device) => p.id === data.printerid)
-      console.log(printer)
       if (printer) {
         printer.error = data.error
       }
@@ -85,7 +101,6 @@ export function setupCanPauseSocket(printers: any) {
       console.error('printers or printers.value is undefined')
     }
   })
-  console.log('queue socket set up')
 }
 
 // *** JOBS ***
@@ -155,23 +170,6 @@ export function setupReleaseSocket(printers: any) {
         .find((job: { id: any }) => job?.id === data.job_id)
       if (job) {
         job.released = data.released
-      }
-    } else {
-      console.error('printers or printers.value is undefined')
-    }
-  })
-}
-
-export function setupJobStatusSocket(printers: any) {
-  // Always set up the socket connection and event listener
-  socket.value.on('job_status_update', (data: any) => {
-    if (printers) {
-      const job = printers.value
-        .flatMap((printer: { queue: any }) => printer.queue)
-        .find((job: { id: any }) => job?.id === data.job_id)
-
-      if (job) {
-        job.status = data.status
       }
     } else {
       console.error('printers or printers.value is undefined')

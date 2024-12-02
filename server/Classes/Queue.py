@@ -10,8 +10,6 @@ class Queue(deque):
 
     def addToBack(self, job: Job, printerid):
         assert isinstance(job, Job)
-        print("Adding job to back of queue ", job.id)
-        print("Adding job to back of queue ", printerid)
 
         if self.count(job) > 0:
             return False
@@ -160,14 +158,8 @@ class Queue(deque):
                 return True
         return False
 
-    def getQueue(self):
-        return self
-
     def getNext(self):
-        return self[0]
-
-    def getSize(self):
-        return len(self)
+        return self[0] if len(self) > 0 else None
 
     def removeJob(self):
         self.pop()

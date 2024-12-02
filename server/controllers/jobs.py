@@ -10,6 +10,7 @@ import serial.tools.list_ports
 from app import handle_errors_and_logging
 from flask import current_app
 from traceback import format_exc
+from Classes.Fabricators.Fabricator import Fabricator
 
 # get data for jobs 
 jobs_bp = Blueprint("jobs", __name__)
@@ -66,7 +67,7 @@ def add_job_to_queue():
         favoriteOne = False
 
         # for i in range(int(quantity)):
-        if(favorite == 'true' and not favoriteOne):
+        if favorite == 'true' and not favoriteOne:
             favorite = 1
             favoriteOne = True
         else:
@@ -142,7 +143,6 @@ def auto_queue():
         job.setFilament(filament) # set filament type
 
         findPrinterObject(printer_id).getQueue().addToBack(job, printer_id)
-
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
 
     except Exception as e:
@@ -253,36 +253,44 @@ def remove_job_from_queue():
 
 @jobs_bp.route('/releasejob', methods=["POST"])
 def releasejob():
+    if request.method != "POST":
+        return
     try:
         data = request.get_json()
         jobpk = data['jobpk']
         key = data['key']
         job = Job.findJob(jobpk)
         printerid = job.getPrinterId()
-        printerobject = findPrinterObject(printerid)
-        printerobject.error = ""
-        queue = printerobject.getQueue()
-
-        queue.deleteJob(jobpk, printerid) # remove job from queue
+        fabricator = findPrinterObject(printerid)
+        if fabricator is None:
+            return jsonify({"error": "Printer not found."}), 404
+        print(fabricator)
+        fabricator.error = ""
+        if len(fabricator.queue) > 0:
+            assert len(fabricator.queue) > 0, "Queue is empty"
+            assert fabricator.queue[0].getJobId() == jobpk, "Job not at front of queue"
+            fabricator.queue.removeJob()
+        if fabricator.job is not None:
+            fabricator.job = None
 
         printerid = data['printerid']
 
-        currentStatus = printerobject.getStatus()
+        currentStatus = fabricator.getStatus()
 
         if key == 3:
             Job.update_job_status(jobpk, "error")
-            printerobject.setError(job.comments)
-            printerobject.setStatus("error") # printer ready to accept new prints
+            fabricator.setError(job.comments)
+            fabricator.setStatus("error") # printer ready to accept new prints
 
         elif key == 2:
             rerunjob(printerid, jobpk, "front")
 
             if currentStatus!="offline":
-                printerobject.setStatus("ready") # printer ready to accept new prints
+                fabricator.setStatus("ready") # printer ready to accept new prints
 
         elif key == 1:
             if currentStatus!="offline":
-                printerobject.setStatus("ready") # printer ready to accept new prints
+                fabricator.setStatus("ready") # printer ready to accept new prints
 
         return jsonify({"success": True, "message": "Job released successfully."}), 200
 
@@ -344,7 +352,7 @@ def updateJobStatus():
         printerobject = findPrinterObject(printerid)
         queue = printerobject.getQueue()
 
-        # queue.deleteJob(job_id, printerid)
+        queue.deleteJob(job_id, printerid)
 
         return jsonify(res), 200
     except Exception as e:
@@ -405,15 +413,13 @@ def setStatus():
     try:
         data = request.get_json() # get json data
         printer_id = data['printerid']
-        newstatus = data['status']
-        from Classes.Fabricators.Fabricator import Fabricator
-        printerobject: Fabricator | None = findPrinterObject(printer_id)
-        if printerobject is None:
+        newStatus = data['status']
+        fabricator: Fabricator | None = findPrinterObject(printer_id)
+        if fabricator is not None:
+            fabricator.setStatus(newStatus)
+            return jsonify({"success": True, "message": "Status updated successfully."}), 200
+        else:
             return jsonify({"error": "Printer not found."}), 404
-        printerobject.setStatus(newstatus)
-        print(printerobject.status)
-        return jsonify({"success": True, "message": "Status updated successfully."}), 200
-
     except Exception as e:
         handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
@@ -508,9 +514,13 @@ def startPrint():
         jobid = data['jobid']
         printerobject = findPrinterObject(printerid)
         queue = printerobject.getQueue()
-        inmemjob = queue.getJobById(jobid)
-        print(inmemjob)
-        inmemjob.setReleased(1)
+        assert queue is not None, "Queue not found."
+        printerobject.job = queue.getJobById(jobid)
+        assert printerobject.job is not None, "Job not found."
+        assert printerobject.job.getStatus() == "ready", f"Job not ready to print. Status: {printerobject.job.getStatus()}"
+        assert printerobject.job == queue[0], "Job not at front of queue."
+        print(printerobject.job)
+        printerobject.job.setReleased(1)
         printerobject.setStatus("printing")
 
 
@@ -602,6 +612,8 @@ def refetch_time():
 
         printer = findPrinterObject(printerid)
         job = printer.getQueue().getNext()
+        if job is None:
+            return jsonify({"error": "No job found"}), 404
 
         timearray = job.job_time
 
@@ -612,12 +624,19 @@ def refetch_time():
             'pause': timearray[3].isoformat()
         }
 
-        return jsonify(timejson)
+        return jsonify(timejson), 200
 
     except Exception as e:
         handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
+
 def findPrinterObject(printer_id):
+    """
+    Find the printer object by its ID.
+    :param printer_id: The ID of the printer.
+    :type printer_id: int
+    :rtype: Fabricator | None
+    """
     from app import fabricator_list
     threads = fabricator_list.getThreadArray()
     return list(filter(lambda thread: thread.fabricator.dbID == printer_id, threads))[0].fabricator
@@ -625,7 +644,7 @@ def findPrinterObject(printer_id):
 def getSmallestQueue():
     from app import fabricator_list
     threads = fabricator_list.getThreadArray()
-    smallest_queue_thread = min(threads, key=lambda thread: thread.printer.queue.getSize())
+    smallest_queue_thread = min(threads, key=lambda thread: len(thread.printer.queue))
     return smallest_queue_thread.printer.id
 
 def rerunjob(printerpk, jobpk, position):

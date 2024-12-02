@@ -553,8 +553,7 @@ export function useStartJob() {
   return {
     async start(jobid: number, printerid: number) {
       try {
-        const response = await api(`startprint`, { jobid, printerid })
-        return response
+        return await api(`startprint`, { jobid, printerid })
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while starting the job')

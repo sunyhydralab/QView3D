@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers } from '../model/ports'
-import { selectedPrinters, file, fileName, quantity, priority, favorite, name, tdid, filament, useAddJobToQueue, useGetFile, useAutoQueue, isLoading } from '../model/jobs'
+import { selectedPrinters, file, fileName, quantity, priority, favorite, name, tdid, filament, useAddJobToQueue, useGetFile, useAutoQueue, isLoading } from '@/model/jobs'
 import { ref, onMounted, watchEffect, computed, watch } from 'vue'
 import { useRoute } from 'vue-router';
 import { toast } from '@/model/toast';
@@ -341,7 +341,7 @@ const getFilament = (file: File) => {
                         <label class="form-label" v-else-if="selectedPrinters.length === 1">Selected printer:</label>
                         <label class="form-label" v-else>Selected printers:</label>
                         <ul class="list-group" style="max-height: 200px; overflow-y: auto;">
-                            <li v-for="printer in selectedPrinters" class="list-group-item">
+                            <li v-for="printer in selectedPrinters" class="list-group-item" :key="printer.id">
                                 <b>{{ printer.name }}</b> status: {{ printer.status }}
                             </li>
                         </ul>
