@@ -1,4 +1,6 @@
 import asyncio
+import logging
+import sys
 import threading
 import uuid
 from flask import Flask, request, Response, send_from_directory
@@ -62,7 +64,7 @@ app.config.from_object(__name__) # update application instantly
 logs = os.path.join(root_path,"server", "logs")
 if not os.path.exists(logs): os.makedirs(logs)
 from Classes.Logger import Logger
-app.logger = Logger("App", consoleLogger=None, fileLogger=os.path.abspath(os.path.join(logs, "app.log")))
+app.logger = Logger("App", consoleLogger=sys.stdout, fileLogger=os.path.abspath(os.path.join(logs, "app.log")), consoleLevel=logging.ERROR)
 # start database connection
 app.config["environment"] = Config.get('environment')
 app.config["ip"] = Config.get('ip')
@@ -179,7 +181,6 @@ with app.app_context():
         tempcsv = os.path.abspath('../tempcsv')
         fabricator_list = FabricatorList(app)
         app.fabricator_list = fabricator_list
-
         # Check if directories exist and handle them accordingly
         for folder in [uploads_folder, tempcsv]:
             if os.path.exists(folder):

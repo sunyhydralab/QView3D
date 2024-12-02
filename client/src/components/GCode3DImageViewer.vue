@@ -62,8 +62,12 @@ onMounted(async () => {
         backgroundColor: 'black',
         buildVolume: { x: 250, y: 210, z: 220 },
         travelColor: 'limegreen',
+        lineWidth: 1,
+          lineHeight: 1,
+          extrusionWidth: 1,
         renderExtrusion: true,
         renderTravel: renderTravel.value,
+          renderTubes: true,
       });
 
       preview.camera.position.set(-200, 232, 200);

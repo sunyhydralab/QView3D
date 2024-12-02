@@ -32,7 +32,9 @@ export function useGetPorts() {
   return {
     async ports() {
       try {
-        return await api('getports')
+        const response = await api('getports')
+        console.log('response:', response)
+        return response
       } catch (error) {
         console.error(error)
       }
@@ -159,7 +161,7 @@ export function useDeletePrinter() {
   return {
     async deletePrinter(printerid: number | undefined) {
       try {
-        const response = await api('deleteprinter', { printerid })
+        const response = await api('deletefabricator', { printerid })
         // if (response) {
         //   if (response.success == false) {
         //     toast.error(response.message)

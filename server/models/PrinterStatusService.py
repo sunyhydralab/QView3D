@@ -75,7 +75,7 @@ class PrinterStatusService:
                 time.sleep(2)
                 status = printer.getStatus()  # get printer status
 
-                queueSize = printer.getQueue().getSize() # get size of queue 
+                queueSize = len(printer.getQueue()) # get size of queue
                 printer.responseCount = 0 
                 if (status == "ready" and queueSize > 0):
                     time.sleep(2) # wait for 2 seconds to allow the printer to process the queue

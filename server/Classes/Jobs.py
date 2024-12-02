@@ -317,7 +317,7 @@ class Job(db.Model):
     @classmethod
     def nullifyPrinterId(cls, printer_id):
         try:
-            jobs = cls.query.filter_by(printer_id=printer_id).all()
+            jobs = cls.query.filter_by(fabricator_id=printer_id).all()
             for job in jobs:
                 job.fabricator_id = 0
             db.session.commit()

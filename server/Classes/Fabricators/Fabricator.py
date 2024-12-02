@@ -90,6 +90,54 @@ class Fabricator(db.Model):
         response = response.decode("utf-8")
         return response
 
+    @staticmethod
+    def staticCreateDevice(serialPort: ListPortInfo | SysFS | None, consoleLogger=None, fileLogger=None):
+        """
+        creates the correct printer object based on the serial port info
+        :param serialPort:
+        :type serialPort: ListPortInfo | SysFS | None
+        :param consoleLogger:
+        :type consoleLogger: TextIO | None
+        :param fileLogger:
+        :type fileLogger: str | None
+        :return: device without a fabricator object
+        :rtype: Device | None
+        """
+        if serialPort is None:
+            return None
+        from Classes.Fabricators.Printers.Ender.EnderPrinter import EnderPrinter
+        from Classes.Fabricators.Printers.MakerBot.MakerBotPrinter import MakerBotPrinter
+        from Classes.Fabricators.Printers.Prusa.PrusaPrinter import PrusaPrinter
+        if serialPort.vid == PrusaPrinter.VENDORID:
+            from Classes.Fabricators.Printers.Prusa.PrusaMK3 import PrusaMK3
+            from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
+            from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
+            if serialPort.pid == PrusaMK4.PRODUCTID:
+                return PrusaMK4(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+            elif serialPort.pid == PrusaMK4S.PRODUCTID:
+                return PrusaMK4S(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+            elif serialPort.pid == PrusaMK3.PRODUCTID:
+                return PrusaMK3(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+            else:
+                return None
+        elif serialPort.vid == EnderPrinter.VENDORID:
+            from Classes.Fabricators.Printers.Ender.Ender3 import Ender3
+            from Classes.Fabricators.Printers.Ender.Ender3Pro import Ender3Pro
+            model = Fabricator.getModelFromGcodeCommand(serialPort)
+            if "Ender-3 Pro" in model:
+                return Ender3Pro(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+            elif "Ender-3" in model:
+                return Ender3(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+            else:
+                return None
+        elif serialPort.vid == MakerBotPrinter.VENDORID:
+            from Classes.Fabricators.Printers.MakerBot.Replicator2 import Replicator2
+            if serialPort.pid == Replicator2.PRODUCTID:
+                return Replicator2(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+        else:
+            #TODO: assume generic printer, do stuff
+            return None
+
     def createDevice(self, serialPort: ListPortInfo | SysFS | None, consoleLogger=None, fileLogger=None):
         """
         creates the correct printer object based on the serial port info
@@ -275,8 +323,6 @@ class Fabricator(db.Model):
         assert self.job is not None, "Job is None"
         if self.device.verdict == "complete":
             self.setStatus("complete")
-            self.queue.removeJob()
-            self.job = None
         elif self.device.verdict == "error":
             self.setStatus("error")
         elif self.device.verdict == "cancelled":

@@ -517,6 +517,8 @@ def startPrint():
         assert queue is not None, "Queue not found."
         printerobject.job = queue.getJobById(jobid)
         assert printerobject.job is not None, "Job not found."
+        assert printerobject.job.getStatus() == "inqueue", f"Job status not inqueue. Status: {printerobject.job.getStatus()}"
+        printerobject.job.setStatus("ready")
         assert printerobject.job.getStatus() == "ready", f"Job not ready to print. Status: {printerobject.job.getStatus()}"
         assert printerobject.job == queue[0], "Job not at front of queue."
         print(printerobject.job)

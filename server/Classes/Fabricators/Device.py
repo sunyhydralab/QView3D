@@ -15,7 +15,7 @@ import serial
 import serial.tools.list_ports
 from Mixins.hasEndingSequence import hasEndingSequence
 from Mixins.hasResponseCodes import checkXYZ
-from Classes import FabricatorConnection
+from Classes.FabricatorConnection import FabricatorConnection
 
 
 class Device(ABC):
@@ -25,7 +25,7 @@ class Device(ABC):
     PRODUCTID: int | None = None
     DESCRIPTION: str | None = None
     MAXFEEDRATE: int | None = None
-    serialConnection: FabricatorConnection.FabricatorConnection | None = None
+    serialConnection: FabricatorConnection | None = None
     homePosition: Vector3 | None = None
 
     homeCMD: bytes | None= b"G28\n"
@@ -46,7 +46,7 @@ class Device(ABC):
         self.dbID: int = dbID
         self.serialPort: ListPortInfo | SysFS | None = serialPort
         self.serialID: str | None = serialPort.serial_number
-        self.logger = Logger(self.DESCRIPTION, port=self.serialPort.device, consoleLogger=consoleLogger, fileLogger=fileLogger, loggingLevel=Logger.DEBUG)
+        self.logger = Logger(self.DESCRIPTION, port=self.serialPort.device, consoleLogger=consoleLogger, fileLogger=fileLogger, loggingLevel=Logger.DEBUG, consoleLevel=Logger.ERROR)
         self.status = "idle"
         self.verdict = ""
 
@@ -78,7 +78,7 @@ class Device(ABC):
     def connect(self):
         """Connect to the hardware using the serial port."""
         try:
-            self.serialConnection = serial.Serial(self.serialPort.device, 115200, timeout=60)
+            self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort.device, baudrate=115200, timeout=60)
             self.serialConnection.reset_input_buffer()
             return True
         except Exception as e:
@@ -101,8 +101,11 @@ class Device(ABC):
         try:
             assert isinstance(isVerbose, bool)
             assert isinstance(self, Device)
+            print("passed asserts")
             self.sendGcode(self.homeCMD, isVerbose=isVerbose)
+            print("sent gcode")
             assert self.getHomePosition() == self.getToolHeadLocation(), f"Failed to home, expected {self.getHomePosition()} but got {self.getToolHeadLocation()}"
+            print("asserted")
             return True
         except Exception as e:
             from app import handle_errors_and_logging

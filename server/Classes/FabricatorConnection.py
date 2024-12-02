@@ -9,53 +9,22 @@ import random
 
 
 class FabricatorConnection(ABC):
-    is_open = False
+    @staticmethod
+    def staticCreateConnection(port: str = None, baudrate: int = None, timeout: float = 10.0, websocket_connections: dict = None, fabricator_id: str = None):
+        """Create a new connection to a 3D printer."""
+        if websocket_connections is not None and fabricator_id is not None:
+            return SocketConnection(websocket_connections, fabricator_id)
+        elif port is not None and baudrate is not None:
+            return SerialConnection(port, baudrate, timeout=timeout)
+        else:
+            raise ValueError("Invalid connection parameters")
 
-    @abstractmethod
-    def write(self, data):
-        pass
-
-    @abstractmethod
-    def read(self):
-        pass
-
-    @abstractmethod
-    def close(self):
-        pass
-
-    @abstractmethod
-    def reset_input_buffer(self):
-        pass
-
-    @abstractmethod
-    def readline(self):
-        pass
-
-class SerialConnection(FabricatorConnection):
+class SerialConnection(FabricatorConnection, serial.Serial):
     def __init__(self, port: str, baudrate: int, timeout: float):
-        self.serial = serial.Serial(port, baudrate, timeout=timeout)
-        self.is_open = self.serial.is_open
+        super().__init__(port, baudrate, timeout=timeout)
 
-    def write(self, data):
-        self.serial.write(data)
 
-    def read(self):
-        return self.serial.readline()
-    
-    def close(self):
-        self.serial.close()
-    
-    def reset_input_buffer(self):
-        self.serial.reset_input_buffer()
-    
-    def readline(self):
-        return self.serial.readline()
-    
-    @property
-    def is_open(self):
-        return self.serial.is_open
-
-class SocketConnection:
+class SocketConnection(FabricatorConnection):
     def __init__(self, websocket_connections, fabricator_id: str):
         """
         Initialize a websocket-based connection for a 3D printer with optional mock response generation.

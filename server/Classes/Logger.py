@@ -14,7 +14,7 @@ class Logger(logging.Logger):
     ERROR = logging.ERROR
     CRITICAL = logging.CRITICAL
 
-    def __init__(self, deviceName, port=None, consoleLogger=sys.stdout, fileLogger=None, loggingLevel=logging.INFO, showFile=True, showLevel=True, showDate=True):
+    def __init__(self, deviceName, port=None, consoleLogger=sys.stdout, fileLogger=None, loggingLevel=logging.INFO, showFile=True, showLevel=True, showDate=True, consoleLevel=None):
         title = []
         if port:
             title.append(port)
@@ -32,7 +32,10 @@ class Logger(logging.Logger):
         formatString = " - ".join(info + ["%(message)s"])
         if consoleLogger is not None:
             consoleLogger = logging.StreamHandler(consoleLogger)
-            consoleLogger.setLevel(loggingLevel)
+            if consoleLevel is not None:
+                consoleLogger.setLevel(consoleLevel)
+            else:
+                consoleLogger.setLevel(loggingLevel)
             consoleLogger.setFormatter(CustomFormatter(formatString))
             self.consoleLogger = consoleLogger
             self.addHandler(consoleLogger)

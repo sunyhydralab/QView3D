@@ -9,6 +9,15 @@ from traceback import format_exc
 ports_bp = Blueprint("ports", __name__)
 
 @ports_bp.route("/getports", methods=["GET"])
+def getPorts():
+    """Get a list of all connected ports."""
+    try:
+        ports = Ports.getPorts()
+        return jsonify([port for port in ports])
+    except Exception as e:
+        handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
+
 @ports_bp.route("/getfabricators", methods=["GET"])
 def getRegisteredFabricators():
     """Get a list of all registered fabricators."""
@@ -24,11 +33,12 @@ def registerFabricator():
     """Register a new fabricator with the system."""
     try:
         data = request.get_json()
-        device = data['fabricator']['device']
-        name = data['fabricator']['name']
+        printer = data['printer']
+        device = printer['device']['serialPort']
+        name = printer['name']
 
         # Create a new fabricator instance using the Fabricator class
-        new_fabricator = Fabricator(Ports.getPortByName(device), name)
+        new_fabricator = Fabricator(Ports.getPortByName(device), name=name)
         return jsonify({"success": True, "message": "Fabricator registered successfully", "fabricator_id": new_fabricator.dbID})
     except SQLAlchemyError as db_err:
         print(f"Database error during registration: {db_err}")
@@ -123,17 +133,16 @@ def moveHead():
         port = data['port']
         if port:
             if current_app:
-                with current_app.app_context():
-                    fabricator = current_app.fabricator_list.getFabricatorByPort(port)
-                    if fabricator:
-                        result = fabricator.device.home()  # Use home() method from Device
-                        return jsonify({"success": True, "message": "Head move successful"}) if result else jsonify({"success": False, "message": "Head move unsuccessful"})
-                    else:
-                        return jsonify({"error": "Fabricator not found", "line number": 136}), 404
-            else:
-                fabricator = Fabricator(port)
-                result = fabricator.device.home()  # Use home() method from Device
-                return jsonify({"success": True, "message": "Head move successful"}) if result else jsonify({"success": False, "message": "Head move unsuccessful"})
+                fab = current_app.fabricator_list.getFabricatorByPort(port)
+                if fab: device = current_app.fabricator_list.getFabricatorByPort(port).device
+                else: device = Fabricator.staticCreateDevice(Ports.getPortByName(port))
+            else: device = Fabricator(port).device
+            device.connect()
+            result = device.home()  # Use home() method from Device
+            device.disconnect()
+            res = jsonify({"success": True, "message": "Head move successful"}) if result else jsonify({"success": False, "message": "Head move unsuccessful"})
+            print(res)
+            return res
         else:
             return jsonify({"error": "Device not found"}), 404
     except Exception as e:
@@ -146,8 +155,7 @@ def moveFabricatorList():
     try:
         data = request.get_json()
         fabricator_ids = data['fabricator_ids']
-        from app import app
-        result = app.fabricator_list.moveFabricatorList(fabricator_ids)
+        result = current_app.fabricator_list.moveFabricatorList(fabricator_ids)
         return jsonify({"success": True, "message": "Fabricator list successfully updated"}) if result != "none" else jsonify({"success": False, "message": "Fabricator list not updated"})
     except Exception as e:
         handle_errors_and_logging(e)

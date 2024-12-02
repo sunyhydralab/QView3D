@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters, useMoveHead } from '../model/ports'
-import { isLoading } from '../model/jobs'
-import { useRouter } from 'vue-router'
+import { printers, useRetrievePrintersInfo, useHardReset, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters, useMoveHead } from '@/model/ports'
+import { isLoading } from '@/model/jobs'
 import { ref, onMounted } from 'vue';
-import { toast } from '../model/toast'
-import RegisterModal from '../components/RegisterModal.vue'
+import { toast } from '@/model/toast'
+import RegisterModal from '@/components/RegisterModal.vue'
 import router from '@/router';
 
 const { retrieve } = useRetrievePrinters();
@@ -35,8 +34,7 @@ const selectedPrinter = ref<Device | null>(null);
 // fetch list of connected ports from backend and automatically load them into the form dropdown 
 onMounted(async () => {
     isLoading.value = true
-    const allPrinters = await retrieve(); // load all registered printers
-    registered.value = allPrinters
+    registered.value = await retrieve(); // load all registered printers
     isLoading.value = false
 });
 
