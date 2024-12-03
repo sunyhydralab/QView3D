@@ -259,8 +259,8 @@ const doCloseRegisterModal = async () => {
                         <h6 class="card-text mt-0"> <b>HWID:</b> {{ printer.hwid }}</h6>
 
                         <div v-if="messageId == printer.id && showMessage"
-                            class="alert alert-danger d-flex flex-column align-items-center justify-content-center">
-                            <h6 v-html="message"></h6>
+                            class="alert alert-light d-flex flex-column align-items-center justify-content-center" style="overflow: auto; word-wrap: break-word;">
+                            <p v-html="message" style="width: 100%; word-break: break-word"></p>
                             <div class="d-flex justify-content-between">
                                 <button class="btn btn-secondary me-3" @click="clearMessage()">Clear</button>
                                 <button class="btn btn-primary w-100" @click="doRepair()">Repair Ports</button>

@@ -10,8 +10,22 @@ from serial.tools.list_ports_common import ListPortInfo
 
 class FabricatorConnection(ABC):
     @staticmethod
-    def staticCreateConnection(port: str = None, baudrate: int = None, timeout: float = 10.0, websocket_connections: dict = None, fabricator_id: str = None):
-        """Create a new connection to a 3D printer."""
+    def staticCreateConnection(port = None, baudrate = None, timeout = 10.0, websocket_connections = None, fabricator_id = None):
+        """
+        Create a new connection to a 3D printer.
+        :param port: Serial port to connect to
+        :type port: str
+        :param baudrate: Baudrate for the serial connection
+        :type baudrate: int
+        :param timeout: Maximum time to wait for a response (default: 10.0)
+        :type timeout: float
+        :param websocket_connections: Dictionary of websocket connections
+        :type websocket_connections: dict
+        :param fabricator_id: Unique identifier for the printer
+        :type fabricator_id: str
+        :return: FabricatorConnection instance
+        :rtype: SerialConnection | SocketConnection
+        """
         if websocket_connections is not None and fabricator_id is not None:
             return SocketConnection(websocket_connections, fabricator_id)
         elif port is not None and baudrate is not None:

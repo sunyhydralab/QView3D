@@ -1,5 +1,5 @@
 import serial.tools.list_ports
-from flask import jsonify
+from flask import jsonify, current_app
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 
@@ -166,7 +166,7 @@ class FabricatorList:
 
     def create_fabricator_threads(self):
         for fabricator in self:
-            fabricator.setQueue(Queue())  # Ensure each fabricator has its own queue
+            fabricator.queue = Queue()  # Ensure each fabricator has its own queue
             fabricator_thread = self.start_fabricator_thread(fabricator)
             self.fabricator_threads.append(fabricator_thread)
         self.ping_thread = Thread(target=self.pingForStatus)
@@ -206,22 +206,22 @@ class FabricatorList:
     def resetThread(self, fabricator_id):
         try:
             for thread in self.fabricator_threads:
-                if thread.fabricator.id == fabricator_id:
+                if thread.fabricator.dbID == fabricator_id:
                     fabricator = thread.fabricator
                     fabricator.terminated = 1
                     thread_data = {
-                        "id": fabricator.id,
+                        "id": fabricator.dbID,
                         "device": fabricator.device,
                         "description": fabricator.description,
                         "hwid": fabricator.hwid,
                         "name": fabricator.name,
                     }
                     self.fabricator_threads.remove(thread)
-                    self.create_fabricator_threads()
+                    self.fabricator_threads.append(self.start_fabricator_thread(fabricator))
                     break
             return jsonify({"success": True, "message": "Fabricator thread reset successfully"})
         except Exception as e:
-            print(f"Unexpected error: {e}")
+            current_app.handle_errors_and_logging(e)
             return jsonify({"success": False, "error": "Unexpected error occurred"}), 500
 
     def queueRestore(self, fabricator_id, status):

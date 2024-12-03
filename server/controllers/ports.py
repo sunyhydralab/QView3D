@@ -2,6 +2,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from flask import Blueprint, jsonify, request, current_app
 
 import app
+from Classes.Fabricators.Device import Device
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.Ports import Ports
 from app import handle_errors_and_logging
@@ -91,14 +92,18 @@ def diagnoseFabricator():
         data = request.get_json()
         device_name = data['device']
         port = Ports.getPortByName(device_name)
-
-        if port:
-            fabricator = Fabricator(port)  # Ensure the Fabricator has this method
-            if fabricator:
-                diagnosis_result = fabricator.diagnose()
-                return jsonify({"success": True, "message": diagnosis_result})
+        fabricator = current_app.fabricator_list.getFabricatorByPort(port)
+        if fabricator:
+            device = fabricator.device
+            if device is None:
+                device = Fabricator.staticCreateDevice(port)  # Ensure the Fabricator has this method
+            if device is not None:
+                assert isinstance(device, Device), f"Device must be an instance of Device: {device} : {type(device)}"
+                diagnosis_result = device.diagnose()
+                return jsonify({"success": True, "message": "Diagnosis successful", "diagnoseString": diagnosis_result})
             else:
-                return jsonify({"error": "Failed to create fabricator for diagnosis"}), 500
+                print("no device?")
+                return jsonify({"error": "Failed to create device for diagnosis"}), 500
         else:
             return jsonify({"error": "Device not found"}), 404
     except Exception as e:

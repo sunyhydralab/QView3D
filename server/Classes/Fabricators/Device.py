@@ -1,21 +1,16 @@
-import io
 import os.path
 import sys
 from abc import ABC
 from time import sleep
-
 from flask import current_app
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
-
 from Classes.Jobs import Job
 from Classes.Vector3 import Vector3
 from Classes.Logger import Logger
-import serial
-import serial.tools.list_ports
 from Mixins.hasEndingSequence import hasEndingSequence
 from Mixins.hasResponseCodes import checkXYZ
-from Classes.FabricatorConnection import FabricatorConnection
+from Classes.FabricatorConnection import SerialConnection, SocketConnection, FabricatorConnection
 
 
 class Device(ABC):
@@ -25,7 +20,7 @@ class Device(ABC):
     PRODUCTID: int | None = None
     DESCRIPTION: str | None = None
     MAXFEEDRATE: int | None = None
-    serialConnection: FabricatorConnection | None = None
+    serialConnection: SocketConnection | SerialConnection | None = None
     homePosition: Vector3 | None = None
 
     homeCMD: bytes | None= b"G28\n"
@@ -87,8 +82,7 @@ class Device(ABC):
             self.serialConnection.reset_input_buffer()
             return True
         except Exception as e:
-            from app import handle_errors_and_logging
-            handle_errors_and_logging(e, self)
+            current_app.handle_errors_and_logging(e, self)
             return False
 
     def disconnect(self):
@@ -102,6 +96,8 @@ class Device(ABC):
         Home the device.
         :param isVerbose: Whether to log the command.
         :type isVerbose: bool
+        :return: True if the device is homed, else False
+        :rtype: bool
         """
         try:
             assert isinstance(isVerbose, bool)
@@ -120,11 +116,13 @@ class Device(ABC):
         :type loc: Vector3
         :param isVerbose: whether to log the command
         :type isVerbose: bool
+        :return: True if the tool head is at the location, else False
+        :rtype: bool
         :raises AssertionError: if the location is not a Vector3, if isVerbose is not a bool, or if self is not a Device
         """
-        assert isinstance(loc, Vector3)
-        assert isinstance(isVerbose, bool)
-        assert isinstance(self, Device)
+        assert isinstance(loc, Vector3), f"Expected Vector3, got {type(loc)}"
+        assert isinstance(isVerbose, bool), f"Expected bool, got {type(isVerbose)}"
+        assert isinstance(self, Device), f"Expected Device, got {type(self)}"
         self.sendGcode(f"G0 X{loc.x} Y{loc.y} Z{loc.z} F{str(self.MAXFEEDRATE)}\n".encode("utf-8"), isVerbose=isVerbose)
         self.sendGcode(f'M114\n'.encode("utf-8"), isVerbose=isVerbose)
         if hasattr(self, "getLocationCMD"):
@@ -138,6 +136,8 @@ class Device(ABC):
         :type job: Job
         :param isVerbose: Whether to log the commands
         :type isVerbose: bool
+        :return: True if the job is complete, else False
+        :rtype: bool
         :raises AssertionError: if the file is not a string or if isVerbose is not a bool
         """
         assert isinstance(job, Job), f"Expected Job object, got {type(job)}"
@@ -147,14 +147,14 @@ class Device(ABC):
         assert isinstance(isVerbose, bool), f"Expected bool, got {type(isVerbose)}"
         try:
             with open(file, "r") as f:
-                self.logger.info(f"Printing {file}")
+                if hasattr(self, "logger"): self.logger.info(f"Printing {file}")
                 for line in f:
                     if line.startswith(";") or line == "\n":
                         continue
                     if current_app:
                         with current_app.app_context():
                             current_app.socketio.emit("gcode_line", {"line": line.strip("\n"), "printerid": self.dbID})
-                    if isVerbose: self.logger.debug(line.strip("\n"))
+                    if isVerbose and hasattr(self, "logger"): self.logger.debug(line.strip("\n"))
                     if self.status == "paused":
                         self.pause()
                         while self.status == "paused":
@@ -163,7 +163,7 @@ class Device(ABC):
                                 if isinstance(self, hasEndingSequence):
                                     self.endSequence()
                                 self.verdict = "cancelled"
-                                self.logger.info("Job cancelled")
+                                if hasattr(self, "logger"): self.logger.info("Job cancelled")
                                 return True
                             elif self.status == "printing":
                                 self.resume()
@@ -171,20 +171,20 @@ class Device(ABC):
                         if isinstance(self, hasEndingSequence):
                             self.endSequence()
                         self.verdict = "cancelled"
-                        self.logger.info("Job cancelled")
+                        if hasattr(self, "logger"): self.logger.info("Job cancelled")
                         return True
                     if ";" in line:
                         line = line.split(";")[0].strip() + "\n"
                     self.sendGcode(line.encode("utf-8"), isVerbose=isVerbose)
             self.verdict = "complete"
-            self.logger.info("Job complete")
+            if hasattr(self, "logger"): self.logger.info("Job complete")
             return True
         except Exception as e:
-            if self.logger is None:
+            if not hasattr(self, "logger") or self.logger is None:
                 print(e)
             else:
-                self.logger.error("Error cancelling job:")
-                self.logger.error(e)
+                if hasattr(self, "logger"): self.logger.error("Error cancelling job:")
+                if hasattr(self, "logger"): self.logger.error(e)
             self.verdict = "error"
             return True
 
@@ -212,13 +212,14 @@ class Device(ABC):
         assert isinstance(gcode, bytes)
         assert isinstance(isVerbose, bool)
         self.serialConnection.write(gcode)
-        if isVerbose: self.logger.debug(gcode.decode("utf-8"))
+        if isVerbose and hasattr(self, "logger"): self.logger.debug(gcode.decode("utf-8"))
         return True
 
-    def getToolHeadLocation(self, isVerbose: bool = False) -> Vector3:
+    def getToolHeadLocation(self, isVerbose = False):
         """
         Get the current location of the tool head.
         :param isVerbose: Whether to log the command
+        :type isVerbose: bool
         :return: the current location of the tool head
         :rtype: Vector3
         """
@@ -227,7 +228,7 @@ class Device(ABC):
         response = ""
         while not (("X:" in response) and ("Y:" in response) and ("Z:" in response)):
             response = self.serialConnection.readline().decode("utf-8")
-            if isVerbose: self.logger.info(response)
+            if isVerbose and hasattr(self, "logger"): self.logger.info(response)
         loc = LocationResponse(response)
         return Vector3(loc.x, loc.y, loc.z)
 
@@ -236,25 +237,25 @@ class Device(ABC):
         try:
             if self.MODEL and "Ender" in self.MODEL:
                 # If the device is an Ender, skip specific repair commands
-                if self.logger:
+                if hasattr(self, "logger") and self.logger:
                     self.logger.info(f"Repair skipped for {self.MODEL}")
                 return "Repair not necessary for Ender devices."
 
             if self.serialConnection:
-                self.logger.info("Closing existing connection for repair.")
+                if hasattr(self, "logger"): self.logger.info("Closing existing connection for repair.")
                 self.serialConnection.close()
 
             # Attempt to reconnect
-            self.logger.info("Attempting to reconnect for repair.")
+            if hasattr(self, "logger"): self.logger.info("Attempting to reconnect for repair.")
             self.connect()
 
             if self.serialConnection and self.serialConnection.is_open:
-                self.logger.info("Repair successful: connection reopened.")
+                if hasattr(self, "logger"): self.logger.info("Repair successful: connection reopened.")
                 return "Repair successful."
             else:
                 return "Repair failed: unable to reopen connection."
         except Exception as e:
-            self.logger.error(f"Error during repair: {e}")
+            if hasattr(self, "logger"): self.logger.error(f"Error during repair: {e}")
             return f"Repair failed with error: {e}"
 
     def diagnose(self):
@@ -262,26 +263,25 @@ class Device(ABC):
         try:
             if self.MODEL and "Ender" in self.MODEL:
                 # If the device is an Ender, skip the diagnosis
-                self.logger.info(f"Diagnosis skipped for {self.MODEL}")
+                if hasattr(self, "logger"): self.logger.info(f"Diagnosis skipped for {self.MODEL}")
                 return "Diagnosis not necessary for Ender devices."
 
-            self.logger.info("Starting device diagnosis.")
+            if hasattr(self, "logger"): self.logger.info("Starting device diagnosis.")
             if not self.connect():
                 return "Diagnosis failed: unable to connect."
 
-            self.logger.info("Sending diagnostic G-code command (e.g., M115).")
+            if hasattr(self, "logger"): self.logger.info("Sending diagnostic G-code command (e.g., M115).")
             self.sendGcode(b"M115\n")
 
             response = self.serialConnection.readline().decode("utf-8").strip()
-            self.disconnect()
 
             if response:
-                self.logger.info(f"Diagnosis response: {response}")
-                return f"Diagnosis successful: {response}"
+                if hasattr(self, "logger"): self.logger.info(f"Diagnosis response: {response}")
+                return response
             else:
                 return "Diagnosis failed: no response from device."
         except Exception as e:
-            self.logger.error(f"Error during diagnosis: {e}")
+            if hasattr(self, "logger"): self.logger.error(f"Error during diagnosis: {e}")
             return f"Diagnosis failed with error: {e}"
 
     def hardReset(self, newStatus: str):
