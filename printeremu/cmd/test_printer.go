@@ -16,21 +16,63 @@ import (
 
 func main() {
 	settings, err := src.LoadSettings("data/settings.json")
-
 	if err != nil {
 		log.Fatalf("Error loading settings: %v", err)
 	}
 
 	printers, err := src.LoadPrinters("data/printers.json")
-
 	if err != nil {
 		log.Fatalf("Error loading printers: %v", err)
 	}
 
 	fmt.Println("Loaded printers...")
 
-	var printer *src.Printer
+	var printer *src.Printer // Declare this once
 
+	if len(os.Args) == 3 { // Check if both arguments are provided
+		printerID, err := strconv.Atoi(os.Args[1])
+		if err != nil {
+			log.Fatalf("Invalid printer ID: %v", err)
+		}
+
+		// Find the printer by ID
+		for _, p := range printers {
+			if p.Id == printerID {
+				printer = &p
+				break
+			}
+		}
+
+		if printer == nil {
+			log.Fatalf("Printer with ID %d not found.", printerID)
+		}
+
+		// Now we can safely access the printer.Extruder
+		extruder := printer.Extruder
+
+		// Parse the command
+		command := os.Args[2]
+
+		if command == "-conn" {
+			handleConnection(extruder, printer, &settings)
+			return
+		}
+
+		if command == "-comm" {
+			handleCommand(extruder, printer)
+			return
+		}
+
+		if command == "-reg" {
+			src.PrintPrinters(printers)
+			return
+		}
+
+		log.Fatalf("Unknown command: %s", command)
+		return
+	}
+
+	// If no arguments, let the user choose a printer interactively
 	for printer == nil {
 		printer = askForPrinterID(printers)
 	}
