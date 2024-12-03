@@ -159,9 +159,9 @@ export function useNullifyJobs() {
 
 export function useDeletePrinter() {
   return {
-    async deletePrinter(printerid: number | undefined) {
+    async deletePrinter(fabricator_id: number | undefined) {
       try {
-        const response = await api('deletefabricator', { printerid })
+        const response = await api('deletefabricator', { fabricator_id })
         // if (response) {
         //   if (response.success == false) {
         //     toast.error(response.message)
@@ -211,9 +211,9 @@ export function useRemoveThread() {
 
 export function useEditName() {
   return {
-    async editName(printerid: number | undefined, name: string) {
+    async editName(fabricator_id: number | undefined, name: string) {
       try {
-        const response = await api('editname', { printerid, name })
+        const response = await api('editname', { fabricator_id, name })
         if (response) {
           if (response.success == false) {
             toast.error(response.message)
@@ -237,10 +237,9 @@ export function useEditName() {
 
 export function useEditThread() {
   return {
-    async editThread(printerid: number | undefined, newname: string) {
+    async editThread(fabricator_id: number | undefined, newname: string) {
       try {
-        const response = await api('editNameInThread', { printerid, newname })
-        return response
+        return await api('editNameInThread', { fabricator_id, newname })
       } catch (error) {
         console.error(error)
       }

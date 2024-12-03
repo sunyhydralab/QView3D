@@ -1,8 +1,10 @@
-import serial
 from flask import jsonify, Response
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from sqlalchemy.exc import SQLAlchemyError
+
+import app
+from Classes.FabricatorConnection import FabricatorConnection
 from Classes.Fabricators.Device import Device
 from typing_extensions import TextIO
 from Mixins.hasEndingSequence import hasEndingSequence
@@ -50,13 +52,12 @@ class Fabricator(db.Model):
             self.devicePort = dbFab.devicePort
             self.date = dbFab.date
             self.dbID = dbFab.dbID
-
-        self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger)
+        self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True)
         if self.description == "New Fabricator": self.description = self.device.getDescription()
         db.session.commit()
 
     def __repr__(self):
-        return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}, port open: {self.device.serialConnection.is_open if (self.device is not None and self.device.serialConnection is not None) else None}, queue: {self.queue}, job: {self.job}"
+        return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}, logger: {self.device.logger if hasattr(self.device, 'logger') else 'None'}, port open: {self.device.serialConnection.is_open if (self.device is not None and self.device.serialConnection is not None) else None}, queue: {self.queue}, job: {self.job}"
 
     def __to_JSON__(self):
         """
@@ -79,7 +80,7 @@ class Fabricator(db.Model):
     @staticmethod
     def getModelFromGcodeCommand(serialPort: ListPortInfo | SysFS | None) -> str:
         """returns the model of the printer based on the response to M997"""
-        testName = serial.Serial(serialPort.device, 115200, timeout=10)
+        testName = FabricatorConnection.staticCreateConnection(port=serialPort.device, baudrate=115200, timeout=60)
         testName.write(b"M997\n")
         while True:
             response = testName.readline()
@@ -113,11 +114,11 @@ class Fabricator(db.Model):
             from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
             from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
             if serialPort.pid == PrusaMK4.PRODUCTID:
-                return PrusaMK4(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return PrusaMK4(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False)
             elif serialPort.pid == PrusaMK4S.PRODUCTID:
-                return PrusaMK4S(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return PrusaMK4S(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False)
             elif serialPort.pid == PrusaMK3.PRODUCTID:
-                return PrusaMK3(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return PrusaMK3(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False)
             else:
                 return None
         elif serialPort.vid == EnderPrinter.VENDORID:
@@ -125,20 +126,20 @@ class Fabricator(db.Model):
             from Classes.Fabricators.Printers.Ender.Ender3Pro import Ender3Pro
             model = Fabricator.getModelFromGcodeCommand(serialPort)
             if "Ender-3 Pro" in model:
-                return Ender3Pro(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return Ender3Pro(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False)
             elif "Ender-3" in model:
-                return Ender3(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return Ender3(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False)
             else:
                 return None
         elif serialPort.vid == MakerBotPrinter.VENDORID:
             from Classes.Fabricators.Printers.MakerBot.Replicator2 import Replicator2
             if serialPort.pid == Replicator2.PRODUCTID:
-                return Replicator2(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return Replicator2(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False)
         else:
             #TODO: assume generic printer, do stuff
             return None
 
-    def createDevice(self, serialPort: ListPortInfo | SysFS | None, consoleLogger=None, fileLogger=None):
+    def createDevice(self, serialPort: ListPortInfo | SysFS | None, consoleLogger=None, fileLogger=None, addLogger = False):
         """
         creates the correct printer object based on the serial port info
         :param serialPort: the serial port info
@@ -147,6 +148,8 @@ class Fabricator(db.Model):
         :type consoleLogger: TextIO | None
         :param fileLogger: the file path to output file logs to
         :type fileLogger: str | None
+        :param addLogger: whether to add a logger to the device
+        :type addLogger: bool
         :return: the printer object
         :rtype: Device | None
         """
@@ -162,11 +165,11 @@ class Fabricator(db.Model):
             from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
             from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
             if serialPort.pid == PrusaMK4.PRODUCTID:
-                return PrusaMK4(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return PrusaMK4(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger)
             elif serialPort.pid == PrusaMK4S.PRODUCTID:
-                return PrusaMK4S(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return PrusaMK4S(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger)
             elif serialPort.pid == PrusaMK3.PRODUCTID:
-                return PrusaMK3(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return PrusaMK3(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger)
             else:
                 return None
         elif serialPort.vid == EnderPrinter.VENDORID:
@@ -174,15 +177,15 @@ class Fabricator(db.Model):
             from Classes.Fabricators.Printers.Ender.Ender3Pro import Ender3Pro
             model = Fabricator.getModelFromGcodeCommand(serialPort)
             if "Ender-3 Pro" in model:
-                return Ender3Pro(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return Ender3Pro(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger)
             elif "Ender-3" in model:
-                return Ender3(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return Ender3(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger)
             else:
                 return None
         elif serialPort.vid == MakerBotPrinter.VENDORID:
             from Classes.Fabricators.Printers.MakerBot.Replicator2 import Replicator2
             if serialPort.pid == Replicator2.PRODUCTID:
-                return Replicator2(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+                return Replicator2(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger)
         else:
             #TODO: assume generic printer, do stuff
             return None
@@ -199,6 +202,9 @@ class Fabricator(db.Model):
         for fab in cls.query.all():
             if Ports.getPortByName(fab.devicePort) is not None:
                 fabList.append(cls(Ports.getPortByName(fab.devicePort), fab.name))
+        fake_port, fake_name, fake_hwid = app.get_emu_ports()
+        if fake_port and fake_name:
+            fabList.append(cls(fake_port, fake_name))
         return fabList
 
     @classmethod
@@ -231,9 +237,9 @@ class Fabricator(db.Model):
             #     self.device.startupSequence()
             assert self.setStatus("printing"), "Failed to set status to printing"
             assert self.device.parseGcode(self.job, isVerbose=isVerbose), f"Failed to parse Gcode, status: {self.status}, verdict: {self.device.verdict}, file: {self.job.file_name_original}" # this is the actual command to read the file and fabricate.
-            if isVerbose: self.device.logger.debug(f"Job complete, verdict: {self.device.verdict}")
+            if isVerbose and hasattr(self.device,"logger"): self.device.logger.debug(f"Job complete, verdict: {self.device.verdict}")
             self.handleVerdict()
-            if isVerbose: self.device.logger.debug(f"Verdict handled, status: {self.status}")
+            if isVerbose and hasattr(self.device,"logger"): self.device.logger.debug(f"Verdict handled, status: {self.status}")
             return True
         except Exception as e:
             from app import handle_errors_and_logging

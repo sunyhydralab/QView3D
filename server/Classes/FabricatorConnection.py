@@ -1,11 +1,11 @@
 import asyncio
 import threading
-from abc import ABC, abstractmethod
+from abc import ABC
 import uuid
 import serial
-from flask_socketio import SocketIO
 from queue import Queue, Empty
-import random
+
+from serial.tools.list_ports_common import ListPortInfo
 
 
 class FabricatorConnection(ABC):
@@ -25,32 +25,37 @@ class SerialConnection(FabricatorConnection, serial.Serial):
 
 
 class SocketConnection(FabricatorConnection):
-    def __init__(self, websocket_connections, fabricator_id: str):
+    def __init__(self, port: str, baudrate: int, timeout: float, websocket_connection, fabricator_id: str):
         """
         Initialize a websocket-based connection for a 3D printer with optional mock response generation.
         
-        :param websocket_connections: Dictionary of websocket connections
+        :param websocket_connection: Dictionary of websocket connections
         :param fabricator_id: Unique identifier for the printer
         :param timeout: Maximum time to wait for a response (default: 10.0)
         """
         self._fabricator_id = fabricator_id
-        self._timeout = 10.0
-        
+        self._timeout = timeout
+
         # Queue for storing incoming messages
         self._receive_queue = Queue()
-        
+
         # Connection state
         self._is_open = True
-        
+
         # Event for synchronizing responses
         self._response_event = threading.Event()
-        
+
         # WebSocket connection management
-        self._websocket_connections = websocket_connections
-        self._websocket = None
-        
+        self._websocket_connection = websocket_connection
+
         # Setup connection listeners
         self._setup_listeners()
+
+        self.emuListPortInfo = EmuListPortInfo(device=port, description="Emulator", hwid="")
+
+        self.port = self.emuListPortInfo.device
+        self.baudrate = baudrate
+        self.timeout = timeout
 
     def _setup_listeners(self):
         """Configure websocket event listeners for receiving printer responses."""
@@ -58,7 +63,7 @@ class SocketConnection(FabricatorConnection):
 
     def write(self, data):
         """
-        Send data to the printer via websocket, with optional mock response.
+        Send data to the printer via websocket.
         
         :param data: Data to be sent (typically G-code)
         """
@@ -119,9 +124,7 @@ class SocketConnection(FabricatorConnection):
         websocket_id = str(uuid.uuid4())
         
         # Find the appropriate websocket based on fabricator_id
-        self._websocket = self._websocket_connections.get(self._fabricator_id)
-        
-        if self._websocket is None:
+        if self._websocket_connection is None:
             raise ConnectionError(f"WebSocket not found for printer {self._fabricator_id}")
         
         # Emit a connection/handshake event via WebSocket
@@ -172,3 +175,37 @@ class SocketConnection(FabricatorConnection):
             asyncio.run(self._websocket.send(str(message)))
         else:
             print(f"Cannot send message: WebSocket connection is not open or not available.")
+
+class EmuListPortInfo(ListPortInfo):
+    def __init__(self, device: str, description: str = None, hwid: str = None):
+        super().__init__(device)
+        self._device = device
+        self._description = description
+        self._hwid = hwid
+
+    def __repr__(self):
+        return f"EmuListPortInfo(device={self.device}, description={self.description}, hwid={self.hwid})"
+
+    @property
+    def device(self):
+        return self._device
+
+    @device.setter
+    def device(self, value):
+        self._device = value
+
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, value):
+        self._description = value
+
+    @property
+    def hwid(self):
+        return self._hwid
+
+    @hwid.setter
+    def hwid(self, value):
+        self._hwid = value

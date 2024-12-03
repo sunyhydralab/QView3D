@@ -10,42 +10,8 @@ from Classes.Jobs import Job
 from Classes.Queue import Queue
 from threading import Thread
 import time
+from flask import current_app as app
 
-class FabricatorThread(Thread):
-    def __init__(self, fabricator, app=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fabricator: Fabricator = fabricator
-        if app:
-            self.app = app
-        else:
-            from app import app
-            self.app = app
-
-    def __to_JSON__(self):
-        return {
-            "fabricator": self.fabricator,
-            "app": self.app,
-            "running": self.is_alive(),
-            "daemon": self.daemon,
-        }
-
-    def run(self):
-        with self.app.app_context():
-            while True:
-                time.sleep(2)
-                status = self.fabricator.getStatus()
-                queueSize = len(self.fabricator.queue)
-                self.fabricator.responseCount = 0
-                if status == "printing":
-                    if queueSize > 0:
-                        assert isinstance(self.fabricator.queue[0], Job), f"self.fabricator.queue[0]={self.fabricator.queue[0]}, type(self.fabricator.queue[0])={type(self.fabricator.queue[0])}, self.fabricator.queue={self.fabricator.queue}, type(self.fabricator.queue)={type(self.fabricator.queue)}"
-                if status == "printing" and queueSize > 0 and self.fabricator.queue[0].released == 1:
-                    time.sleep(2)
-                    if status != "offline":
-                        self.fabricator.begin()
-
-    def stop(self):
-        self.fabricator.terminated = 1
 
 class FabricatorList:
     def __init__(self, app=None):
@@ -100,8 +66,7 @@ class FabricatorList:
         newFab: Fabricator | None = None
         if dbFab is not None: # means that the fabricator is in the db
             if listFab is not None: # means that the fabricator is in the list and the db
-                from app import handle_errors_and_logging
-                handle_errors_and_logging(Exception(f"Fabricator {dbFab.getname()} already exists in the list"), listFab)
+                app.handle_errors_and_logging(Exception(f"Fabricator {dbFab.getname()} already exists in the list"), listFab)
             else: # means that the fabricator is in the db but not in the list
                 newFab = Fabricator(serialPort, name=dbFab.getname())
                 self.fabricators.append(newFab)
@@ -114,15 +79,27 @@ class FabricatorList:
                 self.fabricators.append(newFab)
         dbFabricators = Fabricator.queryAll()
         assert(len(self) == len(dbFabricators)), f"len(self)={len(self)}, len(dbFabricators)={len(dbFabricators)}"
-        assert all(fabricator in self for fabricator in dbFabricators), f"self={self}, dbFabricators={dbFabricators}"
-        if newFab: self.start_fabricator_thread(newFab)
-
+        # TODO: figure out how to check if the fabricator is in the db
+        # assert all(fabricator in self.fabricators for fabricator in dbFabricators), f"self={self.fabricators}, dbFabricators={dbFabricators}"
+        if newFab:
+            print("starting new fabricator thread")
+            self.start_fabricator_thread(newFab)
 
     def deleteFabricator(self, fabricatorid):
         """delete a fabricator from the list, and from the database"""
-        # TODO: Implement deleteFabricator
-        raise NotImplementedError("deleteFabricator is not implemented")
-
+        fabricator = self.getFabricatorById(fabricatorid)
+        if fabricator:
+            try:
+                self.fabricators.remove(fabricator)
+                Fabricator.query.filter_by(dbID=fabricatorid).delete()
+                Fabricator.updateDB()
+            except ValueError as e:
+                app.handle_errors_and_logging(e)
+                return e
+            except Exception as e:
+                app.handle_errors_and_logging(e)
+                return False
+            return True
 
     def getFabricatorByName(self, name) -> Fabricator | None:
         """find the first fabricator with the given name"""
@@ -139,11 +116,15 @@ class FabricatorList:
     
 
     def getFabricatorByPort(self, port) -> Fabricator | None:
-        """find the first fabricator with the given port"""
+        """
+        find the first fabricator with the given port
+        :param port: the port to search for
+        :type port: str | ListPortInfo | SysFS
+        """
+        if isinstance(port, ListPortInfo or SysFS): port = port.device
         assert isinstance(port, str), f"port={port}, type(port)={type(port)}"
         for fabricator in self:
             assert isinstance(fabricator.devicePort, str), f"fabricator.devicePort={fabricator.devicePort}, type(fabricator.devicePort)={type(fabricator.devicePort)}"
-            print(fabricator.devicePort + " ?= " + port)
             if fabricator.devicePort == port:
                 return fabricator
         return next((fabricator for fabricator in self.fabricators if fabricator.devicePort == port), None)
@@ -257,7 +238,7 @@ class FabricatorList:
                         "name": fabricator.name,
                     }
                     self.fabricator_threads.remove(thread)
-                    self.queue_restore(status, fabricator)
+                    self.queue_restore(status, fabricator.queue)
                     break
             return jsonify({"success": True, "message": "Fabricator thread reset successfully"})
         except Exception as e:
@@ -268,7 +249,7 @@ class FabricatorList:
     def deleteThread(self, fabricator_id):
         try:
             for thread in self.fabricator_threads:
-                if thread.fabricator.id == fabricator_id:
+                if thread.fabricator.dbID == fabricator_id:
                     fabricator = thread.fabricator
                     if fabricator.getStatus() == "ready":
                         fabricator.terminated = 1
@@ -297,3 +278,51 @@ class FabricatorList:
                     break
         self.fabricator_threads = new_thread_list
         return jsonify({"success": True, "message": "Fabricator list reordered successfully"})
+
+    def editName(self, fabricator_id, name):
+        fabricator = self.getFabricatorById(fabricator_id)
+        if fabricator:
+            fabricator.setName(name)
+            return jsonify({"success": True, "message": "Fabricator name updated successfully"})
+        else:
+            return jsonify({"error": "Fabricator not found"}), 404
+
+class FabricatorThread(Thread):
+    def __init__(self, fabricator, app=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fabricator: Fabricator = fabricator
+        if app:
+            self.app = app
+        else:
+            from app import app
+            self.app = app
+
+    def __repr__(self):
+        return f"FabricatorThread(fabricator={self.fabricator}, daemon={self.daemon}, running={self.is_alive()})"
+
+    def __to_JSON__(self):
+        return {
+            "fabricator": self.fabricator,
+            "app": self.app,
+            "running": self.is_alive(),
+            "daemon": self.daemon,
+        }
+
+    def run(self):
+        with self.app.app_context():
+            while True:
+                time.sleep(2)
+                status = self.fabricator.getStatus()
+                queueSize = len(self.fabricator.queue)
+                self.fabricator.responseCount = 0
+                if status == "printing":
+                    if queueSize > 0:
+                        assert isinstance(self.fabricator.queue[0],
+                                          Job), f"self.fabricator.queue[0]={self.fabricator.queue[0]}, type(self.fabricator.queue[0])={type(self.fabricator.queue[0])}, self.fabricator.queue={self.fabricator.queue}, type(self.fabricator.queue)={type(self.fabricator.queue)}"
+                if status == "printing" and queueSize > 0 and self.fabricator.queue[0].released == 1:
+                    time.sleep(2)
+                    if status != "offline":
+                        self.fabricator.begin()
+
+    def stop(self):
+        self.fabricator.terminated = 1

@@ -46,8 +46,7 @@ class Logger(logging.Logger):
             os.makedirs(log_folder, exist_ok=True)
             subfolder = os.path.join(log_folder, deviceName)
             os.makedirs(subfolder, exist_ok=True)
-            from datetime import datetime
-            fileLogger = CustomFileHandler(os.path.join(subfolder, f"{datetime.now().strftime('%m-%d-%Y__%H-%M-%S')}.log"))
+            fileLogger = CustomFileHandler(os.path.join(subfolder, "fabricator.log"))
         else:
             if not os.path.exists(fileLogger):
                 fileLogger = CustomFileHandler(fileLogger, mode='w')

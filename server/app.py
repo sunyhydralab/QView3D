@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 import sys
 import threading
 import uuid
@@ -29,7 +30,25 @@ async def websocket_server():
         try:
             while True:
                 message = await websocket.recv()
+                assert isinstance(message, str), f"Received non-string message: {message}, Type: ({type(message)})"
                 print(f"Received message from {client_id}: {message}")
+                if not hasattr(emulator_connections[client_id],"fake_port"):
+                    fake_port = message.split('port":"')[-1].split('",')[0]
+                    print(f"Fake port: {fake_port}" if fake_port else "No fake port found")
+                    if fake_port:
+                        emulator_connections[client_id].fake_port = fake_port
+                    fake_name = message.split('Name":"')[-1].split('",')[0]
+                    print(f"Fake name: {fake_name}" if fake_name else "No fake name found")
+                    if fake_name:
+                        emulator_connections[client_id].fake_name = fake_name
+                    fake_hwid = message.split('Hwid":"')[-1].split('",')[0]
+                    print(f"Fake Hwid: {fake_hwid}" if fake_hwid else "No fake Hwid found")
+                    if fake_hwid:
+                        emulator_connections[client_id].fake_hwid = fake_hwid
+                else:
+                    print(f"Fake port: {emulator_connections[client_id].fake_port}")
+                    print(f"Fake name: {emulator_connections[client_id].fake_name}")
+                    print(f"Fake Hwid: {emulator_connections[client_id].fake_hwid}")
                 #await websocket.send(f"Echo from {client_id}: {message}")
         except websockets.exceptions.ConnectionClosed as e:
             # Handle disconnection gracefully
@@ -96,12 +115,21 @@ else:
 socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False, async_mode=async_mode, transport=['websocket', 'polling']) # make it eventlet on production!
 app.socketio = socketio  # Add the SocketIO object to the app object
 
+def get_emu_ports():
+    fake_device = next(iter(emulator_connections.values()), None)
+    if fake_device:
+        fake_port = fake_device.fake_port
+        fake_name = fake_device.fake_name
+        fake_hwid = fake_device.fake_hwid
+        return [fake_port, fake_name, fake_hwid]
+    return [None, None, None]
+
 def handle_errors_and_logging(e: Exception | str, fabricator = None):
     from Classes.Fabricators.Fabricator import Fabricator
     device = fabricator
     if isinstance(fabricator, Fabricator):
         device = fabricator.device
-    if device is not None and device.logger is not None:
+    if device is not None and hasattr(device,"logger") and device.logger is not None:
         device.logger.error(e, stacklevel=3)
     elif app.logger is None:
         if isinstance(e, str):
@@ -159,6 +187,8 @@ with app.app_context():
         # Define directory paths for uploads and tempcsv
         uploads_folder = os.path.abspath('../uploads')
         tempcsv = os.path.abspath('../tempcsv')
+        app.get_emu_ports = get_emu_ports
+        app.emulator_connections = emulator_connections
         fabricator_list = FabricatorList(app)
         app.fabricator_list = fabricator_list
         # Check if directories exist and handle them accordingly

@@ -1,6 +1,6 @@
 import asyncio
 import json
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 
 emulator_bp = Blueprint("emulator", __name__)
 
@@ -8,13 +8,10 @@ emulator_bp = Blueprint("emulator", __name__)
 def registerEmulator():
     try:
         data = request.get_json()
-        
-        from app import emulator_connections
 
-        print(emulator_connections)
-
-        socket = next(iter(emulator_connections.values()))
-
+        socket = next(iter(current_app.emulator_connections.values()), None)
+        if not socket:
+            return jsonify({"error": "No emulator connection found"}), 404
         try:
             message = {
                 'event': 'printer_connect',

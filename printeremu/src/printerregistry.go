@@ -90,7 +90,7 @@ func LoadPrinters(filePath string) ([]Printer, error) {
 
 		printer.SetHwid(hwid)
 
-		printer.AddData("port", "EMU-"+strconv.Itoa(RandomRange(0, 9)))
+		printer.AddData("port", "EMU"+strconv.Itoa(RandomRange(0, 9)))
 
 		// handle stuff like the bed size and such
 		PostRegistry(printer)

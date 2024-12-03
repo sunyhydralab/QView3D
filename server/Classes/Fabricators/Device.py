@@ -42,13 +42,15 @@ class Device(ABC):
         "G28": [checkXYZ],  # Home
     }
 
-    def __init__(self, dbID: int, serialPort: ListPortInfo | SysFS, consoleLogger=sys.stdout, fileLogger=None):
+    def __init__(self, dbID: int, serialPort: ListPortInfo | SysFS, consoleLogger=sys.stdout, fileLogger=None, websocket_connection=None, addLogger: bool =False):
         self.dbID: int = dbID
         self.serialPort: ListPortInfo | SysFS | None = serialPort
         self.serialID: str | None = serialPort.serial_number
-        self.logger = Logger(self.DESCRIPTION, port=self.serialPort.device, consoleLogger=consoleLogger, fileLogger=fileLogger, loggingLevel=Logger.DEBUG, consoleLevel=Logger.ERROR)
+        if addLogger:
+            self.logger = Logger(self.DESCRIPTION, port=self.serialPort.device, consoleLogger=consoleLogger, fileLogger=fileLogger, loggingLevel=Logger.DEBUG, consoleLevel=Logger.ERROR)
         self.status = "idle"
         self.verdict = ""
+        self.websocket_connection = websocket_connection
 
     def __repr__(self):
         return f"{self.getModel()} on {self.getSerialPort().device}"
@@ -70,7 +72,6 @@ class Device(ABC):
             "dbID": self.dbID,
             "serialPort": self.serialPort.name if self.serialPort else None,
             "serialID": self.serialID,
-            "logger": self.logger.name,
             "status": self.status,
             "verdict": self.verdict
         }
@@ -78,7 +79,11 @@ class Device(ABC):
     def connect(self):
         """Connect to the hardware using the serial port."""
         try:
-            self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort.device, baudrate=115200, timeout=60)
+            assert self.serialPort is not None, "Serial port is not set"
+            assert self.serialPort.device is not None, "Serial port device is not set"
+            assert self.serialPort.device != "", "Serial port device is empty"
+            if self.serialConnection is None:
+                self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort.device, baudrate=115200, timeout=60, websocket_connections=self.websocket_connection, fabricator_id=str(self.dbID))
             self.serialConnection.reset_input_buffer()
             return True
         except Exception as e:
@@ -101,11 +106,8 @@ class Device(ABC):
         try:
             assert isinstance(isVerbose, bool)
             assert isinstance(self, Device)
-            print("passed asserts")
             self.sendGcode(self.homeCMD, isVerbose=isVerbose)
-            print("sent gcode")
             assert self.getHomePosition() == self.getToolHeadLocation(), f"Failed to home, expected {self.getHomePosition()} but got {self.getToolHeadLocation()}"
-            print("asserted")
             return True
         except Exception as e:
             from app import handle_errors_and_logging

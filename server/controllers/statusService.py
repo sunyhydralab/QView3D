@@ -77,11 +77,9 @@ def removeThread():
 def editName():
     try:
         data = request.get_json()
-        printerid = data['printerid']
+        fabricator_id = data['fabricator_id']
         name = data['newname']
-        app.fabricator_list.getFabricatorByHwid()
-        res = app.fabricator_list.editName(printerid, name)
-        return res
+        return app.fabricator_list.editName(fabricator_id, name)
     except Exception as e:
         handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500

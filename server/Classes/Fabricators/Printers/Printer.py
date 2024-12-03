@@ -33,8 +33,8 @@ class Printer(Device, metaclass=ABCMeta):
     bedTemperature: int | float | None = None
     nozzleTemperature: int | float |  None = None
 
-    def __init__(self, dbID, serialPort, consoleLogger=None, fileLogger=None):
-        super().__init__(dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger)
+    def __init__(self, dbID, serialPort, consoleLogger=None, fileLogger=None, addLogger: bool =False):
+        super().__init__(dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger)
         self.filamentType = None
         self.filamentDiameter = None
         self.nozzleDiameter = None
@@ -243,14 +243,15 @@ class Printer(Device, metaclass=ABCMeta):
                         self.handleTempLine(decLine)
                         if func != checkBedTemp and func != checkExtruderTemp:
                             continue
-                    self.logger.debug(f"{gcode.decode().strip()}: {decLine}")
+                    if hasattr(self, "logger") and self.logger: self.logger.debug(f"{gcode.decode().strip()}: {decLine}")
                     if func(line):
                         break
                 except UnicodeDecodeError:
-                    if isVerbose: self.logger.debug(f"{gcode.decode().strip()}: {line.strip()}")
+                    if isVerbose and hasattr(self, "logger") and self.logger: self.logger.debug(f"{gcode.decode().strip()}: {line.strip()}")
                     continue
                 except Exception as e:
-                    self.logger.error(e)
+                    if current_app: return current_app.handle_errors_and_logging(e, self)
+                    elif hasattr(self, "logger") and self.logger: self.logger.error(e)
                     return False
         if not callables:
             self.logger.info(f"{gcode.decode().strip()}: Always True")

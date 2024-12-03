@@ -559,8 +559,6 @@ def downloadCSV():
         else:
             # Call the model method to get the CSV content
             res = Job.downloadCSV(0, jobids)
-
-        print(res)
         return res
 
     except Exception as e:
