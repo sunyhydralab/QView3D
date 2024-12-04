@@ -52,7 +52,7 @@ func (cmd *G28Command) Execute(printer *Printer) string {
         return fmt.Sprintf("Error: %s\n", err.Error())
     }
 
-    return "Homing completed\n"
+    return fmt.Sprintf("ok\nX:%.2f Y:%.2f Z:%.2f\nok\n", printer.Extruder.Position.X, printer.Extruder.Position.Y, printer.Extruder.Position.Z)
 }
 
 type G0G1Command struct {
@@ -191,7 +191,7 @@ func (cmd *M104Command) Execute(printer *Printer) string {
         return fmt.Sprintf("Error: %s\n", err.Error())
     }
 
-    return fmt.Sprintf("Extruder temperature set to %.2f°C\n", cmd.temperature)
+    return "ok\n"
 }
 
 // M106Command sets the fan speed
@@ -234,14 +234,12 @@ func NewM140Command(command string) *M140Command {
 }
 
 func (cmd *M140Command) Execute(printer *Printer) string {
-    // Set the target temperature of the bed, but do not block
     if err := printer.SetBedTemperature(cmd.temperature); err != nil {
         return fmt.Sprintf("Error: %s\n", err.Error())
     }
 
-    printer.Heatbed.Heating = true // Start heating
-
-    return fmt.Sprintf("Bed temperature set to %.2f, heating in progress\n", cmd.temperature)
+    printer.Heatbed.Heating = true
+    return "ok\n"
 }
 
 // M190Command waits until the bed reaches the target temperature before allowing further commands
@@ -256,19 +254,16 @@ func NewM190Command(command string) *M190Command {
 }
 
 func (cmd *M190Command) Execute(printer *Printer) string {
-    // Set the target temperature and check if the bed is heated
-    // TODO: use error handling!
     printer.Heatbed.TargetTemp = cmd.temperature
 
-    // Check if the current temperature is below the target
     if printer.Heatbed.Temp < printer.Heatbed.TargetTemp {
-        return "Waiting for bed to reach target temperature...\n"
+        return fmt.Sprintf("B:%.2f / %.2f\n", printer.Heatbed.Temp, printer.Heatbed.TargetTemp)
     }
-
-    // If target temperature reached, continue
+//TODO: Error handling
     printer.Heatbed.Heating = false
-    return fmt.Sprintf("Bed temperature reached %.2f\n", cmd.temperature)
+    return "ok\n"
 }
+
 
 type M109Command struct {
     temperature float64
@@ -281,16 +276,13 @@ func NewM109Command(command string) *M109Command {
 }
 
 func (cmd *M109Command) Execute(printer *Printer) string {
-    // Set the target temperature and check if the extruder is heated
     printer.Extruder.TargetTemp = cmd.temperature
 
-    // Check if the current temperature is below the target
     if printer.Extruder.ExtruderTemp < printer.Extruder.TargetTemp {
-        return "Waiting for extruder to reach target temperature...\n"
+        return fmt.Sprintf("T:%.2f / %.2f\n", printer.Extruder.ExtruderTemp, printer.Extruder.TargetTemp)
     }
 
-    // If target temperature reached, continue
-    return fmt.Sprintf("Extruder temperature reached %.2f\n", cmd.temperature)
+    return "ok\n"
 }
 
 type M113Command struct{}
@@ -331,7 +323,7 @@ func NewM73Command(command string) *M73Command {
 
 func (cmd *M73Command) Execute(printer *Printer) string {
     printer.UpdateProgress(cmd.progress)
-    return fmt.Sprintf("Progress set to %d%%, %d minutes remaining\n", cmd.progress, cmd.remaining)
+    return fmt.Sprintf("Progress set to %d%%, %d minutes remaining\nok\n", cmd.progress, cmd.remaining)
 }
 
 // Parsing helpers
@@ -358,7 +350,7 @@ type M114Command struct{}
 
 func (cmd *M114Command) Execute(printer *Printer) string {
     position := printer.Extruder.Position
-    return fmt.Sprintf("ok\n X:%.2f Y:%.2f Z:%.2f\n ok\n", position.X, position.Y, position.Z)
+    return fmt.Sprintf("X:%.2f Y:%.2f Z:%.2f\nok\n", position.X, position.Y, position.Z)
 }
 
 type M115Command struct{}
