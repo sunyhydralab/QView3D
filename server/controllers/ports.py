@@ -40,7 +40,11 @@ def registerFabricator():
         name = printer['name']
 
         # Create a new fabricator instance using the Fabricator class
-        app.fabricator_list.addFabricator(device, name)
+        try:
+            app.fabricator_list.addFabricator(device, name)
+        except AssertionError as ae:
+            return jsonify({"error": f"Failed to add fabricator: {ae}"}), 500
+
         new_fabricator = Fabricator.query.filter_by(devicePort=device).first()
         return jsonify({"success": True, "message": "Fabricator registered successfully", "fabricator_id": new_fabricator.dbID})
     except SQLAlchemyError as db_err:

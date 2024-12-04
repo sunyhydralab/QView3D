@@ -64,7 +64,7 @@ onMounted(async () => {
         travelColor: 'limegreen',
         lineWidth: 1,
           lineHeight: 1,
-          extrusionWidth: 1,
+          extrusionWidth: 0.4,
         renderExtrusion: true,
         renderTravel: renderTravel.value,
           renderTubes: true,

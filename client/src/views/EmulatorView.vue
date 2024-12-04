@@ -11,11 +11,13 @@ const registerPrinter = async () => {
     message.value = '';
 
     try {
-        const response = await api('registeremulator', { 'data': 'wow' }, 'POST');
+        const response = await api('api/registeremulator', { 'data': 'wow' }, 'POST');
         
         if (response && response.message) {
             message.value = response.message;
             isRegistered.value = true;
+        } else if (response && response.error) {
+            message.value = response.error;
         } else {
             message.value = 'Unknown response structure';
         }
@@ -31,11 +33,13 @@ const disconnectPrinter = async () => {
     message.value = '';
 
     try {
-        const response = await api('disconnectemulator', { 'data': 'wow' }, 'POST');
+        const response = await api('api/disconnectemulator', { 'data': 'wow' }, 'POST');
         
         if (response && response.message) {
             message.value = response.message;
             isRegistered.value = false;
+        } else if (response && response.error) {
+            message.value = response.error;
         } else {
             message.value = 'Unknown response structure';
         }
