@@ -16,3 +16,12 @@ class EventEmitter:
             for callback in self._events[event_name]:
                 # Trigger the callback with the provided data
                 asyncio.create_task(callback(*args, **kwargs))
+
+    def remove_listener(self, event_name, listener):
+        """
+        Remove a specific listener for an event
+        """
+        if event_name in self._listeners:
+            self._listeners[event_name] = [
+                l for l in self._listeners[event_name] if l != listener
+            ]
