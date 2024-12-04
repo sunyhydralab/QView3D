@@ -8,7 +8,7 @@ import os
 import gzip
 import serial
 import serial.tools.list_ports
-from app import current_app
+from globals import current_app
 from traceback import format_exc
 from Classes.Fabricators.Fabricator import Fabricator
 

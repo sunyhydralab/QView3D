@@ -41,7 +41,7 @@ class Logger(logging.Logger):
             self.addHandler(consoleLogger)
         else: self.consoleLogger = None
         if fileLogger is None:
-            from app import root_path
+            from globals import root_path
             log_folder = os.path.abspath(os.path.join(root_path, "server","logs"))
             os.makedirs(log_folder, exist_ok=True)
             subfolder = os.path.join(log_folder, deviceName)

@@ -1,5 +1,5 @@
 from collections import deque
-from app import current_app
+from globals import current_app
 
 from Classes.Jobs import Job
 

@@ -1,4 +1,4 @@
-from flask import jsonify, Response, current_app as app
+from flask import jsonify, Response
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from sqlalchemy.exc import SQLAlchemyError
@@ -9,6 +9,7 @@ from Classes.Jobs import Job
 from Mixins.hasEndingSequence import hasEndingSequence
 from models.db import db
 from datetime import datetime, timezone
+from globals import current_app
 
 class Fabricator(db.Model):
     dbID = db.Column(db.Integer, primary_key=True)
@@ -21,7 +22,6 @@ class Fabricator(db.Model):
         nullable=False,
     )
     devicePort = db.Column(db.String(50), nullable=False)
-
 
     def __init__(self, port: ListPortInfo | SysFS | None, name: str = "", consoleLogger=None, fileLogger=None):
         if port is None:
@@ -51,7 +51,7 @@ class Fabricator(db.Model):
             self.devicePort = dbFab.devicePort
             self.date = dbFab.date
             self.dbID = dbFab.dbID
-        self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True, websocket_connection=next(iter(app.emulator_connections.values(), None)) if port.device == app.get_emu_ports()[0] else None)
+        self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True, websocket_connection=next(iter(current_app.emulator_connections.values(), None)) if port.device == current_app.get_emu_ports()[0] else None)
         if self.description == "New Fabricator": self.description = self.device.getDescription()
         db.session.commit()
 
@@ -203,7 +203,7 @@ class Fabricator(db.Model):
         for fab in cls.query.all():
             if Ports.getPortByName(fab.devicePort) is not None:
                 fabList.append(cls(Ports.getPortByName(fab.devicePort), fab.name))
-        fake_port, fake_name, fake_hwid = app.get_emu_ports()
+        fake_port, fake_name, fake_hwid = current_app.get_emu_ports()
         if fake_port and fake_name and fake_hwid:
             fabList.append(cls(EmuListPortInfo(fake_port, "Emulator", fake_hwid), fake_name))
         return fabList
@@ -243,34 +243,31 @@ class Fabricator(db.Model):
             if isVerbose and hasattr(self.device,"logger"): self.device.logger.debug(f"Verdict handled, status: {self.status}")
             return True
         except Exception as e:
-            from app import handle_errors_and_logging
-            return handle_errors_and_logging(e, self)
+
+            return current_app.handle_errors_and_logging(e, self)
 
 
     def pause(self):
         """pauses the fabrication process if the fabricator supports it"""
+        assert isinstance(self.device,
+                          Device), f"Device is not a Device object or subclass: {self.device}, type: {type(self.device)}"
         if not self.device.pauseCMD:
-            from app import handle_errors_and_logging
-            return handle_errors_and_logging("Fabricator doesn't support pausing", self)
-        assert isinstance(self.device, Device), f"Device is not a Device object or subclass: {self.device}"
+            return current_app.handle_errors_and_logging("Fabricator doesn't support pausing", self)
         if self.status != "printing":
-            from app import handle_errors_and_logging
-            return handle_errors_and_logging("Nothing to pause, Fabricator isn't printing", self)
-        assert isinstance(self.device, Device), f"Device is not a Device object or subclass: {self.device}"
+            return current_app.handle_errors_and_logging("Nothing to pause, Fabricator isn't printing", self)
         assert self.device.pause(), "Failed to pause"
         self.setStatus("paused")
         return self.status == self.device.status == "paused"
 
     def resume(self):
         """resumes the fabrication process if the fabricator supports it"""
+        assert isinstance(self.device,
+                          Device), f"Device is not a Device object or subclass: {self.device}, type: {type(self.device)}"
         if not self.device.resumeCMD:
-            from app import handle_errors_and_logging
-            return handle_errors_and_logging("Fabricator doesn't support pausing", self)
+            return current_app.handle_errors_and_logging("Fabricator doesn't support pausing", self)
         if self.status != "paused":
-            from app import handle_errors_and_logging
-            return handle_errors_and_logging("Nothing to resume, Fabricator isn't paused", self)
+            return current_app.handle_errors_and_logging("Nothing to resume, Fabricator isn't paused", self)
         self.setStatus("printing")
-        assert isinstance(self.device, Device), f"Device is not a Device object or subclass: {self.device}"
         return self.status == self.device.status == "printing"
 
     def cancel(self):
@@ -279,13 +276,11 @@ class Fabricator(db.Model):
             assert self.job is not None, "Job is None"
             assert self.device is not None, "Device is None"
             if self.status != "printing" and self.status != "paused":
-                from app import handle_errors_and_logging
-                return handle_errors_and_logging("Nothing to cancel, Fabricator isn't printing", self)
+                return current_app.handle_errors_and_logging("Nothing to cancel, Fabricator isn't printing", self)
             self.setStatus("cancelled")
             return self.status == self.device.status == "cancelled"
         except Exception as e:
-            from app import handle_errors_and_logging
-            return handle_errors_and_logging(e, self)
+            return current_app.handle_errors_and_logging(e, self)
 
     def getStatus(self):
         return self.status
@@ -306,7 +301,6 @@ class Fabricator(db.Model):
                     self.job.status = newStatus
                     self.queue[0].status = newStatus
                     db.session.commit()
-            from app import current_app
             if current_app:
                 current_app.socketio.emit(
                     "status_update", {"fabricator_id": self.dbID, "status": newStatus}
@@ -317,8 +311,7 @@ class Fabricator(db.Model):
                 print(f"current app is None, status: {newStatus}")
             return True
         except Exception as e:
-            from app import handle_errors_and_logging
-            return handle_errors_and_logging(e, self)
+            return current_app.handle_errors_and_logging(e, self)
 
     def resetToIdle(self):
         #TODO: send message to front end insuring that the print bed is clear and that the job is done

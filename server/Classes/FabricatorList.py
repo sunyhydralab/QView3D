@@ -1,23 +1,23 @@
-import serial.tools.list_ports
-from flask import jsonify, current_app
+from flask import jsonify
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
-
-from Classes.Fabricators.Device import Device
+from sqlalchemy import inspect
 from Classes.Ports import Ports
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.Jobs import Job
 from Classes.Queue import Queue
 from threading import Thread
 import time
-from app import current_app as app
-
+from globals import current_app as app
+from models.db import db
 
 class FabricatorList:
     def __init__(self, app=None):
         self.app = app
         assert self.app is not None, "app is None"
         with self.app.app_context():
+            if not inspect(db.engine).has_table('fabricator') or not Fabricator.metadata.tables:
+                Fabricator.metadata.create_all(db.engine)
             self.fabricators = Fabricator.queryAll()
             self.fabricator_threads = []
             self.ping_thread = None
@@ -130,31 +130,31 @@ class FabricatorList:
         return next((fabricator for fabricator in self.fabricators if fabricator.devicePort == port), None)
 
 
-    def diagnose(self, device: Device | Fabricator):
-        """diagnose a fabricator"""
-        if isinstance(device, Fabricator):
-            device = device.device
-        try:
-            diagnoseString = ""
-            for port in serial.tools.list_ports.comports():
-                if port.device == device.getSerialPort().device:
-                    diagnoseString += f"The system has found a <b>matching port</b> with the following details: <br><br> <b>Device:</b> {port.device}, <br> <b>Description:</b> {port.description}, <br> <b>HWID:</b> {port.hwid}"
-                    hwid = device.getHWID()
-                    fabricatorExists = self.getFabricatorByHwid(hwid)
-                    if fabricatorExists:
-                        fabricator = self.getFabricatorByHwid(hwid)
-                        diagnoseString += f"<hr><br>Device <b>{port.device}</b> is registered with the following details: <br><br> <b>Name:</b> {fabricator.name} <br> <b>Device:</b> {fabricator.device}, <br> <b>Description:</b> {fabricator.description}, <br><b> HWID:</b> {fabricator.hwid}"
-            if diagnoseString == "":
-                diagnoseString = "The port this fabricator is registered under is <b>not found</b>. Please check the connection and try again."
-            return {
-                "success": True,
-                "message": "fabricator successfully diagnosed.",
-                "diagnoseString": diagnoseString,
-            }
-
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-            return jsonify({"error": "Unexpected error occurred"}), 500
+    # def diagnose(self, device: Device | Fabricator):
+    #     """diagnose a fabricator"""
+    #     if isinstance(device, Fabricator):
+    #         device = device.device
+    #     try:
+    #         diagnoseString = ""
+    #         for port in serial.tools.list_ports.comports():
+    #             if port.device == device.getSerialPort().device:
+    #                 diagnoseString += f"The system has found a <b>matching port</b> with the following details: <br><br> <b>Device:</b> {port.device}, <br> <b>Description:</b> {port.description}, <br> <b>HWID:</b> {port.hwid}"
+    #                 hwid = device.getHWID()
+    #                 fabricatorExists = self.getFabricatorByHwid(hwid)
+    #                 if fabricatorExists:
+    #                     fabricator = self.getFabricatorByHwid(hwid)
+    #                     diagnoseString += f"<hr><br>Device <b>{port.device}</b> is registered with the following details: <br><br> <b>Name:</b> {fabricator.name} <br> <b>Device:</b> {fabricator.device}, <br> <b>Description:</b> {fabricator.description}, <br><b> HWID:</b> {fabricator.hwid}"
+    #         if diagnoseString == "":
+    #             diagnoseString = "The port this fabricator is registered under is <b>not found</b>. Please check the connection and try again."
+    #         return {
+    #             "success": True,
+    #             "message": "fabricator successfully diagnosed.",
+    #             "diagnoseString": diagnoseString,
+    #         }
+    #
+    #     except Exception as e:
+    #         print(f"Unexpected error: {e}")
+    #         return jsonify({"error": "Unexpected error occurred"}), 500
 
 
     def start_fabricator_thread(self, fabricator: Fabricator):
@@ -221,7 +221,7 @@ class FabricatorList:
                     break
             return jsonify({"success": True, "message": "Fabricator thread reset successfully"})
         except Exception as e:
-            current_app.handle_errors_and_logging(e)
+            app.handle_errors_and_logging(e)
             return jsonify({"success": False, "error": "Unexpected error occurred"}), 500
 
     def queueRestore(self, fabricator_id, status):
@@ -294,8 +294,8 @@ class FabricatorThread(Thread):
         if app:
             self.app = app
         else:
-            from app import app
-            self.app = app
+            from globals import current_app
+            self.app = current_app
 
     def __repr__(self):
         return f"FabricatorThread(fabricator={self.fabricator}, daemon={self.daemon}, running={self.is_alive()})"

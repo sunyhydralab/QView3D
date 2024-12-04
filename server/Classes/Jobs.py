@@ -6,15 +6,13 @@ from models.db import db
 from models.issues import Issue  # assuming the Issue model is defined in the issue.py file in the models directory
 from datetime import timezone, timedelta
 from flask import jsonify
-from app import current_app
+from globals import current_app
 from traceback import format_exc
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
-from tzlocal import get_localzone
 import gzip
 import csv
 from flask import send_file
-# model for job history table
 
 class Job(db.Model):
     id = db.Column(db.Integer, primary_key=True)

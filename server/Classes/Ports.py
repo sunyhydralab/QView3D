@@ -4,7 +4,7 @@ from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.serialCommunication import sendGcode
-from app import current_app as app
+from globals import current_app as app
 from Classes.FabricatorConnection import EmuListPortInfo
 
 class Ports:
@@ -54,7 +54,7 @@ class Ports:
         """Get a specific port by its device name."""
         assert isinstance(name, str), f"Name must be a string: {name} : {type(name)}"
         ports = Ports.getListPorts()
-        if app.emulator_connections:
+        if len(app.emulator_connections) > 0:
             emu_port, emu_name, emu_hwid = app.get_emu_ports()
             if emu_port and emu_name and emu_hwid and emu_name == name:
                 return EmuListPortInfo(emu_port, description="Emulator", hwid=emu_hwid)

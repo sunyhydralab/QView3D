@@ -5,7 +5,7 @@ import subprocess
 import platform
 
 # Add test root to sys.path if needed
-from app import root_path
+from globals import root_path
 if root_path not in sys.path:
     sys.path.append(root_path)
 serverpath = os.path.join(root_path, "server")
@@ -16,7 +16,6 @@ if testpath not in sys.path:
     sys.path.append(testpath)
 
 from server.Classes.Ports import Ports
-from app import app
 
 PORTS = []
 # List of available ports for testing
@@ -67,5 +66,5 @@ if __name__ == "__main__":
                 try:
                     future.result()
                 except Exception as e:
-                    from app import handle_errors_and_logging
-                    handle_errors_and_logging(e)
+                    from globals import current_app
+                    current_app.handle_errors_and_logging(e)

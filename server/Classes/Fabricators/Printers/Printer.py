@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 from time import sleep
 
-from app import current_app
+from globals import current_app
 
 from Classes.Fabricators.Device import Device
 from Classes.Jobs import Job
@@ -314,7 +314,7 @@ class Printer(Device, metaclass=ABCMeta):
                 self.nozzleTemperature = float(temp_t.group(1))
             if temp_b:
                 self.bedTemperature = float(temp_b.group(1))
-            from app import current_app
+            from globals import current_app
             if current_app:
                 current_app.socketio.emit('temp_update', {'printerid': self.dbID, 'extruder_temp': self.nozzleTemperature,
                                                           'bed_temp': self.bedTemperature})

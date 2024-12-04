@@ -3,7 +3,6 @@ import os
 import re
 import sys
 import pytest
-from app import fabricator_list
 from _pytest.terminal import TerminalWriter, TerminalReporter
 
 
@@ -101,10 +100,10 @@ def fabricator(request, app):
 
 @pytest.fixture(scope="session", autouse=True)
 def app():
-    from app import app
+    from globals import current_app as app
     with app.app_context():
         yield app
-        fabricator_list.teardown()
+        app.fabricator_list.teardown()
 
 
 from Classes.Logger import Logger
@@ -147,7 +146,7 @@ def line_separator(interrupter: str, symbol: str = "-", length: int = 136, color
 
 def setup_logger(port):
     # set up fie location for output logs
-    from app import root_path
+    from globals import root_path
     log_folder = os.path.join(root_path,"Tests", "logs")
     os.makedirs(log_folder, exist_ok=True)
     from datetime import datetime

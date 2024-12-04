@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 import re
 import pytest
-from app import fabricator_list
+from globals import current_app as app
 from Classes.Jobs import Job
 from parallel_test_runner import testLevel
 
@@ -14,7 +14,7 @@ def __repr__(): return f"test_fabricator.py running on port {os.getenv('PORT')}"
 
 def cali_cube_setup(fabricator=None):
     if fabricator is None:
-        fabricator = fabricator_list.getFabricatorByPort(os.getenv("PORT"))
+        fabricator = app.fabricator_list.getFabricatorByPort(os.getenv("PORT"))
     file = "../server/xyz-cali-cube"
     if shortTest: file = file + "-mini"
     file = file + f"_{fabricator.device.MODEL}.gcode"
@@ -34,10 +34,10 @@ def test_add_job(app, fabricator):
     file = cali_cube_setup(fabricator=fabricator)
     with open(file, "r") as f:
         assert fabricator.queue.addToFront(Job(f.read(), "xyz cali cube", fabricator.dbID, "ready", file, False, 1, fabricator.name)), f"Failed to add job on {fabricator.getDescription()}"
-    for job in fabricator.queue.getQueue():
+    for job in fabricator.queue:
         assert job.status == "ready", f"Job status incorrect on {fabricator.getDescription()}"
     fabricator.queue.removeJob()
-    assert len(fabricator.queue.getQueue()) == 0, f"Failed to remove job on {fabricator.getDescription()}"
+    assert len(fabricator.queue) == 0, f"Failed to remove job on {fabricator.getDescription()}"
 
 @pytest.mark.dependency(depends=["test_device.py::test_home", "test_fabricator.py::test_add_job"], scope="session")
 @pytest.mark.skipif(condition=testLevelToRun < 7, reason="Not doing lvl 7 tests")
@@ -88,7 +88,7 @@ def test_pause_and_resume(app, fabricator):
 
         fabricator.resetToIdle()
         assert fabricator.getStatus() == "idle", f"Failed to reset to idle on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
-    from flask import current_app
+    from globals import current_app
     fabricator.device.logger.critical(f"app: ,{current_app}")
     fabricator.device.logger.critical(f"app.socketio: ,{current_app.socketio}")
     from Classes.Fabricators.Printers.Prusa.PrusaMK3 import PrusaMK3

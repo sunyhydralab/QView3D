@@ -5,10 +5,8 @@ import uuid
 import serial
 from queue import Queue, Empty
 import json
-
 from serial.tools.list_ports_common import ListPortInfo
-
-from app import current_app as app
+from globals import current_app as app
 
 
 class FabricatorConnection(ABC):

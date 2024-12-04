@@ -1,7 +1,7 @@
 from sqlalchemy.exc import SQLAlchemyError
 from flask import Blueprint, jsonify, request
 
-from app import current_app as app
+from globals import current_app as app
 from Classes.Fabricators.Device import Device
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.Ports import Ports
