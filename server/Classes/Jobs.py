@@ -5,7 +5,8 @@ from models.db import db
 
 from models.issues import Issue  # assuming the Issue model is defined in the issue.py file in the models directory
 from datetime import timezone, timedelta
-from flask import jsonify, current_app
+from flask import jsonify
+from app import current_app
 from traceback import format_exc
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
@@ -126,10 +127,7 @@ class Job(db.Model):
     ):
         try:
             query = cls.query
-
-            print("fromError: ", fromError)
             if (fromError == 1):
-                print("here")
                 query = cls.query.filter_by(status="error")
 
             if printerIds:
@@ -294,11 +292,6 @@ class Job(db.Model):
             else:
                 print(f"Database error: {e}")
             return jsonify({"error": format_exc()}), 500
-
-    # @classmethod
-    # def findPrinterObject(self, printer_id):
-    #     threads = printer_status_service.getThreadArray()
-    #     return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer
 
     @classmethod
     def removeFileFromPath(cls, file_path):

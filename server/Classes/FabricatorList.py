@@ -10,7 +10,7 @@ from Classes.Jobs import Job
 from Classes.Queue import Queue
 from threading import Thread
 import time
-from flask import current_app as app
+from app import current_app as app
 
 
 class FabricatorList:

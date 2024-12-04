@@ -1,6 +1,7 @@
 import { socket } from './myFetch'
 import type { Device } from './ports'
 import { jobTime } from './jobs'
+import { ref } from 'vue'
 
 export function setupSockets(printers: any) {
     setupTempSocket(printers)
@@ -205,7 +206,8 @@ export function setupGCodeViewerSocket(printers: any) {
     }
   })
 }
-
+import * as GCodePreview from 'gcode-preview';
+export const preview = ref<GCodePreview.WebGLPreview>();
 export function setupGCodeLineSocket(printers: any) {
     socket.value.on('gcode_line', (data: any) => {
         if (printers) {
@@ -215,7 +217,7 @@ export function setupGCodeLineSocket(printers: any) {
 
         if (job) {
             //TODO: add gcode_line to wherever it needs to go
-            job.gcode_line = data.gcode_line
+            preview?.value?.processGCode(data.gcode_line)
         }
         } else {
         console.error('printers or printers.value is undefined')

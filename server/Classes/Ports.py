@@ -4,7 +4,7 @@ from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.serialCommunication import sendGcode
-from flask import current_app as app
+from app import current_app as app
 from Classes.FabricatorConnection import EmuListPortInfo
 
 class Ports:
@@ -24,13 +24,11 @@ class Ports:
         full_devices = []
         for port in ports:
             if app:
-                # print("app exists")
                 if app.fabricator_list.getFabricatorByPort(port) is None:
-                    # print(2)
-                    # print(port)
-                    device = Fabricator.staticCreateDevice(port)
-                    # print(3)
-                    # print(device)
+                    if port.device == emu_port:
+                        device = Fabricator.staticCreateDevice(port, websocket_connection=next(iter(app.emulator_connections.values())))
+                    else:
+                        device = Fabricator.staticCreateDevice(port)
                     full_devices.append(device)
             else:
                 full_devices.append(Fabricator(port).device)

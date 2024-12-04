@@ -226,10 +226,9 @@ export function useGetJobs() {
       countOnly?: number
     ) {
       try {
-        const response = await api(
+        return await api(
           `getjobs?page=${page}&pageSize=${pageSize}&printerIds=${JSON.stringify(printerIds)}&oldestFirst=${oldestFirst}&searchJob=${encodeURIComponent(searchJob)}&searchCriteria=${encodeURIComponent(searchCriteria)}&searchTicketId=${encodeURIComponent(searchTicketId)}&favoriteOnly=${favoriteOnly}&issueIds=${JSON.stringify(issues)}&startdate=${startdate}&enddate=${enddate}&fromError=${fromError}&countOnly=${countOnly}`
         )
-        return response
       } catch (error) {
         console.error(error)
         toast.error('An error occurred while retrieving the jobs')

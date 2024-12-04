@@ -1,12 +1,11 @@
-from flask import jsonify, Response
+from flask import jsonify, Response, current_app as app
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from sqlalchemy.exc import SQLAlchemyError
-
-import app
-from Classes.FabricatorConnection import FabricatorConnection
+from Classes.FabricatorConnection import FabricatorConnection, EmuListPortInfo
 from Classes.Fabricators.Device import Device
 from typing_extensions import TextIO
+from Classes.Jobs import Job
 from Mixins.hasEndingSequence import hasEndingSequence
 from models.db import db
 from datetime import datetime, timezone
@@ -92,7 +91,7 @@ class Fabricator(db.Model):
         return response
 
     @staticmethod
-    def staticCreateDevice(serialPort: ListPortInfo | SysFS | None, consoleLogger=None, fileLogger=None):
+    def staticCreateDevice(serialPort: ListPortInfo | SysFS | None, consoleLogger=None, fileLogger=None, websocket_connection=None):
         """
         creates the correct printer object based on the serial port info
         :param serialPort:
@@ -104,16 +103,17 @@ class Fabricator(db.Model):
         :return: device without a fabricator object
         :rtype: Device | None
         """
-        if serialPort is None:
-            return None
+        assert serialPort is not None, "Serial port is None"
         from Classes.Fabricators.Printers.Ender.EnderPrinter import EnderPrinter
         from Classes.Fabricators.Printers.MakerBot.MakerBotPrinter import MakerBotPrinter
         from Classes.Fabricators.Printers.Prusa.PrusaPrinter import PrusaPrinter
         if serialPort.vid == PrusaPrinter.VENDORID:
+            print("Creating Prusa Printer")
             from Classes.Fabricators.Printers.Prusa.PrusaMK3 import PrusaMK3
             from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
             from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
             if serialPort.pid == PrusaMK4.PRODUCTID:
+                print("Creating Prusa MK4")
                 return PrusaMK4(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False)
             elif serialPort.pid == PrusaMK4S.PRODUCTID:
                 return PrusaMK4S(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False)
@@ -203,8 +203,8 @@ class Fabricator(db.Model):
             if Ports.getPortByName(fab.devicePort) is not None:
                 fabList.append(cls(Ports.getPortByName(fab.devicePort), fab.name))
         fake_port, fake_name, fake_hwid = app.get_emu_ports()
-        if fake_port and fake_name:
-            fabList.append(cls(fake_port, fake_name))
+        if fake_port and fake_name and fake_hwid:
+            fabList.append(cls(EmuListPortInfo(fake_port, "Emulator", fake_hwid), fake_name))
         return fabList
 
     @classmethod
@@ -305,14 +305,13 @@ class Fabricator(db.Model):
                     self.job.status = newStatus
                     self.queue[0].status = newStatus
                     db.session.commit()
-            from flask import current_app
+            from app import current_app
             if current_app:
                 current_app.socketio.emit(
                     "status_update", {"fabricator_id": self.dbID, "status": newStatus}
                 )
                 if self.job is not None:
-                    current_app.socketio.emit('job_status_update', {
-                        'job_id': self.job.id, 'status': newStatus})
+                    Job.update_job_status(self.job.id, newStatus)
             else:
                 print(f"current app is None, status: {newStatus}")
             return True

@@ -1,11 +1,10 @@
 from sqlalchemy.exc import SQLAlchemyError
 from flask import Blueprint, jsonify, request, current_app
 
-import app
+from app import current_app as app
 from Classes.Fabricators.Device import Device
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.Ports import Ports
-from app import handle_errors_and_logging
 from traceback import format_exc
 
 # Blueprint for ports routes
@@ -18,7 +17,7 @@ def getPorts():
         ports = Ports.getPorts()
         return jsonify([port for port in ports])
     except Exception as e:
-        handle_errors_and_logging(e)
+        app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/getfabricators", methods=["GET"])
@@ -28,7 +27,7 @@ def getRegisteredFabricators():
         fabricators = Fabricator.queryAll()
         return jsonify([fab.__to_JSON__() for fab in fabricators])
     except Exception as e:
-        handle_errors_and_logging(e)
+        app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/register", methods=["POST"])
@@ -48,7 +47,7 @@ def registerFabricator():
         print(f"Database error during registration: {db_err}")
         return jsonify({"error": "Database error occurred"}), 500
     except Exception as e:
-        handle_errors_and_logging(e)
+        app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/deletefabricator", methods=["POST"])
@@ -64,7 +63,7 @@ def deleteFabricator():
         if res: return jsonify({"success": True, "message": "Fabricator deleted successfully"})
         return jsonify({"error": "Failed to delete fabricator"}), 500
     except Exception as e:
-        handle_errors_and_logging(e)
+        app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/editname", methods=["POST"])
@@ -82,7 +81,7 @@ def editName():
         else:
             return jsonify({"error": "Fabricator not found"}), 404
     except Exception as e:
-        handle_errors_and_logging(e)
+        app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/diagnose", methods=["POST"])
@@ -107,7 +106,7 @@ def diagnoseFabricator():
         else:
             return jsonify({"error": "Device not found"}), 404
     except Exception as e:
-        handle_errors_and_logging(e)
+        app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/repair", methods=["POST"])
@@ -119,7 +118,7 @@ def repairFabricator():
         port = Ports.getPortByName(device_name)
 
         if port:
-            fabricator = Fabricator.createDevice(port)  # Ensure the Fabricator has this method
+            fabricator = Fabricator.staticCreateDevice(port)  # Ensure the Fabricator has this method
             if fabricator:
                 repair_result = fabricator.repair()
                 return jsonify({"success": True, "message": repair_result})
@@ -128,7 +127,7 @@ def repairFabricator():
         else:
             return jsonify({"error": "Device not found"}), 404
     except Exception as e:
-        handle_errors_and_logging(e)
+        app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/movehead", methods=["POST"])
@@ -151,7 +150,7 @@ def moveHead():
         else:
             return jsonify({"error": "Device not found"}), 404
     except Exception as e:
-        handle_errors_and_logging(e)
+        app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/movefabricatorlist", methods=["POST"])
@@ -163,5 +162,5 @@ def moveFabricatorList():
         result = current_app.fabricator_list.moveFabricatorList(fabricator_ids)
         return jsonify({"success": True, "message": "Fabricator list successfully updated"}) if result != "none" else jsonify({"success": False, "message": "Fabricator list not updated"})
     except Exception as e:
-        handle_errors_and_logging(e)
+        app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500

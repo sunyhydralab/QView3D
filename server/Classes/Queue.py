@@ -1,5 +1,5 @@
 from collections import deque
-from flask import current_app
+from app import current_app
 
 from Classes.Jobs import Job
 

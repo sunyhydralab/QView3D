@@ -26,6 +26,7 @@ class FabricatorConnection(ABC):
         :return: FabricatorConnection instance
         :rtype: SerialConnection | SocketConnection
         """
+        print(f"Creating connection with port: {port}, baudrate: {baudrate}, timeout: {timeout}, websocket_connections: {websocket_connections}, fabricator_id: {fabricator_id}")
         if websocket_connections is not None and fabricator_id is not None:
             return SocketConnection(websocket_connections, fabricator_id)
         elif port is not None and baudrate is not None:
@@ -196,6 +197,8 @@ class EmuListPortInfo(ListPortInfo):
         self._device = device
         self._description = description
         self._hwid = hwid
+        self.vid = int(hwid.split("PID=")[1].split(":")[0], 16) if hwid else None
+        self.pid = int(hwid.split(":")[2].split(" ")[0], 16) if hwid else None
 
     def __repr__(self):
         return f"EmuListPortInfo(device={self.device}, description={self.description}, hwid={self.hwid})"

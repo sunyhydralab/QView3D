@@ -2,7 +2,7 @@ import os.path
 import sys
 from abc import ABC
 from time import sleep
-from flask import current_app
+from app import current_app
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from Classes.Jobs import Job

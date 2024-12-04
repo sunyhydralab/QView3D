@@ -1,21 +1,19 @@
 import asyncio
 import logging
-import re
 import sys
 import threading
 import uuid
-from flask import Flask, request, Response, send_from_directory
+
+from flask import request, Response, send_from_directory, Flask, current_app as flask_current_app
 from flask_cors import CORS
 import os
-from models.db import db
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 import shutil
 from flask_socketio import SocketIO
 import websockets
-from models.config import Config
-from Classes.FabricatorList import FabricatorList
 from routes import defineRoutes
+from werkzeug.local import LocalProxy
 
 emulator_connections = {}
 
@@ -78,108 +76,131 @@ uploads_folder = os.path.abspath(os.path.join(root_path, 'uploads'))
 
 # moved this up here so we can pass the app to the PrinterStatusService
 # Basic app setup 
-app = Flask(__name__, static_folder=os.path.abspath(os.path.join(root_path, "client", "dist")))
-app.config.from_object(__name__) # update application instantly
-logs = os.path.join(root_path,"server", "logs")
-if not os.path.exists(logs): os.makedirs(logs)
-from Classes.Logger import Logger
-app.logger = Logger("App", consoleLogger=sys.stdout, fileLogger=os.path.abspath(os.path.join(logs, "app.log")), consoleLevel=logging.ERROR)
-# start database connection
-app.config["environment"] = Config.get('environment')
-app.config["ip"] = Config.get('ip')
-app.config["port"] = Config.get('port')
-app.config["base_url"] = Config.get('base_url')
+class MyFlaskApp(Flask):
+    def __init__(self):
+        from models.config import Config
+        from Classes.FabricatorList import FabricatorList
+        from models.db import db
 
-load_dotenv()
-basedir = os.path.abspath(os.path.join(root_path, "server"))
-database_file = os.path.abspath(os.path.join(basedir, Config.get('database_uri')))
-if isinstance(database_file, bytes):
-    database_file = database_file.decode('utf-8')
-databaseuri = 'sqlite:///' + database_file
-app.config['SQLALCHEMY_DATABASE_URI'] = databaseuri
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db.init_app(app)
+        super().__init__(__name__, static_folder=os.path.abspath(os.path.join(root_path, "client", "dist")))
+        self._logger = None
+        from Classes.Logger import Logger
+        logs = os.path.join(root_path, "server", "logs")
+        os.makedirs(logs, exist_ok=True)
+        self.logger = Logger("App", consoleLogger=sys.stdout, fileLogger=os.path.abspath(os.path.join(logs, f"{__name__}.log")),
+                            consoleLevel=logging.ERROR)
+        self.config.from_object(__name__) # update application instantly
+        # start database connection
+        self.config["environment"] = Config.get('environment')
+        self.config["ip"] = Config.get('ip')
+        self.config["port"] = Config.get('port')
+        self.config["base_url"] = Config.get('base_url')
 
-migrate = Migrate(app, db)
-# moved this before importing the blueprints so that it can be accessed by the PrinterStatusService
-#printer_status_service = PrinterStatusService(app)
+        load_dotenv()
+        basedir = os.path.abspath(os.path.join(root_path, "server"))
+        database_file = os.path.abspath(os.path.join(basedir, Config.get('database_uri')))
+        if isinstance(database_file, bytes):
+            database_file = database_file.decode('utf-8')
+        databaseuri = 'sqlite:///' + database_file
+        self.config['SQLALCHEMY_DATABASE_URI'] = databaseuri
+        self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        db.init_app(self)
 
-# Initialize SocketIO, which will be used to send printer status updates to the frontend
-# and this specific socket it will be used throughout the backend
+        Migrate(self, db)
 
-if app.config["environment"] == 'production':
-    async_mode = 'eventlet'  # Use 'eventlet' for production
-else:
-    async_mode = 'threading'  # Use 'threading' for development
+        self.socketio = SocketIO(self, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False,
+                            async_mode='eventlet' if self.config["environment"] == 'production' else 'threading',
+                            transport=['websocket', 'polling'])  # make it eventlet on production!
 
-socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False, async_mode=async_mode, transport=['websocket', 'polling']) # make it eventlet on production!
-app.socketio = socketio  # Add the SocketIO object to the app object
+        self.emulator_connections = emulator_connections
 
-def get_emu_ports():
-    fake_device = next(iter(emulator_connections.values()), None)
-    if fake_device:
-        fake_port = fake_device.fake_port
-        fake_name = fake_device.fake_name
-        fake_hwid = fake_device.fake_hwid
-        return [fake_port, fake_name, fake_hwid]
-    return [None, None, None]
+        CORS(self)
 
-def handle_errors_and_logging(e: Exception | str, fabricator = None):
-    from Classes.Fabricators.Fabricator import Fabricator
-    device = fabricator
-    if isinstance(fabricator, Fabricator):
-        device = fabricator.device
-    if device is not None and hasattr(device,"logger") and device.logger is not None:
-        device.logger.error(e, stacklevel=3)
-    elif app.logger is None:
-        if isinstance(e, str):
-            print(e.strip())
+        # Register all routes
+        defineRoutes(self)
+
+        self.fabricator_list = FabricatorList(self)
+
+        @self.cli.command("test")
+        def run_tests():
+            """Run all tests."""
+            import subprocess
+            subprocess.run(["python", "../Tests/parallel_test_runner.py"])
+
+        @self.before_request
+        def handle_preflight():
+            if request.method == "OPTIONS":
+                res = Response()
+                res.headers['X-Content-Type-Options'] = '*'
+                res.headers['Access-Control-Allow-Origin'] = '*'
+                res.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+                res.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+                return res
+
+        # Serve static files
+        @self.route('/')
+        def serve_static(path='index.html'):
+            return send_from_directory(self.static_folder, path)
+
+        @self.route('/assets/<path:filename>')
+        def serve_assets(filename):
+            return send_from_directory(os.path.join(self.static_folder, 'assets'), filename)
+
+        @self.socketio.on('ping')
+        def handle_ping():
+            self.socketio.emit('pong')
+
+        @self.socketio.on('connect')
+        def handle_connect():
+            print("Client connected")
+
+
+    @property
+    def logger(self):
+        return self._logger
+
+    @logger.setter
+    def logger(self, logger):
+        self._logger = logger
+
+    @logger.getter
+    def logger(self):
+        return self._logger
+
+    def handle_errors_and_logging(self, e: Exception | str, fabricator=None):
+        from Classes.Fabricators.Fabricator import Fabricator
+        device = fabricator
+        if isinstance(fabricator, Fabricator):
+            device = fabricator.device
+        if device is not None and hasattr(device, "logger") and device.logger is not None:
+            device.logger.error(e, stacklevel=3)
+        elif self.logger is None:
+            if isinstance(e, str):
+                print(e.strip())
+            else:
+                import traceback
+                print(traceback.format_exception(None, e, e.__traceback__))
         else:
-            import traceback
-            print(traceback.format_exception(None, e, e.__traceback__))
-    else:
-        app.logger.error(e, stacklevel=3)
-    return False
+            self.logger.error(e, stacklevel=3)
+        return False
 
-app.handle_errors_and_logging = handle_errors_and_logging
+    def get_emu_ports(self):
+        fake_device = next(iter(self.emulator_connections.values()), None)
+        if fake_device:
+            fake_port = fake_device.fake_port
+            fake_name = fake_device.fake_name
+            fake_hwid = fake_device.fake_hwid
 
-CORS(app)
+            return [fake_port, fake_name, fake_hwid]
+        return [None, None, None]
 
-# Register all routes
-defineRoutes(app)
+def _find_custom_app():
+    app = flask_current_app._get_current_object()
+    return app if isinstance(app, MyFlaskApp) else None
 
-@app.cli.command("test")
-def run_tests():
-    """Run all tests."""
-    import subprocess
-    subprocess.run(["python", "../Tests/parallel_test_runner.py"])
+current_app = LocalProxy(_find_custom_app)
 
-@app.before_request
-def handle_preflight():
-    if request.method == "OPTIONS":
-        res = Response()
-        res.headers['X-Content-Type-Options'] = '*'
-        res.headers['Access-Control-Allow-Origin'] = '*'
-        res.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        res.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-        return res
-
-# Serve static files
-@app.route('/')
-def serve_static(path='index.html'):
-    return send_from_directory(app.static_folder, path)
-
-@app.route('/assets/<path:filename>')
-def serve_assets(filename):
-    return send_from_directory(os.path.join(app.static_folder, 'assets'), filename)
-
-@app.socketio.on('ping')
-def handle_ping():
-    app.socketio.emit('pong')
-    
-@app.socketio.on('connect')
-def handle_connect():
-    print("Client connected")
+app = MyFlaskApp()
 
 # own thread
 with app.app_context():
@@ -187,10 +208,6 @@ with app.app_context():
         # Define directory paths for uploads and tempcsv
         uploads_folder = os.path.abspath('../uploads')
         tempcsv = os.path.abspath('../tempcsv')
-        app.get_emu_ports = get_emu_ports
-        app.emulator_connections = emulator_connections
-        fabricator_list = FabricatorList(app)
-        app.fabricator_list = fabricator_list
         # Check if directories exist and handle them accordingly
         for folder in [uploads_folder, tempcsv]:
             if os.path.exists(folder):
@@ -207,7 +224,7 @@ with app.app_context():
 
 def run_socketio(app):
     # host=app.config["ip"], port=app.config["port"]
-    socketio.run(app, Debug=True, allow_unsafe_werkzeug=True)
+    app.socketio.run(app, allow_unsafe_werkzeug=True)
 
 if __name__ == "__main__":
     # If hits last line in GCode file: 
