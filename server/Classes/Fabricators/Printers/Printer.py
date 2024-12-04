@@ -52,7 +52,8 @@ class Printer(Device, metaclass=ABCMeta):
                 if self.status == "cancelled":
                     self.sendGcode(self.cancelCMD)
                     self.verdict = "cancelled"
-                    self.logger.debug("Job cancelled")
+                    if hasattr(self, "logger") and self.logger:
+                        self.logger.debug("Job cancelled")
                     return True
 
                 lines = g.readlines()
@@ -97,7 +98,8 @@ class Printer(Device, metaclass=ABCMeta):
                     if self.status == "cancelled":
                         self.sendGcode(self.cancelCMD)
                         self.verdict = "cancelled"
-                        self.logger.debug("Job cancelled")
+                        if hasattr(self, "logger") and self.logger:
+                            self.logger.debug("Job cancelled")
                         return True
 
                         # print("LINE: ", line, " STATUS: ", self.status, " FILE PAUSE: ", job.getFilePause())
@@ -142,7 +144,8 @@ class Printer(Device, metaclass=ABCMeta):
                         if self.status == "cancelled":
                             self.sendGcode(self.cancelCMD)
                             self.verdict = "cancelled"
-                            self.logger.debug("Job cancelled")
+                            if hasattr(self, "logger") and self.logger:
+                                self.logger.debug("Job cancelled")
                             return True
                         self.status = "printing"
 
@@ -166,14 +169,14 @@ class Printer(Device, metaclass=ABCMeta):
                             sleep(.5)
                             readline = self.serialConnection.readline().decode("utf-8").strip()
                             if readline:
-                                self.logger.debug(readline)
+                                if hasattr(self, "logger") and self.logger: self.logger.debug(readline)
                                 if "T:" in readline and "B:" in readline:
-                                    self.logger.warning(f"Temperature line: {readline}")
+                                    if hasattr(self, "logger") and self.logger: self.logger.warning(f"Temperature line: {readline}")
                                     self.handleTempLine(readline)
                             if self.status == "cancelled":
                                 self.sendGcode(self.cancelCMD)
                                 self.verdict = "cancelled"
-                                self.logger.debug("Job cancelled")
+                                if hasattr(self, "logger") and self.logger: self.logger.debug("Job cancelled")
                                 return True
                             elif self.status == "printing":
                                 self.resume()
@@ -206,16 +209,16 @@ class Printer(Device, metaclass=ABCMeta):
                     # if self.status == "complete" and job.extruded != 0:
                     if self.status == "complete":
                         self.verdict = "complete"
-                        self.logger.debug("Job complete")
+                        if hasattr(self, "logger") and self.logger: self.logger.debug("Job complete")
                         return True
 
                     if self.status == "error":
                         self.verdict = "error"
-                        self.logger.debug("Job error")
+                        if hasattr(self, "logger") and self.logger: self.logger.debug("Job error")
                         return False
             self.verdict = "complete"
             self.status = "complete"
-            self.logger.debug("Job complete")
+            if hasattr(self, "logger") and self.logger: self.logger.debug("Job complete")
             return True
         except Exception as e:
             # self.setStatus("error")
@@ -254,9 +257,9 @@ class Printer(Device, metaclass=ABCMeta):
                     elif hasattr(self, "logger") and self.logger: self.logger.error(e)
                     return False
         if not callables:
-            self.logger.info(f"{gcode.decode().strip()}: Always True")
+            if hasattr(self, "logger") and self.logger: self.logger.info(f"{gcode.decode().strip()}: Always True")
         else:
-            self.logger.info(
+            if hasattr(self, "logger") and self.logger: self.logger.info(
                 gcode.decode().strip() + ": " + (line.decode() if isinstance(line, bytes) else line).strip())
         return True
 
@@ -329,11 +332,12 @@ class Printer(Device, metaclass=ABCMeta):
         :rtype: str
         """
         hashIndex = gcode.decode().split("\n")[0].split(" ")[0]
-        if hashIndex == "M109" or hashIndex == "M190":
-            self.logger.info("Waiting for temperature to stabilize...")
-        elif hashIndex == "G28":
-            self.logger.info("Homing...")
-        return hashIndex
+        if hasattr(self, "logger") and self.logger:
+            if hashIndex == "M109" or hashIndex == "M190":
+                self.logger.info("Waiting for temperature to stabilize...")
+            elif hashIndex == "G28":
+                self.logger.info("Homing...")
+            return hashIndex
 
     def pause(self):
         """
@@ -342,7 +346,7 @@ class Printer(Device, metaclass=ABCMeta):
         :rtype: bool
         """
         if not self.pauseCMD:
-            self.logger.error("Pause command not implemented.")
+            if hasattr(self, "logger") and self.logger: self.logger.error("Pause command not implemented.")
             return True
         try:
             assert self.pauseCMD is not None
@@ -352,20 +356,15 @@ class Printer(Device, metaclass=ABCMeta):
             if hasattr(self, "keepAliveCMD") and self.keepAliveCMD:
                 self.sendGcode(self.keepAliveCMD)
             self.sendGcode(self.pauseCMD)
-            self.logger.info("Job Paused")
+            if hasattr(self, "logger") and self.logger: self.logger.info("Job Paused")
             return True
         except Exception as e:
-            if self.logger is None:
-                print(e)
-            else:
-                self.logger.error("Error pausing job:")
-                self.logger.error(e)
-            return False
+            return current_app.handle_errors_and_logging(e, self)
 
     def resume(self):
         """Resume the device, if the resume command is implemented."""
         if self.resumeCMD is None:
-            self.logger.error("Resume command not implemented.")
+            if hasattr(self, "logger") and self.logger: self.logger.error("Resume command not implemented.")
             return False
         try:
             assert isinstance(self, Device), "self is not an instance of Device"
@@ -373,15 +372,10 @@ class Printer(Device, metaclass=ABCMeta):
             assert self.serialConnection.is_open, "Serial connection is not open"
             if hasattr(self, "doNotKeepAliveCMD") and self.doNotKeepAliveCMD: self.sendGcode(self.doNotKeepAliveCMD)
             self.sendGcode(self.resumeCMD)
-            self.logger.info("Job Resumed")
+            if hasattr(self, "logger") and self.logger: self.logger.info("Job Resumed")
             return True
         except Exception as e:
-            if self.logger is None:
-                print(e)
-            else:
-                self.logger.error("Error resuming job:")
-                self.logger.error(e)
-            return False
+            return current_app.handle_errors_and_logging(e, self)
 
     def connect(self):
         super().connect()

@@ -146,14 +146,14 @@ class Device(ABC):
         assert isinstance(isVerbose, bool), f"Expected bool, got {type(isVerbose)}"
         try:
             with open(file, "r") as f:
-                if hasattr(self, "logger"): self.logger.info(f"Printing {file}")
+                if hasattr(self, "logger") and self.logger: self.logger.info(f"Printing {file}")
                 for line in f:
                     if line.startswith(";") or line == "\n":
                         continue
                     if current_app:
                         with current_app.app_context():
                             current_app.socketio.emit("gcode_line", {"line": line.strip("\n"), "printerid": self.dbID})
-                    if isVerbose and hasattr(self, "logger"): self.logger.debug(line.strip("\n"))
+                    if isVerbose and hasattr(self, "logger") and self.logger: self.logger.debug(line.strip("\n"))
                     if self.status == "paused":
                         self.pause()
                         while self.status == "paused":
@@ -162,7 +162,7 @@ class Device(ABC):
                                 if isinstance(self, hasEndingSequence):
                                     self.endSequence()
                                 self.verdict = "cancelled"
-                                if hasattr(self, "logger"): self.logger.info("Job cancelled")
+                                if hasattr(self, "logger") and self.logger: self.logger.info("Job cancelled")
                                 return True
                             elif self.status == "printing":
                                 self.resume()
@@ -170,20 +170,20 @@ class Device(ABC):
                         if isinstance(self, hasEndingSequence):
                             self.endSequence()
                         self.verdict = "cancelled"
-                        if hasattr(self, "logger"): self.logger.info("Job cancelled")
+                        if hasattr(self, "logger") and self.logger: self.logger.info("Job cancelled")
                         return True
                     if ";" in line:
                         line = line.split(";")[0].strip() + "\n"
                     self.sendGcode(line.encode("utf-8"), isVerbose=isVerbose)
             self.verdict = "complete"
-            if hasattr(self, "logger"): self.logger.info("Job complete")
+            if hasattr(self, "logger") and self.logger: self.logger.info("Job complete")
             return True
         except Exception as e:
             if not hasattr(self, "logger") or self.logger is None:
                 print(e)
             else:
-                if hasattr(self, "logger"): self.logger.error("Error cancelling job:")
-                if hasattr(self, "logger"): self.logger.error(e)
+                self.logger.error("Error cancelling job:")
+                self.logger.error(e)
             self.verdict = "error"
             return True
 
@@ -211,7 +211,7 @@ class Device(ABC):
         assert isinstance(gcode, bytes)
         assert isinstance(isVerbose, bool)
         self.serialConnection.write(gcode)
-        if isVerbose and hasattr(self, "logger"): self.logger.debug(gcode.decode("utf-8"))
+        if isVerbose and hasattr(self, "logger") and self.logger: self.logger.debug(gcode.decode("utf-8"))
         return True
 
     def getToolHeadLocation(self, isVerbose = False):
@@ -227,7 +227,7 @@ class Device(ABC):
         response = ""
         while not (("X:" in response) and ("Y:" in response) and ("Z:" in response)):
             response = self.serialConnection.readline().decode("utf-8")
-            if isVerbose and hasattr(self, "logger"): self.logger.info(response)
+            if isVerbose and hasattr(self, "logger") and self.logger: self.logger.info(response)
         loc = LocationResponse(response)
         return Vector3(loc.x, loc.y, loc.z)
 
@@ -241,20 +241,20 @@ class Device(ABC):
                 return "Repair not necessary for Ender devices."
 
             if self.serialConnection:
-                if hasattr(self, "logger"): self.logger.info("Closing existing connection for repair.")
+                if hasattr(self, "logger") and self.logger: self.logger.info("Closing existing connection for repair.")
                 self.serialConnection.close()
 
             # Attempt to reconnect
-            if hasattr(self, "logger"): self.logger.info("Attempting to reconnect for repair.")
+            if hasattr(self, "logger") and self.logger: self.logger.info("Attempting to reconnect for repair.")
             self.connect()
 
             if self.serialConnection and self.serialConnection.is_open:
-                if hasattr(self, "logger"): self.logger.info("Repair successful: connection reopened.")
+                if hasattr(self, "logger") and self.logger: self.logger.info("Repair successful: connection reopened.")
                 return "Repair successful."
             else:
                 return "Repair failed: unable to reopen connection."
         except Exception as e:
-            if hasattr(self, "logger"): self.logger.error(f"Error during repair: {e}")
+            if hasattr(self, "logger") and self.logger: self.logger.error(f"Error during repair: {e}")
             return f"Repair failed with error: {e}"
 
     def diagnose(self):
@@ -262,25 +262,25 @@ class Device(ABC):
         try:
             if self.MODEL and "Ender" in self.MODEL:
                 # If the device is an Ender, skip the diagnosis
-                if hasattr(self, "logger"): self.logger.info(f"Diagnosis skipped for {self.MODEL}")
+                if hasattr(self, "logger") and self.logger: self.logger.info(f"Diagnosis skipped for {self.MODEL}")
                 return "Diagnosis not necessary for Ender devices."
 
-            if hasattr(self, "logger"): self.logger.info("Starting device diagnosis.")
+            if hasattr(self, "logger") and self.logger: self.logger.info("Starting device diagnosis.")
             if not self.connect():
                 return "Diagnosis failed: unable to connect."
 
-            if hasattr(self, "logger"): self.logger.info("Sending diagnostic G-code command (e.g., M115).")
+            if hasattr(self, "logger") and self.logger: self.logger.info("Sending diagnostic G-code command (e.g., M115).")
             self.sendGcode(b"M115\n")
 
             response = self.serialConnection.readline().decode("utf-8").strip()
 
             if response:
-                if hasattr(self, "logger"): self.logger.info(f"Diagnosis response: {response}")
+                if hasattr(self, "logger") and self.logger: self.logger.info(f"Diagnosis response: {response}")
                 return response
             else:
                 return "Diagnosis failed: no response from device."
         except Exception as e:
-            if hasattr(self, "logger"): self.logger.error(f"Error during diagnosis: {e}")
+            if hasattr(self, "logger") and self.logger: self.logger.error(f"Error during diagnosis: {e}")
             return f"Diagnosis failed with error: {e}"
 
     def hardReset(self, newStatus: str):
