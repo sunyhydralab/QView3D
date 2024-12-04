@@ -144,10 +144,14 @@ def moveHead():
             if app:
                 fab = app.fabricator_list.getFabricatorByPort(port)
                 print(fab if fab else f"No fabricator found in fabricator list, fabricator_list: {app.fabricator_list.fabricators}, threads: {app.fabricator_list.fabricator_threads}")
-                if fab: device = fab.device
-                elif port.startswith("EMU"): device = Fabricator.staticCreateDevice(Ports.getPortByName(port), websocket_connection=next(iter(app.emulator_connections.values())))
-                else: device = Fabricator.staticCreateDevice(Ports.getPortByName(port))
-            else: device = Fabricator(port).device
+                if fab: 
+                    device = fab.device
+                elif port.startswith("EMU"):
+                    device = Fabricator.staticCreateDevice(Ports.getPortByName(port), websocket_connection=next(iter(app.emulator_connections.values())))
+                else:
+                    device = Fabricator.staticCreateDevice(Ports.getPortByName(port)) 
+            else: 
+                device = Fabricator(port).device
             device.connect()
             result = device.home()  # Use home() method from Device
             device.disconnect()

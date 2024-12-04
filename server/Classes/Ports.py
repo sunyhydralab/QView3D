@@ -54,12 +54,13 @@ class Ports:
         """Get a specific port by its device name."""
         assert isinstance(name, str), f"Name must be a string: {name} : {type(name)}"
         ports = Ports.getListPorts()
-        emu_port, emu_name, emu_hwid = app.get_emu_ports()
-        if emu_port and emu_name and emu_hwid:
-            ports.append(EmuListPortInfo(emu_port, description="Emulator", hwid=emu_hwid))
+        if app.emulator_connections:
+            emu_port, emu_name, emu_hwid = app.get_emu_ports()
+            if emu_port and emu_name and emu_hwid and emu_name == name:
+                return EmuListPortInfo(emu_port, description="Emulator", hwid=emu_hwid)
         for port in ports:
             if not port: continue
-            if port.device == name:
+            if port.device.lstrip("/dev/") == name:
                 return port
         return None
 
