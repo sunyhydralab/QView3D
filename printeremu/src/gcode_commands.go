@@ -1,12 +1,12 @@
 package src
 
 import (
-    "fmt"
-    "math"
-    "regexp"
-    "strconv"
-    "strings"
-    "time"
+	"fmt"
+	"math"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
 )
 
 type Command interface {
@@ -358,7 +358,7 @@ type M114Command struct{}
 
 func (cmd *M114Command) Execute(printer *Printer) string {
     position := printer.Extruder.Position
-    return fmt.Sprintf("X:%.2f Y:%.2f Z:%.2f\n", position.X, position.Y, position.Z)
+    return fmt.Sprintf("ok\n X:%.2f Y:%.2f Z:%.2f\n ok\n", position.X, position.Y, position.Z)
 }
 
 type M115Command struct{}

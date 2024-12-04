@@ -66,9 +66,9 @@ class FabricatorList:
         newFab: Fabricator | None = None
         if dbFab is not None: # means that the fabricator is in the db
             if listFab is not None: # means that the fabricator is in the list and the db
-                app.handle_errors_and_logging(Exception(f"Fabricator {dbFab.getname()} already exists in the list"), listFab)
+                app.handle_errors_and_logging(Exception(f"Fabricator {dbFab.getName()} already exists in the list"), listFab)
             else: # means that the fabricator is in the db but not in the list
-                newFab = Fabricator(serialPort, name=dbFab.getname())
+                newFab = Fabricator(serialPort, name=dbFab.getName())
                 self.fabricators.append(newFab)
         else: # means that the fabricator is not in the db
             if listFab is not None: # means that the fabricator is in the list but not in the db

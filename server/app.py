@@ -14,14 +14,16 @@ from flask_socketio import SocketIO
 import websockets
 from routes import defineRoutes
 from werkzeug.local import LocalProxy
+from Classes.EventEmitter import EventEmitter
 
 emulator_connections = {}
+event_emitter = EventEmitter()
 
 async def websocket_server():
     async def handle_client(websocket):
         client_id = str(uuid.uuid4())
 
-        print(f"New WebSocket client connected: {client_id}")
+        print(f"Emulator websocket connected: {client_id}")
 
         emulator_connections[client_id] = websocket
 
@@ -29,7 +31,10 @@ async def websocket_server():
             while True:
                 message = await websocket.recv()
                 assert isinstance(message, str), f"Received non-string message: {message}, Type: ({type(message)})"
-                print(f"Received message from {client_id}: {message}")
+                #print(f"Received message from {client_id}: {message}")
+
+                event_emitter.emit("message_received", client_id, message)
+
                 if not hasattr(emulator_connections[client_id],"fake_port"):
                     fake_port = message.split('port":"')[-1].split('",')[0]
                     print(f"Fake port: {fake_port}" if fake_port else "No fake port found")
@@ -50,7 +55,7 @@ async def websocket_server():
                 #await websocket.send(f"Echo from {client_id}: {message}")
         except websockets.exceptions.ConnectionClosed as e:
             # Handle disconnection gracefully
-            print(f"Client {client_id} has been disconnected.")
+            print(f"Emulator '{client_id}' has been disconnected.")
         except Exception as e:
             # Handle any other exception (unexpected disconnection, etc.)
             print(f"Error with client {client_id}: {e}")
@@ -113,6 +118,7 @@ class MyFlaskApp(Flask):
                             transport=['websocket', 'polling'])  # make it eventlet on production!
 
         self.emulator_connections = emulator_connections
+        self.event_emitter = event_emitter
 
         CORS(self)
 

@@ -112,6 +112,8 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 				return
 			}
 
+			message = []byte(strings.ReplaceAll(string(message), "'", "\""))
+
 			if messageType == websocket.TextMessage && string(message) == "close" {
 				fmt.Println("Received 'close' signal from server, ending connection.")
 				return
@@ -148,41 +150,61 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 				}
 
 			case "send_gcode":
-				if data != nil {
-					payload, ok := data.(map[string]interface{})
-					if ok {
-						printerID, pidOk := payload["printerid"].(string)
-						gcode, gcodeOk := payload["gcode"].(string)
+				messageStr := strings.ReplaceAll(string(message), "'", "\"")
+			
+				var parsedMessage map[string]interface{}
+				if err := json.Unmarshal([]byte(messageStr), &parsedMessage); err != nil {
+					log.Println("Error parsing received message:", err)
+					log.Println("Original message:", string(message))
+					continue
+				}
+			
+				data := parsedMessage["data"]
+				if data == nil {
+					log.Println("Received G-code command, but no data.")
+					continue
+				}
+			
+				// Convert data to map
+				dataMap, ok := data.(map[string]interface{})
+				if !ok {
+					log.Println("Data is not a map")
+					continue
+				}
+			
+				printerID, pidOk := dataMap["printerid"].(string)
+				gcode, gcodeOk := dataMap["gcode"].(string)
+			
+				fmt.Print("Received G-code command for printer ", printerID, ": ", gcode, "\n")
+			
+				if pidOk && gcodeOk {
+					response := CommandHandler(gcode, printer)
 
-						if pidOk && gcodeOk {
-							response := CommandHandler(gcode, printer)
-
-							fmt.Println("Gcode executed:", response)
-
-							printerResponse := map[string]interface{}{
-								"printerid": printerID,
-								"response":  response,
-							}
-
-							responseMessage, err := json.Marshal(printerResponse)
-
-							if err != nil {
-								log.Println("Failed to marshal printer_response:", err)
-								continue
-							}
-
-							if err := conn.WriteMessage(websocket.TextMessage, responseMessage); err != nil {
-								log.Println("Error sending printer_response:", err)
-								continue
-							}
-						} else {
-							log.Println("Invalid send_gcode payload")
-						}
+					parsedResponse := ""
+					if response != "Unknown command" {
+						parsedResponse = "ok"
 					} else {
-						log.Println("Received G-code command, but data is not a map")
+						parsedResponse = "Unknown command"
+					}
+			
+					printerResponse := map[string]interface{}{
+						"printerid": printerID,
+						"response":  parsedResponse,
+					}
+			
+					responseMessage, err := json.Marshal(printerResponse)
+			
+					if err != nil {
+						log.Println("Failed to marshal printer_response:", err)
+						continue
+					}
+			
+					if err := conn.WriteMessage(websocket.TextMessage, responseMessage); err != nil {
+						log.Println("Error sending printer_response:", err)
+						continue
 					}
 				} else {
-					log.Println("Received G-code command, but no data")
+					log.Println("Invalid send_gcode payload")
 				}
 			case "printer_connect":
 				RegisterPrinter(conn, printer)
