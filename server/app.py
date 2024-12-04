@@ -15,6 +15,7 @@ import websockets
 from routes import defineRoutes
 from werkzeug.local import LocalProxy
 from Classes.EventEmitter import EventEmitter
+from controllers.emulator import emulator_bp  # import the blueprint
 
 emulator_connections = {}
 event_emitter = EventEmitter()
@@ -63,8 +64,11 @@ async def websocket_server():
              if client_id in emulator_connections:
                 del emulator_connections[client_id]
 
-    server = await websockets.serve(handle_client, "localhost", 8001)
-    await server.wait_closed()
+    try:
+        server = await websockets.serve(handle_client, "localhost", 8001)
+        await server.wait_closed()
+    except Exception as e:
+        print(f"WebSocket server error: {e}")
 
 def start_websocket():
     print("Starting WebSocket server...")
@@ -124,6 +128,7 @@ class MyFlaskApp(Flask):
 
         # Register all routes
         defineRoutes(self)
+        self.register_blueprint(emulator_bp, url_prefix='/api', name='emulator_bp')  # Register the emulator blueprint with a unique name
 
         self.fabricator_list = FabricatorList(self)
 
@@ -225,8 +230,10 @@ with app.app_context():
         app.handle_errors_and_logging(e)
 
 def run_socketio(app):
-    # host=app.config["ip"], port=app.config["port"]
-    app.socketio.run(app, allow_unsafe_werkzeug=True)
+    try:
+        app.socketio.run(app, allow_unsafe_werkzeug=True)
+    except Exception as e:
+        app.handle_errors_and_logging(e)
 
 if __name__ == "__main__":
     # If hits last line in GCode file: 
