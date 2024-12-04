@@ -11,7 +11,7 @@ const registerPrinter = async () => {
     message.value = '';
 
     try {
-        const response = await api('api/registeremulator', { 'data': 'wow' }, 'POST');
+        const response = await api('registeremulator', { 'data': 'wow' }, 'POST');
         
         if (response && response.message) {
             message.value = response.message;
@@ -33,7 +33,7 @@ const disconnectPrinter = async () => {
     message.value = '';
 
     try {
-        const response = await api('api/disconnectemulator', { 'data': 'wow' }, 'POST');
+        const response = await api('disconnectemulator', { 'data': 'wow' }, 'POST');
         
         if (response && response.message) {
             message.value = response.message;

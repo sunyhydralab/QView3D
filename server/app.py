@@ -128,7 +128,6 @@ class MyFlaskApp(Flask):
 
         # Register all routes
         defineRoutes(self)
-        self.register_blueprint(emulator_bp, url_prefix='/api', name='emulator_bp')  # Register the emulator blueprint with a unique name
 
         self.fabricator_list = FabricatorList(self)
 
