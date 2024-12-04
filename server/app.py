@@ -187,11 +187,7 @@ class MyFlaskApp(Flask):
     def get_emu_ports(self):
         fake_device = next(iter(self.emulator_connections.values()), None)
         if fake_device:
-            fake_port = fake_device.fake_port
-            fake_name = fake_device.fake_name
-            fake_hwid = fake_device.fake_hwid
-
-            return [fake_port, fake_name, fake_hwid]
+            return [fake_device.fake_port, fake_device.fake_name, fake_device.fake_hwid]
         return [None, None, None]
 
 def _find_custom_app():

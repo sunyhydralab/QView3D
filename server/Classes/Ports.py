@@ -26,7 +26,13 @@ class Ports:
             if app:
                 if app.fabricator_list.getFabricatorByPort(port) is None:
                     if port.device == emu_port:
-                        device = Fabricator.staticCreateDevice(port, websocket_connection=next(iter(app.emulator_connections.values())))
+                        print(f"emulator_connections: {app.emulator_connections}" if app.emulator_connections else "No emulator connections")
+                        values = app.emulator_connections.values()
+                        print(values)
+                        ws = next(iter(values), None)
+                        print(ws if ws else "No websocket connection")
+                        device = Fabricator.staticCreateDevice(port, websocket_connection=ws)
+                        print(device)
                     else:
                         device = Fabricator.staticCreateDevice(port)
                     full_devices.append(device)

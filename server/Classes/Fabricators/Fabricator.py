@@ -108,17 +108,15 @@ class Fabricator(db.Model):
         from Classes.Fabricators.Printers.MakerBot.MakerBotPrinter import MakerBotPrinter
         from Classes.Fabricators.Printers.Prusa.PrusaPrinter import PrusaPrinter
         if serialPort.vid == PrusaPrinter.VENDORID:
-            print("Creating Prusa Printer")
             from Classes.Fabricators.Printers.Prusa.PrusaMK3 import PrusaMK3
             from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
             from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
             if serialPort.pid == PrusaMK4.PRODUCTID:
-                print("Creating Prusa MK4")
-                return PrusaMK4(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False)
+                return PrusaMK4(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False, websocket_connection=websocket_connection)
             elif serialPort.pid == PrusaMK4S.PRODUCTID:
-                return PrusaMK4S(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False)
+                return PrusaMK4S(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False, websocket_connection=websocket_connection)
             elif serialPort.pid == PrusaMK3.PRODUCTID:
-                return PrusaMK3(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False)
+                return PrusaMK3(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False, websocket_connection=websocket_connection)
             else:
                 return None
         elif serialPort.vid == EnderPrinter.VENDORID:
@@ -126,15 +124,15 @@ class Fabricator(db.Model):
             from Classes.Fabricators.Printers.Ender.Ender3Pro import Ender3Pro
             model = Fabricator.getModelFromGcodeCommand(serialPort)
             if "Ender-3 Pro" in model:
-                return Ender3Pro(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False)
+                return Ender3Pro(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False, websocket_connection=websocket_connection)
             elif "Ender-3" in model:
-                return Ender3(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False)
+                return Ender3(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False, websocket_connection=websocket_connection)
             else:
                 return None
         elif serialPort.vid == MakerBotPrinter.VENDORID:
             from Classes.Fabricators.Printers.MakerBot.Replicator2 import Replicator2
             if serialPort.pid == Replicator2.PRODUCTID:
-                return Replicator2(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False)
+                return Replicator2(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False, websocket_connection=websocket_connection)
         else:
             #TODO: assume generic printer, do stuff
             return None

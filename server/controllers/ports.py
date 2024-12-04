@@ -1,5 +1,5 @@
 from sqlalchemy.exc import SQLAlchemyError
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request
 
 from app import current_app as app
 from Classes.Fabricators.Device import Device
@@ -91,7 +91,7 @@ def diagnoseFabricator():
         data = request.get_json()
         device_name = data['device']
         port = Ports.getPortByName(device_name)
-        fabricator = current_app.fabricator_list.getFabricatorByPort(port)
+        fabricator = app.fabricator_list.getFabricatorByPort(port)
         if fabricator:
             device = fabricator.device
             if device is None:
@@ -137,10 +137,11 @@ def moveHead():
         data = request.get_json()
         port = data['port']
         if port:
-            if current_app:
-                fab = current_app.fabricator_list.getFabricatorByPort(port)
-                print(fab if fab else f"No fabricator found in fabricator list, fabricator_list: {current_app.fabricator_list.fabricators}, threads: {current_app.fabricator_list.fabricator_threads}")
+            if app:
+                fab = app.fabricator_list.getFabricatorByPort(port)
+                print(fab if fab else f"No fabricator found in fabricator list, fabricator_list: {app.fabricator_list.fabricators}, threads: {app.fabricator_list.fabricator_threads}")
                 if fab: device = fab.device
+                elif port.startswith("EMU"): device = Fabricator.staticCreateDevice(Ports.getPortByName(port), websocket_connection=next(iter(app.emulator_connections.values())))
                 else: device = Fabricator.staticCreateDevice(Ports.getPortByName(port))
             else: device = Fabricator(port).device
             device.connect()
@@ -159,7 +160,7 @@ def moveFabricatorList():
     try:
         data = request.get_json()
         fabricator_ids = data['fabricator_ids']
-        result = current_app.fabricator_list.moveFabricatorList(fabricator_ids)
+        result = app.fabricator_list.moveFabricatorList(fabricator_ids)
         return jsonify({"success": True, "message": "Fabricator list successfully updated"}) if result != "none" else jsonify({"success": False, "message": "Fabricator list not updated"})
     except Exception as e:
         app.handle_errors_and_logging(e)

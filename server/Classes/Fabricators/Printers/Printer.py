@@ -390,8 +390,7 @@ class Printer(Device, metaclass=ABCMeta):
                 self.serialConnection.write(b"M155 S1\n")
                 return True
         except Exception as e:
-            from app import handle_errors_and_logging
-            return handle_errors_and_logging(e, self)
+            return current_app.handle_errors_and_logging(e, self)
 
     def disconnect(self: Device):
         if self.serialConnection and self.serialConnection.is_open:

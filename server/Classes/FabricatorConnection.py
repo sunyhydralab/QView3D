@@ -28,7 +28,7 @@ class FabricatorConnection(ABC):
         """
         print(f"Creating connection with port: {port}, baudrate: {baudrate}, timeout: {timeout}, websocket_connections: {websocket_connections}, fabricator_id: {fabricator_id}")
         if websocket_connections is not None and fabricator_id is not None:
-            return SocketConnection(websocket_connections, fabricator_id)
+            return SocketConnection(port, baudrate, timeout, websocket_connections, fabricator_id)
         elif port is not None and baudrate is not None:
             return SerialConnection(port, baudrate, timeout=timeout)
         else:
@@ -128,8 +128,8 @@ class SocketConnection(FabricatorConnection):
             # Emit a disconnect event if needed
             self._send_message("printer_disconnect", {"printerid": self._fabricator_id})
             self._is_open = False
-            if self._websocket:
-                asyncio.run(self._websocket.close())  # Ensure closing the websocket.
+            if self._websocket_connection:
+                asyncio.run(self._websocket_connection.close())  # Ensure closing the websocket.
 
     def open(self):
         """
@@ -185,9 +185,9 @@ class SocketConnection(FabricatorConnection):
 
     def _send_message(self, event, data):
         """Helper to send messages via the WebSocket connection."""
-        if self._websocket and self._is_open:
+        if self._websocket_connection and self._is_open:
             message = {"event": event, "data": data}
-            asyncio.run(self._websocket.send(str(message)))
+            asyncio.run(self._websocket_connection.send(str(message)))
         else:
             print(f"Cannot send message: WebSocket connection is not open or not available.")
 

@@ -48,7 +48,7 @@ class Device(ABC):
         self.websocket_connection = websocket_connection
 
     def __repr__(self):
-        return f"{self.getModel()} on {self.getSerialPort().device}"
+        return f"port: {self.serialPort.device}, status: {self.status}, websocket_connection: {self.websocket_connection if self.websocket_connection else 'None'}"
 
     def __to_JSON__(self):
         return {
@@ -106,8 +106,7 @@ class Device(ABC):
             assert self.getHomePosition() == self.getToolHeadLocation(), f"Failed to home, expected {self.getHomePosition()} but got {self.getToolHeadLocation()}"
             return True
         except Exception as e:
-            from app import handle_errors_and_logging
-            return handle_errors_and_logging(e, self)
+            return current_app.handle_errors_and_logging(e, self)
 
     def goTo(self, loc: Vector3, isVerbose: bool = False):
         """
