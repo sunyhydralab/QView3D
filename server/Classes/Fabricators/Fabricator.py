@@ -51,7 +51,7 @@ class Fabricator(db.Model):
             self.devicePort = dbFab.devicePort
             self.date = dbFab.date
             self.dbID = dbFab.dbID
-        self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True)
+        self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True, websocket_connection=next(iter(app.emulator_connections.values(), None)) if port.device == app.get_emu_ports()[0] else None)
         if self.description == "New Fabricator": self.description = self.device.getDescription()
         db.session.commit()
 
@@ -94,6 +94,7 @@ class Fabricator(db.Model):
     def staticCreateDevice(serialPort: ListPortInfo | SysFS | None, consoleLogger=None, fileLogger=None, websocket_connection=None):
         """
         creates the correct printer object based on the serial port info
+        :param websocket_connection: the websocket connection to the emulator, if it exists
         :param serialPort:
         :type serialPort: ListPortInfo | SysFS | None
         :param consoleLogger:
@@ -137,9 +138,11 @@ class Fabricator(db.Model):
             #TODO: assume generic printer, do stuff
             return None
 
-    def createDevice(self, serialPort: ListPortInfo | SysFS | None, consoleLogger=None, fileLogger=None, addLogger = False):
+    def createDevice(self, serialPort: ListPortInfo | SysFS | None, consoleLogger=None, fileLogger=None, addLogger = False, websocket_connection=None):
         """
         creates the correct printer object based on the serial port info
+        :param websocket_connection: the websocket connection to the emulator, if it exists
+        :type websocket_connection: WebSocket | None
         :param serialPort: the serial port info
         :type serialPort: ListPortInfo | SysFS | None
         :param consoleLogger: the console stream to output to
@@ -163,11 +166,11 @@ class Fabricator(db.Model):
             from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
             from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
             if serialPort.pid == PrusaMK4.PRODUCTID:
-                return PrusaMK4(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger)
+                return PrusaMK4(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection)
             elif serialPort.pid == PrusaMK4S.PRODUCTID:
-                return PrusaMK4S(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger)
+                return PrusaMK4S(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection)
             elif serialPort.pid == PrusaMK3.PRODUCTID:
-                return PrusaMK3(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger)
+                return PrusaMK3(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection)
             else:
                 return None
         elif serialPort.vid == EnderPrinter.VENDORID:
@@ -175,15 +178,15 @@ class Fabricator(db.Model):
             from Classes.Fabricators.Printers.Ender.Ender3Pro import Ender3Pro
             model = Fabricator.getModelFromGcodeCommand(serialPort)
             if "Ender-3 Pro" in model:
-                return Ender3Pro(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger)
+                return Ender3Pro(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection)
             elif "Ender-3" in model:
-                return Ender3(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger)
+                return Ender3(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection)
             else:
                 return None
         elif serialPort.vid == MakerBotPrinter.VENDORID:
             from Classes.Fabricators.Printers.MakerBot.Replicator2 import Replicator2
             if serialPort.pid == Replicator2.PRODUCTID:
-                return Replicator2(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger)
+                return Replicator2(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection)
         else:
             #TODO: assume generic printer, do stuff
             return None
