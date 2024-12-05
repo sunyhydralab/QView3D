@@ -39,7 +39,15 @@ const eventHandlers = {
 
 function sendGCodeCommands(ws) {
     const gcodeCommands = [
-        "M155 S1"
+        "G28",  // Home all axes
+        "G1 X10 Y10 Z10 F1500",  // Move to X:10 Y:10 Z:10
+        "G1 X20 Y20 Z20 F1500",  // Move to X:20 Y:20 Z:20
+        "G1 Z0",  // Move to Z:0
+        "M104 S200",  // Set extruder temperature
+        "M140 S60",  // Set bed temperature
+        "M107",  // Turn off fan
+        "M155 S1", // get temps
+        "M155 S0", // turn off
     ];
 
     gcodeCommands.forEach((gcode, index) => {

@@ -180,6 +180,8 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 				if pidOk && gcodeOk {
 					response := CommandHandler(gcode, printer)
 
+					fmt.Println("Response:", response)
+
 					parsedResponse := ""
 					if response != "Unknown command" {
 						parsedResponse = "ok"
@@ -199,7 +201,7 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 						continue
 					}
 
-					if gcode == "M155" {
+					if gcode != "M155" {
 						err = printer.WriteSerial("gcode_response", string(jsonResponse))
 
 						if err != nil {

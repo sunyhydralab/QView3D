@@ -55,7 +55,7 @@ func CommandHandler(command string, printer *Printer) string {
 						continue
 					}
 				}
-				fmt.Println(result)
+				//fmt.Println(result)
 			}
 		}()
 	}
