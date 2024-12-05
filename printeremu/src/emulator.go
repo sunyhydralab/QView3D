@@ -199,11 +199,13 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 						continue
 					}
 
-					err = printer.WriteSerial("gcode_response", string(jsonResponse))
+					if gcode == "M155" {
+						err = printer.WriteSerial("gcode_response", string(jsonResponse))
 
-					if err != nil {
-						log.Println("Error sending gcode_response:", err)
-						continue
+						if err != nil {
+							log.Println("Error sending gcode_response:", err)
+							continue
+						}
 					}
 				} else {
 					log.Println("Invalid send_gcode payload")
