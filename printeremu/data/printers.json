@@ -12,7 +12,8 @@
         "width": 210,
         "height": 220,
         "startTemp": 0,
-        "productId": "000D"
+        "productId": "000D",
+        "homePos": [14.0, -4.0, 2.0]
       },
       "attributes": {
         "marlin": true
@@ -31,7 +32,8 @@
         "width": 220,
         "height": 250,
         "startTemp": 0,
-        "productId": "7523"
+        "productId": "7523",
+        "homePos": [-3.0, -10.0, 0.0]
       },
       "attributes": {
         "marlin": true

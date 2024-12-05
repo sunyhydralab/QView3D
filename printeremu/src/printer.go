@@ -32,6 +32,7 @@ type Printer struct {
 	Attributes          map[string]interface{}
 	Data                map[string]interface{}
 	WSConnection        *websocket.Conn
+	HomePos             Vector3
 
 	CommandStatus *PrinterCommandStatus
 }
@@ -111,6 +112,12 @@ func NewPrinter(id int, device, description, hwid, name, status, date string, ex
 		Attributes:          make(map[string]interface{}),
 		Data:                make(map[string]interface{}),
 		WSConnection:        nil, // Default will be offline emulator
+
+		HomePos: Vector3{
+			X: 0.0,
+			Y: 0.0,
+			Z: 0.0,
+		},
 
 		CommandStatus: &PrinterCommandStatus{
 			m155Status: M155Status{
@@ -222,9 +229,9 @@ func (printer *Printer) MoveExtruder(targetPos Vector3) error {
 	}
 
 	// Optionally, check if the position is within the allowed print area
-	if targetPos.X < 0 || targetPos.Y < 0 || targetPos.Z < 0 {
+	/* 	if targetPos.X < 0 || targetPos.Y < 0 || targetPos.Z < 0 {
 		return fmt.Errorf("invalid position: coordinates cannot be negative")
-	}
+	} */
 
 	// Check for the printable area bounds (example)
 	if targetPos.X > printer.Heatbed.Width || targetPos.Y > printer.Heatbed.Length || targetPos.Z > printer.Extruder.MaxZHeight {

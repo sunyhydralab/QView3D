@@ -83,10 +83,13 @@ func NewCommand(command string, printer *Printer) Command {
 type G28Command struct{}
 
 func (cmd *G28Command) Execute(printer *Printer) string {
-	if err := printer.MoveExtruder(Vector3{X: 0, Y: 0, Z: 0}); err != nil {
+	homePos := printer.HomePos
+
+	if err := printer.MoveExtruder(homePos); err != nil {
 		return fmt.Sprintf("Error: %s\n", err.Error())
 	}
 
+	// TODO: send as seperate messages for socket
 	return fmt.Sprintf("ok\nX:%.2f Y:%.2f Z:%.2f\nok\n", printer.Extruder.Position.X, printer.Extruder.Position.Y, printer.Extruder.Position.Z)
 }
 

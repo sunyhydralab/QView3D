@@ -56,6 +56,12 @@ func PostRegistry(printer *Printer) {
 	printer.Heatbed.Width = printer.GetData("width").(float64)
 	printer.Extruder.MaxZHeight = printer.GetData("height").(float64)
 	printer.Heatbed.Temp = printer.GetData("startTemp").(float64)
+
+	printer.HomePos = Vector3{
+		X: printer.GetData("homePos").([]interface{})[0].(float64),
+		Y: printer.GetData("homePos").([]interface{})[1].(float64),
+		Z: printer.GetData("homePos").([]interface{})[2].(float64),
+	}
 }
 
 func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, settings *EmulatorSettings) {
@@ -201,7 +207,37 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 						continue
 					}
 
-					if gcode != "M155" {
+					if gcode == "G28" {
+						okResponse := map[string]interface{}{
+							"printerid": printerID,
+							"response":  "ok",
+						}
+
+						okJsonResponse, err := json.Marshal(okResponse)
+
+						if err != nil {
+							log.Println("Error marshaling printer response:", err)
+							continue
+						}
+
+						bodyResponse := map[string]interface{}{
+							"printerid": printerID,
+							"response":  fmt.Sprintf("X:%.2f Y:%.2f Z:%.2f", printer.Extruder.Position.X, printer.Extruder.Position.Y, printer.Extruder.Position.Z),
+						}
+
+						okBodyResponse, err := json.Marshal(bodyResponse)
+
+						if err != nil {
+							log.Println("Error marshaling printer response:", err)
+							continue
+						}
+
+						err = printer.WriteSerial("gcode_response", string(okJsonResponse))
+
+						err = printer.WriteSerial("gcode_response", string(okBodyResponse))
+
+						err = printer.WriteSerial("gcode_response", string(okJsonResponse))
+					} else if gcode != "M155" {
 						err = printer.WriteSerial("gcode_response", string(jsonResponse))
 
 						if err != nil {
