@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -14,13 +15,32 @@ import (
 	"printeremu/src"
 )
 
+func getDataFilePath(filename string) string {
+	// Get the current working directory
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Error getting working directory: %v", err)
+	}
+
+	if filepath.Base(wd) == "cmd" {
+		// Go up one level to the root project directory
+		wd = filepath.Dir(wd)
+	}
+
+	// Construct the absolute path to the file
+	return filepath.Join(wd, "data", filename)
+}
+
 func main() {
-	settings, err := src.LoadSettings("data/settings.json")
+	settingsFilePath := getDataFilePath("settings.json")
+	printersFilePath := getDataFilePath("printers.json")
+
+	settings, err := src.LoadSettings(settingsFilePath)
 	if err != nil {
 		log.Fatalf("Error loading settings: %v", err)
 	}
 
-	printers, err := src.LoadPrinters("data/printers.json")
+	printers, err := src.LoadPrinters(printersFilePath)
 	if err != nil {
 		log.Fatalf("Error loading printers: %v", err)
 	}
