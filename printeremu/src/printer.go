@@ -313,7 +313,13 @@ func (m *M155Status) Start(interval time.Duration, resultChan chan string, print
 			case <-ticker.C:
 				// Send result via the result channel
 				result := fmt.Sprintf("T:%.1f /%.1f B:%.1f /%.1f T0:%.1f /%.1f @:0 B@:0 P:%.1f A:26.4",
-					0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) // Replace with actual values
+					printer.Extruder.ExtruderTemp,
+					printer.Extruder.TargetTemp,
+					printer.Heatbed.Temp,
+					printer.Heatbed.TargetTemp,
+					printer.Extruder.ExtruderTemp,
+					printer.Extruder.TargetTemp,
+					printer.HeatbreakTemp)
 				select {
 				case m.ResultChan <- result:
 				default:
