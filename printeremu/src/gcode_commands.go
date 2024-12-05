@@ -33,15 +33,9 @@ func CommandHandler(command string, printer *Printer) string {
 	}
 
 	if m155Cmd, ok := cmd.(*M155Command); ok {
-		if m155Cmd.interval == 0 {
-			m155Cmd.Stop()
-			return "ok"
-		}
-
 		go func() {
 			for result := range m155Cmd.resultChan {
 				if printer.WSConnection != nil {
-
 					printerResponse := map[string]interface{}{
 						"printerid": printer.Id,
 						"response":  result,
@@ -546,59 +540,24 @@ func NewM155Command(command string) *M155Command {
 
 func (cmd *M155Command) Execute(printer *Printer) string {
 	if cmd.interval == 0 {
-		cmd.Stop()
+		printer.CommandStatus.m155Status.Stop()
 		return "ok"
 	}
 
-	if !cmd.once {
-		cmd.once = true
-		result := fmt.Sprintf("ok T:%.1f /%.1f B:%.1f /%.1f T0:%.1f /%.1f @:0 B@:0 P:%.1f A:26.4",
+	if !printer.CommandStatus.m155Status.IsRunning {
+		printer.CommandStatus.m155Status.Start(cmd.interval, cmd.resultChan)
+
+		return (fmt.Sprintf("ok T:%.1f /%.1f B:%.1f /%.1f T0:%.1f /%.1f @:0 B@:0 P:%.1f A:26.4",
 			printer.Extruder.ExtruderTemp,
 			printer.Extruder.TargetTemp,
 			printer.Heatbed.Temp,
 			printer.Heatbed.TargetTemp,
 			printer.Extruder.ExtruderTemp,
 			printer.Extruder.TargetTemp,
-			printer.HeatbreakTemp)
-
-		go func() {
-			ticker := time.NewTicker(cmd.interval)
-			defer ticker.Stop()
-
-			for {
-				select {
-				case <-ticker.C:
-					result := fmt.Sprintf("T:%.1f /%.1f B:%.1f /%.1f T0:%.1f /%.1f @:0 B@:0 P:%.1f A:26.4",
-						printer.Extruder.ExtruderTemp,
-						printer.Extruder.TargetTemp,
-						printer.Heatbed.Temp,
-						printer.Heatbed.TargetTemp,
-						printer.Extruder.ExtruderTemp,
-						printer.Extruder.TargetTemp,
-						printer.HeatbreakTemp)
-
-					select {
-					case cmd.resultChan <- result:
-						//log.Println("Sent result to channel")
-					default:
-						//log.Println("Channel is blocked, unable to send result")
-					}
-
-				case <-cmd.stopChan:
-					close(cmd.resultChan)
-					return
-				}
-			}
-		}()
-
-		return result
+			printer.HeatbreakTemp))
 	}
 
 	return "ok"
-}
-
-func (cmd *M155Command) Stop() {
-	close(cmd.stopChan)
 }
 
 // ==================== Parsing Helpers ====================

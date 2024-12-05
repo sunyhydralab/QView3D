@@ -36,15 +36,16 @@ type Printer struct {
 }
 
 type PrinterCommandStatus struct {
-	m115Status M115Status
+	m155Status M155Status
 }
 
-type M115Status struct {
+type M155Status struct {
 	Interval   time.Duration
 	StopChan   chan struct{}
 	ResultChan chan string
 	Once       bool
 	Mutex      sync.Mutex
+	IsRunning  bool
 }
 
 // DisableMotor disables a motor for a specific axis
@@ -111,11 +112,12 @@ func NewPrinter(id int, device, description, hwid, name, status, date string, ex
 		WSConnection:        nil, // Default will be offline emulator
 
 		CommandStatus: &PrinterCommandStatus{
-			m115Status: M115Status{
+			m155Status: M155Status{
 				Interval:   0,
 				StopChan:   make(chan struct{}),
 				ResultChan: make(chan string),
 				Once:       false,
+				IsRunning:  false,
 			},
 		},
 	}
@@ -255,6 +257,57 @@ func (printer *Printer) GetHwid() string {
 
 func (printer *Printer) SetHwid(hwid string) {
 	printer.Hwid = hwid
+}
+
+// Start method to start the M155 status update
+func (m *M155Status) Start(interval time.Duration, resultChan chan string) {
+	m.Mutex.Lock()
+	defer m.Mutex.Unlock()
+
+	if m.IsRunning {
+		return // Avoid starting a new update if it's already running
+	}
+
+	m.Interval = interval
+	m.ResultChan = resultChan
+	m.StopChan = make(chan struct{})
+	m.IsRunning = true
+
+	go func() {
+		ticker := time.NewTicker(m.Interval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				// Send result via the result channel
+				result := fmt.Sprintf("T:%.1f /%.1f B:%.1f /%.1f T0:%.1f /%.1f @:0 B@:0 P:%.1f A:26.4",
+					0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) // Replace with actual values
+				select {
+				case m.ResultChan <- result:
+				default:
+				}
+
+			case <-m.StopChan:
+				m.IsRunning = false
+				close(m.ResultChan)
+				return
+			}
+		}
+	}()
+}
+
+// Stop method to stop the M155 status update
+func (m *M155Status) Stop() {
+	m.Mutex.Lock()
+	defer m.Mutex.Unlock()
+
+	if !m.IsRunning {
+		return // If it's not running, do nothing
+	}
+
+	close(m.StopChan) // Signal the goroutine to stop
+	m.IsRunning = false
 }
 
 func (printer *Printer) WriteSerial(event string, data interface{}) error {
