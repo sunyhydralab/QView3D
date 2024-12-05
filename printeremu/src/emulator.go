@@ -78,6 +78,8 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 
 	fmt.Println("Connected to WebSocket server")
 
+	printer.WSConnection = conn
+
 	pingTicker := time.NewTicker(5 * time.Second)
 	defer pingTicker.Stop()
 
@@ -87,19 +89,9 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 			fmt.Println("Context canceled, closing connection.")
 			return
 		case <-pingTicker.C:
-			pingMessage := map[string]interface{}{
-				"event": "ping",
-				"data":  "alive",
-			}
-
-			jsonPingMessage, err := json.Marshal(pingMessage)
+			err := printer.WriteSerial("ping", "alive")
 
 			if err != nil {
-				log.Println("Failed to marshal ping message:", err)
-				return
-			}
-
-			if err := conn.WriteMessage(websocket.TextMessage, jsonPingMessage); err != nil {
 				log.Println("Error sending ping message:", err)
 				return
 			}
@@ -151,32 +143,40 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 
 			case "send_gcode":
 				messageStr := strings.ReplaceAll(string(message), "'", "\"")
-			
+
 				var parsedMessage map[string]interface{}
 				if err := json.Unmarshal([]byte(messageStr), &parsedMessage); err != nil {
 					log.Println("Error parsing received message:", err)
 					log.Println("Original message:", string(message))
 					continue
 				}
-			
+
 				data := parsedMessage["data"]
 				if data == nil {
 					log.Println("Received G-code command, but no data.")
 					continue
 				}
-			
+
 				// Convert data to map
 				dataMap, ok := data.(map[string]interface{})
 				if !ok {
 					log.Println("Data is not a map")
 					continue
 				}
-			
+
 				printerID, pidOk := dataMap["printerid"].(string)
 				gcode, gcodeOk := dataMap["gcode"].(string)
-			
+
 				fmt.Print("Received G-code command for printer ", printerID, ": ", gcode, "\n")
-			
+
+				if !pidOk {
+					log.Println("Missing or invalid 'printerid' field in 'send_gcode' event data")
+				}
+
+				if !gcodeOk {
+					log.Println("Missing or invalid 'gcode' field in 'send_gcode' event data")
+				}
+
 				if pidOk && gcodeOk {
 					response := CommandHandler(gcode, printer)
 
@@ -186,21 +186,23 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 					} else {
 						parsedResponse = "Unknown command"
 					}
-			
+
 					printerResponse := map[string]interface{}{
 						"printerid": printerID,
 						"response":  parsedResponse,
 					}
-			
-					responseMessage, err := json.Marshal(printerResponse)
-			
+
+					jsonResponse, err := json.Marshal(printerResponse)
+
 					if err != nil {
-						log.Println("Failed to marshal printer_response:", err)
+						log.Println("Error marshaling printer response:", err)
 						continue
 					}
-			
-					if err := conn.WriteMessage(websocket.TextMessage, responseMessage); err != nil {
-						log.Println("Error sending printer_response:", err)
+
+					err = printer.WriteSerial("gcode_response", string(jsonResponse))
+
+					if err != nil {
+						log.Println("Error sending gcode_response:", err)
 						continue
 					}
 				} else {
@@ -248,21 +250,12 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 					"hwid":      hwid,
 				}
 
-				message := map[string]interface{}{
-					"event": "printer_connect",
-					"data":  dataMap,
-				}
-
-				jsonMessage, err := json.Marshal(message)
+				err := printer.WriteSerial("printer_connect", dataMap)
 
 				if err != nil {
-					log.Println("Failed to marshal printer object:", err)
+					log.Println("Failed to send printer_connect:", err)
 					return
 				}
-
-				log.Println("Sending fake serial port message...")
-
-				conn.WriteMessage(websocket.TextMessage, []byte(jsonMessage))
 			default:
 				log.Println("Received from server:", string(message))
 			}

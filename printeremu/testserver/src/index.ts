@@ -15,7 +15,6 @@ const eventHandlers = {
             ws.send(JSON.stringify({ event: 'error', message: 'No printerId provided' }));
             return;
         }
-
         printersMap.set(printerId, { ws, printerInfo });
 
         console.log(`Printer connected with ID: ${printerId}`);
@@ -29,7 +28,7 @@ const eventHandlers = {
             ws.send(JSON.stringify({ event: 'error', message: 'Invalid ping data' }));
         }
     },
-    gcode: (ws, data) => {
+    send_gcode: (ws, data) => {
         // Handle G-code command from the client here
         console.log(`Sent G-code: ${data}`);
     },
@@ -40,21 +39,18 @@ const eventHandlers = {
 
 function sendGCodeCommands(ws) {
     const gcodeCommands = [
-        "G28",  // Home all axes
-        "G1 X10 Y10 Z10 F1500",  // Move to X:10 Y:10 Z:10
-        "G1 X20 Y20 Z20 F1500",  // Move to X:20 Y:20 Z:20
-        "G1 Z0",  // Move to Z:0
-        "M104 S200",  // Set extruder temperature
-        "M140 S60",  // Set bed temperature
-        "M107",  // Turn off fan
+        "M155 S1"
     ];
 
     gcodeCommands.forEach((gcode, index) => {
         setTimeout(() => {
             console.log(`Sending G-code command: ${gcode}`);
             ws.send(JSON.stringify({
-                event: 'gcode',
-                data: gcode
+                event: 'send_gcode',
+                data: { 
+                    printerid: '10000', 
+                    gcode: gcode 
+                }
             }));
         }, index * 2000);  // Send every 2 seconds
     });
@@ -113,6 +109,6 @@ wss.on('connection', (ws) => {
     });
 });
 
-httpServer.listen(8000, () => {
-    console.log("WebSocket server is running on http://127.0.0.1:8000");
+httpServer.listen(8001, () => {
+    console.log("WebSocket server is running on http://127.0.0.1:8001");
 });

@@ -3,6 +3,7 @@ package src
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -30,6 +31,20 @@ type Printer struct {
 	Attributes          map[string]interface{}
 	Data                map[string]interface{}
 	WSConnection        *websocket.Conn
+
+	CommandStatus *PrinterCommandStatus
+}
+
+type PrinterCommandStatus struct {
+	m115Status M115Status
+}
+
+type M115Status struct {
+	Interval   time.Duration
+	StopChan   chan struct{}
+	ResultChan chan string
+	Once       bool
+	Mutex      sync.Mutex
 }
 
 // DisableMotor disables a motor for a specific axis
@@ -94,6 +109,15 @@ func NewPrinter(id int, device, description, hwid, name, status, date string, ex
 		Attributes:          make(map[string]interface{}),
 		Data:                make(map[string]interface{}),
 		WSConnection:        nil, // Default will be offline emulator
+
+		CommandStatus: &PrinterCommandStatus{
+			m115Status: M115Status{
+				Interval:   0,
+				StopChan:   make(chan struct{}),
+				ResultChan: make(chan string),
+				Once:       false,
+			},
+		},
 	}
 
 	return printer, nil
