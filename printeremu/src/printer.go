@@ -3,6 +3,7 @@ package src
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -260,12 +261,42 @@ func (printer *Printer) SetHwid(hwid string) {
 }
 
 // Start method to start the M155 status update
-func (m *M155Status) Start(interval time.Duration, resultChan chan string) {
+func (m *M155Status) Start(interval time.Duration, resultChan chan string, printer *Printer) string {
 	m.Mutex.Lock()
 	defer m.Mutex.Unlock()
 
 	if m.IsRunning {
-		return // Avoid starting a new update if it's already running
+		return "" // Avoid starting a new update if it's already running
+	}
+
+	if !m.IsRunning && printer.WSConnection != nil {
+		result := fmt.Sprintf("ok T:%.1f /%.1f B:%.1f /%.1f T0:%.1f /%.1f @:0 B@:0 P:%.1f A:26.4",
+			printer.Extruder.ExtruderTemp,
+			printer.Extruder.TargetTemp,
+			printer.Heatbed.Temp,
+			printer.Heatbed.TargetTemp,
+			printer.Extruder.ExtruderTemp,
+			printer.Extruder.TargetTemp,
+			printer.HeatbreakTemp)
+
+		printerResponse := map[string]interface{}{
+			"printerid": printer.Id,
+			"response":  result,
+		}
+
+		jsonResponse, err := json.Marshal(printerResponse)
+
+		if err != nil {
+			log.Println("Error marshaling printer response:", err)
+			return ""
+		}
+
+		err = printer.WriteSerial("gcode_response", string(jsonResponse))
+
+		if err != nil {
+			log.Println("Error sending gcode_response:", err)
+			return ""
+		}
 	}
 
 	m.Interval = interval
@@ -295,6 +326,15 @@ func (m *M155Status) Start(interval time.Duration, resultChan chan string) {
 			}
 		}
 	}()
+
+	return fmt.Sprintf("ok T:%.1f /%.1f B:%.1f /%.1f T0:%.1f /%.1f @:0 B@:0 P:%.1f A:26.4",
+		printer.Extruder.ExtruderTemp,
+		printer.Extruder.TargetTemp,
+		printer.Heatbed.Temp,
+		printer.Heatbed.TargetTemp,
+		printer.Extruder.ExtruderTemp,
+		printer.Extruder.TargetTemp,
+		printer.HeatbreakTemp)
 }
 
 // Stop method to stop the M155 status update

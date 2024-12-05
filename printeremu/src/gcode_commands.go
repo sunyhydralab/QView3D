@@ -545,16 +545,7 @@ func (cmd *M155Command) Execute(printer *Printer) string {
 	}
 
 	if !printer.CommandStatus.m155Status.IsRunning {
-		printer.CommandStatus.m155Status.Start(cmd.interval, cmd.resultChan)
-
-		return (fmt.Sprintf("ok T:%.1f /%.1f B:%.1f /%.1f T0:%.1f /%.1f @:0 B@:0 P:%.1f A:26.4",
-			printer.Extruder.ExtruderTemp,
-			printer.Extruder.TargetTemp,
-			printer.Heatbed.Temp,
-			printer.Heatbed.TargetTemp,
-			printer.Extruder.ExtruderTemp,
-			printer.Extruder.TargetTemp,
-			printer.HeatbreakTemp))
+		return printer.CommandStatus.m155Status.Start(cmd.interval, cmd.resultChan, printer)
 	}
 
 	return "ok"
