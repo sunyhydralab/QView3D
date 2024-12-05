@@ -180,6 +180,11 @@ func askForPrinterID(printers []src.Printer) *src.Printer {
 		scanner.Scan()
 		idInput := scanner.Text()
 
+		if idInput == "exit" || idInput == "quit" {
+			fmt.Println("Exiting printer emulator...")
+			os.Exit(0)
+		}
+
 		id, err := strconv.Atoi(idInput)
 
 		if err != nil {
