@@ -2,6 +2,7 @@ import asyncio
 
 class EventEmitter:
     def __init__(self):
+        self._listeners = None
         self._events = {}
 
     def on(self, event_name, callback):
@@ -17,11 +18,9 @@ class EventEmitter:
                 # Trigger the callback with the provided data
                 asyncio.create_task(callback(*args, **kwargs))
 
-    def remove_listener(self, event_name, listener):
+    def remove_event(self, event_name):
         """
         Remove a specific listener for an event
         """
-        if event_name in self._listeners:
-            self._listeners[event_name] = [
-                l for l in self._listeners[event_name] if l != listener
-            ]
+        if event_name in self._events:
+            self._events.pop(event_name)

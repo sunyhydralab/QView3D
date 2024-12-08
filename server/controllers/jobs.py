@@ -433,6 +433,7 @@ def setStatus():
             fabricator.setStatus(newStatus)
             return jsonify({"success": True, "message": "Status updated successfully."}), 200
         else:
+            print(f"Fabricator not found: {printer_id}, fabricator: {fabricator}")
             return jsonify({"error": "Printer not found."}), 404
     except Exception as e:
         current_app.handle_errors_and_logging(e)
@@ -652,6 +653,7 @@ def findPrinterObject(fabricator_id):
     :rtype: Fabricator | None
     """
     threads = current_app.fabricator_list.getThreadArray()
+    print(threads)
     fabricatorThread = list(filter(lambda thread: thread.fabricator.dbID == fabricator_id, threads))
     return fabricatorThread[0].fabricator if len(fabricatorThread) > 0 else None
 

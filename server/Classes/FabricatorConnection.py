@@ -108,26 +108,30 @@ class SocketConnection(FabricatorConnection):
     def read(self):
         """
         Read response from the printer.
-    
+
         :return: Response from the printer as bytes
         """
         if not self._is_open:
             raise ConnectionError("WebSocket connection is not open")
-    
-        # Use a local event and queue for this specific read operation
-        local_response_event = threading.Event()
-        local_receive_queue = Queue()
 
-        def on_message_received(client_id, message):
+        # Use a local event and queue for this specific read operation
+
+        async def on_message_received(client_id, message):
             try:
                 data = json.loads(message)
+                print(data)
 
-                if data.get("printerid") == self._fabricator_id:
-                    response = data.get("response", "")
-                    local_receive_queue.put(response)
-                    local_response_event.set()
-                else:
-                    print(f"Received message from unknown printer {data.get('printerid')}")
+                if data.get("event") != ("gcode_response"):
+                    return
+
+                info: dict = json.loads(data.get("data"))
+
+                # if data.get("printerid") == self._fabricator_id:
+                response = info.get("response", "")
+                self._receive_queue.put(response)
+                self._response_event.set()
+                # else:
+                #     print(f"Received message from unknown printer {data.get('printerid')}")
             except json.JSONDecodeError as e:
                 print(f"Failed to decode message: {message} - {e}")
             except Exception as e:
@@ -135,21 +139,16 @@ class SocketConnection(FabricatorConnection):
 
         #try:
             # Register the temporary listener
-            app.event_emitter.on("message_received", on_message_received)
+        app.event_emitter.on("message_received", on_message_received)
 
-            # Wait for response with timeout
-            if not local_response_event.wait(timeout=self._timeout):
-                return b''
-                #raise TimeoutError(f"No response received within {self._timeout} seconds")
-        
-            try:
-                response = local_receive_queue.get(block=False)
-                return response.encode('utf-8') if response else b''  # Convert string to bytes
-            except Empty:
-                return b''
-        #finally:
+        try:
+            response = self._receive_queue.get(timeout=self._timeout)
+            return response.encode('utf-8') if response else b''  # Convert string to bytes
+        except Empty:
+            return b''
+        finally:
             # Unregister the listener to prevent memory leaks
-            # app.event_emitter.remove_listener("message_received", on_message_received)
+            app.event_emitter.remove_event("message_received")
 
     def close(self):
         """
@@ -204,7 +203,6 @@ class SocketConnection(FabricatorConnection):
         :return: A single line of response
         """
         response = self.read()
-
         if response is None:
             response = b''
 

@@ -1,5 +1,6 @@
 import asyncio
 import threading
+import traceback
 import uuid
 import os
 import shutil
@@ -20,34 +21,33 @@ async def websocket_server():
             while True:
                 message = await websocket.recv()
                 assert isinstance(message, str), f"Received non-string message: {message}, Type: ({type(message)})"
-                #print(f"Received message from {client_id}: {message}")
-
                 event_emitter.emit("message_received", client_id, message)
-
+                fake_port = None
+                fake_name = None
+                fake_hwid = None
                 if not hasattr(emulator_connections[client_id],"fake_port"):
                     fake_port = message.split('port":"')[-1].split('",')[0]
-                    print(f"Fake port: {fake_port}" if fake_port else "No fake port found")
                     if fake_port:
                         emulator_connections[client_id].fake_port = fake_port
                     fake_name = message.split('Name":"')[-1].split('",')[0]
-                    print(f"Fake name: {fake_name}" if fake_name else "No fake name found")
                     if fake_name:
                         emulator_connections[client_id].fake_name = fake_name
                     fake_hwid = message.split('Hwid":"')[-1].split('",')[0]
-                    print(f"Fake Hwid: {fake_hwid}" if fake_hwid else "No fake Hwid found")
                     if fake_hwid:
                         emulator_connections[client_id].fake_hwid = fake_hwid
-                else:
-                    print(f"Fake port: {emulator_connections[client_id].fake_port}")
-                    print(f"Fake name: {emulator_connections[client_id].fake_name}")
-                    print(f"Fake Hwid: {emulator_connections[client_id].fake_hwid}")
-                #await websocket.send(f"Echo from {client_id}: {message}")
-        except websockets.exceptions.ConnectionClosed as e:
+                if fake_hwid is not None and fake_name is not None and fake_port is not None:
+                    break
+            while True:
+                message = await websocket.recv()
+                print(f"Received message: {message}")
+                assert isinstance(message, str), f"Received non-string message: {message}, Type: ({type(message)})"
+                event_emitter.emit("message_received", client_id, message)
+        except websockets.exceptions.ConnectionClosed:
             # Handle disconnection gracefully
             print(f"Emulator '{client_id}' has been disconnected.")
-        except Exception as e:
+        except Exception:
             # Handle any other exception (unexpected disconnection, etc.)
-            print(f"Error with client {client_id}: {e}")
+            print(f"Error with client {client_id}: {traceback.format_exc()}")
         finally:
              if client_id in emulator_connections:
                 del emulator_connections[client_id]
@@ -55,8 +55,8 @@ async def websocket_server():
     try:
         server = await websockets.serve(handle_client, "localhost", 8001)
         await server.wait_closed()
-    except Exception as e:
-        print(f"WebSocket server error: {e}")
+    except Exception:
+        print(f"WebSocket server error: {traceback.format_exc()}")
 
 def start_websocket():
     print("Starting WebSocket server...")

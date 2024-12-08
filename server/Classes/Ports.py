@@ -15,24 +15,14 @@ class Ports:
         emu_port, emu_name, emu_hwid = app.get_emu_ports()
         if emu_port and emu_name and emu_hwid:
             ports.append(EmuListPortInfo(emu_port, description="Emulator", hwid=emu_hwid))
-        # if app:
-        #     if app.fabricator_list is not None:
-        #         print(1)
-        #         [print(fab.device) for fab in app.fabricator_list.fabricators]
-        #     else:
-        #         print("No fabricator list")
         full_devices = []
         for port in ports:
             if app:
                 if app.fabricator_list.getFabricatorByPort(port) is None:
                     if port.device == emu_port:
-                        print(f"emulator_connections: {app.emulator_connections}" if app.emulator_connections else "No emulator connections")
                         values = app.emulator_connections.values()
-                        print(values)
                         ws = next(iter(values), None)
-                        print(ws if ws else "No websocket connection")
                         device = Fabricator.staticCreateDevice(port, websocket_connection=ws)
-                        print(device)
                     else:
                         device = Fabricator.staticCreateDevice(port)
                     full_devices.append(device)
@@ -51,12 +41,18 @@ class Ports:
 
     @staticmethod
     def getPortByName(name: str):
-        """Get a specific port by its device name."""
+        """
+        Get a specific port by its device name.
+        :param name: The name of the device.
+        :type name: str
+        :return: The port object
+        :rtype: ListPortInfo | SysFS
+        """
         assert isinstance(name, str), f"Name must be a string: {name} : {type(name)}"
         ports = Ports.getListPorts()
         if len(app.emulator_connections) > 0:
             emu_port, emu_name, emu_hwid = app.get_emu_ports()
-            if emu_port and emu_name and emu_hwid and emu_name == name:
+            if emu_port and emu_name and emu_hwid and emu_port == name:
                 return EmuListPortInfo(emu_port, description="Emulator", hwid=emu_hwid)
         for port in ports:
             if not port: continue

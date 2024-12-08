@@ -1,10 +1,9 @@
+import traceback
 from abc import ABCMeta
 import re
 from datetime import datetime
 from time import sleep
-
 from globals import current_app
-
 from Classes.Fabricators.Device import Device
 from Classes.Jobs import Job
 from Mixins.hasResponseCodes import checkTime, checkExtruderTemp, checkXYZ, checkBedTemp, checkOK
@@ -52,7 +51,7 @@ class Printer(Device, metaclass=ABCMeta):
                 if self.status == "cancelled":
                     self.sendGcode(self.cancelCMD)
                     self.verdict = "cancelled"
-                    if hasattr(self, "logger") and self.logger:
+                    if self.logger is not None:
                         self.logger.debug("Job cancelled")
                     return True
 
@@ -98,7 +97,7 @@ class Printer(Device, metaclass=ABCMeta):
                     if self.status == "cancelled":
                         self.sendGcode(self.cancelCMD)
                         self.verdict = "cancelled"
-                        if hasattr(self, "logger") and self.logger:
+                        if self.logger is not None:
                             self.logger.debug("Job cancelled")
                         return True
 
@@ -144,7 +143,7 @@ class Printer(Device, metaclass=ABCMeta):
                         if self.status == "cancelled":
                             self.sendGcode(self.cancelCMD)
                             self.verdict = "cancelled"
-                            if hasattr(self, "logger") and self.logger:
+                            if self.logger is not None:
                                 self.logger.debug("Job cancelled")
                             return True
                         self.status = "printing"
@@ -169,14 +168,14 @@ class Printer(Device, metaclass=ABCMeta):
                             sleep(.5)
                             readline = self.serialConnection.readline().decode("utf-8").strip()
                             if readline:
-                                if hasattr(self, "logger") and self.logger: self.logger.debug(readline)
+                                if self.logger is not None: self.logger.debug(readline)
                                 if "T:" in readline and "B:" in readline:
-                                    if hasattr(self, "logger") and self.logger: self.logger.warning(f"Temperature line: {readline}")
+                                    if self.logger is not None: self.logger.warning(f"Temperature line: {readline}")
                                     self.handleTempLine(readline)
                             if self.status == "cancelled":
                                 self.sendGcode(self.cancelCMD)
                                 self.verdict = "cancelled"
-                                if hasattr(self, "logger") and self.logger: self.logger.debug("Job cancelled")
+                                if self.logger is not None: self.logger.debug("Job cancelled")
                                 return True
                             elif self.status == "printing":
                                 self.resume()
@@ -209,31 +208,40 @@ class Printer(Device, metaclass=ABCMeta):
                     # if self.status == "complete" and job.extruded != 0:
                     if self.status == "complete":
                         self.verdict = "complete"
-                        if hasattr(self, "logger") and self.logger: self.logger.debug("Job complete")
+                        if self.logger is not None: self.logger.debug("Job complete")
                         return True
 
                     if self.status == "error":
                         self.verdict = "error"
-                        if hasattr(self, "logger") and self.logger: self.logger.debug("Job error")
+                        if self.logger is not None: self.logger.debug("Job error")
                         return False
             self.verdict = "complete"
             self.status = "complete"
-            if hasattr(self, "logger") and self.logger: self.logger.debug("Job complete")
+            if self.logger is not None: self.logger.debug("Job complete")
             return True
         except Exception as e:
             # self.setStatus("error")
-            from app import handle_errors_and_logging
-            return handle_errors_and_logging(e, self)
+            return current_app.handle_errors_and_logging(e, self)
         
     def sendGcode(self, gcode: bytes | str, isVerbose: bool = False):
+        """
+        Method to send gcode to the printer
+        :param gcode: the line of gcode to send to the printer
+        :type gcode: bytes | str | LiteralString
+        :param isVerbose: whether to log or not
+        :type isVerbose: bool
+        :return: True if the gcode was successfully sent, else False
+        :rtype: bool
+        """
         assert self.serialConnection is not None, "Serial connection is None"
         assert self.serialConnection.is_open, "Serial connection is not open"
         if isinstance(gcode, str):
             if gcode[-1] != "\n": gcode += "\n"
             gcode = gcode.encode("utf-8")
         assert isinstance(gcode, bytes), f"Expected bytes, got {type(gcode)}"
-        self.serialConnection.write(gcode)
+        assert isinstance(isVerbose, bool), f"Expected bool, got {type(isVerbose)}"
         callables = self.callablesHashtable.get(self.extractIndex(gcode), [checkOK])
+        self.serialConnection.write(gcode)
         line = ''
         for func in callables:
             while True:
@@ -241,25 +249,31 @@ class Printer(Device, metaclass=ABCMeta):
                 try:
                     line = self.serialConnection.readline()
                     decLine = line.decode("utf-8").strip()
+                    # print(decLine if decLine != "" else "No line")
+                    print("send gcode ok" if "ok" in decLine.lower() else "send gcode no ok")
                     if "processing" in decLine or "echo" in decLine: continue
                     if "T:" in decLine and "B:" in decLine:
                         self.handleTempLine(decLine)
-                        if func != checkBedTemp and func != checkExtruderTemp:
+                        if func != checkBedTemp and func != checkExtruderTemp and func != checkOK:
                             continue
-                    if hasattr(self, "logger") and self.logger: self.logger.debug(f"{gcode.decode().strip()}: {decLine}")
-                    if func(line):
+                    if self.logger is not None: self.logger.debug(f"{gcode.decode().strip()}: {decLine}")
+                    current_app.socketio.emit("console_update", {"message": decLine, "level": "debug", "printerid": self.dbID})
+                    if func(line, self):
                         break
                 except UnicodeDecodeError:
-                    if isVerbose and hasattr(self, "logger") and self.logger: self.logger.debug(f"{gcode.decode().strip()}: {line.strip()}")
+                    if isVerbose:
+                        if self.logger is not None: self.logger.debug(f"{gcode.decode().strip()}: {line.strip()}")
+                        else: print(f"{gcode.decode().strip()}: {line.strip()}")
                     continue
                 except Exception as e:
                     if current_app: return current_app.handle_errors_and_logging(e, self)
-                    elif hasattr(self, "logger") and self.logger: self.logger.error(e)
+                    elif self.logger is not None: self.logger.error(e)
+                    else: print(traceback.format_exc())
                     return False
         if not callables:
-            if hasattr(self, "logger") and self.logger: self.logger.info(f"{gcode.decode().strip()}: Always True")
+            if self.logger is not None: self.logger.info(f"{gcode.decode().strip()}: Always True")
         else:
-            if hasattr(self, "logger") and self.logger: self.logger.info(
+            if self.logger is not None: self.logger.info(
                 gcode.decode().strip() + ": " + (line.decode() if isinstance(line, bytes) else line).strip())
         return True
 
@@ -279,8 +293,7 @@ class Printer(Device, metaclass=ABCMeta):
             self.filamentType = filamentType
             self.filamentDiameter = filamentDiameter
         except Exception as e:
-            from app import handle_errors_and_logging
-            handle_errors_and_logging(e, self)
+            current_app.handle_errors_and_logging(e, self)
 
     def changeNozzle(self, nozzleDiameter: float):
         """
@@ -294,8 +307,7 @@ class Printer(Device, metaclass=ABCMeta):
             assert self.status == "idle", "Printer is not idle"
             self.nozzleDiameter = nozzleDiameter
         except Exception as e:
-            from app import handle_errors_and_logging
-            handle_errors_and_logging(e, self)
+            current_app.handle_errors_and_logging(e, self)
 
     def handleTempLine(self, line: str):
         """
@@ -321,8 +333,7 @@ class Printer(Device, metaclass=ABCMeta):
         except ValueError:
             pass
         except Exception as e:
-            from app import handle_errors_and_logging
-            handle_errors_and_logging(e, self)
+            current_app.handle_errors_and_logging(e, self)
     def extractIndex(self, gcode: bytes) -> str:
         """
         Method to extract the index of the gcode for use in the callablesHashtable
@@ -332,7 +343,7 @@ class Printer(Device, metaclass=ABCMeta):
         :rtype: str
         """
         hashIndex = gcode.decode().split("\n")[0].split(" ")[0]
-        if hasattr(self, "logger") and self.logger:
+        if self.logger is not None:
             if hashIndex == "M109" or hashIndex == "M190":
                 self.logger.info("Waiting for temperature to stabilize...")
             elif hashIndex == "G28":
@@ -346,7 +357,7 @@ class Printer(Device, metaclass=ABCMeta):
         :rtype: bool
         """
         if not self.pauseCMD:
-            if hasattr(self, "logger") and self.logger: self.logger.error("Pause command not implemented.")
+            if self.logger is not None: self.logger.error("Pause command not implemented.")
             return True
         try:
             assert self.pauseCMD is not None
@@ -356,7 +367,7 @@ class Printer(Device, metaclass=ABCMeta):
             if hasattr(self, "keepAliveCMD") and self.keepAliveCMD:
                 self.sendGcode(self.keepAliveCMD)
             self.sendGcode(self.pauseCMD)
-            if hasattr(self, "logger") and self.logger: self.logger.info("Job Paused")
+            if self.logger is not None: self.logger.info("Job Paused")
             return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self)
@@ -364,7 +375,7 @@ class Printer(Device, metaclass=ABCMeta):
     def resume(self):
         """Resume the device, if the resume command is implemented."""
         if self.resumeCMD is None:
-            if hasattr(self, "logger") and self.logger: self.logger.error("Resume command not implemented.")
+            if self.logger is not None: self.logger.error("Resume command not implemented.")
             return False
         try:
             assert isinstance(self, Device), "self is not an instance of Device"
@@ -372,7 +383,7 @@ class Printer(Device, metaclass=ABCMeta):
             assert self.serialConnection.is_open, "Serial connection is not open"
             if hasattr(self, "doNotKeepAliveCMD") and self.doNotKeepAliveCMD: self.sendGcode(self.doNotKeepAliveCMD)
             self.sendGcode(self.resumeCMD)
-            if hasattr(self, "logger") and self.logger: self.logger.info("Job Resumed")
+            if self.logger is not None: self.logger.info("Job Resumed")
             return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self)
@@ -381,7 +392,7 @@ class Printer(Device, metaclass=ABCMeta):
         super().connect()
         try:
             if self.serialConnection and self.serialConnection.is_open:
-                self.serialConnection.write(b"M155 S1\n")
+                self.sendGcode(b"M155 S1\n", isVerbose=True)
                 return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self)

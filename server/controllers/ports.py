@@ -40,12 +40,14 @@ def registerFabricator():
         name = printer['name']
 
         # Create a new fabricator instance using the Fabricator class
+        print(f"Registering fabricator: device: {device}, name: {name}, printer: {printer}")
         try:
             app.fabricator_list.addFabricator(device, name)
         except AssertionError as ae:
             return jsonify({"error": f"Failed to add fabricator: {ae}"}), 500
-
         new_fabricator = Fabricator.query.filter_by(devicePort=device).first()
+        print(f"New fabricator: {new_fabricator}")
+
         return jsonify({"success": True, "message": "Fabricator registered successfully", "fabricator_id": new_fabricator.dbID})
     except SQLAlchemyError as db_err:
         print(f"Database error during registration: {db_err}")
@@ -143,7 +145,7 @@ def moveHead():
         if port:
             if app:
                 fab = app.fabricator_list.getFabricatorByPort(port)
-                print(fab if fab else f"No fabricator found in fabricator list, fabricator_list: {app.fabricator_list.fabricators}, threads: {app.fabricator_list.fabricator_threads}")
+                # print(fab if fab else f"No fabricator found in fabricator list, fabricator_list: {app.fabricator_list.fabricators}, threads: {app.fabricator_list.fabricator_threads}")
                 if fab: 
                     device = fab.device
                 elif port.startswith("EMU"):
@@ -153,7 +155,7 @@ def moveHead():
             else: 
                 device = Fabricator(port).device
             device.connect()
-            result = device.home()  # Use home() method from Device
+            result = device.home(isVerbose=False)  # Use home() method from Device
             device.disconnect()
             return jsonify({"success": True, "message": "Head move successful"}) if result else jsonify({"success": False, "message": "Head move unsuccessful"})
         else:

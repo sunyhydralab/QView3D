@@ -1,6 +1,8 @@
+from Classes.FabricatorConnection import FabricatorConnection
 from Classes.Fabricators.Printers.Prusa.PrusaPrinter import PrusaPrinter
 from Classes.Vector3 import Vector3
 from Mixins.hasResponseCodes import checkOK, checkTime, checkXYZ
+from globals import current_app
 
 
 class PrusaMK3(PrusaPrinter):
@@ -37,7 +39,7 @@ class PrusaMK3(PrusaPrinter):
     def connect(self):
         try:
             import serial
-            self.serialConnection = serial.Serial(self.serialPort.device, 115200, timeout=60)
+            self.serialConnection = FabricatorConnection.staticCreateConnection(self.serialPort.device, 115200, timeout=60)
             self.serialConnection.reset_input_buffer()
             from time import sleep
             sleep(4)
@@ -45,5 +47,4 @@ class PrusaMK3(PrusaPrinter):
                 self.sendGcode(b"M155 S1\n")
                 return True
         except Exception as e:
-            from app import handle_errors_and_logging
-            return handle_errors_and_logging(e, self)
+            return current_app.handle_errors_and_logging(e, self)

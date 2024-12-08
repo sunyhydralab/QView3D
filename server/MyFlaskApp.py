@@ -1,7 +1,7 @@
 import logging
 import os
+import subprocess
 import sys
-
 from flask import request, Response, send_from_directory, Flask
 from flask_cors import CORS
 from flask_migrate import Migrate
@@ -53,6 +53,9 @@ class MyFlaskApp(Flask):
         defineRoutes(self)
 
         self.fabricator_list = FabricatorList(self)
+        # TODO: figure out how to run the emu from here
+        # emu_path = os.path.abspath(os.path.join(".", root_path, "printeremu", "cmd", "test_printer.go"))
+        # self.run_go_command(f"go run .\\{emu_path} 1 -conn")
 
         @self.cli.command("test")
         def run_tests():
@@ -134,3 +137,17 @@ class MyFlaskApp(Flask):
         if fake_device:
             return [fake_device.fake_port, fake_device.fake_name, fake_device.fake_hwid]
         return [None, None, None]
+
+    def run_go_command(self, command):
+        try:
+            result = subprocess.run(
+                command,
+                shell=True,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            return result.stdout.decode('utf-8')
+        except subprocess.CalledProcessError as e:
+            self.handle_errors_and_logging(e)
+            return None

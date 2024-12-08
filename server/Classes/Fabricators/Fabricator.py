@@ -51,7 +51,7 @@ class Fabricator(db.Model):
             self.devicePort = dbFab.devicePort
             self.date = dbFab.date
             self.dbID = dbFab.dbID
-        self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True, websocket_connection=next(iter(current_app.emulator_connections.values(), None)) if port.device == current_app.get_emu_ports()[0] else None)
+        self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True, websocket_connection=next(iter(current_app.emulator_connections.values())) if port.device == current_app.get_emu_ports()[0] else None)
         if self.description == "New Fabricator": self.description = self.device.getDescription()
         db.session.commit()
 
@@ -74,6 +74,7 @@ class Fabricator(db.Model):
             "queue": self.queue.convertQueueToJson(),
             "job": self.job.__to_JSON__() if self.job is not None else None,
             "device": self.device.__to_JSON__(),
+            "consoles": [[],[],[],[],[]],
         }
 
     @staticmethod

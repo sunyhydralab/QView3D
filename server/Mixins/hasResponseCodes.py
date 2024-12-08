@@ -1,7 +1,7 @@
 import re
-import traceback
 from abc import ABCMeta, abstractmethod
 from Classes.Vector3 import Vector3
+from globals import current_app
 
 class hasResponsecodes(metaclass=ABCMeta):
     headPosition: Vector3 = None
@@ -14,48 +14,45 @@ class hasResponsecodes(metaclass=ABCMeta):
     def getToolHeadLocation(self) -> Vector3:
         pass
 
-def checkOK(line):
-    line = (line.decode() if isinstance(line, bytes) else line).strip()
-    return line == "ok"
+def checkOK(line, dev):
+    line = (line.decode() if isinstance(line, bytes) else line).strip().lower()
+    return "ok" in line
 
-def checkXYZ(line):
-    line = (line.decode() if isinstance(line, bytes) else line).strip()
-    return ("X:" in line) and ("Y:" in line) and ("Z:" in line)
+def checkXYZ(line, dev):
+    line = (line.decode() if isinstance(line, bytes) else line).strip().lower()
+    return ("x:" in line) and ("y:" in line) and ("z:" in line)
 
-def checkEcho(line):
-    line = (line.decode() if isinstance(line, bytes) else line).strip()
+def checkEcho(line, dev):
+    line = (line.decode() if isinstance(line, bytes) else line).strip().lower()
     return line.startswith("echo")
 
-def checkBedTemp(line):
-    line = (line.decode() if isinstance(line, bytes) else line).strip()
+def checkBedTemp(line, dev):
+    line = (line.decode() if isinstance(line, bytes) else line).strip().lower()
     try:
-        return checkTemp([temp.strip() for temp in line.split("B:")[1].split("T0:")[0].split("X:")[0].split("/")])
-    except IndexError as e:
+        return checkTemp([temp.strip() for temp in line.split("b:")[1].split("t0:")[0].split("x:")[0].split("/")])
+    except IndexError:
         return False
     except Exception as e:
-        traceback.print_exc()
-        return False
+        return current_app.handle_errors_and_logging(e, dev)
 
-def checkExtruderTemp(line):
+def checkExtruderTemp(line, dev):
     line = (line.decode() if isinstance(line, bytes) else line).strip()
     try:
         return checkTemp([temp.strip() for temp in line.split("T:")[1].split("B:")[0].split("/")])
-    except IndexError as e:
+    except IndexError:
         return False
     except Exception as e:
-        traceback.print_exc()
-        return False
+        return current_app.handle_errors_and_logging(e, dev)
 
-def checkTemp(temps):
+def checkTemp(temps, dev):
     try:
         if len(temps) == 2:
             if float(temps[1]) == 0.0: return True
             return float(temps[1]) - float(temps[0]) < 0.25
         return False
     except Exception as e:
-        traceback.print_exc()
-        return False
+        return current_app.handle_errors_and_logging(e, dev)
 
-def checkTime(line):
+def checkTime(line, dev):
     line = (line.decode() if isinstance(line, bytes) else line).strip()
     return re.search(r"\d+m \d+s", line) or re.search(r"\d+ min, \d+ sec", line)

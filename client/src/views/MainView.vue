@@ -8,6 +8,7 @@ import GCode3DLiveViewer from '@/components/GCode3DLiveViewer.vue';
 import { useAssignIssue, useGetIssues, type Issue } from '@/model/issues';
 import { jobTime, useAssignComment, useGetFile, useGetJobFile, useReleaseJob, useStartJob, type Job } from '@/model/jobs';
 import { useRouter } from 'vue-router';
+import ConsoleTerminal from "@/components/ConsoleTerminal.vue";
 
 const { assign } = useAssignIssue()
 const { assignComment } = useAssignComment()
@@ -52,6 +53,13 @@ onMounted(async () => {
   liveModal?.addEventListener('hidden.bs.modal', () => {
     isGcodeLiveViewVisible.value = false;
   });
+  if (printers.value.length > 0) {
+    for (const printer of printers.value as Device[]) {
+      if (printer.consoles === undefined) {
+        printer.consoles = [[],[],[],[],[]]
+      }
+    }
+  }
 });
 
 function formatTime(milliseconds: number): string {
@@ -166,12 +174,13 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
   let printer = printers.value.find((printer) => printer.id === printerIdToPrintTo)
   printer!.error = ""
 
-    if (printer) {
-        printer.extruder_temp = 0
-        printer.bed_temp = 0;
-        printer.queue?.shift(); // Remove the first job in the queue
-        //TODO: marker
-    }
+  if (printer) {
+    printer.extruder_temp = 0
+    printer.bed_temp = 0;
+    printer.queue?.shift(); // Remove the first job in the queue
+    printer.consoles = [[],[],[],[],[]]
+    //TODO: marker
+  }
 
   await releaseJob(jobToFind, key, printerIdToPrintTo)
   await nextTick()
@@ -556,6 +565,11 @@ const handleDragEnd = async () => {
               <td class="borderless-top" colspan="2">
                 <span
                   v-html="printer?.status === 'colorchange' ? 'Waiting...' : (printer.queue[0]?.extruded ? formatETA(printer.queue[0]?.job_client?.eta) : '<i>Waiting...</i>')"></span>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="9">
+                <ConsoleTerminal :lines="printer.consoles![4] || []"/>
               </td>
             </tr>
           </div>

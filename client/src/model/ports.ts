@@ -24,6 +24,8 @@ export interface Device {
   extruder_temp?: number
   bed_temp?: number
   colorChangeBuffer?: number
+  colorbuff?: number,
+  consoles?: [string[], string[], string[], string[], string[]] // array of debug, info, and error console messages
 }
 
 export const printers = ref<Device[]>([])

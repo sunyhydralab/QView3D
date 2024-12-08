@@ -33,7 +33,7 @@ class PrusaPrinter(Printer, hasEndingSequence, metaclass=ABCMeta):
                 hashIndex += ".01" if g29addon == "P1" else ".02"
             except IndexError as e:
                 hashIndex += ".01"
-        if hasattr(self, "logger"):
+        if self.logger is not None:
             if hashIndex == "M109" or hashIndex == "M190":
                 self.logger.info("Waiting for temperature to stabilize...")
             elif hashIndex == "G28":
