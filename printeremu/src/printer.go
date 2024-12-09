@@ -277,7 +277,7 @@ func (m *M155Status) Start(interval time.Duration, resultChan chan string, print
 	}
 
 	if !m.IsRunning && printer.WSConnection != nil {
-		result := fmt.Sprintf("ok T:%.1f /%.1f B:%.1f /%.1f T0:%.1f /%.1f @:0 B@:0 P:%.1f A:26.4",
+		result := fmt.Sprintf("T:%.1f /%.1f B:%.1f /%.1f T0:%.1f /%.1f @:0 B@:0 P:%.1f A:26.4",
 			printer.Extruder.ExtruderTemp,
 			printer.Extruder.TargetTemp,
 			printer.Heatbed.Temp,
@@ -340,7 +340,7 @@ func (m *M155Status) Start(interval time.Duration, resultChan chan string, print
 		}
 	}()
 
-	return fmt.Sprintf("ok T:%.1f /%.1f B:%.1f /%.1f T0:%.1f /%.1f @:0 B@:0 P:%.1f A:26.4",
+	return fmt.Sprintf("T:%.1f /%.1f B:%.1f /%.1f T0:%.1f /%.1f @:0 B@:0 P:%.1f A:26.4",
 		printer.Extruder.ExtruderTemp,
 		printer.Extruder.TargetTemp,
 		printer.Heatbed.Temp,
