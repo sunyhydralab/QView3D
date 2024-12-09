@@ -1,7 +1,6 @@
 package src
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"math"
@@ -12,52 +11,24 @@ import (
 )
 
 type Command interface {
-	Execute(printer *Printer) string
+	Execute(printer *Printer) []string
 }
 
 // CommandHandler parses and executes commands
-func CommandHandler(command string, printer *Printer) string {
+func CommandHandler(command string, printer *Printer) []string {
 	if semicolonIndex := strings.Index(command, ";"); semicolonIndex != -1 {
 		command = command[:semicolonIndex]
 	}
 
 	if command == "" {
-		return ""
+		return []string{""}
 	}
 
 	command = strings.TrimSpace(command)
 	cmd := NewCommand(command, printer)
 
 	if cmd == nil {
-		return "Unknown command\n"
-	}
-
-	if m155Cmd, ok := cmd.(*M155Command); ok {
-		go func() {
-			for result := range m155Cmd.resultChan {
-				if printer.WSConnection != nil {
-					printerResponse := map[string]interface{}{
-						"printerid": printer.Id,
-						"response":  result,
-					}
-
-					jsonResponse, err := json.Marshal(printerResponse)
-
-					if err != nil {
-						log.Println("Error marshaling printer response:", err)
-						continue
-					}
-
-					err = printer.WriteSerial("gcode_response", string(jsonResponse))
-
-					if err != nil {
-						log.Println("Error sending gcode_response:", err)
-						continue
-					}
-				}
-				//fmt.Println(result)
-			}
-		}()
+		return []string{"Unknown command"}
 	}
 
 	return cmd.Execute(printer)
@@ -82,15 +53,18 @@ func NewCommand(command string, printer *Printer) Command {
 
 type G28Command struct{}
 
-func (cmd *G28Command) Execute(printer *Printer) string {
+func (cmd *G28Command) Execute(printer *Printer) []string {
 	homePos := printer.HomePos
 
 	if err := printer.MoveExtruder(homePos); err != nil {
-		return fmt.Sprintf("Error: %s\n", err.Error())
+		return []string{fmt.Sprintf("Error: %s", err.Error())}
 	}
 
-	// TODO: send as seperate messages for socket
-	return fmt.Sprintf("ok\nX:%.2f Y:%.2f Z:%.2f\nok\n", printer.Extruder.Position.X, printer.Extruder.Position.Y, printer.Extruder.Position.Z)
+	return []string{
+		"ok",
+		fmt.Sprintf("X:%.2f Y:%.2f Z:%.2f", printer.Extruder.Position.X, printer.Extruder.Position.Y, printer.Extruder.Position.Z),
+		"ok",
+	}
 }
 
 type G0G1Command struct {
@@ -104,13 +78,13 @@ func NewG0G1Command(command string, printer *Printer) *G0G1Command {
 	return &G0G1Command{target: target, feedRate: feedRate}
 }
 
-func (cmd *G0G1Command) Execute(printer *Printer) string {
+func (cmd *G0G1Command) Execute(printer *Printer) []string {
 	// TODO: Implement feed rate
 	if err := printer.MoveExtruder(cmd.target); err != nil {
-		return fmt.Sprintf("Error: %s\n", err.Error())
+		return []string{fmt.Sprintf("Error: %s", err.Error())}
 	}
 
-	return fmt.Sprintf("Moved to X:%.2f Y:%.2f Z:%.2f\n", cmd.target.X, cmd.target.Y, cmd.target.Z)
+	return []string{fmt.Sprintf("Moved to X:%.2f Y:%.2f Z:%.2f", cmd.target.X, cmd.target.Y, cmd.target.Z)}
 }
 
 type G2G3Command struct {
@@ -125,9 +99,9 @@ func NewG2G3Command(command string, clockwise bool, printer *Printer) *G2G3Comma
 	return &G2G3Command{target: target, radius: radius, clockwise: clockwise}
 }
 
-func (cmd *G2G3Command) Execute(printer *Printer) string {
+func (cmd *G2G3Command) Execute(printer *Printer) []string {
 	if printer.Paused {
-		return "Printer is paused\n"
+		return []string{"Printer is paused"}
 	}
 
 	currentPos := printer.Extruder.Position
@@ -143,10 +117,10 @@ func (cmd *G2G3Command) Execute(printer *Printer) string {
 	}
 
 	if err := printer.MoveExtruder(cmd.target); err != nil {
-		return fmt.Sprintf("Error: %s\n", err.Error())
+		return []string{fmt.Sprintf("Error: %s", err.Error())}
 	}
 
-	return fmt.Sprintf("Arc move to X:%.2f Y:%.2f Z:%.2f\n", cmd.target.X, cmd.target.Y, cmd.target.Z)
+	return []string{fmt.Sprintf("Arc move to X:%.2f Y:%.2f Z:%.2f", cmd.target.X, cmd.target.Y, cmd.target.Z)}
 }
 
 type G4Command struct {
@@ -158,24 +132,24 @@ func NewG4Command(command string) *G4Command {
 	return &G4Command{duration: duration}
 }
 
-func (cmd *G4Command) Execute(printer *Printer) string {
-	return fmt.Sprintf("Dwelling for %d ms\n", cmd.duration)
+func (cmd *G4Command) Execute(printer *Printer) []string {
+	return []string{fmt.Sprintf("Dwelling for %d ms", cmd.duration)}
 }
 
 type G90Command struct{}
 
-func (cmd *G90Command) Execute(printer *Printer) string {
+func (cmd *G90Command) Execute(printer *Printer) []string {
 	printer.Extruder.AbsolutePositioning = true
 
-	return "Set to Absolute Positioning\n"
+	return []string{"Set to Absolute Positioning"}
 }
 
 type G91Command struct{}
 
-func (cmd *G91Command) Execute(printer *Printer) string {
+func (cmd *G91Command) Execute(printer *Printer) []string {
 	printer.Extruder.AbsolutePositioning = false
 
-	return "Set to Relative Positioning\n"
+	return []string{"Set to Relative Positioning"}
 }
 
 type G92Command struct {
@@ -188,28 +162,30 @@ func NewG92Command(command string) *G92Command {
 	return &G92Command{position: position}
 }
 
-func (cmd *G92Command) Execute(printer *Printer) string {
+func (cmd *G92Command) Execute(printer *Printer) []string {
 	if err := printer.MoveExtruder(cmd.position); err != nil {
-		return fmt.Sprintf("Error: %s\n", err.Error())
+		return []string{fmt.Sprintf("Error: %s", err.Error())}
 	}
 
-	return fmt.Sprintf("Position set to X:%.2f Y:%.2f Z:%.2f\n", cmd.position.X, cmd.position.Y, cmd.position.Z)
+	return []string{fmt.Sprintf("Position set to X:%.2f Y:%.2f Z:%.2f", cmd.position.X, cmd.position.Y, cmd.position.Z)}
 }
 
 // ==================== Unit Conversion Commands ====================
 
 type G20Command struct{}
 
-func (cmd *G20Command) Execute(printer *Printer) string {
+func (cmd *G20Command) Execute(printer *Printer) []string {
 	printer.Units = "inches"
-	return "Units set to inches\n"
+
+	return []string{"Units set to inches"}
 }
 
 type G21Command struct{}
 
-func (cmd *G21Command) Execute(printer *Printer) string {
+func (cmd *G21Command) Execute(printer *Printer) []string {
 	printer.Units = "mm"
-	return "Units set to millimeters\n"
+
+	return []string{"Units set to millimeters"}
 }
 
 // ==================== Temperature and Fan Control Commands ====================
@@ -224,12 +200,12 @@ func NewM104Command(command string) *M104Command {
 	return &M104Command{temperature: temperature}
 }
 
-func (cmd *M104Command) Execute(printer *Printer) string {
+func (cmd *M104Command) Execute(printer *Printer) []string {
 	if err := printer.SetExtruderTemperature(cmd.temperature); err != nil {
-		return fmt.Sprintf("Error: %s\n", err.Error())
+		return []string{fmt.Sprintf("Error: %s", err.Error())}
 	}
 
-	return "ok\n"
+	return []string{"ok"}
 }
 
 // M106Command sets the fan speed
@@ -239,25 +215,28 @@ type M106Command struct {
 
 func NewM106Command(command string) *M106Command {
 	fanSpeed := parseFanSpeed(command)
+
 	return &M106Command{fanSpeed: fanSpeed}
 }
 
-func (cmd *M106Command) Execute(printer *Printer) string {
+func (cmd *M106Command) Execute(printer *Printer) []string {
 	if cmd.fanSpeed > 255 {
-		return "Error: invalid fan speed. Valid range: 0 to 255\n"
+		return []string{"Error: invalid fan speed. Valid range: 0 to 255"}
 	}
+
 	if err := printer.SetFanSpeed(cmd.fanSpeed); err != nil {
-		return fmt.Sprintf("Error: %s\n", err.Error())
+		return []string{fmt.Sprintf("Error: %s", err.Error())}
 	}
-	return fmt.Sprintf("Fan speed set to %.2f\n", cmd.fanSpeed)
+
+	return []string{fmt.Sprintf("Fan speed set to %.2f", cmd.fanSpeed)}
 }
 
 type M107Command struct{}
 
-func (cmd *M107Command) Execute(printer *Printer) string {
+func (cmd *M107Command) Execute(printer *Printer) []string {
 	printer.SetFanSpeed(0)
 
-	return "Fan turned off\n"
+	return []string{"Fan turned off"}
 }
 
 type M140Command struct {
@@ -270,13 +249,13 @@ func NewM140Command(command string) *M140Command {
 	return &M140Command{temperature: temperature}
 }
 
-func (cmd *M140Command) Execute(printer *Printer) string {
+func (cmd *M140Command) Execute(printer *Printer) []string {
 	if err := printer.SetBedTemperature(cmd.temperature); err != nil {
-		return fmt.Sprintf("Error: %s\n", err.Error())
+		return []string{fmt.Sprintf("Error: %s", err.Error())}
 	}
 
 	printer.Heatbed.Heating = true
-	return "ok\n"
+	return []string{"ok"}
 }
 
 // M190Command waits until the bed reaches the target temperature before allowing further commands
@@ -290,15 +269,15 @@ func NewM190Command(command string) *M190Command {
 	return &M190Command{temperature: temperature}
 }
 
-func (cmd *M190Command) Execute(printer *Printer) string {
+func (cmd *M190Command) Execute(printer *Printer) []string {
 	printer.Heatbed.TargetTemp = cmd.temperature
 
 	if printer.Heatbed.Temp < printer.Heatbed.TargetTemp {
-		return fmt.Sprintf("B:%.2f / %.2f\n", printer.Heatbed.Temp, printer.Heatbed.TargetTemp)
+		return []string{fmt.Sprintf("B:%.2f / %.2f", printer.Heatbed.Temp, printer.Heatbed.TargetTemp)}
 	}
 	//TODO: Error handling
 	printer.Heatbed.Heating = false
-	return "ok\n"
+	return []string{"ok"}
 }
 
 type M109Command struct {
@@ -311,14 +290,14 @@ func NewM109Command(command string) *M109Command {
 	return &M109Command{temperature: temperature}
 }
 
-func (cmd *M109Command) Execute(printer *Printer) string {
+func (cmd *M109Command) Execute(printer *Printer) []string {
 	printer.Extruder.TargetTemp = cmd.temperature
 
 	if printer.Extruder.ExtruderTemp < printer.Extruder.TargetTemp {
-		return fmt.Sprintf("T:%.2f / %.2f\n", printer.Extruder.ExtruderTemp, printer.Extruder.TargetTemp)
+		return []string{fmt.Sprintf("T:%.2f / %.2f", printer.Extruder.ExtruderTemp, printer.Extruder.TargetTemp)}
 	}
 
-	return "ok\n"
+	return []string{"ok"}
 }
 
 type M113Command struct{}
@@ -327,9 +306,10 @@ func NewM113Command(command string) *M113Command {
 	return &M113Command{}
 }
 
-func (cmd *M113Command) Execute(printer *Printer) string {
+func (cmd *M113Command) Execute(printer *Printer) []string {
 	printer.KeepAliveTime = time.Now()
-	return "Keepalive signal sent\n"
+
+	return []string{"Keepalive signal sent"}
 }
 
 type M204Command struct {
@@ -338,12 +318,14 @@ type M204Command struct {
 
 func NewM204Command(command string) *M204Command {
 	acceleration := parseAcceleration(command)
+
 	return &M204Command{acceleration: acceleration}
 }
 
-func (cmd *M204Command) Execute(printer *Printer) string {
+func (cmd *M204Command) Execute(printer *Printer) []string {
 	printer.Acceleration = cmd.acceleration
-	return fmt.Sprintf("Acceleration set to %.2f\n", cmd.acceleration)
+
+	return []string{fmt.Sprintf("Acceleration set to %.2f", cmd.acceleration)}
 }
 
 type M73Command struct {
@@ -354,77 +336,74 @@ type M73Command struct {
 func NewM73Command(command string) *M73Command {
 	progress := parseProgress(command)
 	remaining := parseRemainingTime(command)
+
 	return &M73Command{progress: progress, remaining: remaining}
 }
 
-func (cmd *M73Command) Execute(printer *Printer) string {
+func (cmd *M73Command) Execute(printer *Printer) []string {
 	printer.UpdateProgress(cmd.progress)
-	return fmt.Sprintf("Progress set to %d%%, %d minutes remaining\nok\n", cmd.progress, cmd.remaining)
-}
 
-// Parsing helpers
-func parseRemainingTime(command string) int {
-	reR := regexp.MustCompile(`R([0-9]+)`)
-	remaining := 0
-	if rMatch := reR.FindStringSubmatch(command); rMatch != nil {
-		remaining, _ = strconv.Atoi(rMatch[1])
-	}
-	return remaining
+	return []string{fmt.Sprintf("Progress set to %d%%, %d minutes remaining", cmd.progress, cmd.remaining), "ok"}
 }
 
 // ==================== Control and Status Commands ====================
 
 type CancelCommand struct{}
 
-func (cmd *CancelCommand) Execute(printer *Printer) string {
+func (cmd *CancelCommand) Execute(printer *Printer) []string {
 	printer.Pause()
 
-	return "Emergency stop activated, printer paused\n"
+	return []string{"Emergency stop activated, printer paused"}
 }
 
 type M114Command struct{}
 
-func (cmd *M114Command) Execute(printer *Printer) string {
+func (cmd *M114Command) Execute(printer *Printer) []string {
 	position := printer.Extruder.Position
-	return fmt.Sprintf("X:%.2f Y:%.2f Z:%.2f\nok\n", position.X, position.Y, position.Z)
+
+	return []string{fmt.Sprintf("X:%.2f Y:%.2f Z:%.2f", position.X, position.Y, position.Z), "ok"}
 }
 
 type M115Command struct{}
 
-func (cmd *M115Command) Execute(printer *Printer) string {
-	return "Firmware: TotallyRealMarlin 2.1.2.5\n"
+func (cmd *M115Command) Execute(printer *Printer) []string {
+	return []string{"Firmware: QViewGCode 2.1.2.5"}
 }
 
 type M17Command struct{}
 
-func (cmd *M17Command) Execute(printer *Printer) string {
+func (cmd *M17Command) Execute(printer *Printer) []string {
 	printer.EnableMotor("x")
 	printer.EnableMotor("y")
 	printer.EnableMotor("z")
-	return "Motors enabled\n"
+
+	return []string{"Motors enabled"}
 }
 
 type M18Command struct{}
 
-func (cmd *M18Command) Execute(printer *Printer) string {
+func (cmd *M18Command) Execute(printer *Printer) []string {
 	printer.DisableMotor("x")
 	printer.DisableMotor("y")
 	printer.DisableMotor("z")
-	return "Motors disabled\n"
+
+	return []string{"Motors disabled"}
 }
 
 type M82Command struct{}
 
-func (cmd *M82Command) Execute(printer *Printer) string {
+func (cmd *M82Command) Execute(printer *Printer) []string {
 	printer.Extruder.AbsolutePositioning = true
-	return "Extruder set to absolute positioning\n"
+
+	return []string{"Extruder set to absolute positioning"}
 }
 
 type M83Command struct{}
 
-func (cmd *M83Command) Execute(printer *Printer) string {
+func (cmd *M83Command) Execute(printer *Printer) []string {
 	printer.Extruder.AbsolutePositioning = false
-	return "Extruder set to relative positioning\n"
+
+	return []string{"Extruder set to relative positioning"}
 }
 
 type M302Command struct {
@@ -433,42 +412,44 @@ type M302Command struct {
 
 func NewM302Command(command string) *M302Command {
 	allowColdExtrusion := parseAllowColdExtrusion(command)
+
 	return &M302Command{allowColdExtrusion: allowColdExtrusion}
 }
 
-func (cmd *M302Command) Execute(printer *Printer) string {
+func (cmd *M302Command) Execute(printer *Printer) []string {
 	if cmd.allowColdExtrusion {
-		return "Cold extrusion allowed\n"
+		return []string{"Cold extrusion allowed"}
 	}
-	return "Cold extrusion not allowed\n"
+
+	return []string{"Cold extrusion not allowed"}
 }
 
 type M503Command struct{}
 
-func (cmd *M503Command) Execute(printer *Printer) string {
-	return printer.String()
+func (cmd *M503Command) Execute(printer *Printer) []string {
+	return []string{printer.String()}
 }
 
 type M997Command struct{}
 
-func (cmd *M997Command) Execute(printer *Printer) string {
-	return fmt.Sprintf("Machine name: %s", printer.Device)
+func (cmd *M997Command) Execute(printer *Printer) []string {
+	return []string{fmt.Sprintf("Machine name: %s", printer.Device)}
 }
 
 type M601Command struct{}
 
-func (cmd *M601Command) Execute(printer *Printer) string {
+func (cmd *M601Command) Execute(printer *Printer) []string {
 	printer.Pause()
 
-	return "Printer paused\n"
+	return []string{"Printer paused"}
 }
 
 type M602Command struct{}
 
-func (cmd *M602Command) Execute(printer *Printer) string {
+func (cmd *M602Command) Execute(printer *Printer) []string {
 	printer.Resume()
 
-	return "Printer not paused\n"
+	return []string{"Printer not paused"}
 }
 
 type M900Command struct {
@@ -481,10 +462,10 @@ func NewM900Command(command string) *M900Command {
 	return &M900Command{kFactor: kFactor}
 }
 
-func (cmd *M900Command) Execute(printer *Printer) string {
+func (cmd *M900Command) Execute(printer *Printer) []string {
 	printer.LinearAdvanceFactor = cmd.kFactor
 
-	return fmt.Sprintf("Linear Advance factor set to %.2f\n", cmd.kFactor)
+	return []string{fmt.Sprintf("Linear Advance factor set to %.2f", cmd.kFactor)}
 }
 
 type M142Command struct {
@@ -497,10 +478,10 @@ func NewM142Command(command string) *M142Command {
 	return &M142Command{temperature: temperature}
 }
 
-func (cmd *M142Command) Execute(printer *Printer) string {
+func (cmd *M142Command) Execute(printer *Printer) []string {
 	printer.HeatbreakTemp = cmd.temperature
 
-	return fmt.Sprintf("Heatbreak target temperature set to %.2f\n", cmd.temperature)
+	return []string{fmt.Sprintf("Heatbreak target temperature set to %.2f", cmd.temperature)}
 }
 
 type M84Command struct {
@@ -513,12 +494,12 @@ func NewM84Command(command string) *M84Command {
 	return &M84Command{axes: axes}
 }
 
-func (cmd *M84Command) Execute(printer *Printer) string {
+func (cmd *M84Command) Execute(printer *Printer) []string {
 	for _, axis := range cmd.axes {
 		printer.DisableMotor(axis)
 	}
 
-	return fmt.Sprintf("Motors %v disabled\n", cmd.axes)
+	return []string{fmt.Sprintf("Motors %v disabled", cmd.axes)}
 }
 
 type M155Command struct {
@@ -541,17 +522,18 @@ func NewM155Command(command string) *M155Command {
 	}
 }
 
-func (cmd *M155Command) Execute(printer *Printer) string {
+func (cmd *M155Command) Execute(printer *Printer) []string {
 	if cmd.interval == 0 {
 		printer.CommandStatus.m155Status.Stop()
-		return "ok"
+		return []string{"ok"}
 	}
 
 	if !printer.CommandStatus.m155Status.IsRunning {
-		return printer.CommandStatus.m155Status.Start(cmd.interval, cmd.resultChan, printer)
+		status := printer.CommandStatus.m155Status.Start(cmd.interval, cmd.resultChan, printer)
+		return []string{"ok", status, "ok"}
 	}
 
-	return "ok"
+	return []string{"ok"}
 }
 
 // ==================== Parsing Helpers ====================
@@ -691,6 +673,16 @@ func parseM155Interval(command string) int {
 	}
 
 	return interval
+}
+
+func parseRemainingTime(command string) int {
+	reR := regexp.MustCompile(`R([0-9]+)`)
+	remaining := 0
+
+	if rMatch := reR.FindStringSubmatch(command); rMatch != nil {
+		remaining, _ = strconv.Atoi(rMatch[1])
+	}
+	return remaining
 }
 
 // ==================== Command Registry ====================

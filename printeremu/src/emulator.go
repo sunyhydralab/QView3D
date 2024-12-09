@@ -184,64 +184,29 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 				}
 
 				if pidOk && gcodeOk {
-					response := CommandHandler(gcode, printer)
+					responses := CommandHandler(gcode, printer)
 
-					fmt.Println("Response:", response)
+					for _, response := range responses {
+						response := string(response)
 
-					parsedResponse := ""
-					if response != "Unknown command" {
-						parsedResponse = "ok"
-					} else {
-						parsedResponse = "Unknown command"
-					}
+						fmt.Println("GCode Handler Response:", response)
 
-					printerResponse := map[string]interface{}{
-						"printerid": printerID,
-						"response":  parsedResponse,
-					}
-
-					jsonResponse, err := json.Marshal(printerResponse)
-
-					if err != nil {
-						log.Println("Error marshaling printer response:", err)
-						continue
-					}
-
-					if gcode == "G28" {
-						okResponse := map[string]interface{}{
+						printerResponse := map[string]interface{}{
 							"printerid": printerID,
-							"response":  "ok",
+							"response":  response,
 						}
 
-						okJsonResponse, err := json.Marshal(okResponse)
+						jsonResponse, err := json.Marshal(printerResponse)
 
 						if err != nil {
 							log.Println("Error marshaling printer response:", err)
 							continue
 						}
 
-						bodyResponse := map[string]interface{}{
-							"printerid": printerID,
-							"response":  fmt.Sprintf("X:%.2f Y:%.2f Z:%.2f", printer.Extruder.Position.X, printer.Extruder.Position.Y, printer.Extruder.Position.Z),
-						}
-
-						okBodyResponse, err := json.Marshal(bodyResponse)
-
-						if err != nil {
-							log.Println("Error marshaling printer response:", err)
-							continue
-						}
-
-						err = printer.WriteSerial("gcode_response", string(okJsonResponse))
-
-						err = printer.WriteSerial("gcode_response", string(okBodyResponse))
-
-						err = printer.WriteSerial("gcode_response", string(okJsonResponse))
-					} else if gcode != "M155" {
 						err = printer.WriteSerial("gcode_response", string(jsonResponse))
 
 						if err != nil {
-							log.Println("Error sending gcode_response:", err)
+							log.Println("Error sending printer response:", err)
 							continue
 						}
 					}

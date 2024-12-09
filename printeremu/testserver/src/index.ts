@@ -40,6 +40,7 @@ const eventHandlers = {
 function sendGCodeCommands(ws) {
     const gcodeCommands = [
         "G28",  // Home all axes
+        "M114", // Report current position
         "G1 X10 Y10 Z10 F1500",  // Move to X:10 Y:10 Z:10
         "G1 X20 Y20 Z20 F1500",  // Move to X:20 Y:20 Z:20
         "G1 Z0",  // Move to Z:0
