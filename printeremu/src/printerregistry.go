@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"time"
 
 	"golang.org/x/exp/rand"
@@ -51,7 +50,10 @@ func LoadPrinters(filePath string) ([]Printer, error) {
 	var printers []Printer
 
 	for _, printerConfig := range printersConfig {
-		_, printer, err := Init(printerConfig.Id, printerConfig.Brand.PrinterName+" "+printerConfig.Brand.PrinterModel, "Marlin GCode", "EMU-"+RandomString(8), printerConfig.Name, "Init")
+		emuPort := "EMU-0"
+
+		//_, printer, err := Init(printerConfig.Id, printerConfig.Brand.PrinterName+" "+printerConfig.Brand.PrinterModel, "Marlin GCode", "EMU-"+RandomString(8), printerConfig.Name, "Init")
+		_, printer, err := Init(printerConfig.Id, printerConfig.Brand.PrinterName+" "+printerConfig.Brand.PrinterModel, "Marlin GCode", emuPort, printerConfig.Name, "Init")
 
 		// always add the model as an attribute so we always know what the model is
 		printer.AddAttribute("model", printerConfig.Brand.PrinterName)
@@ -90,7 +92,8 @@ func LoadPrinters(filePath string) ([]Printer, error) {
 
 		printer.SetHwid(hwid)
 
-		printer.AddData("port", "EMU"+strconv.Itoa(RandomRange(0, 9)))
+		// printer.AddData("port", "EMU"+strconv.Itoa(RandomRange(0, 9)))
+		printer.AddData("port", emuPort)
 
 		// handle stuff like the bed size and such
 		PostRegistry(printer)
