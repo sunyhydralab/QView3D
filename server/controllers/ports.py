@@ -40,13 +40,11 @@ def registerFabricator():
         name = printer['name']
 
         # Create a new fabricator instance using the Fabricator class
-        print(f"Registering fabricator: device: {device}, name: {name}, printer: {printer}")
         try:
             app.fabricator_list.addFabricator(device, name)
         except AssertionError as ae:
             return jsonify({"error": f"Failed to add fabricator: {ae}"}), 500
         new_fabricator = Fabricator.query.filter_by(devicePort=device).first()
-        print(f"New fabricator: {new_fabricator}")
 
         return jsonify({"success": True, "message": "Fabricator registered successfully", "fabricator_id": new_fabricator.dbID})
     except SQLAlchemyError as db_err:
@@ -61,7 +59,6 @@ def deleteFabricator():
     """Delete a fabricator from the system."""
     try:
         data = request.get_json()
-        print(data)
         fabricator_id = data['fabricator_id']
         res = app.fabricator_list.deleteFabricator(fabricator_id)
         if isinstance(res, ValueError):
@@ -107,7 +104,6 @@ def diagnoseFabricator():
                 diagnosis_result = device.diagnose()
                 return jsonify({"success": True, "message": "Diagnosis successful", "diagnoseString": diagnosis_result})
             else:
-                print("no device?")
                 return jsonify({"error": "Failed to create device for diagnosis"}), 500
         else:
             return jsonify({"error": "Device not found"}), 404

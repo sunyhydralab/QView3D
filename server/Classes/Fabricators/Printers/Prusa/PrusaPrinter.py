@@ -2,7 +2,7 @@ from abc import ABCMeta
 from Classes.Fabricators.Printers.Printer import Printer
 from Mixins.hasEndingSequence import hasEndingSequence
 from Mixins.hasResponseCodes import checkXYZ, checkOK, checkTime
-
+from globals import current_app
 
 class PrusaPrinter(Printer, hasEndingSequence, metaclass=ABCMeta):
     VENDORID = 0x2C99
@@ -19,7 +19,6 @@ class PrusaPrinter(Printer, hasEndingSequence, metaclass=ABCMeta):
         "G29.01": [checkXYZ, checkOK],  # Auto bed leveling
         "G29.02": [checkOK],  # Auto bed leveling
         "M31": [checkOK, checkTime, checkOK],  # Print time
-        "M73": [checkOK],  # Set build percentage
     }
 
     callablesHashtable = {**Printer.callablesHashtable, **callablesHashtable}
@@ -27,15 +26,17 @@ class PrusaPrinter(Printer, hasEndingSequence, metaclass=ABCMeta):
 
     def extractIndex(self, gcode: bytes) -> str:
         hashIndex = gcode.decode().split("\n")[0].split(" ")[0]
-        if hashIndex == "G29":
+        if hashIndex == "M109" or hashIndex == "M190":
+            if self.logger is not None: self.logger.info("Waiting for temperature to stabilize...")
+            current_app.socketio.emit("console_update", {"message": "Waiting for temperature to stabilize...", "level": "info", "printerid": self.dbID})
+        elif hashIndex == "G28":
+            if self.logger is not None: self.logger.info("Homing...")
+            current_app.socketio.emit("console_update", {"message": "Homing...", "level": "info", "printerid": self.dbID})
+        elif hashIndex == "G29":
             try:
                 g29addon = gcode.decode().split("\n")[0].split(" ")[1]
                 hashIndex += ".01" if g29addon == "P1" else ".02"
-            except IndexError as e:
+            except IndexError:
                 hashIndex += ".01"
-        if self.logger is not None:
-            if hashIndex == "M109" or hashIndex == "M190":
-                self.logger.info("Waiting for temperature to stabilize...")
-            elif hashIndex == "G28":
-                self.logger.info("Homing...")
+            current_app.socketio.emit("console_update", {"message": "Auto bed leveling...", "level": "info", "printerid": self.dbID})
         return hashIndex

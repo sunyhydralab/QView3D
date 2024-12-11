@@ -270,7 +270,6 @@ def releasejob():
         fabricator = findPrinterObject(printerid)
         if fabricator is None:
             return jsonify({"error": "Printer not found."}), 404
-        print(fabricator)
         fabricator.error = ""
         if len(fabricator.queue) > 0:
             assert len(fabricator.queue) > 0, "Queue is empty"
@@ -653,7 +652,6 @@ def findPrinterObject(fabricator_id):
     :rtype: Fabricator | None
     """
     threads = current_app.fabricator_list.getThreadArray()
-    print(threads)
     fabricatorThread = list(filter(lambda thread: thread.fabricator.dbID == fabricator_id, threads))
     return fabricatorThread[0].fabricator if len(fabricatorThread) > 0 else None
 

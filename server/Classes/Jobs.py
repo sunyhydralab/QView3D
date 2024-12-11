@@ -2,7 +2,6 @@ from operator import or_
 import os
 import re
 from models.db import db
-
 from models.issues import Issue  # assuming the Issue model is defined in the issue.py file in the models directory
 from datetime import timezone, timedelta
 from flask import jsonify

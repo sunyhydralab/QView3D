@@ -8,7 +8,6 @@ from _pytest._code.code import ExceptionChainRepr, ReprEntry, ReprEntryNative
 from _pytest.fixtures import FixtureLookupErrorRepr
 from typing_extensions import Sequence
 
-
 class Logger(logging.Logger):
     DEBUG = logging.DEBUG
     INFO = logging.INFO
@@ -150,19 +149,18 @@ class Logger(logging.Logger):
         """
         if logLevel is None:
             logLevel = self.level
-        """Log a message without any additional formatting."""
         oldFormatters = [handler.formatter for handler in self.handlers]
         for handler in self.handlers:
             handler.setFormatter(CustomFormatter("%(message)s"))
-        if logLevel == self.DEBUG:
+        if logLevel <= self.DEBUG:
             self.debug(msg, stacklevel=stacklevel, *args, **kwargs)
-        elif logLevel == self.INFO:
+        elif logLevel <= self.INFO:
             self.info(msg, stacklevel=stacklevel, *args, **kwargs)
-        elif logLevel == self.WARNING:
+        elif logLevel <= self.WARNING:
             self.warning(msg, stacklevel=stacklevel, *args, **kwargs)
-        elif logLevel == self.ERROR:
+        elif logLevel <= self.ERROR:
             self.error(msg, stacklevel=stacklevel, *args, **kwargs)
-        elif logLevel == self.CRITICAL:
+        elif logLevel <= self.CRITICAL:
             self.critical(msg, stacklevel=stacklevel, *args, **kwargs)
         for handler, formatter in zip(self.handlers, oldFormatters):
             handler.setFormatter(formatter)

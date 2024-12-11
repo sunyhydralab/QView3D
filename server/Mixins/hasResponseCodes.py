@@ -29,7 +29,7 @@ def checkEcho(line, dev):
 def checkBedTemp(line, dev):
     line = (line.decode() if isinstance(line, bytes) else line).strip().lower()
     try:
-        return checkTemp([temp.strip() for temp in line.split("b:")[1].split("t0:")[0].split("x:")[0].split("/")])
+        return checkTemp([temp.strip() for temp in line.split("b:")[1].split("t0:")[0].split("x:")[0].split("/")], dev)
     except IndexError:
         return False
     except Exception as e:
@@ -38,7 +38,7 @@ def checkBedTemp(line, dev):
 def checkExtruderTemp(line, dev):
     line = (line.decode() if isinstance(line, bytes) else line).strip()
     try:
-        return checkTemp([temp.strip() for temp in line.split("T:")[1].split("B:")[0].split("/")])
+        return checkTemp([temp.strip() for temp in line.split("T:")[1].split("B:")[0].split("/")], dev)
     except IndexError:
         return False
     except Exception as e:

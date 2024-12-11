@@ -179,8 +179,7 @@ class Device(ABC):
             if self.logger is None:
                 print(e)
             else:
-                self.logger.error("Error cancelling job:")
-                self.logger.error(e)
+                current_app.handle_errors_and_logging(e, self)
             self.verdict = "error"
             return True
 

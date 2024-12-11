@@ -1,6 +1,5 @@
 from collections import deque
 from globals import current_app
-
 from Classes.Jobs import Job
 
 class Queue(deque):
@@ -21,8 +20,13 @@ class Queue(deque):
             )
         return True
 
-    def addToFront(self, job):
-        assert isinstance(job, Job)
+    def addToFront(self, job: Job) -> bool:
+        """
+        add new job to the front of the Queue
+        :param Job job: the job to add
+        :rtype: bool
+        """
+        assert isinstance(job, Job), f"Job must be an instance of Job: {job} : {type(job)}"
         if self.count(job) > 0:
             return False
         if len(self) >= 1 and self[0].status == "printing":
@@ -79,7 +83,7 @@ class Queue(deque):
 
         if current_app:
             current_app.socketio.emit(
-                "queue_update", {"queue": self.convertQueueToJson(), "printerid": arr[0].fabricator_id if arr else None}
+                "queue_update", {"queue": self.convertQueueToJson(), "printerid": self[0].fabricator_id if len(self) > 0 else None}
             )
     
     def deleteJob(self, jobid: int, fabricator_id: int) -> Job | str:
@@ -173,7 +177,6 @@ class Queue(deque):
         :rtype: bool
         """
         for job in self:
-
             if job.id == jobid:
                 return True
         return False
