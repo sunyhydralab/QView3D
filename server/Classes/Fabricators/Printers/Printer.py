@@ -280,11 +280,8 @@ class Printer(Device, metaclass=ABCMeta):
     def changeFilament(self, filamentType: str, filamentDiameter: float):
         """
         Method to change filament
-        :param filamentType: type of plastic the filament is made of
-        :param filamentDiameter:  diameter of the filament in mm
-        :type filamentType: str
-        :type filamentDiameter: float
-        :return: None
+        :param str filamentType: type of plastic the filament is made of
+        :param float filamentDiameter:  diameter of the filament in mm
         """
         if not isinstance(filamentDiameter, float):
             filamentDiameter = float(filamentDiameter)
@@ -337,9 +334,7 @@ class Printer(Device, metaclass=ABCMeta):
     def extractIndex(self, gcode: bytes) -> str:
         """
         Method to extract the index of the gcode for use in the callablesHashtable
-        :param gcode: the line of gcode to extract the index from
-        :type gcode: bytes
-        :return: the hash index of the gcode
+        :param bytes gcode: the line of gcode to extract the index from
         :rtype: str
         """
         hashIndex = gcode.decode().split("\n")[0].split(" ")[0]
@@ -351,11 +346,6 @@ class Printer(Device, metaclass=ABCMeta):
             return hashIndex
 
     def pause(self):
-        """
-        Pause the device, if the pause command is implemented.
-        :return: True if the device was successfully paused, else False
-        :rtype: bool
-        """
         if not self.pauseCMD:
             if self.logger is not None: self.logger.error("Pause command not implemented.")
             return True
@@ -372,8 +362,7 @@ class Printer(Device, metaclass=ABCMeta):
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self)
 
-    def resume(self):
-        """Resume the device, if the resume command is implemented."""
+    def resume(self) -> bool:
         if self.resumeCMD is None:
             if self.logger is not None: self.logger.error("Resume command not implemented.")
             return False
@@ -388,7 +377,7 @@ class Printer(Device, metaclass=ABCMeta):
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self)
 
-    def connect(self):
+    def connect(self) -> bool:
         super().connect()
         try:
             if self.serialConnection and self.serialConnection.is_open:
@@ -397,7 +386,7 @@ class Printer(Device, metaclass=ABCMeta):
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self)
 
-    def disconnect(self: Device):
+    def disconnect(self) -> None:
         if self.serialConnection and self.serialConnection.is_open:
             self.sendGcode(b"M155 S100\n")
             self.sendGcode(b"M155 S0\n")

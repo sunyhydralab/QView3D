@@ -2,6 +2,8 @@ import logging
 import os
 import sys
 import traceback
+from typing import TextIO
+
 from _pytest._code.code import ExceptionChainRepr, ReprEntry, ReprEntryNative
 from _pytest.fixtures import FixtureLookupErrorRepr
 from typing_extensions import Sequence
@@ -15,6 +17,18 @@ class Logger(logging.Logger):
     CRITICAL = logging.CRITICAL
 
     def __init__(self, deviceName, port=None, consoleLogger=sys.stdout, fileLogger=None, loggingLevel=logging.INFO, showFile=True, showLevel=True, showDate=True, consoleLevel=None):
+        """
+        Initialize a logger for a device with a console and file handler.
+        :param str deviceName: The name of the device
+        :param str port: com port of device
+        :param TextIO consoleLogger: The console to output to
+        :param str fileLogger: File path to log to
+        :param int loggingLevel: Logging level
+        :param bool showFile: whether to show the file in each log line
+        :param bool showLevel: whether to show the level in each log line
+        :param bool showDate: whether to show the date in each log line
+        :param consoleLevel: The level to log to the console, this is to allow for different levels to be logged to the console and file.
+        """
         title = []
         if port:
             title.append(port)
@@ -57,7 +71,14 @@ class Logger(logging.Logger):
         self.fileLogger = fileLogger
         self.addHandler(fileLogger)
 
-    def formatLog(self, msg):
+    @staticmethod
+    def formatLog(msg):
+        """
+        Format the log message.
+        :param str | ExceptionChainRepr | Exception | list | tuple msg: input to format
+        :return: formatted message
+        :rtype: str
+        """
         if isinstance(msg, str):
             pass
         elif isinstance(msg, ExceptionChainRepr):
@@ -70,32 +91,63 @@ class Logger(logging.Logger):
             msg = str(msg)
         return msg
 
-    def info(self, msg: str | Exception | ExceptionChainRepr, end='', stacklevel: int = 2, *args, **kwargs):
-        """Log a message with level INFO and append `end` after the message."""
+    def info(self, msg: str | Exception | ExceptionChainRepr | list | tuple, end='', stacklevel: int = 2, *args, **kwargs):
+        """
+        Log a message with level INFO and append `end` after the message.
+        :param str | Exception | ExceptionChainRepr | list | tuple msg: The message to log
+        :param str end: The string to append to the message
+        :param int stacklevel: The level in the stack to log from. this is to stop the logger from logging from the logger itself.
+        """
         msg = self.formatLog(msg)
         super().info(msg + end, *args, **kwargs, stacklevel=stacklevel)
 
-    def debug(self, msg: str | Exception | ExceptionChainRepr, end='', stacklevel: int = 2, *args, **kwargs):
-        """Log a message with level DEBUG and append `end` after the message."""
+    def debug(self, msg: str | Exception | ExceptionChainRepr | list | tuple, end='', stacklevel: int = 2, *args, **kwargs):
+        """
+        Log a message with level DEBUG and append `end` after the message.
+        :param str | Exception | ExceptionChainRepr | list | tuple msg: The message to log
+        :param str end: The string to append to the message
+        :param int stacklevel: The level in the stack to log from. this is to stop the logger from logging from the logger itself.
+        """
         msg = self.formatLog(msg)
         super().debug(msg + end, *args, **kwargs, stacklevel=stacklevel)
 
-    def warning(self, msg: str | Exception | ExceptionChainRepr, end='', stacklevel: int = 2, *args, **kwargs):
-        """Log a message with level WARNING and append `end` after the message."""
+    def warning(self, msg: str | Exception | ExceptionChainRepr | list | tuple, end='', stacklevel: int = 2, *args, **kwargs):
+        """
+        Log a message with level WARNING and append `end` after the message.
+        :param str | Exception | ExceptionChainRepr | list | tuple msg: The message to log
+        :param str end: The string to append to the message
+        :param int stacklevel: The level in the stack to log from. this is to stop the logger from logging from the logger itself.
+        """
         msg = self.formatLog(msg)
         super().warning(msg + end, *args, **kwargs, stacklevel=stacklevel)
 
-    def error(self, msg: str | Exception | ExceptionChainRepr, end='', stacklevel: int = 2, *args, **kwargs):
-        """Log a message with level ERROR and append `end` after the message."""
+    def error(self, msg: str | Exception | ExceptionChainRepr | list | tuple, end='', stacklevel: int = 2, *args, **kwargs):
+        """
+        Log a message with level ERROR and append `end` after the message.
+        :param str | Exception | ExceptionChainRepr | list | tuple msg: The message to log
+        :param str end: The string to append to the message
+        :param int stacklevel: The level in the stack to log from. this is to stop the logger from logging from the logger itself.
+        """
         msg = self.formatLog(msg)
         super().error(msg + end, *args, **kwargs, stacklevel=stacklevel)
 
-    def critical(self, msg: str | Exception | ExceptionChainRepr, end='',stacklevel: int = 2, *args, **kwargs):
-        """Log a message with level CRITICAL and append `end` after the message."""
+    def critical(self, msg: str | Exception | ExceptionChainRepr | list | tuple, end='',stacklevel: int = 2, *args, **kwargs):
+        """
+        Log a message with level CRITICAL and append `end` after the message.
+        :param str | Exception | ExceptionChainRepr | list | tuple msg: The message to log
+        :param str end: The string to append to the message
+        :param int stacklevel: The level in the stack to log from. this is to stop the logger from logging from the logger itself.
+        """
         msg = self.formatLog(msg)
         super().critical(msg + end, *args, **kwargs, stacklevel=stacklevel)
 
     def logMessageOnly(self, msg: str, logLevel: int = None, stacklevel: int = 3, *args, **kwargs):
+        """
+        Log a message without any additional formatting, removing the log level, date, time, and file info.
+        :param str msg: the message to log
+        :param int logLevel: the level to log the message at
+        :param int stacklevel: The level in the stack to log from. this is to stop the logger from logging from the logger itself.
+        """
         if logLevel is None:
             logLevel = self.level
         """Log a message without any additional formatting."""
@@ -116,6 +168,10 @@ class Logger(logging.Logger):
             handler.setFormatter(formatter)
 
     def logException(self, reprentries: list[ExceptionChainRepr] | ExceptionChainRepr | list[ReprEntry | ReprEntryNative] | Sequence[ReprEntry | ReprEntryNative]| list[FixtureLookupErrorRepr] | FixtureLookupErrorRepr | ReprEntry | str):
+        """
+        Log an exception chain, for use in pytests.
+        :param list[ExceptionChainRepr] | ExceptionChainRepr | list[ReprEntry | ReprEntryNative] | Sequence[ReprEntry | ReprEntryNative]| list[FixtureLookupErrorRepr] | FixtureLookupErrorRepr | ReprEntry | str reprentries: The exception chain to log
+        """
         if isinstance(reprentries, ExceptionChainRepr) or isinstance(reprentries, ReprEntry) or isinstance(reprentries, FixtureLookupErrorRepr):
             reprentries = [reprentries]
         if isinstance(reprentries, list):
@@ -159,11 +215,18 @@ class Logger(logging.Logger):
                     self.logMessageOnly(line)
 
     def setLevel(self, level):
+        """
+        Set the logging level for the logger and its handlers.
+        :param int level: The logging level, 10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR, 50=CRITICAL
+        """
         super().setLevel(level)
         if self.consoleLogger is not None: self.consoleLogger.setLevel(level)
         self.fileLogger.setLevel(level)
 
 class CustomFormatter(logging.Formatter):
+    """
+    A custom formatter for the logger, used to apply color to the log messages.
+    """
     # ANSI escape codes for colors
     COLOR_CODES = {
         "DEBUG": "\033[94m",  # Blue

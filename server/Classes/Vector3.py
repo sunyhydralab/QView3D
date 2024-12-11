@@ -2,6 +2,12 @@ import math
 
 class Vector3:
     def __init__(self, x=0.0, y=0.0, z=0.0):
+        """
+        A 3D vector class used for representing the position of the tool head/
+        :param float x:
+        :param float y:
+        :param float z:
+        """
         self.x = x
         self.y = y
         self.z = z

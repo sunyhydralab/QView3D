@@ -9,8 +9,11 @@ from Classes.FabricatorConnection import EmuListPortInfo
 
 class Ports:
     @staticmethod
-    def getPorts():
-        """Get a list of all connected serial ports."""
+    def getPorts() -> list[dict]:
+        """
+        Get a list of all connected serial ports in JSON format
+        :rtype: list[dict]
+        """
         ports = serial.tools.list_ports.comports()
         emu_port, emu_name, emu_hwid = app.get_emu_ports()
         if emu_port and emu_name and emu_hwid:
@@ -37,6 +40,10 @@ class Ports:
 
     @staticmethod
     def getListPorts():
+        """
+        Get a list of all connected serial ports.
+        :rtype: list[ListPortInfo | SysFS]
+        """
         return serial.tools.list_ports.comports()
 
     @staticmethod
@@ -62,7 +69,11 @@ class Ports:
 
     @staticmethod
     def getPortByHwid(hwid: str):
-        """Get a specific port by its hardware ID."""
+        """
+        Get a specific port by its hardware ID.
+        :param str hwid: The hardware ID of the device.
+        :rtype: ListPortInfo | SysFS | None
+        """
         assert isinstance(hwid, str), f"HWID must be a string: {hwid} : {type(hwid)}"
         ports = Ports.getListPorts()
         for port in ports:
@@ -71,8 +82,11 @@ class Ports:
         return None
 
     @staticmethod
-    def getRegisteredFabricators() -> list[Fabricator]:
-        """Get a list of all registered fabricators."""
+    def getRegisteredFabricators():
+        """
+        Get a list of all registered fabricators.
+        :rtype: list[Fabricator]
+        """
         fabricators = Fabricator.queryAll()
         registered_fabricators = []
         for fab in fabricators:
@@ -83,7 +97,11 @@ class Ports:
 
     @staticmethod
     def diagnosePort(port: ListPortInfo | SysFS) -> str:
-        """Diagnose a port to check if it is functional by sending basic G-code commands."""
+        """
+        Diagnose a port to check if it is functional by sending basic G-code commands.
+        :param ListPortInfo | SysFS port: The port to diagnose
+        :rtype: str
+        """
         try:
             if app:
                 device = app.fabricator_list.getFabricatorByPort(port).device

@@ -36,8 +36,7 @@ class FabricatorList:
 
     def __to_JSON__(self):
         """
-        Convert the FabricatorList to a JSON object
-        :return: JSON object
+        Convert the FabricatorList to a JSON object that can be sent to the frontend
         :rtype: dict
         """
         fab_list = []
@@ -59,7 +58,11 @@ class FabricatorList:
         self.fabricator_threads = []
 
     def addFabricator(self, serialPortName: str, name: str = ""):
-        """add a fabricator to the list, and to the database, then start a thread for it"""
+        """
+        add a fabricator to the list, and to the database, then start a thread for it
+        :param str serialPortName: the name of the serial port to add
+        :param str name: the name of the fabricator to add
+        """
         serialPort: ListPortInfo | SysFS | None = Ports.getPortByName(serialPortName)
         dbFab: Fabricator | None = next((fabricator for fabricator in Fabricator.queryAll() if fabricator.getHwid() == serialPort.hwid.split(' LOCATION=')[0]), None)
         listFab: Fabricator | None = next((fabricator for fabricator in self if fabricator.getHwid() == serialPort.hwid.split(' LOCATION=')[0]), None)
@@ -85,9 +88,14 @@ class FabricatorList:
             print("starting new fabricator thread")
             self.start_fabricator_thread(newFab)
 
-    def deleteFabricator(self, fabricatorid):
-        """delete a fabricator from the list, and from the database"""
-        fabricator = self.getFabricatorById(fabricatorid)
+    def deleteFabricator(self, fabricator_id):
+        """
+        delete a fabricator from the list, and from the database
+        :param int fabricator_id: the id of the fabricator to delete
+        :return: True if the fabricator was deleted, False otherwise
+        :rtype: bool
+        """
+        fabricator = self.getFabricatorById(fabricator_id)
         if fabricator:
             try:
                 self.fabricators.remove(fabricator)
@@ -102,24 +110,39 @@ class FabricatorList:
             return True
 
     def getFabricatorByName(self, name) -> Fabricator | None:
-        """find the first fabricator with the given name"""
+        """
+        find the first fabricator with the given name
+        :param str name: the name to search for
+        :return: the first fabricator with the given name, or None if no fabricator has that name
+        :rtype: Fabricator | None
+        """
         return next((fabricator for fabricator in self if fabricator.getName() == name), None)
 
 
     def getFabricatorByHwid(self, hwid) -> Fabricator | None:
-        """find the first fabricator with the given hwid"""
+        """
+        find the first fabricator with the given hwid
+        :param str hwid: the hwid to search for
+        :return: the first fabricator with the given hwid, or None if no fabricator has that hwid
+        :rtype: Fabricator | None
+        """
         return next((fabricator for fabricator in self if fabricator.getHwid() == hwid), None)
 
-    def getFabricatorById(self, id) -> Fabricator | None:
-        """find the first fabricator with the given id"""
-        return next((fabricator for fabricator in self if fabricator.dbID == id), None)
-    
+    def getFabricatorById(self, dbID) -> Fabricator | None:
+        """
+        find the first fabricator with the given id
+        :param int dbID: the id to search for
+        :return: the first fabricator with the given id, or None if no fabricator has that id
+        :rtype: Fabricator | None
+        """
+        return next((fabricator for fabricator in self if fabricator.dbID == dbID), None)
 
     def getFabricatorByPort(self, port) -> Fabricator | None:
         """
         find the first fabricator with the given port
-        :param port: the port to search for
-        :type port: str | ListPortInfo | SysFS
+        :param str | ListPortInfo | SysFS port: the port to search for
+        :return: the first fabricator with the given port, or None if no fabricator has that port
+        :rtype: Fabricator | None
         """
         if isinstance(port, ListPortInfo or SysFS): port = port.device
         assert isinstance(port, str), f"port={port}, type(port)={type(port)}"
@@ -158,13 +181,19 @@ class FabricatorList:
 
 
     def start_fabricator_thread(self, fabricator: Fabricator):
-        thread = FabricatorThread(fabricator, app=self.app, target=self.update_thread, args=(fabricator,))
-        thread.daemon = True
+        """
+        Start a thread for the given fabricator
+        :param Fabricator fabricator: the given fabricator
+        :return:
+        :rtype: FabricatorThread
+        """
+        thread = FabricatorThread(fabricator, passed_app=self.app, **{"daemon": True})
         thread.start()
         return thread
 
 
     def create_fabricator_threads(self):
+        """Create a thread for each fabricator in the list and start it"""
         for fabricator in self:
             fabricator.queue = Queue()  # Ensure each fabricator has its own queue
             fabricator_thread = self.start_fabricator_thread(fabricator)
@@ -172,15 +201,23 @@ class FabricatorList:
         self.ping_thread = Thread(target=self.pingForStatus)
 
     def get_fabricator_thread(self, fabricator):
+        """
+        Get the thread for the given fabricator
+        :param fabricator: the given fabricator
+        :return: that fabricator's thread
+        """
         assert fabricator in self, f"fabricator {fabricator} not in self"
         thread = next(thread for thread in self.fabricator_threads if thread.fabricator == fabricator)
         assert thread.is_alive(), f"thread {thread} is not alive"
         assert thread.daemon, f"thread {thread} is not daemon"
         return thread
 
-
-
-    def queue_restore(self, status, queue):
+    def queue_restore(self, status: str, queue: Queue):
+        """
+        Restore the queue for the given fabricator
+        :param str status: the status of the fabricator
+        :param Queue queue: the queue to restore
+        """
         for fabricator in self.fabricators:
             for job in queue:
                 if job.status != 'inqueue':
@@ -191,7 +228,12 @@ class FabricatorList:
             fabricator_thread = self.start_fabricator_thread(fabricator)
             self.fabricator_threads.append(fabricator_thread)
 
-    def update_thread(self, fabricator):
+    def update_thread(self, fabricator: Fabricator):
+        """
+        Update the thread for the given fabricator
+        :param Fabricator fabricator:
+        :return:
+        """
         # thread = next(thread for thread in self.fabricator_threads if thread.fabricator.id == fabricator.id)
         while True:
             time.sleep(2)
@@ -203,7 +245,13 @@ class FabricatorList:
                 if status != "offline":
                     fabricator.printNextInQueue()
 
-    def resetThread(self, fabricator_id):
+    def resetThread(self, fabricator_id: int) -> tuple[Response, int]:
+        """
+        Reset the thread for the given fabricator
+        :param int fabricator_id: the dbID of the fabricator to reset
+        :return: a json response for the client
+        :rtype: tuple[Response, int]
+        """
         try:
             for thread in self.fabricator_threads:
                 if thread.fabricator.dbID == fabricator_id:
@@ -224,7 +272,14 @@ class FabricatorList:
             app.handle_errors_and_logging(e)
             return jsonify({"success": False, "error": "Unexpected error occurred"}), 500
 
-    def queueRestore(self, fabricator_id, status):
+    def queueRestore(self, fabricator_id: int, status: str) -> tuple[Response, int]:
+        """
+        Restore the queue for the given fabricator
+        :param int fabricator_id:
+        :param str status:
+        :return: a json response for the client
+        :rtype: tuple[Response, int]
+        """
         try:
             for thread in self.fabricator_threads:
                 if thread.fabricator.id == fabricator_id:
@@ -246,7 +301,13 @@ class FabricatorList:
             return jsonify({"success": False, "error": "Unexpected error occurred"}), 500
 
 
-    def deleteThread(self, fabricator_id):
+    def deleteThread(self, fabricator_id: int) -> tuple[Response, int]:
+        """
+        Delete the thread for the given fabricator
+        :param int fabricator_id: the dbID of the fabricator to delete
+        :return: a json response for the client
+        :rtype: tuple[Response, int]
+        """
         try:
             for thread in self.fabricator_threads:
                 if thread.fabricator.dbID == fabricator_id:
@@ -269,7 +330,13 @@ class FabricatorList:
         pass
 
 
-    def moveFabricatorList(self, fabricator_ids):
+    def moveFabricatorList(self, fabricator_ids: list[int]) -> tuple[Response, int]:
+        """
+        Move the fabricator list to the given order
+        :param list[int] fabricator_ids:
+        :return: a json response for the client
+        :rtype: tuple[Response, int]
+        """
         new_thread_list = []
         for id in fabricator_ids:
             for thread in self.fabricator_threads:
@@ -279,7 +346,14 @@ class FabricatorList:
         self.fabricator_threads = new_thread_list
         return jsonify({"success": True, "message": "Fabricator list reordered successfully"})
 
-    def editName(self, fabricator_id, name):
+    def editName(self, fabricator_id: int, name: str) -> tuple[Response, int]:
+        """
+        Edit the name of a registered fabricator.
+        :param int fabricator_id: the dbID of the fabricator to edit
+        :param str name: the new name for the fabricator
+        :return: a json response for the client
+        :rtype: tuple[Response, int]
+        """
         fabricator = self.getFabricatorById(fabricator_id)
         if fabricator:
             fabricator.setName(name)
@@ -301,6 +375,10 @@ class FabricatorThread(Thread):
         return f"FabricatorThread(fabricator={self.fabricator}, daemon={self.daemon}, running={self.is_alive()})"
 
     def __to_JSON__(self):
+        """
+        Convert the FabricatorThread to a JSON object that can be sent to the frontend
+        :rtype: dict
+        """
         return {
             "fabricator": self.fabricator,
             "app": self.app,

@@ -127,13 +127,11 @@ class Device(ABC):
             return loc == self.getToolHeadLocation()
         return True
 
-    def parseGcode(self, job: Job, isVerbose: bool = False):
+    def parseGcode(self, job: Job, isVerbose: bool = False) -> bool:
         """
         Parse a G-code file and send the commands to the device.
-        :param job: The Job object, with file name to parse.
-        :type job: Job
-        :param isVerbose: Whether to log the commands
-        :type isVerbose: bool
+        :param Job job: The Job object, with file name to parse.
+        :param bool isVerbose: Whether to log the commands
         :return: True if the job is complete, else False
         :rtype: bool
         :raises AssertionError: if the file is not a string or if isVerbose is not a bool
@@ -187,20 +185,25 @@ class Device(ABC):
             return True
 
 
-    def pause(self):
+    def pause(self) -> bool:
+        """
+        Pause the device, if the pause command is implemented.
+        :rtype: bool
+        """
         pass
 
-    def resume(self):
+    def resume(self) -> bool:
+        """
+        Resume the device, if the resume command is implemented.
+        :rtype: bool
+        """
         pass
 
-    def sendGcode(self, gcode: bytes, isVerbose: bool = False):
+    def sendGcode(self, gcode: bytes, isVerbose: bool = False) -> bool:
         """
         Send a G-code command to the device.
-        :param gcode: The line to send to the hardware
-        :type gcode: bytes
-        :param isVerbose: Whether to log the command
-        :type isVerbose: bool
-        :return: True if the command was sent successfully, else False
+        :param bytes gcode: The line to send to the hardware
+        :param bool isVerbose: Whether to log the command
         :rtype: bool
         :raises AssertionError: if the serial connection is not open, if gcode is not bytes, or if isVerbose is not a bool
         """
@@ -215,11 +218,10 @@ class Device(ABC):
             else: print(gcode.decode("utf-8"))
         return True
 
-    def getToolHeadLocation(self, isVerbose = False):
+    def getToolHeadLocation(self, isVerbose: bool = False) -> Vector3:
         """
         Get the current location of the tool head.
-        :param isVerbose: Whether to log the command
-        :type isVerbose: bool
+        :param bool isVerbose: Whether to log the command
         :return: the current location of the tool head
         :rtype: Vector3
         """
@@ -232,8 +234,11 @@ class Device(ABC):
         loc = LocationResponse(response)
         return Vector3(loc.x, loc.y, loc.z)
 
-    def repair(self):
-        """Attempt to repair the device connection by closing and reopening the serial connection."""
+    def repair(self) -> str:
+        """
+        Attempt to repair the device connection by closing and reopening the serial connection.
+        :rtype: str
+        """
         try:
             if self.MODEL and "Ender" in self.MODEL:
                 # If the device is an Ender, skip specific repair commands
@@ -258,8 +263,11 @@ class Device(ABC):
             if self.logger is not None: self.logger.error(f"Error during repair: {e}")
             return f"Repair failed with error: {e}"
 
-    def diagnose(self):
-        """Diagnose the device by sending basic G-code commands and checking responses."""
+    def diagnose(self) -> str:
+        """
+        Diagnose the device by sending basic G-code commands and checking responses.
+        :rtype: str
+        """
         try:
             if self.MODEL and "Ender" in self.MODEL:
                 # If the device is an Ender, skip the diagnosis
@@ -322,7 +330,7 @@ class LocationResponse:
         self.count_y = float(loc[5]) if '.' in loc[5] else int(loc[5])
         self.count_z = float(loc[6]) if '.' in loc[6] else int(loc[6])
 
-    def __to_JSON__(self):
+    def __to_JSON__(self) -> dict[str, float | int]:
         return {
             "x": self.x,
             "y": self.y,

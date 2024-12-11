@@ -2,7 +2,7 @@ from flask import jsonify, Response
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from sqlalchemy.exc import SQLAlchemyError
-from Classes.FabricatorConnection import FabricatorConnection, EmuListPortInfo
+from Classes.FabricatorConnection import FabricatorConnection
 from Classes.Fabricators.Device import Device
 from typing_extensions import TextIO
 from Classes.Jobs import Job
@@ -23,14 +23,19 @@ class Fabricator(db.Model):
     )
     devicePort = db.Column(db.String(50), nullable=False)
 
-    def __init__(self, port: ListPortInfo | SysFS | None, name: str = "", consoleLogger=None, fileLogger=None):
+    def __init__(self, port: ListPortInfo | SysFS | None, name: str = "", consoleLogger: TextIO | None = None, fileLogger: str | None = None):
+        """
+        Initialize a new Fabricator instance.
+        :param ListPortInfo | SysFS | None port: the serial port to connect to
+        :param str name: the name to show the frontend
+        :param TextIO | None consoleLogger: the console to log to
+        :param str | None fileLogger: the file path to log to
+        """
         if port is None:
             return
         assert isinstance(port, ListPortInfo) or isinstance(port, SysFS), f"Invalid port type: {type(port)}"
         assert isinstance(name, str), f"Invalid name type: {type(name)}"
         from Classes.Queue import Queue
-        from Classes.Jobs import Job
-
         self.dbID = None  # Initialize dbID
         self.job: Job | None = None
         self.queue: Queue = Queue()
@@ -58,9 +63,9 @@ class Fabricator(db.Model):
     def __repr__(self):
         return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}, logger: {self.device.logger if hasattr(self.device, 'logger') else 'None'}, port open: {self.device.serialConnection.is_open if (self.device is not None and self.device.serialConnection is not None) else None}, queue: {self.queue}, job: {self.job}"
 
-    def __to_JSON__(self):
+    def __to_JSON__(self) -> dict:
         """
-        Converts the Fabricator object to a JSON object
+        Converts the Fabricator object to a JSON object that can be sent to the front end
         :return: JSON object
         :rtype: dict
         """
@@ -79,7 +84,11 @@ class Fabricator(db.Model):
 
     @staticmethod
     def getModelFromGcodeCommand(serialPort: ListPortInfo | SysFS | None) -> str:
-        """returns the model of the printer based on the response to M997"""
+        """
+        returns the model of the printer based on the response to M997, NOTE: this is meant for use with Ender printers only for now.
+        :param ListPortInfo | SysFS | None serialPort: the serial port to connect to
+        :rtype: str
+        """
         testName = FabricatorConnection.staticCreateConnection(port=serialPort.device, baudrate=115200, timeout=60)
         testName.write(b"M997\n")
         while True:
@@ -92,16 +101,13 @@ class Fabricator(db.Model):
         return response
 
     @staticmethod
-    def staticCreateDevice(serialPort: ListPortInfo | SysFS | None, consoleLogger=None, fileLogger=None, websocket_connection=None):
+    def staticCreateDevice(serialPort: ListPortInfo | SysFS | None, consoleLogger: TextIO | None = None, fileLogger: str | None = None, websocket_connection=None) -> Device | None:
         """
         creates the correct printer object based on the serial port info
-        :param websocket_connection: the websocket connection to the emulator, if it exists
-        :param serialPort:
-        :type serialPort: ListPortInfo | SysFS | None
-        :param consoleLogger:
-        :type consoleLogger: TextIO | None
-        :param fileLogger:
-        :type fileLogger: str | None
+        :param Websocket | None websocket_connection: the websocket connection to the emulator, if it exists
+        :param ListPortInfo | SysFS | None serialPort: the serial port info
+        :param TextIO | None consoleLogger: the console stream to output to
+        :param str | None fileLogger: the file path to log to
         :return: device without a fabricator object
         :rtype: Device | None
         """
@@ -139,20 +145,15 @@ class Fabricator(db.Model):
             #TODO: assume generic printer, do stuff
             return None
 
-    def createDevice(self, serialPort: ListPortInfo | SysFS | None, consoleLogger=None, fileLogger=None, addLogger = False, websocket_connection=None):
+    def createDevice(self, serialPort: ListPortInfo | SysFS | None, consoleLogger: TextIO | None = None, fileLogger: str | None = None, addLogger: bool = False, websocket_connection=None) -> Device | None:
         """
         creates the correct printer object based on the serial port info
-        :param websocket_connection: the websocket connection to the emulator, if it exists
-        :type websocket_connection: WebSocket | None
-        :param serialPort: the serial port info
-        :type serialPort: ListPortInfo | SysFS | None
-        :param consoleLogger: the console stream to output to
-        :type consoleLogger: TextIO | None
-        :param fileLogger: the file path to output file logs to
-        :type fileLogger: str | None
-        :param addLogger: whether to add a logger to the device
-        :type addLogger: bool
-        :return: the printer object
+        :param WebSocket | None websocket_connection: the websocket connection to the emulator, if it exists
+        :param ListPortInfo | SysFS | None serialPort: the serial port info
+        :param TextIO | None consoleLogger: the console stream to output to
+        :param str | None fileLogger: the file path to output file logs to
+        :param bool addLogger: whether to add a logger to the device
+        :return: the fabricator object
         :rtype: Device | None
         """
         if serialPort is None:
@@ -193,10 +194,10 @@ class Fabricator(db.Model):
             return None
 
     @classmethod
-    def queryAll(cls):
+    def queryAll(cls) -> list["Fabricator"]:
         """
         Returns all fabricators in the database as a list of the Fabricator objects
-        :return: list of Fabricator objects
+        :return: list of Fabricator objects in the DB.
         :rtype: list[Fabricator]
         """
         fabList = []
@@ -209,22 +210,10 @@ class Fabricator(db.Model):
             fabList.append(cls(EmuListPortInfo(fake_port, "Emulator", fake_hwid), fake_name))
         return fabList
 
-    @classmethod
-    def updateDB(cls):
-        """commits all changes to the db"""
-        db.session.commit()
-
-    def addToDB(self):
-        """adds the fabricator to the db"""
-        db.session.add(self)
-        db.session.commit()
-
-    def begin(self, isVerbose: bool = False):
+    def begin(self, isVerbose: bool = False) -> bool:
         """
         starts the fabrication process
-        :param isVerbose: whether to print verbose output
-        :type isVerbose: bool
-        :return: whether the fabrication process was successful
+        :param bool isVerbose: whether to print verbose output
         :rtype: bool
         """
         try:
@@ -244,12 +233,14 @@ class Fabricator(db.Model):
             if isVerbose and hasattr(self.device,"logger"): self.device.logger.debug(f"Verdict handled, status: {self.status}")
             return True
         except Exception as e:
-
             return current_app.handle_errors_and_logging(e, self)
 
-
-    def pause(self):
-        """pauses the fabrication process if the fabricator supports it"""
+    def pause(self) -> bool:
+        """
+        pauses the fabrication process if the fabricator supports it
+        :rtype: bool
+        :raises AssertionError: if the device doesn't support pausing, or if the fabricator isn't paused despite being capable of it.
+        """
         assert isinstance(self.device,
                           Device), f"Device is not a Device object or subclass: {self.device}, type: {type(self.device)}"
         if not self.device.pauseCMD:
@@ -260,8 +251,12 @@ class Fabricator(db.Model):
         self.setStatus("paused")
         return self.status == self.device.status == "paused"
 
-    def resume(self):
-        """resumes the fabrication process if the fabricator supports it"""
+    def resume(self) -> bool:
+        """
+        resumes the fabrication process if the fabricator supports it
+        :rtype: bool
+        :raises AssertionError: if the device doesn't support resuming, or if the fabricator hasn't resumed despite being capable of it.
+        """
         assert isinstance(self.device,
                           Device), f"Device is not a Device object or subclass: {self.device}, type: {type(self.device)}"
         if not self.device.resumeCMD:
@@ -271,8 +266,12 @@ class Fabricator(db.Model):
         self.setStatus("printing")
         return self.status == self.device.status == "printing"
 
-    def cancel(self):
-        """cancels the fabrication process"""
+    def cancel(self) -> bool:
+        """
+        cancels the fabrication process
+        :rtype: bool
+        :raises AssertionError: if the fabricator isn't printing, or if the fabricator hasn't cancelled despite being capable of it
+        """
         try:
             assert self.job is not None, "Job is None"
             assert self.device is not None, "Device is None"
@@ -283,10 +282,19 @@ class Fabricator(db.Model):
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self)
 
-    def getStatus(self):
+    def getStatus(self) -> str:
+        """
+        gets the status of the fabricator
+        :rtype: str
+        """
         return self.status
 
-    def setStatus(self, newStatus):
+    def setStatus(self, newStatus: str) -> bool:
+        """
+        sets the status of the fabricator
+        :param str newStatus: new status to set
+        :rtype: bool
+        """
         try:
             assert newStatus in ["idle", "printing", "paused", "complete", "error", "cancelled", "misprint", "ready", "offline"], f"Invalid status: {newStatus}"
             assert self.device is not None, "Device is None"
@@ -319,6 +327,7 @@ class Fabricator(db.Model):
         self.setStatus("idle")
 
     def handleVerdict(self):
+        """handles the verdict of the device, this is used for handling the completion of a job"""
         assert self.device.verdict in ["complete", "error", "cancelled", "misprint"], f"Invalid verdict: {self.device.verdict}"
         assert self.job is not None, "Job is None"
         if self.device.verdict == "complete":
@@ -334,10 +343,19 @@ class Fabricator(db.Model):
         elif self.device.verdict== "misprint":
             self.setStatus("misprint")
 
-    def getName(self):
+    def getName(self) -> str:
+        """
+        gets the name of the fabricator
+        :rtype: str
+        """
         return self.name
 
     def setName(self, name: str) -> Response:
+        """
+        sets the name of the fabricator
+        :param str name: new name to set
+        :rtype: Response
+        """
         try:
             Fabricator.query.filter_by(hwid=self.hwid).first().name = name
             self.name = name
@@ -393,8 +411,12 @@ class Fabricator(db.Model):
             self.job = None
 
 
-def getFileConfig(file):
-    """Get the config lines from the job file."""
+def getFileConfig(file: str) -> dict:
+    """
+    Get the config lines from the job file.
+    :param str file: the file path to the job file
+    :rtype: dict
+    """
     with open(file, 'r') as f:
         lines = f.readlines()
     comment_lines = [line.lstrip(';').strip() for line in lines if line.startswith(';') or ':' in line]

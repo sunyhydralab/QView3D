@@ -4,6 +4,7 @@ from globals import current_app
 from Classes.Jobs import Job
 
 class Queue(deque):
+    """Represents a queue of jobs, used to manage the order of jobs to be fabricated."""
     def setToInQueue(self): 
         for job in self:
             job.status = "inqueue"
@@ -35,6 +36,11 @@ class Queue(deque):
         return True
 
     def bump(self, up, jobid):
+        """
+        Move a job up or down in the queue.
+        :param bool up: True to move the job up, False to move it down
+        :param int jobid: The ID of the job to move
+        """
         index = next(
             (
                 index
@@ -58,6 +64,10 @@ class Queue(deque):
             )
 
     def reorder(self, arr):
+        """
+        Reorder the queue based on a list of job IDs.
+        :param list[int] arr: The list of job IDs to reorder the queue by
+        """
         new_queue = deque()
         for jobid in arr:
             for job in self:
@@ -72,48 +82,40 @@ class Queue(deque):
                 "queue_update", {"queue": self.convertQueueToJson(), "printerid": arr[0].fabricator_id if arr else None}
             )
     
-    def deleteJob(self, jobid, printerid):
-        deletedjob = None
+    def deleteJob(self, jobid: int, fabricator_id: int) -> Job | str:
+        """
+        Delete a job from the queue.
+        :param int jobid: job id to delete
+        :param int fabricator_id: printer id for frontend.
+        :return: the deleted job or a message indicating the job was not found
+        :rtype: Job | str
+        """
         for job in self:
             if job.getJobId() == jobid:
                 deletedjob = job
                 self.remove(job)
                 current_app.socketio.emit(
                     "queue_update",
-                    {"queue": self.convertQueueToJson(), "printerid": printerid},
+                    {"queue": self.convertQueueToJson(), "printerid": fabricator_id},
                 )
                 return deletedjob
         return "Job not found in queue."
 
-    def convertQueueToJson(self):
-        queue = [job.__to_JSON__() for job in self]
-        # for job in self:
-        #     job_info = {
-        #         "id": job.id,
-        #         "name": job.name,
-        #         "status": job.status,
-        #         "date": job.date.strftime('%a, %d %b %Y %H:%M:%S'),
-        #         "printerid": job.fabricator_id,
-        #         "errorid": job.error_id,
-        #         "file_name_original": job.file_name_original,
-        #         "progress": job.progress,
-        #         "sent_lines": job.sent_lines,
-        #         "favorite": job.favorite,
-        #         "released": job.released,
-        #         "file_pause": job.filePause,
-        #         "comments": job.comments,
-        #         "extruded": job.extruded,
-        #         "td_id": job.td_id,
-        #         "time_started": job.time_started,
-        #         "printer_name": job.fabricator_name,
-        #         "max_layer_height": job.max_layer_height,
-        #         "current_layer_height": job.current_layer_height,
-        #         "filament": job.filament,
-        #     }
-        #     queue.append(job_info)
-        return queue
+    def convertQueueToJson(self) -> list[dict]:
+        """
+        Convert the queue to a JSON-serializable format.
+        :return: list of job dictionaries
+        :rtype: list[dict]
+        """
+        return [job.__to_JSON__() for job in self]
 
-    def bumpExtreme(self, front, jobid, printerid):
+    def bumpExtreme(self, front: bool, jobid: int, fabricator_id: int):
+        """
+        Move a job to the front or back of the queue.
+        :param bool front: True to move the job to the front, False to move it to the back
+        :param int jobid: The ID of the job to move
+        :param int fabricator_id: The ID of the printer to move the job to
+        """
         index = next(
             (
                 index
@@ -133,35 +135,64 @@ class Queue(deque):
             else:
                 self.insert(0, job_to_move)
         else:
-            self.addToBack(job_to_move, printerid)
+            self.addToBack(job_to_move, fabricator_id)
         if current_app:
             current_app.socketio.emit(
-                "queue_update", {"queue": self.convertQueueToJson(), "printerid": printerid}
+                "queue_update", {"queue": self.convertQueueToJson(), "printerid": fabricator_id}
             )
 
-    def getJob(self, job_to_find):
+    def getJob(self, job_to_find) -> Job | None:
+        """
+        Get a job from the queue. This is used to make sure that a Job is in the queue, after fetching it from the db with a query.
+        :param Job job_to_find: The job to find
+        :return: a job object if found, None otherwise
+        :rtype: Job | None
+        """
         for job in self:
             if job.getJobId() == job_to_find.getJobId():
                 return job
         return None
 
-    def getJobById(self, job_to_find):
+    def getJobById(self, job_to_find: int) -> Job | None:
+        """
+        Get a job from the queue by its ID.
+        :param int job_to_find: The ID of the job to find
+        :return: a job object if found, None otherwise
+        :rtype: Job | None
+        """
         for job in self:
             if job.getJobId() == job_to_find:
                 return job
         return None
 
-    def jobExists(self, jobid):
+    def jobExists(self, jobid: int) -> bool:
+        """
+        Check if a job exists in the queue.
+        :param int jobid: The ID of the job to check for
+        :return: True if the job exists, False otherwise
+        :rtype: bool
+        """
         for job in self:
 
             if job.id == jobid:
                 return True
         return False
 
-    def getNext(self):
+    def getNext(self) -> Job | None:
+        """
+        Get the next job in the queue.
+        :rtype: Job | None
+        """
         return self[0] if len(self) > 0 else None
 
-    def removeJob(self):
+    def removeJob(self) -> Job | None:
+        """
+        Remove the next job from the queue.
+        :return: the removed job or None if the queue is empty
+        :rtype Job | None
+        """
+        if len(self) == 0:
+            return None
         self.pop()
         if current_app:
             current_app.socketio.emit("job_removed", {"queue": list(self)})
