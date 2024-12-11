@@ -61,7 +61,7 @@ class Fabricator(db.Model):
         db.session.commit()
 
     def __repr__(self):
-        return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}, logger: {self.device.logger if hasattr(self.device, 'logger') else 'None'}, port open: {self.device.serialConnection.is_open if (self.device is not None and self.device.serialConnection is not None) else None}, queue: {self.queue}, job: {self.job}"
+        return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}, logger: {self.device.logger if hasattr(self, "device") and hasattr(self.device, 'logger') else 'None'}, port open: {self.device.serialConnection.is_open if (hasattr(self, "device") and self.device is not None and self.device.serialConnection is not None) else None}, queue: {self.queue}, job: {self.job}"
 
     def __to_JSON__(self) -> dict:
         """
@@ -205,9 +205,6 @@ class Fabricator(db.Model):
         for fab in cls.query.all():
             if Ports.getPortByName(fab.devicePort) is not None:
                 fabList.append(cls(Ports.getPortByName(fab.devicePort), fab.name))
-        fake_port, fake_name, fake_hwid = current_app.get_emu_ports()
-        if fake_port and fake_name and fake_hwid:
-            fabList.append(cls(EmuListPortInfo(fake_port, "Emulator", fake_hwid), fake_name))
         return fabList
 
     def begin(self, isVerbose: bool = False) -> bool:
@@ -405,7 +402,7 @@ class Fabricator(db.Model):
                 #     return False
                 pass
         except AssertionError as e:
-            self.device.logger.error(f"Invalid job: {e}")
+            current_app.handle_errors_and_logging(e, self.device)
             self.setStatus("error")
             self.queue.removeJob()
             self.job = None
@@ -419,7 +416,7 @@ def getFileConfig(file: str) -> dict:
     """
     with open(file, 'r') as f:
         lines = f.readlines()
-    comment_lines = [line.lstrip(';').strip() for line in lines if line.startswith(';') or ':' in line]
+    comment_lines = [line.strip().lstrip(';').strip() for line in lines if line.strip().startswith(';') or ':' in line]
     if len(comment_lines) > 0 and "prusaslicer" in comment_lines[0].lower():
         settingsDict = {line.split('=')[0].strip(): line.split('=')[1].strip() for line in comment_lines if '=' in line}
         import re

@@ -119,7 +119,6 @@ class SocketConnection(FabricatorConnection):
         async def on_message_received(client_id, message):
             try:
                 data = json.loads(message)
-                print(data)
 
                 if data.get("event") != ("gcode_response"):
                     return

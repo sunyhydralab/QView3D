@@ -5,6 +5,7 @@ import uuid
 import os
 import shutil
 import websockets
+from websockets.asyncio.server import Server
 from MyFlaskApp import MyFlaskApp
 from globals import emulator_connections, event_emitter
 
@@ -53,7 +54,7 @@ async def websocket_server():
                 del emulator_connections[client_id]
 
     try:
-        server = await websockets.serve(handle_client, "localhost", 8001)
+        server: Server = await websockets.serve(handle_client, "localhost", 8001)
         await server.wait_closed()
     except Exception:
         print(f"WebSocket server error: {traceback.format_exc()}")
@@ -62,8 +63,7 @@ def start_websocket():
     print("Starting WebSocket server...")
     asyncio.run(websocket_server())
 
-websocket_thread = threading.Thread(target=start_websocket)
-websocket_thread.daemon = True  # Make it a daemon thread to exit with the main program
+websocket_thread = threading.Thread(target=start_websocket, daemon=True)
 websocket_thread.start()
 
 
