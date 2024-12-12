@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onActivated, onDeactivated, ref, toRef, onUnmounted } from 'vue';
+import { onMounted, ref, onUnmounted } from 'vue';
 import { useGetFile, type Job } from '@/model/jobs';
 import * as GCodePreview from 'gcode-preview';
 
@@ -44,7 +44,6 @@ onMounted(async () => {
         try {
             // Extract the thumbnail from the metadata
             const { metadata } = preview.parser.parseGCode(gcode);
-            console.debug('GCode metadata:', metadata);
             let thumbnailData = null;
             if (metadata.thumbnails) {
                 if(metadata.thumbnails['640x480']) thumbnailData = metadata.thumbnails['640x480'];
@@ -94,7 +93,7 @@ const fileToString = (file: File | undefined) => {
 </script>
 
 <template>
-    <canvas v-show="false" style="display: hidden" ref="canvas"></canvas>
+    <canvas v-show="false" ref="canvas"></canvas>
     <img v-if="thumbnailSrc" :src="thumbnailSrc" alt="GCode Thumbnail" />
     <div v-else>This file doesn't have a thumbnail attached, you can check the viewer instead!</div>
 </template>

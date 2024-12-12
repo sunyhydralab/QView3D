@@ -94,9 +94,9 @@ def add_job_to_queue():
         if fabricator is None:
             return jsonify({"error": "Fabricator not found."}), 404
         if priority == 'true':
-            fabricator.queue.addToFront(job, printer_id)
+            fabricator.queue.addToFront(job)
         else:
-            fabricator.queue.addToBack(job, printer_id)
+            fabricator.queue.addToBack(job)
 
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
 
@@ -145,7 +145,7 @@ def auto_queue():
         fabricator = findPrinterObject(printer_id)
         if fabricator is None:
             return jsonify({"error": "Fabricator not found."}), 404
-        fabricator.queue.addToBack(job, printer_id)
+        fabricator.queue.addToBack(job)
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
 
     except Exception as e:
@@ -685,8 +685,8 @@ def rerunjob(printerpk, jobpk, position):
     if fabricator is None:
         return jsonify({"error": "Fabricator not found."}), 404
     if position == "back":
-        findPrinterObject(printerpk).getQueue().addToBack(rjob, rjob.fabricator_id)
+        findPrinterObject(printerpk).getQueue().addToBack(rjob)
     else:
-        findPrinterObject(printerpk).getQueue().addToFront(rjob, rjob.fabricator_id)
+        findPrinterObject(printerpk).getQueue().addToFront(rjob)
 
     return jsonify({"success": True, "message": "Job added to printer queue."}), 200

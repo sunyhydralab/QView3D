@@ -1,127 +1,89 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onActivated, onDeactivated, ref, toRef, watchEffect, onUnmounted } from 'vue';
-import { useGetFile, type Job } from '@/model/jobs';
+import {ref, onMounted, onUnmounted, watch, type Ref} from 'vue';
+import {type Device} from '@/model/ports';
 import * as GCodePreview from 'gcode-preview';
 
-const { getFile } = useGetFile();
-
 const props = defineProps({
-    job: Object as () => Job
-})
+  device: Object as () => Device,
+});
 
-const job = toRef(props, 'job');
-
-const modal = document.getElementById('gcodeLiveViewModal');
-
-// Create a ref for the canvas
 const canvas = ref<HTMLCanvasElement | null>(null);
+
+const gcodeBuffer: Ref<Array<string>> = ref([] as Array<string>);
+
 let preview: GCodePreview.WebGLPreview | null = null;
-let layers: string[][] = [];
+const originalConsoleWarn = console.warn;
+const bufferSizeToRender = 50;
 
 onMounted(async () => {
-    if (!modal) {
-        console.error('Modal element is not available');
-        return;
+  if (canvas.value) {
+    try {
+        console.warn = () => {}; // Suppress warnings from gcode-preview
+      preview = (GCodePreview.init({
+        canvas: canvas.value,
+        extrusionColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#7561A9',
+        backgroundColor: 'black',
+        buildVolume: {x: 250, y: 210, z: 220},
+        travelColor: 'limegreen',
+        lineWidth: 1,
+        lineHeight: 1,
+        extrusionWidth: 1,
+        renderExtrusion: true,
+        renderTravel: false,
+        renderTubes: false,
+      }));
+
+      preview.camera.position.set(-200, 232, 200);
+      preview.camera.lookAt(0, 0, 0);
+      console.warn = originalConsoleWarn;
+
+    } catch (error) {
+      console.error('Error initializing GCodePreview:', error);
     }
-
-    const gcodeFile = await getFile(props.job!);
-    if (!gcodeFile) {
-        console.error('Failed to get the file');
-        return;
+  }
+  if(preview?.renderTubes) {
+    watch(() => props.device!.gcodeLines?.length, () => {
+      gcodeBuffer.value.push(props.device!.gcodeLines![props.device!.gcodeLines!.length - 1]);
+      if (gcodeBuffer.value?.length > bufferSizeToRender) {
+        renderAllNoWarn(gcodeBuffer.value);
+        gcodeBuffer.value = [];
+      }
+    });
+    if (props.device!.gcodeLines) {
+      renderAllNoWarn(props.device!.gcodeLines!);
     }
-
-    const fileString = await fileToString(gcodeFile);
-    const lines = fileString.split('\n');
-    layers = lines.reduce((layers, line) => {
-        if (line.startsWith(";LAYER_CHANGE")) {
-            layers.push([]);
-        }
-        if (layers.length > 0) {
-            layers[layers.length - 1].push(line as never);
-        }
-        return layers;
-    }, [[]]);
-
-    watchEffect(() => {
-        if (job.value?.current_layer_height && preview) {
-            try {
-                // process gcode of layers up to current_layer_height
-                const currentLayerIndex = layers.findIndex(layer => layer.includes(`;Z:${job.value!.current_layer_height}`));
-                if (currentLayerIndex !== -1) {
-                    preview.clear();
-                    preview.processGCode(layers.slice(0, currentLayerIndex + 1).flat());
-                }
-            } catch (error) {
-                console.error('Failed to process GCode:', error);
-            }
-        }
+  } else {
+    watch(() => props.device!.gcodeLines?.length, () => {
+      gcodeBuffer.value.push(props.device!.gcodeLines![props.device!.gcodeLines!.length - 1]);
+      if (gcodeBuffer.value?.length > bufferSizeToRender) {
+        renderAll(gcodeBuffer.value);
+        gcodeBuffer.value = [];
+      }
     });
-
-    modal.addEventListener('shown.bs.modal', async () => {
-        // Initialize the GCodePreview and show the GCode when the modal is shown
-        if (canvas.value) {
-            preview = GCodePreview.init({
-                canvas: canvas.value,
-                extrusionColor: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#7561A9',
-                backgroundColor: 'black',
-                buildVolume: { x: 250, y: 210, z: 220 },
-                lineWidth: 1,
-                lineHeight: 1,
-                extrusionWidth: 1,
-                renderExtrusion: true,
-                renderTubes: true,
-            });
-
-            preview.camera.position.set(-200, 232, 200);
-            preview.camera.lookAt(0, 0, 0);
-
-            if (job.value?.current_layer_height && preview) {
-                try {
-                    // process gcode of layers up to current_layer_height
-                    const currentLayerIndex = layers.findIndex(layer => layer.includes(`;Z:${job.value!.current_layer_height}`));
-                    if (currentLayerIndex !== -1) {
-                        preview.clear();
-                        const gcode = layers.slice(0, currentLayerIndex + 1).flat();
-                        preview.processGCode(gcode);
-                    }
-                } catch (error) {
-                    console.error('Failed to process GCode:', error);
-                }
-            }
-        }
-    });
-
-    modal.addEventListener('hidden.bs.modal', () => {
-        // Clean up when the modal is hidden
-        preview?.processGCode('');
-        preview?.clear();
-        preview = null;
-    });
+    if(props.device!.gcodeLines) {
+      renderAll(props.device!.gcodeLines!);
+    }
+  }
 });
+
+
+function renderAll(gcode: string[]){
+    preview?.processGCode(gcode);
+}
+
+function renderAllNoWarn(gcode: string[]){
+    console.warn = () => {}; // Suppress warnings from gcode-preview
+    preview?.processGCode(gcode);
+    console.warn = originalConsoleWarn;
+}
 
 onUnmounted(() => {
-    preview?.processGCode('');
-    preview?.clear();
+  if (preview) {
+    preview.clear();
     preview = null;
+  }
 });
 
-const fileToString = (file: File | undefined) => {
-    if (!file) {
-        console.error('File is not available');
-        return '';
-    }
-
-    const reader = new FileReader();
-    reader.readAsText(file);
-    return new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-            resolve(reader.result as string);
-        };
-        reader.onerror = (error) => {
-            reject(error);
-        };
-    });
-};
 </script>
 
 <template>
@@ -131,7 +93,7 @@ const fileToString = (file: File | undefined) => {
 <style scoped>
 canvas {
     width: 100%;
-    height: 100%;
+    height: 400px;
     display: block;
 }
 </style>

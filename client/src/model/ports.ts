@@ -25,7 +25,8 @@ export interface Device {
   bed_temp?: number
   colorChangeBuffer?: number
   colorbuff?: number,
-  consoles?: [string[], string[], string[], string[], string[]] // array of debug, info, and error console messages
+  consoles?: [string[], string[], string[], string[], string[]] // array of debug, info, warning, error and critical console messages
+  gcodeLines?: string[] // array of gocde lines sent to the printer
 }
 
 export const printers = ref<Device[]>([])
@@ -34,9 +35,7 @@ export function useGetPorts() {
   return {
     async ports() {
       try {
-        const response = await api('getports')
-        console.log('response:', response)
-        return response
+        return await api('getports')
       } catch (error) {
         console.error(error)
       }
@@ -163,21 +162,7 @@ export function useDeletePrinter() {
   return {
     async deletePrinter(fabricator_id: number | undefined) {
       try {
-        const response = await api('deletefabricator', { fabricator_id })
-        // if (response) {
-        //   if (response.success == false) {
-        //     toast.error(response.message)
-        //   } else if (response.success === true) {
-        //     toast.success(response.message)
-        //   } else {
-        //     console.error('Unexpected response:', response)
-        //     toast.error('Failed to delete printer. Unexpected response.')
-        //   }
-        // } else {
-        //   console.error('Response is undefined or null')
-        //   toast.error('Failed to delete printer. Unexpected response')
-        // }
-        return response
+        return await api('deletefabricator', { fabricator_id })
       } catch (error) {
         console.error(error)
       }
@@ -333,8 +318,7 @@ export function useMovePrinterList() {
       try {
         // make new array of printer id's in the order they are in the printers array
         const printersIds = printers.map((printer) => printer.id)
-        const response = await api('moveprinterlist', { printersIds })
-        return response
+        return await api('moveprinterlist', { printersIds })
       } catch (error) {
         console.error(error)
       }

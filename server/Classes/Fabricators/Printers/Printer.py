@@ -124,9 +124,6 @@ class Printer(Device, metaclass=ABCMeta):
 
                     if len(line) == 0 or line.startswith(";"):
                         continue
-                    if current_app:
-                        with current_app.app_context():
-                            current_app.socketio.emit("gcode_line", {"line": line.strip("\n"), "printerid": self.dbID})
                     if ("M569" in line) and job.getTimeStarted() == 0:
                         job.setTimeStarted(1)
                         job.setTime(job.calculateEta(), 1)
@@ -230,11 +227,8 @@ class Printer(Device, metaclass=ABCMeta):
     def sendGcode(self, gcode: bytes | str, isVerbose: bool = False):
         """
         Method to send gcode to the printer
-        :param gcode: the line of gcode to send to the printer
-        :type gcode: bytes | str | LiteralString
-        :param isVerbose: whether to log or not
-        :type isVerbose: bool
-        :return: True if the gcode was successfully sent, else False
+        :param bytes | str | LiteralString gcode: the line of gcode to send to the printer
+        :param bool isVerbose: whether to log or not
         :rtype: bool
         """
         assert self.serialConnection is not None, "Serial connection is None"
@@ -245,7 +239,7 @@ class Printer(Device, metaclass=ABCMeta):
         assert isinstance(gcode, bytes), f"Expected bytes, got {type(gcode)}"
         assert isinstance(isVerbose, bool), f"Expected bool, got {type(isVerbose)}"
         callables = self.callablesHashtable.get(self.extractIndex(gcode), [checkOK])
-        current_app.socketio.emit("gcode_line", {"line": gcode.decode(), "printerid": self.dbID})
+        current_app.socketio.emit("gcode_line", {"line": (gcode.decode() if isinstance(gcode, bytes) else gcode).strip(), "printerid": self.dbID})
         self.serialConnection.write(gcode)
         line = ''
         for func in callables:

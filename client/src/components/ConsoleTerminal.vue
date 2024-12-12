@@ -11,14 +11,6 @@ watch(() => props.lines, (newLines) => {
   lines.value = newLines;
 });
 
-// Watch for changes in the lines prop and trigger scrolling
-watch(
-  () => lines,
-  () => {
-    scrollToBottom();
-  }
-);
-
 // Ref for the terminal container to enable automatic scrolling
 const terminalOutput = ref<HTMLDivElement | null>(null);
 
@@ -30,11 +22,16 @@ const processedLines = computed(() =>
   lines.value!.map((line) => ansiConverter.toHtml(line))
 );
 
+// Watch for changes in the lines prop and trigger scrolling
+watch(processedLines, () => {scrollToBottom();});
+
 // Scroll to the bottom whenever lines update
 const scrollToBottom = () => {
-  if (terminalOutput.value) {
-    terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
-  }
+  requestAnimationFrame(() => {
+    if (terminalOutput.value) {
+      terminalOutput.value.scrollTop = terminalOutput.value.scrollHeight;
+    }
+  });
 };
 
 </script>
@@ -55,27 +52,28 @@ const scrollToBottom = () => {
 <style scoped>
 .terminal-container {
   width: 100%;
-  height: 400px;
+  height: 400px; /* Constrain height, but allow dynamic resizing */
+  overflow-y: auto; /* Allow scrolling for overflowing content */
   background-color: #1e1e1e;
   color: #ffffff;
-  font-family: "Courier New", Courier, monospace;
-  font-size: 14px;
+  font-size: 11px;
   border: 1px solid #333;
   border-radius: 4px;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .terminal-output {
-  flex: 1;
+  flex: 1; /* Let it grow or shrink with the container */
   overflow-y: auto;
   padding: 10px;
 }
 
 .terminal-line {
   white-space: pre-wrap;
+  text-align: left;
 }
+
 </style>
 
 

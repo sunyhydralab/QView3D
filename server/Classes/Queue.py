@@ -8,7 +8,7 @@ class Queue(deque):
         for job in self:
             job.status = "inqueue"
 
-    def addToBack(self, job: Job, printerid):
+    def addToBack(self, job: Job):
         assert isinstance(job, Job)
 
         if self.count(job) > 0:
@@ -16,7 +16,7 @@ class Queue(deque):
         self.append(job)
         if current_app:
             current_app.socketio.emit(
-                 "queue_update", {"queue": self.convertQueueToJson(), "printerid": printerid}
+                 "queue_update", {"queue": self.convertQueueToJson(), "printerid": job.fabricator_id}
             )
         return True
 
@@ -139,7 +139,7 @@ class Queue(deque):
             else:
                 self.insert(0, job_to_move)
         else:
-            self.addToBack(job_to_move, fabricator_id)
+            self.addToBack(job_to_move)
         if current_app:
             current_app.socketio.emit(
                 "queue_update", {"queue": self.convertQueueToJson(), "printerid": fabricator_id}

@@ -24,24 +24,16 @@ const modal = document.getElementById('gcodeImageModal');
 const canvas = ref<HTMLCanvasElement | null>(null);
 let preview: GCodePreview.WebGLPreview | null = null;
 
-const renderTravel = ref(true); // Ref to control renderTravel dynamically
-
 const processGCodeCommand = (gcode: string) => {
   try {
     // Dynamically process G-code and determine if renderTravel should be enabled
-    if (gcode.includes('G0') || gcode.includes('G1')) {
-      renderTravel.value = true; // Enable renderTravel for movement commands
-    } else {
-      renderTravel.value = false; // Disable for other commands
-    }
     if (preview) {
-      preview.renderTravel = renderTravel.value;
+      preview.renderTravel = true;
     }
   } catch (error) {
     console.error('Error processing GCode command. Reverting to default renderTravel:', error);
 
     // Ensure proper fallback
-    renderTravel.value = true;
     if (preview) {
       preview.renderTravel = true;
     }
@@ -56,22 +48,22 @@ onMounted(async () => {
 
   if (canvas.value) {
     try {
-      preview = GCodePreview.init({
+      preview = (GCodePreview.init({
         canvas: canvas.value,
         extrusionColor: getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9',
         backgroundColor: 'black',
-        buildVolume: { x: 250, y: 210, z: 220 },
+        buildVolume: {x: 250, y: 210, z: 220},
         travelColor: 'limegreen',
         lineWidth: 1,
-          lineHeight: 1,
-          extrusionWidth: 0.4,
+        lineHeight: 1,
+        extrusionWidth: 1,
         renderExtrusion: true,
-        renderTravel: renderTravel.value,
-          renderTubes: true,
-      });
+        renderTravel: false,
+        renderTubes: true,
+      }));
 
-      preview.camera.position.set(-200, 232, 200);
-      preview.camera.lookAt(0, 0, 0);
+      preview?.camera.position.set(-200, 232, 200);
+      preview?.camera.lookAt(0, 0, 0);
 
       const fileValue = await file();
       if (fileValue) {
@@ -79,21 +71,28 @@ onMounted(async () => {
 
         try {
           // Process and render G-code with timeout
-          const commands = gcode.split('\n');
+          let commands = gcode.split('\n');
+          commands = commands.filter(command => !command.trim().startsWith(';'));
           for (const command of commands) {
-            setTimeout(() => {
-              processGCodeCommand(command); // Update renderTravel dynamically
-              preview?.processGCode(command);
-            }, 2000);
+            await new Promise(resolve => setTimeout(resolve, 150));
+            processGCodeCommand(command); // Update renderTravel dynamically
+            preview?.processGCode(command);
+            // try {
+            //
+            // } catch (error: unknown) {
+            //   if (error instanceof TypeError) {
+            //     continue;
+            //   }
+            //   throw error;
+            // }
           }
         } catch (error) {
           console.error('Failed to process GCode:', error);
 
           // Reset to original behavior on failure
-          renderTravel.value = true;
           if (preview) {
             preview.renderTravel = true;
-            preview.processGCode(gcode); // Fallback to processing entire file
+            preview?.processGCode(gcode); // Fallback to processing entire file
           }
         }
       }
@@ -101,7 +100,6 @@ onMounted(async () => {
       console.error('Error initializing GCodePreview:', error);
 
       // Fallback logic if initialization fails
-      renderTravel.value = true;
       if (preview) {
         preview.renderTravel = true;
       }
@@ -111,18 +109,16 @@ onMounted(async () => {
   modal.addEventListener('hidden.bs.modal', () => {
     // Clean up when the modal is hidden
     if (preview) {
-      preview.processGCode('');
       preview.clear();
-      preview = null;
+      setPreview(null);
     }
   });
 });
 
 onUnmounted(() => {
   if (preview) {
-    preview.processGCode('');
     preview.clear();
-    preview = null;
+    setPreview(null);
   }
 });
 

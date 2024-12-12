@@ -9,16 +9,16 @@ import SettingsPanel from '@/components/SettingsPanel.vue'
 import { onMounted } from 'vue';
 import {setupSockets} from '@/model/sockets';
 import {useRetrievePrintersInfo, printers} from '@/model/ports';
-import {isLoading} from '@/model/jobs';
+import {isLoading, setupTimeSocket} from '@/model/jobs';
 
 const { retrieveInfo } = useRetrievePrintersInfo();
 
 onMounted(async () => {
-    printers.value = await retrieveInfo()
-  console.log(printers.value)
+  printers.value = await retrieveInfo()
 
-    // sockets
-    setupSockets(printers.value)
+  // sockets
+  setupSockets(printers.value)
+  setupTimeSocket(printers.value)
 
 })
 </script>
