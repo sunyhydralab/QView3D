@@ -341,10 +341,35 @@ class Printer(Device, metaclass=ABCMeta):
         """
         hashIndex = gcode.decode().split("\n")[0].split(" ")[0]
 
-        if hashIndex == "M109" or hashIndex == "M190":
-            if self.logger is not None: self.logger.info("Waiting for temperature to stabilize...")
-            current_app.socketio.emit("console_update",
-                                      {"message": "Waiting for temperature to stabilize...", "level": "info",
+        if hashIndex == "M109":
+            try:
+                temp = gcode.decode().split("S")[1].split("\n")[0]
+            except IndexError:
+                temp = None
+            if temp:
+                if self.logger is not None: self.logger.info(f"Waiting for hotend temperature to stabilize at {temp}\u00B0C...")
+                current_app.socketio.emit("console_update",
+                                      {"message": f"Waiting for hotend temperature to stabilize at {temp}\u00B0C...", "level": "info",
+                                       "printerid": self.dbID})
+            else:
+                if self.logger is not None: self.logger.info("Waiting for hotend temperature to stabilize...")
+                current_app.socketio.emit("console_update",
+                                      {"message": "Waiting for hotend temperature to stabilize...", "level": "info",
+                                       "printerid": self.dbID})
+        if hashIndex == "M190":
+            try:
+                temp = gcode.decode().split("S")[1].split("\n")[0]
+            except IndexError:
+                temp = None
+            if temp:
+                if self.logger is not None: self.logger.info(f"Waiting for bed temperature to stabilize at {temp}\u00B0C...")
+                current_app.socketio.emit("console_update",
+                                      {"message": f"Waiting for bed temperature to stabilize at {temp}\u00B0C...", "level": "info",
+                                       "printerid": self.dbID})
+            else:
+                if self.logger is not None: self.logger.info("Waiting for bed temperature to stabilize...")
+                current_app.socketio.emit("console_update",
+                                      {"message": "Waiting for bed temperature to stabilize...", "level": "info",
                                        "printerid": self.dbID})
         elif hashIndex == "G28":
             if self.logger is not None: self.logger.info("Homing...")

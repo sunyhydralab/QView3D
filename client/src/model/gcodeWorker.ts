@@ -23,7 +23,7 @@ const processGCode = (gcode: string | string[], suppressWarnings: boolean = fals
 // Initialize GCodePreview with the OffscreenCanvas
 self.onmessage = (event) => {
     const {type, payload} = event.data;
-    console.debug(type, payload)
+    // console.debug(type, payload)
     if (type === 'init') {
         const {canvas, options} = payload;
 
