@@ -61,7 +61,7 @@ class Fabricator(db.Model):
         db.session.commit()
 
     def __repr__(self):
-        return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}, logger: {self.device.logger if hasattr(self, "device") and hasattr(self.device, 'logger') else 'None'}, port open: {self.device.serialConnection.is_open if (hasattr(self, "device") and self.device is not None and self.device.serialConnection is not None) else None}, queue: {self.queue}, job: {self.job}"
+        return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}, logger: {self.device.logger if hasattr(self, 'device') and hasattr(self.device, 'logger') else 'None'}, port open: {self.device.serialConnection.is_open if hasattr(self, 'device') and self.device and self.device.serialConnection else None}, queue: {self.queue}, job: {self.job}"
 
     def __to_JSON__(self) -> dict:
         """
