@@ -1,5 +1,5 @@
 import shutil
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, Response
 from Classes.Jobs import Job
 from models.db import db
 from models.printers import Printer
@@ -119,7 +119,7 @@ def auto_queue():
         favoriteOne = False
         # for i in range(int(quantity)):
         status = 'inqueue' # set status
-        printer_id = getSmallestQueue()
+        fabricator_id = getSmallestQueue()
 
         if(favorite == 'true' and not favoriteOne):
             favorite = 1
@@ -128,7 +128,7 @@ def auto_queue():
             favorite = 0
         # favorite = 1 if _favorite == 'true' else 0
 
-        res = Job.jobHistoryInsert(name, printer_id, status, file, file_name_original, favorite, td_id) # insert into DB
+        res = Job.jobHistoryInsert(name, fabricator_id, status, file, file_name_original, favorite, td_id) # insert into DB
 
         id = res['id']
 
@@ -142,7 +142,7 @@ def auto_queue():
         job.setFileName(file_name_pk) # set unique in-memory file name
 
         job.setFilament(filament) # set filament type
-        fabricator = findPrinterObject(printer_id)
+        fabricator = findPrinterObject(fabricator_id)
         if fabricator is None:
             return jsonify({"error": "Fabricator not found."}), 404
         fabricator.queue.addToBack(job)
@@ -644,23 +644,34 @@ def refetch_time():
         current_app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
 
-def findPrinterObject(fabricator_id):
+def findPrinterObject(fabricator_id: int) -> Fabricator | None:
     """
     Find the printer object by its ID.
-    :param fabricator_id: The ID of the printer.
-    :type fabricator_id: int
+    :param int fabricator_id: The ID of the printer.
     :rtype: Fabricator | None
     """
-    threads = current_app.fabricator_list.getThreadArray()
+    threads = current_app.fabricator_list.fabricator_threads
     fabricatorThread = list(filter(lambda thread: thread.fabricator.dbID == fabricator_id, threads))
     return fabricatorThread[0].fabricator if len(fabricatorThread) > 0 else None
 
-def getSmallestQueue():
-    threads = current_app.fabricator_list.getThreadArray()
+def getSmallestQueue() -> int:
+    """
+    Get the printer with the smallest queue.
+    :rtype: int
+    """
+    threads = current_app.fabricator_list.fabricator_threads
     smallest_queue_thread = min(threads, key=lambda thread: len(thread.fabricator.queue))
     return smallest_queue_thread.fabricator.dbID
 
-def rerunjob(printerpk, jobpk, position):
+def rerunjob(printerpk: int, jobpk: int, position: str) -> tuple[Response, int]:
+    """
+    Rerun a job on a printer.
+    :param int printerpk: dbID of the fabricator to rerun the job on
+    :param int jobpk: id of the job to rerun
+    :param str position: where to put the job
+    :return: JSON response for the frontend
+    :rtype: tuple[Response, int]
+    """
     job = Job.findJob(jobpk) # retrieve Job to rerun
 
     status = 'inqueue' # set status

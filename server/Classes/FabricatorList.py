@@ -86,8 +86,7 @@ class FabricatorList:
         # TODO: figure out how to check if the fabricator is in the db
         # assert all(fabricator in self.fabricators for fabricator in dbFabricators), f"self={self.fabricators}, dbFabricators={dbFabricators}"
         if newFab:
-            print("starting new fabricator thread")
-            self.start_fabricator_thread(newFab)
+            self.fabricator_threads.append(self.start_fabricator_thread(newFab))
 
     def deleteFabricator(self, fabricator_id):
         """
@@ -351,7 +350,6 @@ class FabricatorThread(Thread):
     def run(self):
         with self.app.app_context():
             self.fabricator.responseCount = 0
-            print(f"Starting thread for fabricator {self.fabricator.getName()}")
             while True:
                 time.sleep(2)
                 status = self.fabricator.getStatus()

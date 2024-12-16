@@ -15,6 +15,7 @@ class PrusaMK3(PrusaPrinter):
     homeCMD = b"G28\n"
     keepAliveCMD = None
     doNotKeepAliveCMD = None
+    startTimeCMD = "M107"
 
     callablesHashtable = {
         "M31": [checkTime, checkOK],  # Print time

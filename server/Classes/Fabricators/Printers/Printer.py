@@ -18,6 +18,7 @@ class Printer(Device, metaclass=ABCMeta):
     pauseCMD: bytes = b"M601\n"
     resumeCMD: bytes = b"M602\n"
     getMachineNameCMD: bytes = b"M997\n"
+    startTimeCMD: str = "M75"
 
     callablesHashtable = {
         "M31": [checkTime],  # Print time
@@ -39,12 +40,12 @@ class Printer(Device, metaclass=ABCMeta):
         self.nozzleDiameter = None
 
     def parseGcode(self, job: Job, isVerbose: bool = False):
-        assert isinstance(job, Job)
+        assert isinstance(job, Job), f"Expected Job, got {type(job)}"
         file = job.file_path
-        assert isinstance(file, str)
-        assert isinstance(isVerbose, bool)
-        assert self.serialConnection.is_open
-        assert self.status == "printing"
+        assert isinstance(file, str), f"Expected file to be a str, got {type(file)}"
+        assert isinstance(isVerbose, bool), f"Expected isVerbose to be a bool, got {type(isVerbose)}"
+        assert self.serialConnection.is_open, "Serial connection is not open"
+        assert self.status == "printing", f"Printer status is {self.status}, expected printing"
         try:
             with open(file, "r") as g:
                 # Read the file and store the lines in a list
@@ -93,6 +94,7 @@ class Printer(Device, metaclass=ABCMeta):
                 prev_line = ""
                 # Replace file with the path to the file. "r" means read mode. 
                 # now instead of reading from 'g', we are reading line by line
+                current_app.socketio.emit("console_update", {"message": "Starting Job", "level": "critical", "printerid": self.dbID})
                 for line in lines:
                     if self.status == "cancelled":
                         self.sendGcode(self.cancelCMD)
@@ -124,7 +126,7 @@ class Printer(Device, metaclass=ABCMeta):
 
                     if len(line) == 0 or line.startswith(";"):
                         continue
-                    if ("M569" in line) and job.getTimeStarted() == 0:
+                    if job.getTimeStarted() == 0 and ("M75" in line or self.startTimeCMD in line) :
                         job.setTimeStarted(1)
                         job.setTime(job.calculateEta(), 1)
                         job.setTime(datetime.now(), 2)
@@ -256,12 +258,12 @@ class Printer(Device, metaclass=ABCMeta):
                     if func(line, self):
                         break
                     if self.logger is not None: self.logger.debug(f"{gcode.decode().strip()}: {decLine}")
-                    current_app.socketio.emit("console_update",{"message": decLine, "level": "debug", "printerid": self.dbID})
+                    # current_app.socketio.emit("console_update",{"message": decLine, "level": "debug", "printerid": self.dbID})
                 except UnicodeDecodeError:
                     if isVerbose:
                         if self.logger is not None: self.logger.debug(f"{gcode.decode().strip()}: {line.strip()}")
                         else: print(f"{gcode.decode().strip()}: {line.strip()}")
-                        current_app.socketio.emit("console_update",{"message": gcode.decode().strip(), "level": "debug", "printerid": self.dbID})
+                        # current_app.socketio.emit("console_update",{"message": gcode.decode().strip(), "level": "debug", "printerid": self.dbID})
                     continue
                 except Exception as e:
                     if current_app: return current_app.handle_errors_and_logging(e, self)
@@ -269,10 +271,10 @@ class Printer(Device, metaclass=ABCMeta):
                     else: print(traceback.format_exc())
                     return False
         if not callables:
-            current_app.socketio.emit("console_update", {"message": f"{gcode.decode().strip()}: ok", "level": "info", "printerid": self.dbID})
+            # current_app.socketio.emit("console_update", {"message": f"{gcode.decode().strip()}: ok", "level": "info", "printerid": self.dbID})
             if self.logger is not None: self.logger.info(f"{gcode.decode().strip()}: Always True")
         else:
-            current_app.socketio.emit("console_update", {"message": f"{gcode.decode().strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}", "level": "info", "printerid": self.dbID})
+            # current_app.socketio.emit("console_update", {"message": f"{gcode.decode().strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}", "level": "info", "printerid": self.dbID})
             if self.logger is not None: self.logger.info(
                 f"{gcode.decode().strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}")
         return True
@@ -339,12 +341,12 @@ class Printer(Device, metaclass=ABCMeta):
         if hashIndex == "M109" or hashIndex == "M190":
             if self.logger is not None: self.logger.info("Waiting for temperature to stabilize...")
             current_app.socketio.emit("console_update",
-                                      {"message": "Waiting for temperature to stabilize...", "level": "info",
+                                      {"message": "Waiting for temperature to stabilize...", "level": "critical",
                                        "printerid": self.dbID})
         elif hashIndex == "G28":
             if self.logger is not None: self.logger.info("Homing...")
             current_app.socketio.emit("console_update",
-                                      {"message": "Homing...", "level": "info", "printerid": self.dbID})
+                                      {"message": "Homing...", "level": "critical", "printerid": self.dbID})
         return hashIndex
 
     def pause(self):

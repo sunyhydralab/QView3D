@@ -212,13 +212,13 @@ export function setupGCodeViewerSocket(printers: Array<Device>) {
 }
 
 export function setupGCodeLineSocket(printers: Array<Device>) {
+  for (let i = 0; i < printers.length; i++) {
+    printers[i].gcodeLines = []
+  }
   socket.value.on('gcode_line', (data: any) => {
     if (printers) {
       const printer: Device | undefined = printers.find((p: Device) => p.id === data.printerid)
       if (printer) {
-        if (!printer.gcodeLines) {
-          printer.gcodeLines = []
-          }
         printer.gcodeLines!.push(data.line)
       } else {
         console.error('printer is undefined')
@@ -233,6 +233,9 @@ const arrayLevels = ['critical', 'error', 'warning', 'info', 'debug']
 const colors = ['\x1b[95m', '\x1b[91m', '\x1b[93m', '\x1b[0m', '\x1b[94m']
 
 export function setupConsoleSocket(printers: Array<Device>) {
+  for (let i = 0; i < printers.length; i++) {
+    printers[i].gcodeLines = []
+  }
   socket.value.on('console_update', (data: any) => {
     if (printers) {
       const printer = printers.find((p: Device) => p.id === data.printerid)
@@ -246,6 +249,8 @@ export function setupConsoleSocket(printers: Array<Device>) {
               printer.consoles[i].push(colors[maxLevelToAdd] + data.message + '\x1b[0m')
             }
           }
+          if (data.level === 'info') printer.gcodeLines!.push(data.message.split(':')[0]);
+
         } else {
           console.error('data.level is undefined')
         }

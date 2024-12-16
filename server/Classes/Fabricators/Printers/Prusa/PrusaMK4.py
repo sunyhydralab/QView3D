@@ -7,6 +7,7 @@ class PrusaMK4(PrusaPrinter):
     DESCRIPTION = "Original Prusa MK4 - CDC"
     MAXFEEDRATE = 36000
     homePosition = Vector3(14.0, -4.0, 2.0)
+    startTimeCMD = "M569"
 
     def endSequence(self):
         self.sendGcode(b"M104 S0\n")  # ; turn off temperature
