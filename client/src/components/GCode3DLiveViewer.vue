@@ -1,98 +1,65 @@
 <script setup lang="ts">
-import {ref, onMounted, onUnmounted, watch, type Ref} from 'vue';
+import {ref, onMounted, onUnmounted, watch} from 'vue';
 import {type Device} from '@/model/ports';
 import * as GCodePreview from 'gcode-preview';
 
-const props = defineProps({
-  device: Object as () => Device,
-});
+const props = defineProps<{ device: Device }>();
 
-const canvas = ref<HTMLCanvasElement | null>(null);
-
-const gcodeBuffer: Ref<Array<string>> = ref([] as Array<string>);
-
+const canvas = ref<HTMLCanvasElement | undefined>(undefined);
 let preview: GCodePreview.WebGLPreview | null = null;
-const originalConsoleWarn = console.warn;
-const bufferSizeToRender = 50;
+let worker: Worker | null = null;
 
 onMounted(async () => {
-  if (canvas.value) {
-    try {
-        console.warn = () => {}; // Suppress warnings from gcode-preview
-      preview = (GCodePreview.init({
-        canvas: canvas.value,
-        extrusionColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#7561A9',
-        backgroundColor: 'black',
-        buildVolume: {x: 250, y: 210, z: 220},
-        travelColor: 'limegreen',
-        lineWidth: 1,
-        lineHeight: 1,
-        extrusionWidth: 1,
-        renderExtrusion: true,
-        renderTravel: false,
-        renderTubes: false,
-      }));
-
-      preview.camera.position.set(-200, 232, 200);
-      preview.camera.lookAt(0, 0, 0);
-      console.warn = originalConsoleWarn;
-
-    } catch (error) {
-      console.error('Error initializing GCodePreview:', error);
-    }
+  if (!canvas.value) {
+    console.error('Canvas not found');
+    return;
   }
-  if(preview?.renderTubes) {
-    watch(() => props.device!.gcodeLines?.length, () => {
-      gcodeBuffer.value.push(props.device!.gcodeLines![props.device!.gcodeLines!.length - 1]);
-      if (gcodeBuffer.value?.length > bufferSizeToRender) {
-        renderAllNoWarn(gcodeBuffer.value);
-        gcodeBuffer.value = [];
-      }
-    });
-    if (props.device!.gcodeLines) {
-      renderAllNoWarn(props.device!.gcodeLines!);
+  worker = new Worker(new URL('@/model/gcodeWorker.ts', import.meta.url), {type: 'module'});
+  worker.onmessage = (event) => {
+    const {type, error} = event.data;
+    if (type === 'error') console.error('Worker Error:', error);
+  };
+
+  const extrusionColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#7561A9';
+  const offscreen: OffscreenCanvas = canvas.value.transferControlToOffscreen();
+
+  console.debug(offscreen)
+
+  worker.postMessage({
+    type: 'init',
+    payload: {
+      canvas: offscreen,
+      extrusionColor: extrusionColor,
+      backgroundColor: 'black',
+      buildVolume: {x: 250, y: 210, z: 220},
+      travelColor: 'limegreen',
+      lineWidth: 1,
+      lineHeight: 1,
+      extrusionWidth: 1,
+      renderExtrusion: true,
+      renderTravel: false,
+      renderTubes: false
     }
-  } else {
-    watch(() => props.device!.gcodeLines?.length, () => {
-      gcodeBuffer.value.push(props.device!.gcodeLines![props.device!.gcodeLines!.length - 1]);
-      if (gcodeBuffer.value?.length > bufferSizeToRender) {
-        renderAll(gcodeBuffer.value);
-        gcodeBuffer.value = [];
-      }
+  }, [offscreen]);
+
+  const renderGCode = (gcode: string) => {
+    worker?.postMessage({
+      type: 'render',
+      payload: {gcode},
     });
-    if(props.device!.gcodeLines) {
-      renderAll(props.device!.gcodeLines!);
-    }
+  };
+
+  watch(() => props.device?.gcodeLines?.length!, () => {
+    renderGCode(props.device.gcodeLines!.slice(-1)[0]); // Render last 10 lines as a batch
+  });
+
+
+  const allLines = props.device?.gcodeLines;
+  if (allLines) {
+    for (let i = 0; i < allLines.length; i++) renderGCode(allLines[i]);
   }
 });
 
-    modal.addEventListener('shown.bs.modal', async () => {
-        // Initialize the GCodePreview and show the GCode when the modal is shown
-        if (canvas.value) {
-            preview = GCodePreview.init({
-                canvas: canvas.value,
-                extrusionColor: getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9',
-                backgroundColor: 'black',
-                buildVolume: { x: 250, y: 210, z: 220 },
-                lineWidth: 0.2,
-                lineHeight: 0.2,
-                extrusionWidth: 0.2,
-                renderExtrusion: true,
-                renderTubes: true,
-            });
-
-            preview.camera.position.set(-200, 232, 200);
-            preview.camera.lookAt(0, 0, 0);
-
-function renderAll(gcode: string[]){
-    preview?.processGCode(gcode);
-}
-
-function renderAllNoWarn(gcode: string[]){
-    console.warn = () => {}; // Suppress warnings from gcode-preview
-    preview?.processGCode(gcode);
-    console.warn = originalConsoleWarn;
-}
 
 onUnmounted(() => {
   if (preview) {
@@ -104,13 +71,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <canvas ref="canvas"></canvas>
+  <canvas ref="canvas"></canvas>
 </template>
 
 <style scoped>
 canvas {
-    width: 100%;
-    height: 400px;
-    display: block;
+  width: 100%;
+  height: 400px;
+  display: block;
 }
 </style>

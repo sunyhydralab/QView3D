@@ -31,7 +31,7 @@ Config = {
     'ip': ip,
     'database_uri': database_uri,
     'port': port,
-    'emulator_port': emulator_port
+    'emulator_port': emulator_port,
     'discord_enabled': discord_enabled,
     'discord_token': discord_token,
     'command_prefix': discord_prefix,

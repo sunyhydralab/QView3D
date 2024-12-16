@@ -1,5 +1,6 @@
 import asyncio
 import threading
+from threading import Thread
 import traceback
 import uuid
 import os
@@ -8,6 +9,11 @@ import websockets
 from websockets.asyncio.server import Server
 from MyFlaskApp import MyFlaskApp
 from globals import emulator_connections, event_emitter
+import discord
+from discord.ext import commands
+import certifi
+from datetime import datetime
+from models.config import Config
 
 
 async def websocket_server():
@@ -62,26 +68,7 @@ async def websocket_server():
 def start_websocket():
     print("Starting WebSocket server...")
     asyncio.run(websocket_server())
-    
-from flask import Flask, jsonify, request, Response, url_for, send_from_directory
-from threading import Thread
-from flask_cors import CORS 
-import os 
-from models.db import db
-from models.PrinterStatusService import PrinterStatusService
-from flask_migrate import Migrate
-from dotenv import load_dotenv, set_key
-from controllers.ports import getRegisteredPrinters
-import shutil
-from flask_socketio import SocketIO
-from datetime import datetime, timedelta
-from sqlalchemy import text
-import json
-from models.config import Config
-import discord
-import threading
-from discord.ext import commands
-import certifi
+
 
 os.environ["SSL_CERT_FILE"] = certifi.where()
 
@@ -242,10 +229,8 @@ def sync_send_discord_embed(embed):
 def sync_send_discord_file(file_path: str, message: str = None):
     """
     Sends a file to a specified Discord channel with an optional message.
-    
-    :param channel: The channel where the file will be sent.
-    :param file_path: The path to the file to be uploaded.
-    :param message: The optional message to send with the file.
+    :param str file_path: The path to the file to be uploaded.
+    :param str message: The optional message to send with the file.
     """
     # Check if the bot is ready
     if not bot.is_ready():
