@@ -24,7 +24,7 @@ const router = useRouter()
 
 const consoles = [{name: "Critical", color: "#ff00ff"}, {name: "Error", color: "#ff0000"}, {name: "Warning", color: "#ffff00"}, {name: "Info", color: "#ffffff"}, {name: "Debug", color: "#00ffff"}]
 const tdWidth = ["64px", "130px", "142px", "110px", "110px", "314px", "315px", "75px", "58px"]
-const displayLevel = ref(1)
+const displayLevel = ref(3)
 const selectedIssue = ref<Issue>()
 const selectedJob = ref<Job>()
 const jobComments = ref('')
