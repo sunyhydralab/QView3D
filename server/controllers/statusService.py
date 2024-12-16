@@ -1,75 +1,72 @@
-from flask import Blueprint, jsonify
-from app import printer_status_service  # import the instance from app.py
 from flask import Blueprint, jsonify, request
-from models.jobs import Job 
 import os
-
+from globals import current_app as app
+from traceback import format_exc
 status_bp = Blueprint("status", __name__)
 
-@status_bp.route('/ping', methods=["GET"])
-def getStatus(Printer):
-    pass
-
-@status_bp.route('/getopenthreads')
-def getOpenThreads():
-    pass 
+@status_bp.route('/getprinters', methods=["GET"])
+def getPrinters():
+    try:
+        printers = app.fabricator_list.fabricators  # call the method on the instance
+        return jsonify({"printers": printers})
+    except Exception as e:
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 # this is the route that will be called by the UI to get the printers that have threads information
 @status_bp.route('/getprinterinfo', methods=["GET"])
 def getPrinterInfo():
-    try: 
-        printer_info = printer_status_service.retrieve_printer_info()  # call the method on the instance
-        return jsonify(printer_info)
+    try:
+        return jsonify([fab.__to_JSON__() for fab in app.fabricator_list.fabricators])
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @status_bp.route('/hardreset', methods=["POST"])
 def hardreset():
-    try: 
-        data = request.get_json() # get json data 
+    try:
+        data = request.get_json() # get json data
         id = data['printerid']
-        res = printer_status_service.resetThread(id)
-        return res 
+        res = app.fabricator_list.resetThread(id)
+        return res
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-    
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
+
 @status_bp.route('/queuerestore', methods=["POST"])
 def queueRestore():
-    try: 
-        data = request.get_json() # get json data 
+    try:
+        data = request.get_json() # get json data
         id = data['printerid']
         status = data['status']
-        res = printer_status_service.queueRestore(id, status)
-        return res 
+        res = app.fabricator_list.queueRestore(id, status)
+        return res
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-    
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
+
 @status_bp.route("/removethread", methods=["POST"])
 def removeThread():
     try:
         data = request.get_json() # get json data
         printerid = data['printerid']
-        res = printer_status_service.deleteThread(printerid)
-        return res 
+        res = app.fabricator_list.deleteThread(printerid)
+        return res
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-    
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
+
 @status_bp.route("/editNameInThread", methods=["POST"])
-def editName(): 
-    try: 
-        data = request.get_json() 
-        printerid = data['printerid']
+def editName():
+    try:
+        data = request.get_json()
+        fabricator_id = data['fabricator_id']
         name = data['newname']
-        res = printer_status_service.editName(printerid, name)
-        return res 
+        return app.fabricator_list.editName(fabricator_id, name)
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-    
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
+
 @status_bp.route("/serverVersion", methods=["GET"])
 def getVersion():
     res = jsonify(os.environ.get('SERVER_VERSION'))

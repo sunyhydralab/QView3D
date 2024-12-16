@@ -1,0 +1,6 @@
+{
+    "enabledPrinters": [],
+    "defaultAddress": "127.0.0.1",
+    "defaultPort": 8001,
+    "startup": "default"
+}

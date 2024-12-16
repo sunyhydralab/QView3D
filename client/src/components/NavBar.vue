@@ -46,13 +46,12 @@ const observer = new MutationObserver(() => {
     const colorSecondary = getComputedStyle(document.documentElement, null).getPropertyValue('--color-secondary').trim();
 
     const svgElementPrimary = document.getElementById('cls-1');
-
+    
     if (svgElementPrimary) {
         svgElementPrimary.style.fill = colorPrimary;
     }
-
     const svgElementSecondary = document.getElementById('cls-2');
-
+    
     if (svgElementSecondary) {
         svgElementSecondary.style.stroke = colorSecondary;
     }
@@ -122,6 +121,9 @@ watch([API_IP_ADDRESS, API_PORT], async () => {
                     </li>
                     <li class="nav-item">
                         <router-link to="/error" class="nav-link" active-class="active-tab">ERROR LOG</router-link>
+                    </li>
+                    <li class="nav-item">
+                        <router-link to="/emulator" class="nav-link" active-class="active-tab">EMULATOR</router-link>
                     </li>
                 </ul>
             </div>

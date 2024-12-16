@@ -9,7 +9,7 @@ export function api(action: string, body?: unknown, method?: string, headers?: a
 }
 
 export interface Device {
-  device: string
+  device: Record<string, any>
   description: string
   hwid: string
   name?: string
@@ -24,6 +24,9 @@ export interface Device {
   extruder_temp?: number
   bed_temp?: number
   colorChangeBuffer?: number
+  colorbuff?: number,
+  consoles?: [string[], string[], string[], string[], string[]] // array of debug, info, warning, error and critical console messages
+  gcodeLines?: string[] // array of gocde lines sent to the printer
 }
 
 export const printers = ref<Device[]>([])
@@ -70,8 +73,7 @@ export function useRetrievePrinters() {
   return {
     async retrieve() {
       try {
-        const response = await api('getprinters')
-        return response.printers
+        return await api('getprinterinfo')
       } catch (error) {
         console.error(error)
       }
@@ -158,23 +160,9 @@ export function useNullifyJobs() {
 
 export function useDeletePrinter() {
   return {
-    async deletePrinter(printerid: number | undefined) {
+    async deletePrinter(fabricator_id: number | undefined) {
       try {
-       return await api('deleteprinter', { printerid })
-        // if (response) {
-        //   if (response.success == false) {
-        //     toast.error(response.message)
-        //   } else if (response.success === true) {
-        //     toast.success(response.message)
-        //   } else {
-        //     console.error('Unexpected response:', response)
-        //     toast.error('Failed to delete printer. Unexpected response.')
-        //   }
-        // } else {
-        //   console.error('Response is undefined or null')
-        //   toast.error('Failed to delete printer. Unexpected response')
-        // }
-        // return response
+        return await api('deletefabricator', { fabricator_id })
       } catch (error) {
         console.error(error)
       }
@@ -210,9 +198,9 @@ export function useRemoveThread() {
 
 export function useEditName() {
   return {
-    async editName(printerid: number | undefined, name: string) {
+    async editName(fabricator_id: number | undefined, name: string) {
       try {
-        const response = await api('editname', { printerid, name })
+        const response = await api('editname', { fabricator_id, name })
         if (response) {
           if (response.success == false) {
             toast.error(response.message)
@@ -236,9 +224,9 @@ export function useEditName() {
 
 export function useEditThread() {
   return {
-    async editThread(printerid: number | undefined, newname: string) {
+    async editThread(fabricator_id: number | undefined, newname: string) {
       try {
-        return await api('editNameInThread', { printerid, newname })
+        return await api('editNameInThread', { fabricator_id, newname })
       } catch (error) {
         console.error(error)
       }

@@ -5,7 +5,7 @@ import RegisteredViewVue from '@/views/RegisteredView.vue'
 import SubmitJobVue from '@/views/SubmitJob.vue'
 import JobHistoryVue from '@/views/JobHistory.vue'
 import ErrorView from '@/views/ErrorView.vue'
-import { isLoading } from '@/model/jobs'
+import EmulatorView from '@/views/EmulatorView.vue'
 
 const routes = [
   {
@@ -37,7 +37,12 @@ const routes = [
     path: '/error',
     name: 'ErrorView',
     component: ErrorView
-  }, 
+  },
+  {
+    path: '/emulator',
+    name: 'EmulatorView',
+    component: EmulatorView
+  }
 ]
 
 const router = createRouter({

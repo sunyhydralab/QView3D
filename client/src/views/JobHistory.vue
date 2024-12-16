@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { printers, type Device } from '../model/ports'
-import { pageSize, useGetJobs, type Job, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useGetLogFile, useAssignComment, useDownloadCsv, useRemoveIssue, isLoading } from '../model/jobs';
+import { printers, type Device } from '@/model/ports'
+import { pageSize, useGetJobs, type Job, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useDownloadCsv, useRemoveIssue, isLoading } from '../model/jobs';
 import { computed, onMounted, onBeforeUnmount, ref, watchEffect, onUnmounted } from 'vue';
-import { type Issue, useGetIssues, useAssignIssue } from '../model/issues'
+import { type Issue, useGetIssues, useAssignIssue } from '@/model/issues'
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
@@ -88,6 +88,7 @@ let filteredJobs = computed(() => {
         return displayJobs.value
     }
 })
+
 
 let offcanvasElement: HTMLElement | null = null;
 

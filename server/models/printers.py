@@ -12,6 +12,7 @@ from tzlocal import get_localzone
 import os
 import requests
 from dotenv import load_dotenv
+import socketio
 
 from models.config import Config
 from models.jobs import Job
@@ -43,6 +44,7 @@ class Printer(db.Model):
     prevMes = ""
     colorbuff = 0
     terminated = 0
+    emulated = False
 
     def __init__(self, device, description, hwid, name, status=status, id=None):
         self.device = device
@@ -65,6 +67,9 @@ class Printer(db.Model):
         if id is not None:
             self.id = id
         self.responseCount = 0
+        
+        if hwid.beginsWith("EMU"):
+            self.emulated = True
 
     # general classes
     @classmethod
@@ -325,6 +330,10 @@ class Printer(db.Model):
         return 
         
     def connect(self):
+        if (self.emulated):
+            self.socketio.emit("print", {"command": "M114"})
+            return "ok"
+        
         try:
             self.ser = serial.Serial(self.device, 115200, timeout=10)
             self.ser.write(f"M155 S5\n".encode("utf-8"))

@@ -1,6 +1,7 @@
 from models.db import db
 from flask import jsonify
 from sqlalchemy.exc import SQLAlchemyError
+
 from datetime import datetime
 import discord
 from models.config import Config

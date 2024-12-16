@@ -1,109 +1,154 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onActivated, onDeactivated, ref, toRef, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useGetFile, type Job } from '@/model/jobs';
 import * as GCodePreview from 'gcode-preview';
 
 const { getFile } = useGetFile();
 
 const props = defineProps({
-    job: Object as () => Job,
-    file: Object as () => File
-})
+  job: Object as () => Job,
+  file: Object as () => File
+});
 
 const file = () => {
-    if (props.file) {
-        return props.file
-    } else if (props.job) {
-        return getFile(props.job)
-    } else {
-        return null
-    }
-}
+  if (props.file) {
+    return props.file;
+  } else if (props.job) {
+    return getFile(props.job);
+  } else {
+    return null;
+  }
+};
 
 const modal = document.getElementById('gcodeImageModal');
-
-// Create a ref for the canvas
 const canvas = ref<HTMLCanvasElement | null>(null);
 let preview: GCodePreview.WebGLPreview | null = null;
 
+const processGCodeCommand = (gcode: string) => {
+  try {
+    // Dynamically process G-code and determine if renderTravel should be enabled
+    if (preview) {
+      preview.renderTravel = true;
+    }
+  } catch (error) {
+    console.error('Error processing GCode command. Reverting to default renderTravel:', error);
+
+    // Ensure proper fallback
+    if (preview) {
+      preview.renderTravel = true;
+    }
+  }
+};
+
 onMounted(async () => {
-    if (!modal) {
-        console.error('Modal element is not available');
-        return;
-    }
+  if (!modal) {
+    console.error('Modal element is not available');
+    return;
+  }
 
-    if (canvas.value) {
-        preview = GCodePreview.init({
-            canvas: canvas.value,
-            extrusionColor: getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9',
-            backgroundColor: 'black',
-            buildVolume: { x: 250, y: 210, z: 220 },
-            lineWidth: 0.2,
-            lineHeight: 0.2,
-            extrusionWidth: 0.2,
-            renderExtrusion: false,
-            renderTubes: true,
-        });
+  if (canvas.value) {
+    try {
+      preview = (GCodePreview.init({
+        canvas: canvas.value,
+        extrusionColor: getComputedStyle(document.documentElement).getPropertyValue('--bs-primary-color').trim() || '#7561A9',
+        backgroundColor: 'black',
+        buildVolume: {x: 250, y: 210, z: 220},
+        travelColor: 'limegreen',
+        lineWidth: 1,
+        lineHeight: 1,
+        extrusionWidth: 1,
+        renderExtrusion: true,
+        renderTravel: false,
+        renderTubes: true,
+      }));
 
-        preview.camera.position.set(-200, 232, 200);
-        preview.camera.lookAt(0, 0, 0);
+      preview?.camera.position.set(-200, 232, 200);
+      preview?.camera.lookAt(0, 0, 0);
 
-        if (canvas.value) {
-            // job.file to string
-            const fileValue = await file();
-            if (fileValue) {
-                const gcode = await fileToString(fileValue);
+      const fileValue = await file();
+      if (fileValue) {
+        const gcode = await fileToString(fileValue);
 
-                try {
-                    preview?.processGCode(gcode); // MAIN LINE
-                } catch (error) {
-                    console.error('Failed to process GCode:', error);
-                }
-            }
+        try {
+          // Process and render G-code with timeout
+          let commands = gcode.split('\n');
+          commands = commands.filter(command => !command.trim().startsWith(';'));
+          for (const command of commands) {
+            await new Promise(resolve => setTimeout(resolve, 150));
+            processGCodeCommand(command); // Update renderTravel dynamically
+            preview?.processGCode(command);
+            // try {
+            //
+            // } catch (error: unknown) {
+            //   if (error instanceof TypeError) {
+            //     continue;
+            //   }
+            //   throw error;
+            // }
+          }
+        } catch (error) {
+          console.error('Failed to process GCode:', error);
+
+          // Reset to original behavior on failure
+          if (preview) {
+            preview.renderTravel = true;
+            preview?.processGCode(gcode); // Fallback to processing entire file
+          }
         }
-    }
+      }
+    } catch (error) {
+      console.error('Error initializing GCodePreview:', error);
 
-    modal.addEventListener('hidden.bs.modal', () => {
-        // Clean up when the modal is hidden
-        preview?.processGCode('');
-        preview?.clear();
-        preview = null;
-    });
+      // Fallback logic if initialization fails
+      if (preview) {
+        preview.renderTravel = true;
+      }
+    }
+  }
+
+  modal.addEventListener('hidden.bs.modal', () => {
+    // Clean up when the modal is hidden
+    if (preview) {
+      preview.clear();
+      setPreview(null);
+    }
+  });
 });
 
 onUnmounted(() => {
-    preview?.processGCode('');
-    preview?.clear();
-    preview = null;
+  if (preview) {
+    preview.clear();
+    setPreview(null);
+  }
 });
 
 const fileToString = (file: File | undefined) => {
-    if (!file) {
-        console.error('File is not available');
-        return '';
-    }
+  if (!file) {
+    console.error('File is not available');
+    return '';
+  }
 
-    const reader = new FileReader();
-    reader.readAsText(file);
-    return new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-            resolve(reader.result as string);
-        };
-        reader.onerror = (error) => {
-            reject(error);
-        };
-    });
+  const reader = new FileReader();
+  reader.readAsText(file);
+  return new Promise<string>((resolve, reject) => {
+    reader.onload = () => {
+      resolve(reader.result as string);
+    };
+    reader.onerror = (error) => {
+      reject(error);
+    };
+  });
 };
 </script>
 
 <template>
-    <canvas ref="canvas"></canvas>
+  <canvas ref="canvas"></canvas>
 </template>
 
 <style scoped>
 canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 </style>

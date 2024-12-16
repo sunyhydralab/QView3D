@@ -1,154 +1,173 @@
-# get connected serial ports
-import serial
-import serial.tools.list_ports
-import time
-from flask_cors import cross_origin
 from sqlalchemy.exc import SQLAlchemyError
-from flask import Blueprint, jsonify, request, make_response
-from models.printers import Printer
-# from app import printer_status_service
-# from models.jobs import Job
-# from models.PrinterStatusService import PrinterStatusService
-# from app import printer_status_service
+from flask import Blueprint, jsonify, request
 
+from globals import current_app as app
+from Classes.Fabricators.Device import Device
+from Classes.Fabricators.Fabricator import Fabricator
+from Classes.Ports import Ports
+from traceback import format_exc
+
+# Blueprint for ports routes
 ports_bp = Blueprint("ports", __name__)
 
-@ports_bp.route("/getports",  methods=["GET"])
+@ports_bp.route("/getports", methods=["GET"])
 def getPorts():
-    printerList = Printer.getConnectedPorts()
-    return jsonify(printerList)
-
-# method to get printers already registered with the system 
-@ports_bp.route("/getprinters", methods=["GET"])
-def getRegisteredPrinters():  
-    try: 
-        res = Printer.get_registered_printers()
-        return res
+    """Get a list of all connected ports."""
+    try:
+        ports = Ports.getPorts()
+        return jsonify([port for port in ports])
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
+
+@ports_bp.route("/getfabricators", methods=["GET"])
+def getRegisteredFabricators():
+    """Get a list of all registered fabricators."""
+    try:
+        fabricators = Fabricator.queryAll()
+        return jsonify([fab.__to_JSON__() for fab in fabricators])
+    except Exception as e:
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/register", methods=["POST"])
-def registerPrinter(): 
-    try: 
-        from app import printer_status_service
-        data = request.get_json() # get json data 
-        # extract data 
-        device = data['printer']['device']
-        description = data['printer']['description']
-        hwid = data['printer']['hwid']
-        name = data['printer']['name']
-        
-
-        res = Printer.create_printer(device=device, description=description, hwid=hwid, name=name, status='ready')
-        if(res["success"] == True):
-            id = res['printer_id']
-            # hwid_parts = hwid.split('-')  # Replace '-' with the actual separator
-            # hwid_without_location = '-'.join(hwid_parts[:-1])
-            thread_data = {
-                "id": id, 
-                "device": device,
-                "description": description,
-                "hwid": hwid,
-                "name": name
-            }
-            
-            printer_status_service.create_printer_threads([thread_data])
-        
-        return res
-    
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-
-@ports_bp.route("/deleteprinter", methods=["POST"])
-def delete_printer():
-    try: 
-        data = request.get_json()
-        printerid = data['printerid']
-        # res = printer_status_service.deleteThread(printerid)
-        res = Printer.deletePrinter(printerid)
-        return res 
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-    
-@ports_bp.route("/editname", methods=["POST"])
-def edit_name(): 
-    try: 
-        data = request.get_json() 
-        printerid = data['printerid']
-        name = data['name']
-        res = Printer.editName(printerid, name)
-        return res 
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-    
-@ports_bp.route("/diagnose", methods=["POST"])
-def diagnose_printer():
+def registerFabricator():
+    """Register a new fabricator with the system."""
     try:
-        data = request.get_json() 
-        device = data['device']
-        res = Printer.diagnosePrinter(device)
-        return res
+        data = request.get_json()
+        printer = data['printer']
+        device = printer['device']['serialPort']
+        name = printer['name']
+
+        # Create a new fabricator instance using the Fabricator class
+        try:
+            app.fabricator_list.addFabricator(device, name)
+        except AssertionError as ae:
+            return jsonify({"error": f"Failed to add fabricator: {ae}"}), 500
+        new_fabricator = Fabricator.query.filter_by(devicePort=device).first()
+
+        return jsonify({"success": True, "message": "Fabricator registered successfully", "fabricator_id": new_fabricator.dbID})
+    except SQLAlchemyError as db_err:
+        print(f"Database error during registration: {db_err}")
+        return jsonify({"error": "Database error occurred"}), 500
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-    
-# @ports_bp.route("/repairports", methods=["POST", "GET"])
-# def repair_ports(): 
-#     try:
-#         ports = serial.tools.list_ports.comports()    
-#         print("PORTS: ", ports)
-#         for port in ports: 
-#             hwid = port.hwid # get hwid 
-#             print("HWID: ", hwid)
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
-#             hwid_without_location = hwid.split(' LOCATION=')[0]
-#             printer = Printer.getPrinterByHwid(hwid_without_location)
-#             if printer is not None: 
-#                 if(printer.getDevice()!=port.device):
-#                     printer.editPort(printer.getId(), port.device)
-#                     printerthread = findPrinterObject(printer.getId())
-#                     printerthread.setDevice(port.device)
-#         return {"success": True, "message": "Printer port(s) successfully updated."}
+@ports_bp.route("/deletefabricator", methods=["POST"])
+def deleteFabricator():
+    """Delete a fabricator from the system."""
+    try:
+        data = request.get_json()
+        fabricator_id = data['fabricator_id']
+        res = app.fabricator_list.deleteFabricator(fabricator_id)
+        if isinstance(res, ValueError):
+            return jsonify({"error": "Fabricator not found"}), 404
+        if res: return jsonify({"success": True, "message": "Fabricator deleted successfully"})
+        return jsonify({"error": "Failed to delete fabricator"}), 500
+    except Exception as e:
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
-    # except Exception as e:
-    #     print(f"Unexpected error: {e}")
-    #     return jsonify({"error": "Unexpected error occurred"}), 500
-    
+@ports_bp.route("/editname", methods=["POST"])
+def editName():
+    """Edit the name of a registered fabricator."""
+    try:
+        data = request.get_json()
+        fabricator_id = data['fabricator_id']
+        new_name = data['name']
+
+        fabricator = Fabricator.query.filter_by(dbID=fabricator_id).first()
+        if fabricator:
+            fabricator.setName(new_name)
+            return jsonify({"success": True, "message": "Fabricator name updated successfully"})
+        else:
+            return jsonify({"error": "Fabricator not found"}), 404
+    except Exception as e:
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
+
+@ports_bp.route("/diagnose", methods=["POST"])
+def diagnoseFabricator():
+    """Diagnose a fabricator based on its port."""
+    try:
+        data = request.get_json()
+        device_name = data['device']
+        port = Ports.getPortByName(device_name)
+        fabricator = app.fabricator_list.getFabricatorByPort(port)
+        if fabricator:
+            device = fabricator.device
+            if device is None:
+                device = Fabricator.staticCreateDevice(port)  # Ensure the Fabricator has this method
+            if device is not None:
+                assert isinstance(device, Device), f"Device must be an instance of Device: {device} : {type(device)}"
+                diagnosis_result = device.diagnose()
+                return jsonify({"success": True, "message": "Diagnosis successful", "diagnoseString": diagnosis_result})
+            else:
+                return jsonify({"error": "Failed to create device for diagnosis"}), 500
+        else:
+            return jsonify({"error": "Device not found"}), 404
+    except Exception as e:
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
+
+@ports_bp.route("/repair", methods=["POST"])
+def repairFabricator():
+    """Repair a fabricator based on its port."""
+    try:
+        data = request.get_json()
+        device_name = data['device']
+        port = Ports.getPortByName(device_name)
+
+        if port:
+            fabricator = Fabricator.staticCreateDevice(port)  # Ensure the Fabricator has this method
+            if fabricator:
+                repair_result = fabricator.repair()
+                return jsonify({"success": True, "message": repair_result})
+            else:
+                return jsonify({"error": "Failed to create fabricator for repair"}), 500
+        else:
+            return jsonify({"error": "Device not found"}), 404
+    except Exception as e:
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
+
 @ports_bp.route("/movehead", methods=["POST"])
 def moveHead():
-    try: 
+    """Move the head of a fabricator. Deprecated if no longer needed."""
+    try:
         data = request.get_json()
         port = data['port']
-        
-        res = Printer.moveHead(port)
-        if res == "none": 
-            return {"success": False, "message": "Head move unsuccessful."}
-        
-        return {"success": True, "message": "Head move successful."}
+        if port:
+            if app:
+                fab = app.fabricator_list.getFabricatorByPort(port)
+                # print(fab if fab else f"No fabricator found in fabricator list, fabricator_list: {app.fabricator_list.fabricators}, threads: {app.fabricator_list.fabricator_threads}")
+                if fab: 
+                    device = fab.device
+                elif port.startswith("EMU"):
+                    device = Fabricator.staticCreateDevice(Ports.getPortByName(port), websocket_connection=next(iter(app.emulator_connections.values())))
+                else:
+                    device = Fabricator.staticCreateDevice(Ports.getPortByName(port)) 
+            else: 
+                device = Fabricator(port).device
+            device.connect()
+            result = device.home(isVerbose=False)  # Use home() method from Device
+            device.disconnect()
+            return jsonify({"success": True, "message": "Head move successful"}) if result else jsonify({"success": False, "message": "Head move unsuccessful"})
+        else:
+            return jsonify({"error": "Device not found"}), 404
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
-        
-# def findPrinterObject(printer_id): 
-#     threads = printer_status_service.getThreadArray()
-#     return list(filter(lambda thread: thread.printer.id == printer_id, threads))[0].printer  
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
 
-@ports_bp.route("/moveprinterlist", methods=["POST"])
-def movePrinterList():
+@ports_bp.route("/movefabricatorlist", methods=["POST"])
+def moveFabricatorList():
+    """Change the order of fabricators."""
     try:
-        from app import printer_status_service
         data = request.get_json()
-        printersIds = data['printersIds']
-        # change the order of the printers threads
-        res = printer_status_service.movePrinterList(printersIds) 
-        if res == "none": 
-            return {"success": False, "message": "Printer list not updated."}
-               
-        return jsonify({"success": True, "message": "Printer list successfully updated."})
+        fabricator_ids = data['fabricator_ids']
+        result = app.fabricator_list.moveFabricatorList(fabricator_ids)
+        return jsonify({"success": True, "message": "Fabricator list successfully updated"}) if result != "none" else jsonify({"success": False, "message": "Fabricator list not updated"})
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return jsonify({"error": "Unexpected error occurred"}), 500
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500

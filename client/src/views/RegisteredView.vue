@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { printers, useGetPorts, useRetrievePrintersInfo, useHardReset, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters, useMoveHead } from '../model/ports'
-import { isLoading } from '../model/jobs'
-import { useRouter } from 'vue-router'
+import { printers, useRetrievePrintersInfo, useHardReset, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters, useMoveHead } from '@/model/ports'
+import { isLoading } from '@/model/jobs'
 import { ref, onMounted } from 'vue';
-import { toast } from '../model/toast'
-import RegisterModal from '../components/RegisterModal.vue'
+import { toast } from '@/model/toast'
+import RegisterModal from '@/components/RegisterModal.vue'
 import router from '@/router';
 
 const { retrieve } = useRetrievePrinters();
@@ -35,8 +34,7 @@ const selectedPrinter = ref<Device | null>(null);
 // fetch list of connected ports from backend and automatically load them into the form dropdown 
 onMounted(async () => {
     isLoading.value = true
-    const allPrinters = await retrieve(); // load all registered printers
-    registered.value = allPrinters
+    registered.value = await retrieve(); // load all registered printers
     isLoading.value = false
 });
 
@@ -113,9 +111,9 @@ const doRepair = async () => {
     isLoading.value = false
 }
 
-const doMove = async (printer: Device) => {
+const doMove = async (port: string) => {
     isLoading.value = true
-    await move(printer.device).then(() => {
+    await move(port).then(() => {
         toast.success('Printer moved to home position')
     }).catch(() => {
         toast.error('Failed to move printer to home position')
@@ -125,9 +123,9 @@ const doMove = async (printer: Device) => {
 
 const doDiagnose = async (printer: Device) => {
     isLoading.value = true
-    message.value = `Diagnosing <b>${printer.name}</b>:<br/><br/>This printer is registered under port <b>${printer.device}</b>.`
+    message.value = `Diagnosing <b>${printer.name}</b>:<br/><br/>This printer is registered under port <b>${printer.device['serialPort']}</b>.`
     showMessage.value = true
-    let str = await diagnose(printer.device)
+    let str = await diagnose(printer.device['serialPort'])
     let resstr = str.diagnoseString
     message.value += "<br><br>" + resstr
     isLoading.value = false
@@ -239,7 +237,7 @@ const doCloseRegisterModal = async () => {
                                             </a>
                                         </li>
                                         <li>
-                                            <a class="dropdown-item d-flex align-items-center" @click="doMove(printer)">
+                                            <a class="dropdown-item d-flex align-items-center" @click="doMove(printer.device['serialPort'])">
                                                 <i class="fas fa-home"></i>
                                                 <span class="ms-2">Home Printer</span>
                                             </a>
@@ -255,14 +253,14 @@ const doCloseRegisterModal = async () => {
                                     @click="editMode = false; editNum = undefined; newName = ''">Cancel</button>
                             </div>
                         </div>
-                        <h6 class="card-text mb-0"> <b>Printer device:</b> {{ printer.device }}</h6>
+                        <h6 class="card-text mb-0"> <b>Printer device:</b> {{ printer.name }}</h6>
                         <h6 class="card-text mb-0"> <b>Printer description:</b> {{ printer.description }}</h6>
                         <h6 class="card-text mb-0"> <b>Date registered:</b> {{ printer.date }}</h6>
                         <h6 class="card-text mt-0"> <b>HWID:</b> {{ printer.hwid }}</h6>
 
                         <div v-if="messageId == printer.id && showMessage"
-                            class="alert alert-danger d-flex flex-column align-items-center justify-content-center">
-                            <h6 v-html="message"></h6>
+                            class="alert alert-light d-flex flex-column align-items-center justify-content-center" style="overflow: auto; word-wrap: break-word;">
+                            <p v-html="message" style="width: 100%; word-break: break-word"></p>
                             <div class="d-flex justify-content-between">
                                 <button class="btn btn-secondary me-3" @click="clearMessage()">Clear</button>
                                 <button class="btn btn-primary w-100" @click="doRepair()">Repair Ports</button>

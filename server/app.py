@@ -1,4 +1,68 @@
 import asyncio
+import threading
+import traceback
+import uuid
+import os
+import shutil
+import websockets
+from websockets.asyncio.server import Server
+from MyFlaskApp import MyFlaskApp
+from globals import emulator_connections, event_emitter
+
+
+async def websocket_server():
+    async def handle_client(websocket):
+        client_id = str(uuid.uuid4())
+
+        print(f"Emulator websocket connected: {client_id}")
+
+        emulator_connections[client_id] = websocket
+
+        try:
+            while True:
+                message = await websocket.recv()
+                assert isinstance(message, str), f"Received non-string message: {message}, Type: ({type(message)})"
+                event_emitter.emit("message_received", client_id, message)
+                fake_port = None
+                fake_name = None
+                fake_hwid = None
+                if not hasattr(emulator_connections[client_id],"fake_port"):
+                    fake_port = message.split('port":"')[-1].split('",')[0]
+                    if fake_port:
+                        emulator_connections[client_id].fake_port = fake_port
+                    fake_name = message.split('Name":"')[-1].split('",')[0]
+                    if fake_name:
+                        emulator_connections[client_id].fake_name = fake_name
+                    fake_hwid = message.split('Hwid":"')[-1].split('",')[0]
+                    if fake_hwid:
+                        emulator_connections[client_id].fake_hwid = fake_hwid
+                if fake_hwid is not None and fake_name is not None and fake_port is not None:
+                    break
+            while True:
+                message = await websocket.recv()
+                print(f"Received message: {message}")
+                assert isinstance(message, str), f"Received non-string message: {message}, Type: ({type(message)})"
+                event_emitter.emit("message_received", client_id, message)
+        except websockets.exceptions.ConnectionClosed:
+            # Handle disconnection gracefully
+            print(f"Emulator '{client_id}' has been disconnected.")
+        except Exception:
+            # Handle any other exception (unexpected disconnection, etc.)
+            print(f"Error with client {client_id}: {traceback.format_exc()}")
+        finally:
+             if client_id in emulator_connections:
+                del emulator_connections[client_id]
+
+    try:
+        server: Server = await websockets.serve(handle_client, "localhost", 8001)
+        await server.wait_closed()
+    except Exception:
+        print(f"WebSocket server error: {traceback.format_exc()}")
+
+def start_websocket():
+    print("Starting WebSocket server...")
+    asyncio.run(websocket_server())
+    
 from flask import Flask, jsonify, request, Response, url_for, send_from_directory
 from threading import Thread
 from flask_cors import CORS 
@@ -21,72 +85,14 @@ import certifi
 
 os.environ["SSL_CERT_FILE"] = certifi.where()
 
+websocket_thread = threading.Thread(target=start_websocket, daemon=True)
+websocket_thread.start()
+
+
 # moved this up here so we can pass the app to the PrinterStatusService
-# Basic app setup 
-app = Flask(__name__, static_folder='../client/dist')
-app.config.from_object(__name__) # update application instantly 
+# Basic app setup
 
-# moved this before importing the blueprints so that it can be accessed by the PrinterStatusService
-printer_status_service = PrinterStatusService(app)
-
-# Initialize SocketIO, which will be used to send printer status updates to the frontend
-# and this specific socketit will be used throughout the backend
-
-if Config.get('environment') == 'production':
-    async_mode = 'eventlet'  # Use 'eventlet' for production
-else:
-    async_mode = 'threading'  # Use 'threading' for development
-
-socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False, async_mode=async_mode) # make it eventlet on production!
-app.socketio = socketio  # Add the SocketIO object to the app object
-
-# IMPORTING BLUEPRINTS 
-from controllers.ports import ports_bp
-from controllers.jobs import jobs_bp
-from controllers.statusService import status_bp, getStatus 
-from controllers.issues import issue_bp
-
-CORS(app)
-
-@app.before_request
-def handle_preflight():
-    if request.method == "OPTIONS":
-        res = Response()
-        res.headers['X-Content-Type-Options'] = '*'
-        res.headers['Access-Control-Allow-Origin'] = '*'
-        res.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        res.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-        return res
-
-# Serve static files
-@app.route('/')
-def serve_static(path='index.html'):
-    return send_from_directory(app.static_folder, path)
-
-@app.route('/assets/<path:filename>')
-def serve_assets(filename):
-    return send_from_directory(os.path.join(app.static_folder, 'assets'), filename)
-
-# start database connection
-load_dotenv()
-basedir = os.path.abspath(os.path.dirname(__file__))
-database_file = os.path.join(basedir, Config.get('database_uri'))
-databaseuri = 'sqlite:///' + database_file
-app.config['SQLALCHEMY_DATABASE_URI'] = databaseuri
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db.init_app(app)
-
-migrate = Migrate(app, db)
-
-# # Register the display_bp Blueprint
-app.register_blueprint(ports_bp)
-app.register_blueprint(jobs_bp)
-app.register_blueprint(status_bp)
-app.register_blueprint(issue_bp)
-    
-@app.socketio.on('ping')
-def handle_ping():
-    app.socketio.emit('pong')
+app = MyFlaskApp()
 
 # Set up the bot with the necessary intents
 intents = discord.Intents.default()
@@ -272,34 +278,28 @@ if Config['discord_enabled']:
 # own thread
 with app.app_context():
     try:
-        # Creating printer threads from registered printers on server start 
-        res = getRegisteredPrinters() # gets registered printers from DB 
-        data = res[0].get_json() # converts to JSON 
-        printers_data = data.get("printers", []) # gets the values w/ printer data
-        printer_status_service.create_printer_threads(printers_data)
-        
-        # Create in-memory uploads folder 
-        uploads_folder = os.path.join('../uploads')
-        tempcsv = os.path.join('../tempcsv')
+        # Define directory paths for uploads and tempcsv
+        uploads_folder = os.path.abspath('../uploads')
+        tempcsv = os.path.abspath('../tempcsv')
+        # Check if directories exist and handle them accordingly
+        for folder in [uploads_folder, tempcsv]:
+            if os.path.exists(folder):
+                # Remove the folder and all its contents
+                shutil.rmtree(folder)
+                app.logger.info(f"{folder} removed and will be recreated.")
+            # Recreate the folder
+            os.makedirs(folder)
+            app.logger.info(f"{folder} recreated as an empty directory.")
 
-        if os.path.exists(uploads_folder):
-            # Remove the uploads folder and all its contents
-            shutil.rmtree(uploads_folder)
-            shutil.rmtree(tempcsv)
-
-            # Recreate it as an empty directory
-            os.makedirs(uploads_folder)
-            os.makedirs(tempcsv)
-
-            print("Uploads folder recreated as an empty directory.")
-        else:
-            # Create the uploads folder if it doesn't exist
-            os.makedirs(uploads_folder)
-            os.makedirs(tempcsv)
-            print("Uploads folder created successfully.")  
     except Exception as e:
-        print(f"Unexpected error: {e}")
-            
+        # Log any exceptions for troubleshooting
+        app.handle_errors_and_logging(e)
+
+def run_socketio(app):
+    try:
+        app.socketio.run(app, allow_unsafe_werkzeug=True)
+    except Exception as e:
+        app.handle_errors_and_logging(e)
 
 if __name__ == "__main__":
     # If hits last line in GCode file: 
@@ -307,7 +307,4 @@ if __name__ == "__main__":
         # Before sending to printer, query for status. If error, throw error. 
     # since we are using socketio, we need to use socketio.run instead of app.run
     # which passes the app anyways
-    socketio.run(app, debug=True)  # Replace app.run with socketio.run
-    
-def create_app():
-    return app
+    run_socketio(app)  # Replace app.run with socketio.run
