@@ -18,6 +18,13 @@ database_uri = config.get('databaseURI', 'hvamc') + ".db"
 port = os.environ.get('FLASK_RUN_PORT', 8000),
 emulator_port = os.environ.get('EMULATOR_PORT', 8001)
 
+discord_config = config.get('discord', {})
+discord_enabled = discord_config.get('enabled', False)
+discord_token = discord_config.get('token', None)
+discord_prefix = discord_config.get('command_prefix', '!')
+discord_issues_channel = discord_config.get('issues_channel', None)
+discord_issues_role = discord_config.get('issues_role', None)
+
 Config = {
     'base_url': base_url(),
     'environment': environment,
@@ -25,4 +32,9 @@ Config = {
     'database_uri': database_uri,
     'port': port,
     'emulator_port': emulator_port
+    'discord_enabled': discord_enabled,
+    'discord_token': discord_token,
+    'command_prefix': discord_prefix,
+    'discord_issues_channel': discord_issues_channel,
+    'discord_issues_role': discord_issues_role
 }

@@ -12,6 +12,7 @@ import '@vuepic/vue-datepicker/dist/main.css';
 const { jobhistory, getFavoriteJobs } = useGetJobs()
 const { getFileDownload } = useGetJobFile()
 const { getFile } = useGetFile()
+const { getLogFile } = useGetLogFile()
 const { deleteJob } = useDeleteJob()
 const { clearSpace } = useClearSpace()
 const { favorite } = useFavoriteJob()
@@ -450,7 +451,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
                             <label for="issue" class="form-label">Select Issue</label>
                             <select name="issue" id="issue" v-model="selectedIssueId" class="form-select" required>
                                 <option disabled value="undefined">Select Issue</option>
-                                <option v-for="issue in issuelist" :value="issue.id">
+                                <option v-for="issue in issuelist" :key="issue.id" :value="issue.id">
                                     {{ issue.issue }}
                                 </option>
                                 <option disabled class="separator">----------------</option>
@@ -527,30 +528,21 @@ const onlyNumber = ($event: KeyboardEvent) => {
                 <h5>File Name</h5>
                 <h5>Actions</h5>
             </div>
-            <div v-if="favoriteJobs.length > 0" v-for="job in favoriteJobs" :key="job.id" class="mb-3">
+            <div v-if="favoriteJobs.length > 0">
+              <div v-for="job in favoriteJobs" :key="job.id" class="mb-3">
                 <div class="grid-container job">
-                    <p class="my-auto truncate-name">{{ job.name }}</p>
-                    <p class="my-auto truncate-file">{{ job.file_name_original }}</p>
-                    <div class="d-flex align-items-center">
-                        <i class="fas fa-star" style="margin-right: 10px;" data-bs-toggle="modal"
-                            data-bs-target="#favoriteModal" @click="jobToUnfavorite = job"></i>
-                        <button class="btn btn-secondary download" style="margin-right: 10px;"
-                            @click="getFileDownload(job.id)" :disabled="job.file_name_original.includes('.gcode:')">
-                            <i class="fas fa-download"></i>
-                        </button>
-                        <button class="btn btn-secondary dropdown-toggle" type="button" id="printerDropdown"
-                            data-bs-toggle="dropdown" aria-expanded="false"
-                            :disabled="job.file_name_original.includes('.gcode:')">
-                            <i class="fa-solid fa-arrow-rotate-right"></i>
-                        </button>
-                        <ul class="dropdown-menu" aria-labelledby="printerDropdown">
-                            <li v-for="printer in printers" :key="printer.id">
-                                <a class="dropdown-item" @click="handleRerun(job, printer)"
-                                    data-bs-dismiss="offcanvas">{{ printer.name }}</a>
-                            </li>
-                        </ul>
-                    </div>
+                  <p class="my-auto truncate-name">{{ job.name }}</p>
+                  <p class="my-auto truncate-file">{{ job.file_name_original }}</p>
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-star" style="margin-right: 10px;" data-bs-toggle="modal"
+                      data-bs-target="#favoriteModal" @click="jobToUnfavorite = job"></i>
+                    <button class="btn btn-secondary download" style="margin-right: 10px;"
+                      @click="getFileDownload(job.id)" :disabled="job.file_name_original.includes('.gcode:')">
+                      <i class="fas fa-download"></i>
+                    </button>
+                  </div>
                 </div>
+              </div>
             </div>
             <p v-else class="text-center" style="color: var(--color-nav-text)">No favorite jobs found. Favorite your first job!</p>
         </div>
@@ -855,7 +847,15 @@ const onlyNumber = ($event: KeyboardEvent) => {
                                             @click="getFileDownload(job.id)"
                                             :disabled="job.file_name_original.includes('.gcode:')">
                                             <i class="fas fa-download"></i>
-                                            <span class="ms-2">Download</span>
+                                            <span class="ms-2">Download Gcode</span>
+                                        </a>
+                                    </li>
+                                  <li>
+                                        <a class="dropdown-item d-flex align-items-center"
+                                            @click="getLogFile(job.id)"
+                                            :disabled="job.file_name_original.includes('.gcode:')">
+                                            <i class="fas fa-download"></i>
+                                            <span class="ms-2">Download Log</span>
                                         </a>
                                     </li>
                                     <li>

@@ -2,6 +2,9 @@ from models.db import db
 from flask import jsonify
 from sqlalchemy.exc import SQLAlchemyError
 
+from datetime import datetime
+import discord
+from models.config import Config
 
 class Issue(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -30,11 +33,29 @@ class Issue(db.Model):
             )
 
     @classmethod
-    def create_issue(cls, issue):
+    def create_issue(cls, issue, exception=None):
         try:
+            from app import sync_send_discord_embed
             new_issue = cls(issue)
-            db.session.add(new_issue)
-            db.session.commit()
+            from flask import current_app
+            if current_app:
+                db.session.add(new_issue)
+                db.session.commit()
+
+            embed = discord.Embed(title='New Issue Created',
+                                  description='A issue occurred when running a job',
+                                  color=discord.Color.red())
+
+            embed.add_field(name='Issue', value=issue, inline=False)
+            if exception:
+                import traceback
+                exceptionFormatted = "".join(traceback.format_exception(None, exception, exception.__traceback__)).replace("  ", "‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ")
+                embed.add_field(name='Exception', value=exceptionFormatted, inline=False)
+            embed.timestamp = datetime.now()
+
+            if Config['discord_enabled']:
+                if issue.startswith("CODE ISSUE: Print Failed:"):
+                    sync_send_discord_embed(embed=embed)
             return {"success": True, "message": "Issue successfully created"}
         except SQLAlchemyError as e:
             print(f"Database error: {e}")
@@ -42,7 +63,7 @@ class Issue(db.Model):
                 jsonify({"error": "Failed to add job. Database error"}),
                 500,
             )
-            
+
     @classmethod
     def delete_issue(cls, issue_id):
         try:

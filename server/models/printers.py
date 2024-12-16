@@ -1,3 +1,4 @@
+import logging
 import re
 from models.db import db
 from sqlalchemy.exc import SQLAlchemyError
@@ -14,10 +15,12 @@ from dotenv import load_dotenv
 import socketio
 
 from models.config import Config
+from models.jobs import Job
 
 load_dotenv()
 # model for Printer table
 class Printer(db.Model):
+    __allow_unmapped__ = True
     id = db.Column(db.Integer, primary_key=True)
     device = db.Column(db.String(50), nullable=False)
     description = db.Column(db.String(50), nullable=False)
@@ -34,7 +37,7 @@ class Printer(db.Model):
     status = None
     # stopPrint = False
     responseCount = 0  # if count == 10 & no response, set error
-    error = ""
+    error: Exception | None = None
     extruder_temp = 0
     bed_temp = 0
     canPause = 0
@@ -52,7 +55,7 @@ class Printer(db.Model):
         self.date = datetime.now(get_localzone())
         self.queue = Queue()
         self.stopPrint = False
-        self.error = ""
+        self.error = None
         self.extruder_temp = 0
         self.bed_temp = 0
         self.canPause = 0
@@ -187,6 +190,7 @@ class Printer(db.Model):
             if (
                     "2C99:0002" in hwid  # Prusa MK3
                     or "2C99:000D" in hwid  # Prusa MK4
+                    or "2C99:001A" in hwid  # Prusa MK4S
                     or "1A86:7523" in hwid  # Ender 3 and Ender 3 Pro
                     or "prusa" in port.description.lower()  # Fallback for Prusa in description
                     or "ender" in port.description.lower()  # Fallback for Ender in description
@@ -318,7 +322,7 @@ class Printer(db.Model):
             # logic here about time elapsed since last response
 
         response = ser.readline().decode("utf-8").strip()
-        if("error" in response):
+        if "error" in response:
             return "none"
             # if "ok" in response:
             #     break
@@ -348,25 +352,27 @@ class Printer(db.Model):
         self.sendGcode("G92 E0")
 
     # Function to send gcode commands
-    def sendGcode(self, message):
+    def sendGcode(self, message, logger=None):
         try:
             # Encode and send the message to the printer.
             self.ser.write(f"{message}\n".encode("utf-8"))
+            if logger: logger.debug(f"Command: {message}")
             # Sleep the printer to give it enough time to get the instruction.
             # time.sleep(0.1)
             # Save and print out the response from the printer. We can use this for error handling and status updates.
             while True:
-                if(self.terminated==1): 
+                if self.terminated==1:
                     return 
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
-                if response == "": 
+                if logger: logger.debug(f"Received: {response}")
+                if response == "":
                     if self.prevMes == "M602":
                         self.responseCount = 0
                         # break
                     else: 
                         self.responseCount+=1 
-                        if(self.responseCount>=10):
+                        if self.responseCount>=10:
                             self.setError("No response from printer")
                             raise Exception("No response from printer")
 
@@ -384,10 +390,11 @@ class Printer(db.Model):
                         self.setTemps(temp_t.group(1), temp_b.group(1))
 
                 if "ok" in response:
+                    if logger: logger.info(f"Command: {message}, Received: {response}")
+                    else: print(f"Command: {message}, Received: {response}")
                     break
-
-                print(f"Command: {message}, Received: {response}")
-        except Exception as e: 
+        except Exception as e:
+            if logger: logger.error(e)
             self.setError(e)
             return "error"
 
@@ -396,7 +403,7 @@ class Printer(db.Model):
             self.ser.write(f"{message}\n".encode("utf-8"))
             # Save and print out the response from the printer. We can use this for error handling and status updates.
             while True:
-                if(self.terminated==1): 
+                if self.terminated==1:
                     return 
                 # logic here about time elapsed since last response
                 response = self.ser.readline().decode("utf-8").strip()
@@ -425,9 +432,29 @@ class Printer(db.Model):
         try:
             with open(path, "r") as g:
                 # Read the file and store the lines in a list
-                if(self.terminated==1): 
-                    return 
-                
+                if self.terminated==1:
+                    return
+                import sys
+                cwd = os.path.dirname(__file__)
+                logBase = cwd.split("server")[0] + "logs"
+                logFile = str(os.path.join(logBase, self.name, job.getName(), job.date.strftime('%m-%d-%Y_%H-%M-%S'), "color"))
+                os.makedirs(logFile, exist_ok=True)
+                logger = logging.getLogger(logFile)
+                logger.setLevel(logging.DEBUG)
+                console_handler = logging.StreamHandler(sys.stdout)
+                console_formatter = CustomFormatter("%(asctime)s - %(levelname)s - %(module)s.py:%(lineno)d - %(message)s")
+                console_handler.setFormatter(console_formatter)
+                console_handler.setLevel(logging.INFO)
+                logger.addHandler(console_handler)
+                info_file_handler = logging.FileHandler(os.path.join(logFile,"INFO.log"), mode="w")
+                info_file_handler.setLevel(logging.INFO)
+                debug_file_handler = logging.FileHandler(os.path.join(logFile,"DEBUG.log"), mode="w")
+                debug_file_handler.setLevel(logging.DEBUG)
+                for(file_handler) in [info_file_handler, debug_file_handler]:
+                    file_handler.setFormatter(console_formatter)
+                    logger.addHandler(file_handler)
+
+                logger.info(f"Starting {job.name} on {self.name} at {job.date.strftime('%m-%d-%Y %H:%M:%S')}")
                 lines = g.readlines()
 
                 #  Time handling
@@ -468,11 +495,12 @@ class Printer(db.Model):
                 # Replace file with the path to the file. "r" means read mode. 
                 # now instead of reading from 'g', we are reading line by line
                 for line in lines:
-                    if(self.terminated==1): 
-                        return 
+                    if self.terminated==1:
+                        self.handle_end_of_print(logFile, logger)
+                        return "cancelled"
                     
                     # print("LINE: ", line, " STATUS: ", self.status, " FILE PAUSE: ", job.getFilePause())
-                    if("layer" in line.lower() and self.status=='colorchange' and job.getFilePause()==0 and self.colorbuff==0):
+                    if "layer" in line.lower() and self.status== 'colorchange' and job.getFilePause()==0 and self.colorbuff==0:
                         self.setColorChangeBuffer(1)
 
                     # if line contains ";LAYER_CHANGE", do job.currentLayerHeight(the next line)
@@ -494,24 +522,27 @@ class Printer(db.Model):
                     if len(line) == 0 or line.startswith(";"):
                         continue
 
-                    if("M569" in line) and job.getTimeStarted()==0:
+                    if("M569" in line or "M75" in line) and job.getTimeStarted()==0:
                         job.setTimeStarted(1)
                         job.setTime(job.calculateEta(), 1)
                         job.setTime(datetime.now(), 2)
                  
-                    res = self.sendGcode(line)
+                    res = self.sendGcode(line, logger)
+
+                    if res == "error":
+                        raise self.error
                     
-                    if(job.getFilePause() == 1):
+                    if job.getFilePause() == 1:
                         # self.setStatus("printing")
                         job.setTime(job.colorEta(), 1)
                         job.setTime(job.calculateColorChangeTotal(), 0)
                         job.setTime(datetime.min, 3)
                         job.setFilePause(0)
-                        if(self.getStatus()=="complete"):
+                        if self.getStatus()== "complete":
                             return "cancelled"
                         self.setStatus("printing")
                     
-                    if("M600" in line):
+                    if "M600" in line:
                         job.setTime(datetime.now(), 3)
                         # job.setTime(job.calculateTotalTime(), 0)
                         # job.setTime(job.updateEta(), 1)
@@ -527,14 +558,14 @@ class Printer(db.Model):
                         self.prevMes=""
                              
                 #  software pausing        
-                    if (self.getStatus()=="paused"):
+                    if self.getStatus()== "paused":
                         # self.prevMes = "M601"
                         self.sendGcode("M601") # pause command for prusa
                         job.setTime(datetime.now(), 3)
-                        while(True):
+                        while True:
                             time.sleep(1)
                             stat = self.getStatus()
-                            if(stat=="printing"):
+                            if stat== "printing":
                                 self.prevMes = "M602"
 
                                 self.sendGcode("M602") # resume command for prusa
@@ -546,7 +577,7 @@ class Printer(db.Model):
                                 break
                     
                     # software color change
-                    if (self.getStatus()=="colorchange" and job.getFilePause()==0 and self.colorbuff==1):
+                    if self.getStatus()== "colorchange" and job.getFilePause()==0 and self.colorbuff==1:
                         job.setTime(datetime.now(), 3)
                         # job.setTime(job.calculateTotalTime(), 0)
                         # job.setTime(job.updateEta(), 1)
@@ -567,19 +598,19 @@ class Printer(db.Model):
 
                     # Call the setProgress method
                     job.setProgress(progress)
-                
-                    
+
                     # if self.getStatus() == "complete" and job.extruded != 0:
                     if self.getStatus() == "complete":
                         return "cancelled"
 
                     if self.getStatus() == "error":
                         return "error"
-
+            self.handle_end_of_print(logFile, logger)
             return "complete"
         except Exception as e:
-            # self.setStatus("error")
             self.setError(e)
+            self.handle_end_of_print(logFile, logger)
+            # self.setStatus("error")
             return "error"
 
     # Function to send "ending" gcode commands
@@ -611,7 +642,7 @@ class Printer(db.Model):
             self.gcodeEnding("M140 S0")# ; turn off heatbed
             self.gcodeEnding("M107")# ; turn off fan
 
-            if(job and job.getExtruded()==1):
+            if job and job.getExtruded()==1:
                 self.gcodeEnding("G1 X241 Y170 F3600")# ; park
             # self.gcodeEnding("{if layer_z < max_print_height}G1 Z{z_offset+min(layer_z+23, max_print_height)} F300")# ; Move print head up{endif}
                 self.gcodeEnding("G4")# ; wait
@@ -675,10 +706,10 @@ class Printer(db.Model):
             # self.handleVerdict("error", job)
 
     def setErrorMessage(self, error):
-        self.error = str(error)
+        self.error = error
         self.setStatus("error")
         current_app.socketio.emit(
-            "error_update", {"printerid": self.id, "error": self.error}
+            "error_update", {"printerid": self.id, "error": str(self.error)}
         )
             
     def beginPrint(self, job): 
@@ -687,16 +718,54 @@ class Printer(db.Model):
             if job.getReleased()==1: 
                 return True 
             if self.getStatus() == "complete": 
-                return False 
-            
-    def handleVerdict(self, verdict, job):
-        # self.disconnect()
+                return False
+
+    def handle_end_of_print(self, logFile, logger = None):
+        from ANSI_Remover import compress_with_gzip
+        if not logger:
+            return
+        if logger:
+            while logger.handlers:
+                handler = logger.handlers[0]
+                handler.flush()
+                logger.removeHandler(handler)
+                handler.close()
+            for file in os.listdir(logFile):
+                try:
+                    if self.status == "error" or self.error is not None: compress_with_gzip(os.path.join(logFile, file))
+                    os.remove(os.path.join(logFile, file))
+                except Exception:
+                    pass
+            if not os.listdir(logFile):
+                os.rmdir(logFile)
+                parent_dir = os.path.dirname(logFile)
+                while parent_dir and not os.listdir(parent_dir):
+                    os.rmdir(parent_dir)
+                    parent_dir = os.path.dirname(parent_dir)
+
+    def handleVerdict(self, verdict, job: Job):
+        cwd = os.getcwd()
+        logBase = cwd.split("server")[0] + "logs"
+        logFile = os.path.join(logBase, self.name, job.getName(), job.date.strftime('%m-%d-%Y_%H-%M-%S'), "color")
+        infoFile = os.path.join(logFile, "INFO.log.gz")
+        debugFile = os.path.join(logFile, "DEBUG.log.gz")
         if verdict == "complete":
             self.disconnect()
             self.setStatus("complete")
             self.sendStatusToJob(job, job.id, "complete")
-            
+
         elif verdict == "error":
+            # create issue
+            from models.issues import Issue
+            job = self.getQueue().getJob(job)
+            Issue.create_issue(f"CODE ISSUE: Print Failed: {self.name} - {job.file_name_original}", self.error)
+            # send log to discord
+            if Config['discord_enabled']:
+                roleid = Config['discord_issues_role']
+                role_message = '<@&{role_id}>'.format(role_id=roleid)
+                from app import sync_send_discord_file
+                sync_send_discord_file(infoFile, role_message)
+                sync_send_discord_file(debugFile)
             self.disconnect()
             self.getQueue().deleteJob(job.id, self.id)
             self.setStatus("error")
@@ -758,14 +827,14 @@ class Printer(db.Model):
     def setStatus(self, newStatus):
         try:
             print("SETTING STATUS TO:", newStatus)
-            if(self.status == "error" and newStatus!="error"): 
+            if self.status == "error" and newStatus!= "error":
                 Printer.hardReset(self.id, newStatus)
             else: 
                 self.status = newStatus
-
-            current_app.socketio.emit(
-                "status_update", {"printer_id": self.id, "status": newStatus}
-            )
+            if current_app:
+                current_app.socketio.emit(
+                    "status_update", {"printer_id": self.id, "status": newStatus}
+                )
         except Exception as e:
             print("Error setting status:", e)
 
@@ -774,11 +843,12 @@ class Printer(db.Model):
 
     def setError(self, error):
         self.disconnect()
-        self.error = str(error)
+        self.error = error
         self.setStatus("error")
-        current_app.socketio.emit(
-            "error_update", {"printerid": self.id, "error": self.error}
-        )
+        if current_app:
+            current_app.socketio.emit(
+                "error_update", {"printerid": self.id, "error": str(self.error)}
+            )
 
     def sendStatusToJob(self, job, job_id, status):
         try:
@@ -788,7 +858,6 @@ class Printer(db.Model):
                 "jobid": job_id,
                 "status": status,  # Assuming status is accessible here
             }
-            
             response = requests.post(f"{Config.get('base_url')}/updatejobstatus", json=data)
             if response.status_code == 200:
                 print("Status sent successfully")
@@ -816,21 +885,49 @@ class Printer(db.Model):
     def setTemps(self, extruder_temp, bed_temp):
         self.extruder_temp = extruder_temp
         self.bed_temp = bed_temp
-        current_app.socketio.emit(
-            'temp_update', {'printerid': self.id, 'extruder_temp': self.extruder_temp, 'bed_temp': self.bed_temp})
+        if current_app:
+            current_app.socketio.emit(
+                'temp_update', {'printerid': self.id, 'extruder_temp': self.extruder_temp, 'bed_temp': self.bed_temp})
 
 
     def setCanPause(self, canPause):
         try:
             self.canPause = canPause
-            current_app.socketio.emit('can_pause', {'printerid': self.id, 'canPause': canPause})
+            if current_app:
+                current_app.socketio.emit('can_pause', {'printerid': self.id, 'canPause': canPause})
         except Exception as e:
             print('Error setting canPause:', e)
 
     def setColorChangeBuffer(self, buff): 
         self.colorbuff = buff
-        current_app.socketio.emit('color_buff', {'printerid': self.id, 'colorChangeBuffer': buff})
+        if current_app:
+            current_app.socketio.emit('color_buff', {'printerid': self.id, 'colorChangeBuffer': buff})
 
 
-            
+class CustomFormatter(logging.Formatter):
+    # ANSI escape codes for colors
+    lvlHash = {
+        "DEBUG": "DBUG",
+        "INFO": "INFO",
+        "WARNING": "WARN",
+        "ERROR": "EROR",
+        "CRITICAL": "CRIT"
+    }
+    COLOR_CODES = {
+        "DEBUG": "\033[94m",  # Blue
+        "INFO": "\033[0m",  # white
+        "WARNING": "\033[93m",  # Yellow
+        "ERROR": "\033[91m",  # Red
+        "CRITICAL": "\033[95m"  # Magenta
+    }
+    RESET_CODE = "\033[0m"  # Reset to default color
+
+    def format(self, record):
+        # Apply color based on log level
+        color = self.COLOR_CODES.get(record.levelname, self.RESET_CODE)
+        record.levelname = self.lvlHash.get(record.levelname, record.levelname)
+        message = super().format(record)
+        return f"{color}{message}{self.RESET_CODE}"
+
+
             

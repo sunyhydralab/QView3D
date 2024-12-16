@@ -924,4 +924,11 @@ th {
   margin: 0;
   padding: 0.3rem;
 }
+
+.modern-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
 </style>

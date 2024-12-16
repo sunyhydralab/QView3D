@@ -1,11 +1,11 @@
-import {ref} from 'vue'
+import { ref } from 'vue'
 import * as myFetch from './myFetch'
-import {toast} from './toast'
-import {type Job} from './jobs'
+import { toast } from './toast'
+import { type Job } from './jobs'
 
 export function api(action: string, body?: unknown, method?: string, headers?: any) {
   headers = headers ?? {}
-  return myFetch.api(`${action}`, body, method, headers).catch((err) => console.log(err))
+  return myFetch.api(`${action}`, body, method, headers).catch((err) => console.error(err))
 }
 
 export interface Device {

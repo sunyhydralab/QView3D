@@ -19,7 +19,6 @@ onMounted(async () => {
   // sockets
   setupSockets(printers.value)
   setupTimeSocket(printers.value)
-
 })
 </script>
 

@@ -62,6 +62,28 @@ async def websocket_server():
 def start_websocket():
     print("Starting WebSocket server...")
     asyncio.run(websocket_server())
+    
+from flask import Flask, jsonify, request, Response, url_for, send_from_directory
+from threading import Thread
+from flask_cors import CORS 
+import os 
+from models.db import db
+from models.PrinterStatusService import PrinterStatusService
+from flask_migrate import Migrate
+from dotenv import load_dotenv, set_key
+from controllers.ports import getRegisteredPrinters
+import shutil
+from flask_socketio import SocketIO
+from datetime import datetime, timedelta
+from sqlalchemy import text
+import json
+from models.config import Config
+import discord
+import threading
+from discord.ext import commands
+import certifi
+
+os.environ["SSL_CERT_FILE"] = certifi.where()
 
 websocket_thread = threading.Thread(target=start_websocket, daemon=True)
 websocket_thread.start()
@@ -71,6 +93,187 @@ websocket_thread.start()
 # Basic app setup
 
 app = MyFlaskApp()
+
+# Set up the bot with the necessary intents
+intents = discord.Intents.default()
+intents.messages = True  # Enable messages
+intents.message_content = True  # Enable message content
+
+bot = commands.Bot(Config['command_prefix'], intents=intents)
+
+class DiscordBot(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+def run_discord_bot():
+    loop = asyncio.new_event_loop()  # Create a new event loop for this thread
+    asyncio.set_event_loop(loop)  # Set it as the current event loop for this thread
+
+    # Add the bot cog
+    @bot.event
+    async def on_ready():
+        print(f'Logged in as {bot.user.name}')
+        if Config['discord_enabled']:
+            channel = bot.get_channel(int(Config['discord_issues_channel']))
+            #await channel.send("Discord bot is online and ready!")
+
+    @bot.command()
+    async def testembedformatting(ctx):
+        from models.issues import Issue
+        try:
+            raise Exception("Test issue")
+        except Exception as e:
+            Issue.create_issue("CODE ISSUE: Print Failed: Test Issue", e)
+
+    @bot.command()
+    async def testissue(ctx):
+        embed = discord.Embed(title='New Issue Created',
+                description='A issue occurred when running a job',
+                color=discord.Color.red())
+            
+        embed.add_field(name='Issue', value="Issue details here...", inline=False)
+        embed.add_field(name='ID', value="Issue id here...", inline=False)
+            
+        embed.timestamp = datetime.utcnow()
+            
+        await ctx.send(embed=embed)
+    
+    @bot.command()
+    async def testfile(ctx):
+        roleid = Config['discord_issues_role']
+        role_message = '<@&{role_id}>'.format(role_id=roleid)
+        
+        sync_send_discord_file("../INFO.log", role_message)
+
+    @bot.command()
+    async def testsync(ctx):
+        embed = discord.Embed(title='New Issue Created',
+                              description='A issue occurred when running a job',
+                              color=discord.Color.red())
+
+        embed.add_field(name='Issue', value="Issue details here...", inline=False)
+        embed.add_field(name='ID', value="Issue id here...", inline=False)
+
+        sync_send_discord_embed(embed=embed)
+        await ctx.send("sent!")
+
+    # Start the bot
+    bot.run(Config['discord_token'])
+    
+def start_discord_bot():
+    discord_thread = Thread(target=run_discord_bot)
+    discord_thread.start()
+
+async def send_discord_message(message):
+    if bot.is_ready():
+        channel = bot.get_channel(int(Config['discord_issues_channel']))
+        
+        if channel is not None:
+            await channel.send(message)
+        else:
+            print("Discord channel not found.")
+
+def sync_send_discord_message(message):
+    """
+    Send a Discord message from a synchronous context, interacting with the bot's event loop.
+
+    Parameters:
+        message (str): The message to send.
+    """
+    print("Attempting to send embed to Discord...")
+
+    # Check if the bot is ready
+    if not bot.is_ready():
+        print("Bot is not ready yet.")
+        return
+
+    # Get the Discord channel
+    channel_id = int(Config.get("discord_issues_channel", 0))
+    if not channel_id:
+        print("Discord channel ID is not configured properly.")
+        return
+
+    channel = bot.get_channel(channel_id)
+    if channel is None:
+        print(f"Channel with ID {channel_id} not found or inaccessible.")
+        return
+
+    print(f"Channel {channel_id} found. Attempting to send the embed...")
+
+    try:
+        # Submit the coroutine to the bot's event loop
+        asyncio.run_coroutine_threadsafe(channel.send(message), bot.loop)
+        print("Embed sent successfully!")
+    except Exception as e:
+        print(f"An error occurred while sending the embed: {type(e).__name__} - {e}")
+
+def sync_send_discord_embed(embed):
+    """
+    Send a Discord embed message from a synchronous context, interacting with the bot's event loop.
+
+    :param embed: The embed to send.
+    """
+
+    # Check if the bot is ready
+    if not bot.is_ready():
+        print("Bot is not ready yet.")
+        return
+
+    # Get the Discord channel
+    channel_id = int(Config.get("discord_issues_channel", 0))
+    if not channel_id:
+        print("Discord channel ID is not configured properly.")
+        return
+
+    channel = bot.get_channel(channel_id)
+    if channel is None:
+        print(f"Channel with ID {channel_id} not found or inaccessible.")
+        return
+
+    try:
+        # Submit the coroutine to the bot's event loop
+        asyncio.run_coroutine_threadsafe(channel.send(embed=embed), bot.loop)
+    except Exception as e:
+        print(f"An error occurred while sending the embed: {type(e).__name__} - {e}")
+
+
+# this gets called like
+# await send_discord_file(channel, file_path, "Here's an important file:")
+def sync_send_discord_file(file_path: str, message: str = None):
+    """
+    Sends a file to a specified Discord channel with an optional message.
+    
+    :param channel: The channel where the file will be sent.
+    :param file_path: The path to the file to be uploaded.
+    :param message: The optional message to send with the file.
+    """
+    # Check if the bot is ready
+    if not bot.is_ready():
+        print("Bot is not ready yet.")
+        return
+
+    # Get the Discord channel
+    channel_id = int(Config.get("discord_issues_channel", 0))
+    if not channel_id:
+        print("Discord channel ID is not configured properly.")
+        return
+
+    channel = bot.get_channel(channel_id)
+    if channel is None:
+        print(f"Channel with ID {channel_id} not found or inaccessible.")
+        return
+
+    try:
+        with open(file_path, 'rb') as f:
+            file = discord.File(f, filename=file_path.split("/")[-1])
+            # Submit the coroutine to the bot's event loop
+            asyncio.run_coroutine_threadsafe(channel.send(message or "", file=file), bot.loop)
+    except Exception as e:
+        print(f"An error occurred while sending the embed: {type(e).__name__} - {e}")
+
+
+if Config['discord_enabled']:
+    start_discord_bot()
 
 # own thread
 with app.app_context():

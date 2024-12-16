@@ -369,33 +369,33 @@ export function useRemoveJob() {
   }
 }
 
-export function bumpJobs() {
-  return {
-    async bumpjob(job: Job, printer: Device, choice: number) {
-      try {
-        const printerid = printer.id
-        const jobid = job.id
-        const response = await api('bumpjob', { printerid, jobid, choice })
-        if (response) {
-          if (response.success == false) {
-            toast.error(response.message)
-          } else if (response.success === true) {
-            toast.success(response.message)
-          } else {
-            console.error('Unexpected response:', response)
-            toast.error('Failed to bump job. Unexpected response.')
-          }
-        } else {
-          console.error('Response is undefined or null')
-          toast.error('Failed to bump job. Unexpected response')
-        }
-      } catch (error) {
-        console.error(error)
-        toast.error('An error occurred while bumping the job')
-      }
-    }
-  }
-}
+// export function bumpJobs() {
+//   return {
+//     async bumpjob(job: Job, printer: Device, choice: number) {
+//       try {
+//         const printerid = printer.id
+//         const jobid = job.id
+//         const response = await api('bumpjob', { printerid, jobid, choice })
+//         if (response) {
+//           if (response.success == false) {
+//             toast.error(response.message)
+//           } else if (response.success === true) {
+//             toast.success(response.message)
+//           } else {
+//             console.error('Unexpected response:', response)
+//             toast.error('Failed to bump job. Unexpected response.')
+//           }
+//         } else {
+//           console.error('Response is undefined or null')
+//           toast.error('Failed to bump job. Unexpected response')
+//         }
+//       } catch (error) {
+//         console.error(error)
+//         toast.error('An error occurred while bumping the job')
+//       }
+//     }
+//   }
+// }
 
 export function useReleaseJob() {
   return {
@@ -425,6 +425,7 @@ export function useReleaseJob() {
     }
   }
 }
+
 export function useGetGcode() {
   return {
     async getgcode(job: Job) {
@@ -452,6 +453,24 @@ export function useGetJobFile() {
       }
     }
   }
+}
+
+export  function useGetLogFile() {
+    return {
+        async getLogFile(jobid: number) {
+        try {
+            const response = await api(`getlogfile?jobid=${jobid}`)
+            const decodedData = atob(response.file);
+            const byteArray = new Uint8Array(decodedData.split('').map(char => char.charCodeAt(0)));
+            const file = new Blob([byteArray], { type: 'text/plain' });
+            const file_name = response.filename
+            saveAs(file, file_name)
+        } catch (error) {
+            console.error(error)
+            toast.error('An error occurred while retrieving the file')
+        }
+        }
+    }
 }
 
 export function useGetFile() {
@@ -623,7 +642,9 @@ export function useDownloadCsv() {
         const response = await download(`downloadcsv`, { allJobs, jobIds })
 
         if (!response.ok) {
-          throw new Error('HTTP error ' + response.status)
+          console.error('An error occurred while downloading the CSV:', 'HTTP error ' + response.status)
+          toast.error('An error occurred while downloading the CSV')
+          return
         }
 
         const blob = await response.blob() // Convert the response to a blob

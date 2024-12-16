@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { printers, type Device } from '../model/ports'
 import { type Issue, useGetIssues, useCreateIssues, useAssignIssue, useDeleteIssue, useEditIssue } from '../model/issues'
-import { pageSize, useGetJobs, type Job, useAssignComment, useGetJobFile, useGetFile, useRemoveIssue, useDownloadCsv, isLoading } from '../model/jobs';
+import { pageSize, useGetJobs, type Job, useAssignComment, useGetJobFile, useGetFile, useGetLogFile, useRemoveIssue, useDownloadCsv, isLoading } from '../model/jobs';
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
@@ -15,6 +15,7 @@ const { createIssue } = useCreateIssues()
 const { assign } = useAssignIssue()
 const { assignComment } = useAssignComment()
 const { getFileDownload } = useGetJobFile()
+const { getLogFile } = useGetLogFile()
 const { getFile } = useGetFile()
 const { deleteIssue } = useDeleteIssue()
 const { removeIssue } = useRemoveIssue()
@@ -73,6 +74,8 @@ let totalPages = ref(1)
 let searchCriteria = ref('');
 const isOnlyJobNameChecked = computed(() => searchByJobName.value && !searchByFileName.value);
 const isOnlyFileNameChecked = computed(() => !searchByJobName.value && searchByFileName.value);
+
+const charLimit = 500;
 
 // computed property that returns the filtered list of jobs. 
 let filteredJobs = computed(() => {
@@ -238,7 +241,7 @@ const ensureOneCheckboxChecked = () => {
 
 const doCreateIssue = async () => {
     isLoading.value = true
-    await createIssue(newIssue.value)
+    await createIssue(newIssue.value.slice(0, charLimit))
     const newIssues = await issues()
     issuelist.value = newIssues
     resetIssueValues()
@@ -501,7 +504,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
                             <label for="issue" class="form-label">Select Issue</label>
                             <select name="issue" id="issue" v-model="selectedIssueId" class="form-select" required>
                                 <option disabled value="undefined">Select Issue</option>
-                                <option v-for="issue in issuelist" :value="issue.id">
+                                <option v-for="issue in issuelist" :key="issue.id" :value="issue.id">
                                     {{ issue.issue }}
                                 </option>
                                 <option disabled class="separator">----------------</option>
@@ -727,7 +730,15 @@ const onlyNumber = ($event: KeyboardEvent) => {
                                             @click="getFileDownload(job.id)"
                                             :disabled="job.file_name_original.includes('.gcode:')">
                                             <i class="fas fa-download"></i>
-                                            <span class="ms-2">Download</span>
+                                            <span class="ms-2">Download Gcode</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center"
+                                            @click="getLogFile(job.id)"
+                                            :disabled="job.file_name_original.includes('.gcode:')">
+                                            <i class="fas fa-download"></i>
+                                            <span class="ms-2">Download Log</span>
                                         </a>
                                     </li>
                                     <li>

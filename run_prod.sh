@@ -12,7 +12,7 @@ PORT=$(grep FLASK_RUN_PORT server/.env | cut -d '=' -f 2-)
 build_client() {
     echo "Building the client..."
     cd client
-    npm run build-only
+    npm run build
 }
 
 # Function to run the production server

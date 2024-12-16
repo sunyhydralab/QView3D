@@ -18,3 +18,4 @@ eventlet~=0.37.0
 gunicorn~=23.0.0
 websockets~=14.1
 uuid~=1.30
+discord.py~=2.4.0
