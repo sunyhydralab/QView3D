@@ -23,20 +23,13 @@ class PrusaPrinter(Printer, hasEndingSequence, metaclass=ABCMeta):
 
     callablesHashtable = {**Printer.callablesHashtable, **callablesHashtable}
 
-
     def extractIndex(self, gcode: bytes) -> str:
-        hashIndex = gcode.decode().split("\n")[0].split(" ")[0]
-        if hashIndex == "M109" or hashIndex == "M190":
-            if self.logger is not None: self.logger.info("Waiting for temperature to stabilize...")
-            current_app.socketio.emit("console_update", {"message": "Waiting for temperature to stabilize...", "level": "critical", "printerid": self.dbID})
-        elif hashIndex == "G28":
-            if self.logger is not None: self.logger.info("Homing...")
-            current_app.socketio.emit("console_update", {"message": "Homing...", "level": "critical", "printerid": self.dbID})
-        elif hashIndex == "G29":
+        hashIndex = super().extractIndex(gcode)
+        if hashIndex == "G29":
             try:
                 g29addon = gcode.decode().split("\n")[0].split(" ")[1]
                 hashIndex += ".01" if g29addon == "P1" else ".02"
             except IndexError:
                 hashIndex += ".01"
-            current_app.socketio.emit("console_update", {"message": "Auto bed leveling...", "level": "critical", "printerid": self.dbID})
+            current_app.socketio.emit("console_update", {"message": "Auto bed leveling...", "level": "info", "printerid": self.dbID})
         return hashIndex

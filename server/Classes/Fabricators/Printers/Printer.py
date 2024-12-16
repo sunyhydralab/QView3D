@@ -94,7 +94,7 @@ class Printer(Device, metaclass=ABCMeta):
                 prev_line = ""
                 # Replace file with the path to the file. "r" means read mode. 
                 # now instead of reading from 'g', we are reading line by line
-                current_app.socketio.emit("console_update", {"message": "Starting Job", "level": "critical", "printerid": self.dbID})
+                current_app.socketio.emit("console_update", {"message": "Starting Job", "level": "info", "printerid": self.dbID})
                 for line in lines:
                     if self.status == "cancelled":
                         self.sendGcode(self.cancelCMD)
@@ -126,10 +126,12 @@ class Printer(Device, metaclass=ABCMeta):
 
                     if len(line) == 0 or line.startswith(";"):
                         continue
-                    if job.getTimeStarted() == 0 and ("M75" in line or self.startTimeCMD in line) :
+                    if job.getTimeStarted() == 0 and ("M75" in line or self.startTimeCMD in line):
                         job.setTimeStarted(1)
                         job.setTime(job.calculateEta(), 1)
                         job.setTime(datetime.now(), 2)
+                        if current_app:
+                            current_app.socketio.emit("console_update", {"message": "Fabricating...", "level": "info", "printerid": self.dbID})
 
                     assert self.sendGcode(line), f"Failed to send {line}"
 
@@ -175,7 +177,7 @@ class Printer(Device, metaclass=ABCMeta):
                                 self.sendGcode(self.cancelCMD)
                                 self.verdict = "cancelled"
                                 if self.logger is not None: self.logger.debug("Job cancelled")
-                                current_app.socketio.emit("console_update", {"message": "Job cancelled", "level": "critical", "printerid": self.dbID})
+                                current_app.socketio.emit("console_update", {"message": "Job cancelled", "level": "info", "printerid": self.dbID})
                                 return True
                             elif self.status == "printing":
                                 self.resume()
@@ -209,18 +211,18 @@ class Printer(Device, metaclass=ABCMeta):
                     if self.status == "complete":
                         self.verdict = "complete"
                         if self.logger is not None: self.logger.debug("Job complete")
-                        current_app.socketio.emit("console_update", {"message": "Job complete", "level": "critical", "printerid": self.dbID})
+                        current_app.socketio.emit("console_update", {"message": "Job complete", "level": "info", "printerid": self.dbID})
                         return True
 
                     if self.status == "error":
                         self.verdict = "error"
                         if self.logger is not None: self.logger.debug("Job error")
-                        current_app.socketio.emit("console_update", {"message": "Job error", "level": "critical", "printerid": self.dbID})
+                        current_app.socketio.emit("console_update", {"message": "Job error", "level": "info", "printerid": self.dbID})
                         return False
             self.verdict = "complete"
             self.status = "complete"
             if self.logger is not None: self.logger.debug("Job complete")
-            current_app.socketio.emit("console_update", {"message": "Job complete", "level": "critical", "printerid": self.dbID})
+            current_app.socketio.emit("console_update", {"message": "Job complete", "level": "info", "printerid": self.dbID})
             return True
         except Exception as e:
             # self.setStatus("error")
@@ -330,6 +332,7 @@ class Printer(Device, metaclass=ABCMeta):
             pass
         except Exception as e:
             current_app.handle_errors_and_logging(e, self)
+
     def extractIndex(self, gcode: bytes) -> str:
         """
         Method to extract the index of the gcode for use in the callablesHashtable
@@ -341,12 +344,12 @@ class Printer(Device, metaclass=ABCMeta):
         if hashIndex == "M109" or hashIndex == "M190":
             if self.logger is not None: self.logger.info("Waiting for temperature to stabilize...")
             current_app.socketio.emit("console_update",
-                                      {"message": "Waiting for temperature to stabilize...", "level": "critical",
+                                      {"message": "Waiting for temperature to stabilize...", "level": "info",
                                        "printerid": self.dbID})
         elif hashIndex == "G28":
             if self.logger is not None: self.logger.info("Homing...")
             current_app.socketio.emit("console_update",
-                                      {"message": "Homing...", "level": "critical", "printerid": self.dbID})
+                                      {"message": "Homing...", "level": "info", "printerid": self.dbID})
         return hashIndex
 
     def pause(self):
