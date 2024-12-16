@@ -110,7 +110,7 @@ onMounted(async () => {
     // Clean up when the modal is hidden
     if (preview) {
       preview.clear();
-      setPreview(null);
+      preview = null;
     }
   });
 });
@@ -118,7 +118,7 @@ onMounted(async () => {
 onUnmounted(() => {
   if (preview) {
     preview.clear();
-    setPreview(null);
+    preview = null;
   }
 });
 
