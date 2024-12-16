@@ -12,10 +12,8 @@ from tzlocal import get_localzone
 import os
 import requests
 from dotenv import load_dotenv
-import socketio
-
 from models.config import Config
-from models.jobs import Job
+from Classes.Jobs import Job
 
 load_dotenv()
 # model for Printer table

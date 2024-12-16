@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { printers, type Device } from '@/model/ports'
-import { pageSize, useGetJobs, type Job, useGetJobFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useDownloadCsv, useRemoveIssue, isLoading } from '../model/jobs';
+import { pageSize, useGetJobs, type Job, useGetJobFile, useGetLogFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useDownloadCsv, useRemoveIssue, isLoading } from '@/model/jobs';
 import { computed, onMounted, onBeforeUnmount, ref, watchEffect, onUnmounted } from 'vue';
 import { type Issue, useGetIssues, useAssignIssue } from '@/model/issues'
 import { useRouter } from 'vue-router';
