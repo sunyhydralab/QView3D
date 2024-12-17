@@ -5,8 +5,7 @@ const originalConsoleWarn = console.warn;
 
 // Utility to suppress warnings
 function withConsoleSuppression<T>(fn: () => T): T {
-    console.warn = () => {
-    };
+    console.warn = () => {};
     const result = fn();
     console.warn = originalConsoleWarn;
     return result;

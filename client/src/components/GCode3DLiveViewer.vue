@@ -23,8 +23,6 @@ onMounted(async () => {
   const extrusionColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#7561A9';
   const offscreen: OffscreenCanvas = canvas.value.transferControlToOffscreen();
 
-  console.debug(offscreen)
-
   worker.postMessage({
     type: 'init',
     payload: {
