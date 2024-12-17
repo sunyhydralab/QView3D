@@ -345,7 +345,10 @@ class Printer(Device, metaclass=ABCMeta):
             try:
                 temp = gcode.decode().split("S")[1].split("\n")[0]
             except IndexError:
-                temp = None
+                try:
+                    temp = gcode.decode().split("R")[1].split("\n")[0]
+                except IndexError:
+                    temp = None
             if temp:
                 if self.logger is not None: self.logger.info(f"Waiting for hotend temperature to stabilize at {temp}\u00B0C...")
                 current_app.socketio.emit("console_update",

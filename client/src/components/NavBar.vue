@@ -21,7 +21,7 @@ async function refreshServerConnection() {
     }
 
     socket.value.on('connect', () => {
-        console.log('Connected to socket');
+        console.debug('Connected to socket');
         measurePing();
     });
 

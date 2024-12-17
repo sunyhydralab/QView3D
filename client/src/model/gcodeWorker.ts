@@ -4,7 +4,7 @@ let preview: GCodePreview.WebGLPreview | null = null;
 const originalConsoleWarn = console.warn;
 
 // Utility to suppress warnings
-function withConsoleSuppression<T>(fn: () => T): T {
+export function withConsoleSuppression<T>(fn: () => T): T {
     console.warn = () => {};
     const result = fn();
     console.warn = originalConsoleWarn;

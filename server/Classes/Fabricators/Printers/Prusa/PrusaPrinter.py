@@ -31,5 +31,6 @@ class PrusaPrinter(Printer, hasEndingSequence, metaclass=ABCMeta):
                 hashIndex += ".01" if g29addon == "P1" else ".02"
             except IndexError:
                 hashIndex += ".01"
-            current_app.socketio.emit("console_update", {"message": "Auto bed leveling...", "level": "info", "printerid": self.dbID})
+            if hashIndex == "G29.01":
+                current_app.socketio.emit("console_update", {"message": "Auto bed leveling...", "level": "info", "printerid": self.dbID})
         return hashIndex
