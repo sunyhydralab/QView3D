@@ -12,9 +12,8 @@ from globals import current_app as app
 from models.db import db
 
 class FabricatorList:
-    def __init__(self, app=None):
-        self.app = app
-        assert self.app is not None, "app is None"
+    def __init__(self, passed_app=app):
+        self.app = passed_app
         with self.app.app_context():
             if not inspect(db.engine).has_table('fabricator') or not Fabricator.metadata.tables:
                 Fabricator.metadata.create_all(db.engine)
@@ -318,7 +317,7 @@ class FabricatorList:
             return jsonify({"error": "Fabricator not found"}), 404
 
 class FabricatorThread(Thread):
-    def __init__(self, fabricator: Fabricator, passed_app=None, *args, **kwargs):
+    def __init__(self, fabricator: Fabricator, passed_app=app, *args, **kwargs):
         """
         create a new FabricatorThread for the given fabricator
         :param Fabricator fabricator: the fabricator to create a thread for
@@ -326,10 +325,7 @@ class FabricatorThread(Thread):
         """
         super().__init__(*args, **kwargs)
         self.fabricator: Fabricator = fabricator
-        if passed_app:
-            self.app = passed_app
-        else:
-            self.app = app
+        self.app = passed_app
         self.daemon = kwargs.get('daemon', False)
 
     def __repr__(self):
