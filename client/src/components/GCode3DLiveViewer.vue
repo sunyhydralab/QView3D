@@ -30,7 +30,7 @@ onMounted(async () => {
     extrusionWidth: 0.8,
     renderExtrusion: true,
     renderTravel: false,
-    renderTubes: true,
+    renderTubes: false,
     initialCameraPosition: [-200, 232, 200],
   };
 
