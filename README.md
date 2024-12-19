@@ -46,7 +46,7 @@ The project is maintained by computer science students at SUNY New Paltz, under 
 
 ## Architecture Diagram
 
-![QView3D Diagram](QView3DDiagram.jpg)
+![QView3D Diagram](QViewDiagram.png)
 
 ## Setup and Installation
 
