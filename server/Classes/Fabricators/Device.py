@@ -320,7 +320,7 @@ class Device(ABC):
 class LocationResponse:
     def __init__(self, response: str):
         import re
-        loc = [item.strip() for item in re.split(r'X:| Y:| Z:| E:| Count X:|\n', response) if item]
+        loc = [item.strip() for item in re.split(r' Count X:| Count Y:| Count Z:|X:| Y:| Z:| E:|\n', response) if item]
         self.x = float(loc[0])
         self.y = float(loc[1])
         self.z = float(loc[2])

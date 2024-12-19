@@ -362,7 +362,7 @@ func (cmd *M114Command) Execute(printer *Printer) []string {
 	position := printer.Extruder.Position
 
 	// TODO: temp values
-	return []string{fmt.Sprintf("X:%.2f Y:%.2f Z:%.2f E:%.2f Count X:%.2f", position.X, position.Y, position.Z, 1.0, 0.0), "ok"}
+	return []string{fmt.Sprintf("X:%.2f Y:%.2f Z:%.2f E:%.2f Count X:%.2f Count Y:%.2f Count Z:%.2f", position.X, position.Y, position.Z, 1.0, 0.0, 0.0, 0.0), "ok"}
 }
 
 type M115Command struct{}
