@@ -48,4 +48,4 @@ class PrusaMK3(PrusaPrinter):
                 self.sendGcode(b"M155 S1\n")
                 return True
         except Exception as e:
-            return current_app.handle_errors_and_logging(e, self)
+            return current_app.handle_errors_and_logging(e, self.logger)

@@ -1,7 +1,7 @@
 import os
 import re
 import pytest
-from Classes.Logger import Logger
+from Classes.Loggers.Logger import Logger
 from parallel_test_runner import testLevel
 
 def __desc__(): return "App Tests"

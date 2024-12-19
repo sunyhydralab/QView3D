@@ -56,7 +56,7 @@ class Fabricator(db.Model):
             self.devicePort = dbFab.devicePort
             self.date = dbFab.date
             self.dbID = dbFab.dbID
-        self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True, websocket_connection=next(iter(current_app.emulator_connections.values())) if port.device == current_app.get_emu_ports()[0] else None)
+        self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True, websocket_connection=next(iter(current_app.emulator_connections.values())) if port.device == current_app.get_emu_ports()[0] else None, name=name)
         if self.description == "New Fabricator": self.description = self.device.getDescription()
         db.session.commit()
 
@@ -145,7 +145,7 @@ class Fabricator(db.Model):
             #TODO: assume generic printer, do stuff
             return None
 
-    def createDevice(self, serialPort: ListPortInfo | SysFS | None, consoleLogger: TextIO | None = None, fileLogger: str | None = None, addLogger: bool = False, websocket_connection=None) -> Device | None:
+    def createDevice(self, serialPort: ListPortInfo | SysFS | None, consoleLogger: TextIO | None = None, fileLogger: str | None = None, addLogger: bool = False, websocket_connection=None, name: str = None) -> Device | None:
         """
         creates the correct printer object based on the serial port info
         :param WebSocket | None websocket_connection: the websocket connection to the emulator, if it exists
@@ -153,6 +153,7 @@ class Fabricator(db.Model):
         :param TextIO | None consoleLogger: the console stream to output to
         :param str | None fileLogger: the file path to output file logs to
         :param bool addLogger: whether to add a logger to the device
+        :param str name: the name of the fabricator for the device to reference
         :return: the fabricator object
         :rtype: Device | None
         """
@@ -168,11 +169,11 @@ class Fabricator(db.Model):
             from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
             from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
             if serialPort.pid == PrusaMK4.PRODUCTID:
-                return PrusaMK4(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection)
+                return PrusaMK4(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
             elif serialPort.pid == PrusaMK4S.PRODUCTID:
-                return PrusaMK4S(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection)
+                return PrusaMK4S(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
             elif serialPort.pid == PrusaMK3.PRODUCTID:
-                return PrusaMK3(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection)
+                return PrusaMK3(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
             else:
                 return None
         elif serialPort.vid == EnderPrinter.VENDORID:
@@ -180,15 +181,15 @@ class Fabricator(db.Model):
             from Classes.Fabricators.Printers.Ender.Ender3Pro import Ender3Pro
             model = Fabricator.getModelFromGcodeCommand(serialPort)
             if "Ender-3 Pro" in model:
-                return Ender3Pro(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection)
+                return Ender3Pro(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
             elif "Ender-3" in model:
-                return Ender3(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection)
+                return Ender3(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
             else:
                 return None
         elif serialPort.vid == MakerBotPrinter.VENDORID:
             from Classes.Fabricators.Printers.MakerBot.Replicator2 import Replicator2
             if serialPort.pid == Replicator2.PRODUCTID:
-                return Replicator2(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection)
+                return Replicator2(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
         else:
             #TODO: assume generic printer, do stuff
             return None
@@ -225,12 +226,12 @@ class Fabricator(db.Model):
             #     self.device.startupSequence()
             assert self.setStatus("printing"), "Failed to set status to printing"
             assert self.device.parseGcode(self.job, isVerbose=isVerbose), f"Failed to parse Gcode, status: {self.status}, verdict: {self.device.verdict}, file: {self.job.file_name_original}" # this is the actual command to read the file and fabricate.
-            if isVerbose and hasattr(self.device,"logger"): self.device.logger.debug(f"Job complete, verdict: {self.device.verdict}")
+            if isVerbose and self.device.logger is not None: self.device.logger.debug(f"Job complete, verdict: {self.device.verdict}")
             self.handleVerdict()
-            if isVerbose and hasattr(self.device,"logger"): self.device.logger.debug(f"Verdict handled, status: {self.status}")
+            if isVerbose and self.device.logger is not None: self.device.logger.debug(f"Verdict handled, status: {self.status}")
             return True
         except Exception as e:
-            return current_app.handle_errors_and_logging(e, self)
+            return current_app.handle_errors_and_logging(e, self.device.logger)
 
     def pause(self) -> bool:
         """
@@ -277,7 +278,7 @@ class Fabricator(db.Model):
             self.setStatus("cancelled")
             return self.status == self.device.status == "cancelled"
         except Exception as e:
-            return current_app.handle_errors_and_logging(e, self)
+            return current_app.handle_errors_and_logging(e, self.device.logger)
 
     def getStatus(self) -> str:
         """
@@ -317,7 +318,7 @@ class Fabricator(db.Model):
                 print(f"current app is None, status: {newStatus}")
             return True
         except Exception as e:
-            return current_app.handle_errors_and_logging(e, self)
+            return current_app.handle_errors_and_logging(e, self.device.logger)
 
     def resetToIdle(self):
         #TODO: send message to front end insuring that the print bed is clear and that the job is done
@@ -402,7 +403,7 @@ class Fabricator(db.Model):
                 #     return False
                 pass
         except AssertionError as e:
-            current_app.handle_errors_and_logging(e, self.device)
+            current_app.handle_errors_and_logging(e, self.device.logger)
             self.setStatus("error")
             self.queue.removeJob()
             self.job = None

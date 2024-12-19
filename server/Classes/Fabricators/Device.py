@@ -7,7 +7,7 @@ from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from Classes.Jobs import Job
 from Classes.Vector3 import Vector3
-from Classes.Logger import Logger
+from Classes.Loggers.Logger import Logger
 from Mixins.hasEndingSequence import hasEndingSequence
 from Mixins.hasResponseCodes import checkXYZ
 from Classes.FabricatorConnection import SerialConnection, SocketConnection, FabricatorConnection
@@ -37,11 +37,12 @@ class Device(ABC):
         "G28": [checkXYZ],  # Home
     }
 
-    def __init__(self, dbID: int, serialPort: ListPortInfo | SysFS, consoleLogger=sys.stdout, fileLogger=None, websocket_connection=None, addLogger: bool =False):
+    def __init__(self, dbID: int, serialPort: ListPortInfo | SysFS, consoleLogger=sys.stdout, fileLogger=None, websocket_connection=None, addLogger: bool =False, name: str = None):
+        self.name = name if name else self.DESCRIPTION
         self.dbID: int = dbID
         self.serialPort: ListPortInfo | SysFS | None = serialPort
         self.serialID: str | None = serialPort.serial_number
-        self.logger = Logger(self.DESCRIPTION, port=self.serialPort.device, consoleLogger=consoleLogger, fileLogger=fileLogger, loggingLevel=Logger.DEBUG, consoleLevel=Logger.ERROR) if addLogger else None
+        self.logger = Logger(self.name, port=self.serialPort.device, consoleLogger=consoleLogger, fileLogger=fileLogger, loggingLevel=Logger.DEBUG, consoleLevel=Logger.ERROR) if addLogger else None
         self.status = "idle"
         self.verdict = ""
         self.websocket_connection = websocket_connection
@@ -81,7 +82,7 @@ class Device(ABC):
             self.serialConnection.reset_input_buffer()
             return True
         except Exception as e:
-            current_app.handle_errors_and_logging(e, self)
+            current_app.handle_errors_and_logging(e, self.logger)
             return False
 
     def disconnect(self):
@@ -105,7 +106,7 @@ class Device(ABC):
             assert self.getHomePosition() == self.getToolHeadLocation(), f"Failed to home, expected {self.getHomePosition()} but got {self.getToolHeadLocation()}"
             return True
         except Exception as e:
-            return current_app.handle_errors_and_logging(e, self)
+            return current_app.handle_errors_and_logging(e, self.logger)
 
     def goTo(self, loc: Vector3, isVerbose: bool = False):
         """
@@ -179,7 +180,7 @@ class Device(ABC):
             if self.logger is None:
                 print(e)
             else:
-                current_app.handle_errors_and_logging(e, self)
+                current_app.handle_errors_and_logging(e, self.logger)
             self.verdict = "error"
             return True
 

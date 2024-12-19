@@ -33,7 +33,7 @@ def checkBedTemp(line, dev):
     except IndexError:
         return False
     except Exception as e:
-        return current_app.handle_errors_and_logging(e, dev)
+        return current_app.handle_errors_and_logging(e, dev.logger)
 
 def checkExtruderTemp(line, dev):
     line = (line.decode() if isinstance(line, bytes) else line).strip()
@@ -42,7 +42,7 @@ def checkExtruderTemp(line, dev):
     except IndexError:
         return False
     except Exception as e:
-        return current_app.handle_errors_and_logging(e, dev)
+        return current_app.handle_errors_and_logging(e, dev.logger)
 
 def checkTemp(temps, dev):
     try:
@@ -51,7 +51,7 @@ def checkTemp(temps, dev):
             return float(temps[1]) - float(temps[0]) < 0.25
         return False
     except Exception as e:
-        return current_app.handle_errors_and_logging(e, dev)
+        return current_app.handle_errors_and_logging(e, dev.logger)
 
 def checkTime(line, dev):
     line = (line.decode() if isinstance(line, bytes) else line).strip()

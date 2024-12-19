@@ -11,6 +11,7 @@ from globals import root_path, emulator_connections, event_emitter
 from routes import defineRoutes
 from models.config import Config
 from Classes.FabricatorList import FabricatorList
+from Classes.Loggers.ABCLogger import ABCLogger
 from models.db import db
 
 class MyFlaskApp(Flask):
@@ -28,8 +29,8 @@ class MyFlaskApp(Flask):
         Migrate(self, db)
         self._fabricator_list = None
         self._logger = None
-        from Classes.Logger import Logger
-        logs = os.path.join(root_path, "server", "logs")
+        from Classes.Loggers.Logger import Logger
+        logs = os.path.join(root_path, "logs")
         os.makedirs(logs, exist_ok=True)
         self.logger = Logger("App", consoleLogger=sys.stdout, fileLogger=os.path.abspath(os.path.join(logs, f"{__name__}.log")),
                             consoleLevel=logging.ERROR)
@@ -115,13 +116,15 @@ class MyFlaskApp(Flask):
     def fabricator_list(self):
         return self._fabricator_list
 
-    def handle_errors_and_logging(self, e: Exception | str, fabricator=None):
-        from Classes.Fabricators.Fabricator import Fabricator
-        device = fabricator
-        if isinstance(fabricator, Fabricator):
-            device = fabricator.device
-        if device is not None and hasattr(device, "logger") and device.logger is not None:
-            device.logger.error(e, stacklevel=3)
+    def handle_errors_and_logging(self, e: Exception | str, logger=None, level=logging.ERROR):
+        """
+        Handles errors and logs them
+        :param Exception | str e: the exception to handle
+        :param ABCLogger | None logger: the logger to use
+        :param int level: the logging level
+        """
+        if logger is not None:
+            logger.log(level, e, stacklevel=3)
         elif self.logger is None:
             if isinstance(e, str):
                 print(e.strip())
@@ -129,7 +132,7 @@ class MyFlaskApp(Flask):
                 import traceback
                 print(traceback.format_exception(None, e, e.__traceback__))
         else:
-            self.logger.error(e, stacklevel=3)
+            self.logger.log(level, e, stacklevel=3)
         return False
 
     def get_emu_ports(self):

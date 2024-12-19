@@ -106,7 +106,7 @@ def app():
         app.fabricator_list.teardown()
 
 
-from Classes.Logger import Logger
+from Classes.Loggers.Logger import Logger
 
 intLogger = Logger("Internal Errors", consoleLogger=sys.stdout, fileLogger="internal_errors.log", loggingLevel=Logger.INFO)
 
