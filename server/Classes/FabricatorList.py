@@ -352,13 +352,11 @@ class FabricatorThread(Thread):
             self.fabricator.responseCount = 0
             while True:
                 time.sleep(2)
-                status = self.fabricator.getStatus()
                 queueSize = len(self.fabricator.queue)
-                if status == "printing" and queueSize > 0:
+                if self.fabricator.getStatus() == "printing" and queueSize > 0:
                     assert isinstance(self.fabricator.queue[0], Job), f"self.fabricator.queue[0]={self.fabricator.queue[0]}, type(self.fabricator.queue[0])={type(self.fabricator.queue[0])}, self.fabricator.queue={self.fabricator.queue}, type(self.fabricator.queue)={type(self.fabricator.queue)}"
                     if self.fabricator.queue[0].released == 1:
-                        if status != "offline":
-                            self.fabricator.begin()
+                        assert self.fabricator.begin(), f"self.fabricator.begin() failed"
 
     def stop(self):
         self.fabricator.terminated = 1

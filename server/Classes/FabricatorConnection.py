@@ -27,7 +27,6 @@ class FabricatorConnection(ABC):
         :return: FabricatorConnection instance
         :rtype: SerialConnection | SocketConnection
         """
-        print(f"Creating connection with port: {port}, baudrate: {baudrate}, timeout: {timeout}, websocket_connections: {websocket_connections}, fabricator_id: {fabricator_id}")
         if websocket_connections is not None and fabricator_id is not None:
             return SocketConnection(port, baudrate, timeout, websocket_connections, fabricator_id)
         elif port is not None and baudrate is not None:

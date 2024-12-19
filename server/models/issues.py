@@ -5,6 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
 import discord
 from models.config import Config
+from globals import current_app
 
 class Issue(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -17,7 +18,7 @@ class Issue(db.Model):
     def get_issues(cls):
         try:
             issues = cls.query.all()
-            if(issues):
+            if issues:
                 issues = [
                     {"id": issue.id, "issue": issue.issue} for issue in issues
                 ]
@@ -37,7 +38,7 @@ class Issue(db.Model):
         try:
             from app import sync_send_discord_embed
             new_issue = cls(issue)
-            from flask import current_app
+
             if current_app:
                 db.session.add(new_issue)
                 db.session.commit()
@@ -53,9 +54,8 @@ class Issue(db.Model):
                 embed.add_field(name='Exception', value=exceptionFormatted, inline=False)
             embed.timestamp = datetime.now()
 
-            if Config['discord_enabled']:
-                if issue.startswith("CODE ISSUE: Print Failed:"):
-                    sync_send_discord_embed(embed=embed)
+            if Config['discord_enabled'] and issue.startswith("CODE ISSUE: Print Failed:"):
+                sync_send_discord_embed(embed=embed)
             return {"success": True, "message": "Issue successfully created"}
         except SQLAlchemyError as e:
             print(f"Database error: {e}")

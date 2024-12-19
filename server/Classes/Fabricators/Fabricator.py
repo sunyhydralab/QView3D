@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from globals import current_app
 
 class Fabricator(db.Model):
+    """Fabricator class for the database. This is used for all io operations with the database, the hardware, and the front end."""
     dbID = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(50), nullable=False)
     hwid = db.Column(db.String(150), nullable=False)
@@ -433,9 +434,9 @@ def getFileConfig(file: str) -> dict:
             days, hours, minutes, seconds = map(int, timeList)
         settingsDict["expected_time"] = str(days * 86400 + hours * 3600 + (minutes + 2) * 60 + seconds)
     elif len(comment_lines) >= 12 and "cura" in comment_lines[11].lower():
-        equalsDict = {line.split('=')[0].strip(): line.split('=')[1].strip() for line in comment_lines if '=' in line}
-        colonDict = {line.split(':')[0].strip(): line.split(':')[1].strip() for line in comment_lines if ':' in line}
-        settingsDict = {**equalsDict, **colonDict}
+        equalsDict: dict[str, str] = {line.split('=')[0].strip(): line.split('=')[1].strip() for line in comment_lines if '=' in line}
+        colonDict: dict[str, str] = {line.split(':')[0].strip(): line.split(':')[1].strip() for line in comment_lines if ':' in line}
+        settingsDict: dict[str, str] = {**equalsDict, **colonDict}
         settingsDict["expected_time"] = str(int(settingsDict["TIME"]) + 120)
         settingsDict["filament_type"] = settingsDict["material_type"]
         settingsDict["filament_diameter"] = settingsDict["material_diameter"]

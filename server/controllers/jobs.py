@@ -284,7 +284,6 @@ def releasejob():
 
         if key == 3:
             Job.update_job_status(jobpk, "error")
-            fabricator.setError(job.comments)
             fabricator.setStatus("error") # printer ready to accept new prints
 
         elif key == 2:
