@@ -87,7 +87,7 @@ class ABCLogger(logging.Logger, metaclass=ABCMeta):
         msg = self.formatLog(msg)
         super().critical(msg + end, *args, **kwargs, stacklevel=stacklevel)
 
-    def logMessageOnly(self, msg: str, *args, logLevel: int = None, stacklevel: int = 3, **kwargs):
+    def logMessageOnly(self, msg: str, *args, logLevel: int = None, stacklevel: int = 4, **kwargs):
         """
         Log a message without any additional formatting, removing the log level, date, time, and file info.
         :param str msg: the message to log
@@ -103,21 +103,20 @@ class ABCLogger(logging.Logger, metaclass=ABCMeta):
         for handler, formatter in zip(self.handlers, oldFormatters):
             handler.setFormatter(formatter)
 
-    def log(self, level, msg, *args, exc_info=None, stack_info=False, stacklevel: int = 3, extra=None, **kwargs):
-        self.handleLog(level, msg, *args, exc_info=exc_info, stack_info=stack_info, stacklevel=stacklevel, extra=extra,
-                       **kwargs)
+    def log(self, level, msg, *args, exc_info=None, stack_info=False, stacklevel: int = 4, extra=None, **kwargs):
+        self.handleLog(level, msg, *args, exc_info=exc_info, stack_info=stack_info, stacklevel=stacklevel, extra=extra, **kwargs)
 
     def handleLog(self, level, msg, *args, exc_info=None, stack_info=False, stacklevel: int = 3, extra=None, **kwargs):
         if level <= self.DEBUG:
-            self.debug(msg,*args, stacklevel=stacklevel, exc_info=exc_info, stack_info=stack_info, extra=extra **kwargs)
+            self.debug(msg,*args, stacklevel=stacklevel, exc_info=exc_info, stack_info=stack_info, extra=extra, **kwargs)
         elif level <= self.INFO:
-            self.info(msg,*args, stacklevel=stacklevel, exc_info=exc_info, stack_info=stack_info, extra=extra **kwargs)
+            self.info(msg,*args, stacklevel=stacklevel, exc_info=exc_info, stack_info=stack_info, extra=extra, **kwargs)
         elif level <= self.WARNING:
-            self.warning(msg,*args, stacklevel=stacklevel, exc_info=exc_info, stack_info=stack_info, extra=extra **kwargs)
+            self.warning(msg,*args, stacklevel=stacklevel, exc_info=exc_info, stack_info=stack_info, extra=extra, **kwargs)
         elif level <= self.ERROR:
-            self.error(msg,*args, stacklevel=stacklevel, exc_info=exc_info, stack_info=stack_info, extra=extra **kwargs)
+            self.error(msg,*args, stacklevel=stacklevel, exc_info=exc_info, stack_info=stack_info, extra=extra, **kwargs)
         elif level <= self.CRITICAL:
-            self.critical(msg,*args, stacklevel=stacklevel, exc_info=exc_info, stack_info=stack_info, extra=extra **kwargs)
+            self.critical(msg,*args, stacklevel=stacklevel, exc_info=exc_info, stack_info=stack_info, extra=extra, **kwargs)
 
     def setLevel(self, level):
         """
@@ -133,7 +132,7 @@ class CustomFileHandler(logging.FileHandler):
     def emit(self, record):
         try:
             msg = self.format(record)
-            self.stream.write(msg + "\n")
+            self.stream.write(msg.rstrip() + "\n")
             self.flush()
         except RecursionError:
             pass

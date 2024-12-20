@@ -60,7 +60,7 @@ class Printer(Device, metaclass=ABCMeta):
                 logger.info(f"Starting {job.name} on {self.name} at {job.date.strftime('%m-%d-%Y %H:%M:%S')}")
                 # Read the file and store the lines in a list
                 if self.status == "cancelled":
-                    self.sendGcode(self.cancelCMD)
+                    self.sendGcode(self.cancelCMD, isVerbose, logger)
                     self.verdict = "cancelled"
                     logger.info("Job cancelled")
                     logger.nukeLogs()
@@ -107,7 +107,7 @@ class Printer(Device, metaclass=ABCMeta):
                 current_app.socketio.emit("console_update", {"message": "Starting Job", "level": "info", "printerid": self.dbID})
                 for line in lines:
                     if self.status == "cancelled":
-                        self.sendGcode(self.cancelCMD)
+                        self.sendGcode(self.cancelCMD, isVerbose, logger)
                         self.verdict = "cancelled"
                         logger.info("Job cancelled")
                         logger.nukeLogs()
@@ -152,7 +152,7 @@ class Printer(Device, metaclass=ABCMeta):
                         job.setTime(datetime.min, 3)
                         job.setFilePause(0)
                         if self.status == "cancelled":
-                            self.sendGcode(self.cancelCMD)
+                            self.sendGcode(self.cancelCMD, logger=logger)
                             self.verdict = "cancelled"
                             logger.info("Job cancelled")
                             logger.nukeLogs()
@@ -229,8 +229,9 @@ class Printer(Device, metaclass=ABCMeta):
                     if self.status == "error":
                         self.verdict = "error"
                         logger.error("Job error")
-                        current_app.socketio.emit("console_update", {"message": "Job error", "level": "info", "printerid": self.dbID})
-                        return False
+                        logger.nukeLogs(error=True)
+                        current_app.socketio.emit("console_update", {"message": "Job error", "level": "error", "printerid": self.dbID})
+                        return True
             self.verdict = "complete"
             self.status = "complete"
             logger.info("Job complete")
@@ -238,8 +239,12 @@ class Printer(Device, metaclass=ABCMeta):
             current_app.socketio.emit("console_update", {"message": "Job complete", "level": "info", "printerid": self.dbID})
             return True
         except Exception as e:
-            # self.setStatus("error")
-            return current_app.handle_errors_and_logging(e, self.logger)
+            self.verdict = "error"
+            current_app.socketio.emit("error_update",{"fabricator_id": self.dbID, "job_id": job.id, "error": str(e)})
+            current_app.socketio.emit("console_update", {"message": "Job error", "level": "error", "printerid": self.dbID})
+            current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
+            logger.nukeLogs(error=True)
+            return e
         
     def sendGcode(self, gcode: bytes | str, isVerbose: bool = False, logger: JobLogger = None) -> bool:
         """
@@ -249,6 +254,7 @@ class Printer(Device, metaclass=ABCMeta):
         :param JobLogger logger: the logger to use
         :rtype: bool
         """
+        if logger is None: logger = self.logger
         assert self.serialConnection is not None, "Serial connection is None"
         assert self.serialConnection.is_open, "Serial connection is not open"
         if isinstance(gcode, str):
@@ -256,7 +262,7 @@ class Printer(Device, metaclass=ABCMeta):
             gcode = gcode.encode("utf-8")
         assert isinstance(gcode, bytes), f"Expected bytes, got {type(gcode)}"
         assert isinstance(isVerbose, bool), f"Expected bool, got {type(isVerbose)}"
-        callables = self.callablesHashtable.get(self.extractIndex(gcode), [checkOK])
+        callables = self.callablesHashtable.get(self.extractIndex(gcode, logger), [checkOK])
         current_app.socketio.emit("gcode_line", {"line": (gcode.decode() if isinstance(gcode, bytes) else gcode).strip(), "printerid": self.dbID})
         self.serialConnection.write(gcode)
         line = ''
@@ -280,8 +286,7 @@ class Printer(Device, metaclass=ABCMeta):
                     else: print(f"{gcode.decode().strip()}: {line.strip()}")
                     # current_app.socketio.emit("console_update",{"message": gcode.decode().strip(), "level": "debug", "printerid": self.dbID})
                 except Exception as e:
-                    if current_app: return current_app.handle_errors_and_logging(e, self.logger)
-                    elif logger is not None: logger.error(e)
+                    if current_app: return current_app.handle_errors_and_logging(e, logger)
                     else: print(traceback.format_exc())
                     return False
         if not callables:
@@ -293,11 +298,12 @@ class Printer(Device, metaclass=ABCMeta):
                 f"{gcode.decode().strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}")
         return True
 
-    def changeFilament(self, filamentType: str, filamentDiameter: float):
+    def changeFilament(self, filamentType: str, filamentDiameter: float, logger: JobLogger = None):
         """
         Method to change filament
         :param str filamentType: type of plastic the filament is made of
         :param float filamentDiameter:  diameter of the filament in mm
+        :param JobLogger logger: the logger to use
         """
         if not isinstance(filamentDiameter, float):
             filamentDiameter = float(filamentDiameter)
@@ -306,12 +312,13 @@ class Printer(Device, metaclass=ABCMeta):
             self.filamentType = filamentType
             self.filamentDiameter = filamentDiameter
         except Exception as e:
-            current_app.handle_errors_and_logging(e, self.logger)
+            current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
 
-    def changeNozzle(self, nozzleDiameter: float):
+    def changeNozzle(self, nozzleDiameter: float, logger: JobLogger = None):
         """
         Method to change nozzle size
         :param float nozzleDiameter: The diameter of the nozzle in mm
+        :param JobLogger logger: the logger to use
         """
         try:
             if not isinstance(nozzleDiameter, float):
@@ -319,12 +326,13 @@ class Printer(Device, metaclass=ABCMeta):
             assert self.status == "idle", "Printer is not idle"
             self.nozzleDiameter = nozzleDiameter
         except Exception as e:
-            current_app.handle_errors_and_logging(e, self.logger)
+            current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
 
-    def handleTempLine(self, line: str) -> None:
+    def handleTempLine(self, line: str , logger: JobLogger = None) -> None:
         """
         Method to handle temperature lines in the serial response
         :param str line: the line to parse
+        :param JobLogger logger: the logger to use
         """
         try:
             temp_t = re.search(r'T:(\d+.\d+)', line)
@@ -343,13 +351,13 @@ class Printer(Device, metaclass=ABCMeta):
         except ValueError:
             pass
         except Exception as e:
-            current_app.handle_errors_and_logging(e, self.logger)
+            current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
 
     def extractIndex(self, gcode: bytes, logger=None) -> str:
         """
         Method to extract the index of the gcode for use in the callablesHashtable
         :param bytes gcode: the line of gcode to extract the index from
-        :param Logger | JobLogger | None logger: the logger to use
+        :param JobLogger | None logger: the logger to use
         :rtype: str
         """
         if logger is None: logger = self.logger
@@ -379,22 +387,22 @@ class Printer(Device, metaclass=ABCMeta):
             except IndexError:
                 temp = None
             if temp:
-                if self.logger is not None: self.logger.info(f"Waiting for bed temperature to stabilize at {temp}\u00C2\u00B0C...")
+                if logger is not None: logger.info(f"Waiting for bed temperature to stabilize at {temp}\u00C2\u00B0C...")
                 current_app.socketio.emit("console_update",
                                       {"message": f"Waiting for bed temperature to stabilize at {temp}\u00B0C...", "level": "info",
                                        "printerid": self.dbID})
             else:
-                if self.logger is not None: self.logger.info("Waiting for bed temperature to stabilize...")
+                if logger is not None: logger.info("Waiting for bed temperature to stabilize...")
                 current_app.socketio.emit("console_update",
                                       {"message": "Waiting for bed temperature to stabilize...", "level": "info",
                                        "printerid": self.dbID})
         elif hashIndex == "G28":
-            if self.logger is not None: self.logger.info("Homing...")
+            if logger is not None: logger.info("Homing...")
             current_app.socketio.emit("console_update",
                                       {"message": "Homing...", "level": "info", "printerid": self.dbID})
         return hashIndex
 
-    def pause(self):
+    def pause(self, logger: JobLogger = None):
         if not self.pauseCMD:
             if self.logger is not None: self.logger.error("Pause command not implemented.")
             return True
@@ -409,9 +417,9 @@ class Printer(Device, metaclass=ABCMeta):
             if self.logger is not None: self.logger.info("Job Paused")
             return True
         except Exception as e:
-            return current_app.handle_errors_and_logging(e, self.logger)
+            return current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
 
-    def resume(self) -> bool:
+    def resume(self, logger: JobLogger = None) -> bool:
         if self.resumeCMD is None:
             if self.logger is not None: self.logger.error("Resume command not implemented.")
             return False
@@ -424,7 +432,7 @@ class Printer(Device, metaclass=ABCMeta):
             if self.logger is not None: self.logger.info("Job Resumed")
             return True
         except Exception as e:
-            return current_app.handle_errors_and_logging(e, self.logger)
+            return current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
 
     def connect(self) -> bool:
         super().connect()

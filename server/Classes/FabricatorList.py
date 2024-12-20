@@ -352,7 +352,8 @@ class FabricatorThread(Thread):
                 if self.fabricator.getStatus() == "printing" and queueSize > 0:
                     assert isinstance(self.fabricator.queue[0], Job), f"self.fabricator.queue[0]={self.fabricator.queue[0]}, type(self.fabricator.queue[0])={type(self.fabricator.queue[0])}, self.fabricator.queue={self.fabricator.queue}, type(self.fabricator.queue)={type(self.fabricator.queue)}"
                     if self.fabricator.queue[0].released == 1:
-                        assert self.fabricator.begin(), f"self.fabricator.begin() failed"
+                        if not self.fabricator.begin():
+                            self.app.handle_errors_and_logging(Exception(f"Fabricator {self.fabricator.getName()} failed to begin") if not self.fabricator.error else self.fabricator.error, level=50)
 
     def stop(self):
         self.fabricator.terminated = 1

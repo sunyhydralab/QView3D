@@ -23,8 +23,8 @@ class PrusaPrinter(Printer, hasEndingSequence, metaclass=ABCMeta):
 
     callablesHashtable = {**Printer.callablesHashtable, **callablesHashtable}
 
-    def extractIndex(self, gcode: bytes) -> str:
-        hashIndex = super().extractIndex(gcode)
+    def extractIndex(self, gcode: bytes, logger=None) -> str:
+        hashIndex = super().extractIndex(gcode, logger)
         if hashIndex == "G29":
             try:
                 g29addon = gcode.decode().split("\n")[0].split(" ")[1]

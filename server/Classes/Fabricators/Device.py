@@ -128,13 +128,13 @@ class Device(ABC):
             return loc == self.getToolHeadLocation()
         return True
 
-    def parseGcode(self, job: Job, isVerbose: bool = False) -> bool:
+    def parseGcode(self, job: Job, isVerbose: bool = False) -> bool| Exception:
         """
         Parse a G-code file and send the commands to the device.
         :param Job job: The Job object, with file name to parse.
         :param bool isVerbose: Whether to log the commands
-        :return: True if the job is complete, else False
-        :rtype: bool
+        :return: True if the job is complete, else the exception
+        :rtype: bool | Exception
         :raises AssertionError: if the file is not a string or if isVerbose is not a bool
         """
         assert isinstance(job, Job), f"Expected Job object, got {type(job)}"
@@ -177,12 +177,10 @@ class Device(ABC):
             if self.logger is not None: self.logger.info("Job complete")
             return True
         except Exception as e:
-            if self.logger is None:
-                print(e)
-            else:
-                current_app.handle_errors_and_logging(e, self.logger)
+            current_app.socketio.emit("error_update", {"fabricator_id": self.dbID, "job_id": job.id, "error": str(e)})
+            current_app.handle_errors_and_logging(e, self.logger)
             self.verdict = "error"
-            return True
+            return e
 
 
     def pause(self) -> bool:

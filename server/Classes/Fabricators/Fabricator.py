@@ -1,3 +1,5 @@
+import os
+
 from flask import jsonify, Response
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
@@ -7,9 +9,10 @@ from Classes.Fabricators.Device import Device
 from typing_extensions import TextIO
 from Classes.Jobs import Job
 from Mixins.hasEndingSequence import hasEndingSequence
+from models.config import Config
 from models.db import db
 from datetime import datetime, timezone
-from globals import current_app
+from globals import current_app, root_path
 
 class Fabricator(db.Model):
     """Fabricator class for the database. This is used for all io operations with the database, the hardware, and the front end."""
@@ -59,6 +62,7 @@ class Fabricator(db.Model):
             self.dbID = dbFab.dbID
         self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True, websocket_connection=next(iter(current_app.emulator_connections.values())) if port.device == current_app.get_emu_ports()[0] else None, name=name)
         if self.description == "New Fabricator": self.description = self.device.getDescription()
+        self.error = None
         db.session.commit()
 
     def __repr__(self):
@@ -226,13 +230,14 @@ class Fabricator(db.Model):
             # if isinstance(self.device, hasStartupSequence):
             #     self.device.startupSequence()
             assert self.setStatus("printing"), "Failed to set status to printing"
-            assert self.device.parseGcode(self.job, isVerbose=isVerbose), f"Failed to parse Gcode, status: {self.status}, verdict: {self.device.verdict}, file: {self.job.file_name_original}" # this is the actual command to read the file and fabricate.
-            if isVerbose and self.device.logger is not None: self.device.logger.debug(f"Job complete, verdict: {self.device.verdict}")
+            self.error = self.device.parseGcode(self.job, isVerbose=isVerbose) # this is the actual command to read the file and fabricate.
             self.handleVerdict()
             if isVerbose and self.device.logger is not None: self.device.logger.debug(f"Verdict handled, status: {self.status}")
             return True
         except Exception as e:
-            return current_app.handle_errors_and_logging(e, self.device.logger)
+            self.error = e
+            current_app.socketio.emit("error_update", {"fabricator_id": self.dbID, "job_id": self.job.id ,"error": str(e)})
+            return current_app.handle_errors_and_logging(e, self.device.logger, level=50)
 
     def pause(self) -> bool:
         """
@@ -333,6 +338,20 @@ class Fabricator(db.Model):
             self.setStatus("complete")
         elif self.device.verdict == "error":
             self.setStatus("error")
+            # create issue
+            from models.issues import Issue
+            Issue.create_issue(f"CODE ISSUE: Print Failed: {self.name} - {self.job.file_name_original}", self.error)
+            # send log to discord
+            if Config['discord_enabled']:
+                printFile = self.job.file_name_original.split(".gcode")[0]
+                printFile = "-".join(printFile.split("_"))
+                logFile = os.path.join(root_path, "logs", self.name, printFile, self.job.date.strftime('%m-%d-%Y_%H-%M-%S'), "color", "INFO.log.gz")
+                role_message = '<@&{role_id}>'.format(role_id=Config['discord_issues_role'])
+                from app import sync_send_discord_file
+                sync_send_discord_file(logFile, role_message)
+                print("made it past send_discord_file")
+            self.getQueue().deleteJob(self.job.id, self.dbID)
+            self.device.disconnect()
         elif self.device.verdict == "cancelled":
             if isinstance(self.device, hasEndingSequence): self.device.endSequence()
             else: self.device.home()

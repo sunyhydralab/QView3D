@@ -3,6 +3,7 @@ import os
 import shutil
 from os import PathLike
 from typing import TextIO
+from globals import current_app, compress_with_gzip
 
 from Classes.Loggers.ABCLogger import ABCLogger, CustomColorFormatter, CustomFileHandler
 
@@ -15,7 +16,7 @@ class JobLogger(ABCLogger):
         :param str deviceName: The name of the device
         :param str jobName: The name of the job
         :param str startTime: The time the job started
-        :param str | None port: com port of device
+        :param str | PathLike | None port: com port of device
         :param TextIO | None consoleLogger: The console to output to
         :param str | None fileLogger: File path to log to create all logs in
         :param int loggingLevel: Logging level
@@ -77,18 +78,57 @@ class JobLogger(ABCLogger):
         if self.consoleLogger is not None: self.consoleLogger.setLevel(level)
 
 
-    def nukeLogs(self):
-        """Delete all the logs created by the logger, then clear the directories in the log path that are empty."""
-        for handler in self.handlers:
-            if isinstance(handler, CustomFileHandler):
-                handler.close()
-                os.remove(handler.baseFilename)
+    def nukeLogs(self, error: bool = False):
+        """
+        Delete all the logs created by the logger, then clear the directories in the log path that are empty.
+        :param bool error: If a compressed version the logs are being saved because of an error
+        """
+        index = 0
+        if not error:
+            while index < len(self.handlers):
+                handler = self.handlers[index]
+                if isinstance(handler, CustomFileHandler):
+                    try:
+                        handler.flush()
+                        self.removeHandler(handler)
+                        handler.close()
+                        os.remove(handler.baseFilename)
+                    except Exception as e:
+                        if current_app: current_app.handle_errors_and_logging(e, self)
+                        else: print(f"Error deleting {handler.baseFilename}: {e}")
+                else: index += 1
+        else:
+            while index < len(self.handlers):
+                handler = self.handlers[index]
+                if isinstance(handler, CustomFileHandler):
+                    try:
+                        handler.flush()
+                        self.removeHandler(handler)
+                        handler.close()
+                        compress_with_gzip(handler.baseFilename)
+                        os.remove(handler.baseFilename)
+                    except Exception as e:
+                        if current_app: current_app.handle_errors_and_logging(e, self)
+                        else: print(f"Error deleting {handler.baseFilename}: {e}")
         while self.fileLogger is not None and os.path.isdir(self.fileLogger):
-            # Check if fileLogger directory is empty (excluding subdirectories)
-            if not any(os.path.isfile(os.path.join(self.fileLogger, f)) for f in os.listdir(self.fileLogger)):
+            # Check if fileLogger directory is empty (including subdirectories)
+            if all(self.clean_logs(entry) for entry in os.scandir(self.fileLogger)):
                 shutil.rmtree(self.fileLogger)  # Remove the empty directory
                 self.fileLogger = os.path.dirname(self.fileLogger)  # Move to the parent directory
             else:
                 break  # Stop if the directory contains any files
 
-
+    @staticmethod
+    def clean_logs(entry):
+        """Delete all the logs created by the logger, then clear the directories in the log path that are empty."""
+        if entry.is_file():
+            return False
+        elif entry.is_dir():
+            if all(JobLogger.clean_logs(entry) for entry in os.scandir(entry)):
+                shutil.rmtree(entry)
+            else:
+                return False
+        else:
+            print(f"Unexpected file type: {entry}, {type(entry)}")
+            return False
+        return True

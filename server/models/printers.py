@@ -719,7 +719,7 @@ class Printer(db.Model):
                 return False
 
     def handle_end_of_print(self, logFile, logger = None):
-        from ANSI_Remover import compress_with_gzip
+        from globals import compress_with_gzip
         if not logger:
             return
         if logger:

@@ -124,7 +124,7 @@ class MyFlaskApp(Flask):
         :param int level: the logging level
         """
         if logger is not None:
-            logger.log(level, e, stacklevel=3)
+            logger.log(level, e, stacklevel=5)
         elif self.logger is None:
             if isinstance(e, str):
                 print(e.strip())
@@ -132,7 +132,7 @@ class MyFlaskApp(Flask):
                 import traceback
                 print(traceback.format_exception(None, e, e.__traceback__))
         else:
-            self.logger.log(level, e, stacklevel=3)
+            self.logger.log(level, e, stacklevel=5)
         return False
 
     def get_emu_ports(self):
