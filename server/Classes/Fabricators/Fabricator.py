@@ -308,8 +308,9 @@ class Fabricator(db.Model):
             # this is a hack to make sure that the serial connection is open before setting the status to ready,
             # this should be a temp fix until the serial connection is handled better
             if newStatus == "ready":
-                assert self.device.serialConnection is not None, "Serial connection is None"
-                if not self.device.serialConnection.is_open: assert self.device.connect(), "Failed to connect"
+                if  self.device.serialConnection is None or not self.device.serialConnection.is_open: assert self.device.connect(), "Failed to connect"
+            elif newStatus == "offline":
+                if self.device.serialConnection is not None and self.device.serialConnection.is_open: assert self.device.disconnect(), "Failed to disconnect"
             self.status = newStatus
             self.device.status = newStatus
             if self.job is None and len(self.queue) > 0:

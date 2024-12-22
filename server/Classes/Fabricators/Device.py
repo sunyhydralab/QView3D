@@ -79,14 +79,14 @@ class Device(ABC):
             assert self.serialPort is not None, "Serial port is not set"
             assert self.serialPort.device is not None, "Serial port device is not set"
             assert self.serialPort.device != "", "Serial port device is empty"
-            if self.serialConnection is None:
+            if self.serialConnection is None or not self.serialConnection.is_open:
                 self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort.device, baudrate=115200, timeout=60, websocket_connections=self.websocket_connection, fabricator_id=str(self.dbID))
             if self.serialConnection.is_open: self.serialConnection.reset_input_buffer()
             return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self.logger)
 
-    def disconnect(self):
+    def disconnect(self) -> bool:
         """Disconnect from the hardware by closing the serial connection."""
         try:
             if self.serialConnection and self.serialConnection.is_open:
