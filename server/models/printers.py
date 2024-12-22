@@ -755,8 +755,7 @@ class Printer(db.Model):
         elif verdict == "error":
             # create issue
             from models.issues import Issue
-            job = self.getQueue().getJob(job)
-            Issue.create_issue(f"CODE ISSUE: Print Failed: {self.name} - {job.file_name_original}", self.error)
+            Issue.create_issue(f"CODE ISSUE: Print Failed: {self.name} - {job.file_name_original}", self.error, job_id=job)
             # send log to discord
             if Config['discord_enabled']:
                 roleid = Config['discord_issues_role']

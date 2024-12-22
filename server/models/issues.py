@@ -38,7 +38,8 @@ class Issue(db.Model):
                 return {"success": True, "issues": []}
             # return issues
         except SQLAlchemyError as e:
-            print(f"Database error: {e}")
+            if current_app:
+                current_app.handle_errors_and_logging(e)
             return (
                 jsonify({"error": "Failed to get issues. Database error"}),
                 500,
@@ -64,11 +65,7 @@ class Issue(db.Model):
     def create_issue(issue, exception=None, job_id: int = None):
         try:
             from app import sync_send_discord_embed
-            new_issue = cls(issue)
-
-            if current_app:
-                db.session.add(new_issue)
-                db.session.commit()
+            Issue(issue, job_id)
 
             embed = discord.Embed(title='New Issue Created',
                                   description='A issue occurred when running a job',
@@ -85,9 +82,17 @@ class Issue(db.Model):
                 sync_send_discord_embed(embed=embed)
             return {"success": True, "message": "Issue successfully created"}
         except SQLAlchemyError as e:
-            print(f"Database error: {e}")
+            if current_app:
+                current_app.handle_errors_and_logging(e)
             return (
                 jsonify({"error": "Failed to add job. Database error"}),
+                500,
+            )
+        except Exception as e:
+            if current_app:
+                current_app.handle_errors_and_logging(e)
+            return (
+                jsonify({"error": "Failed to add job. Unknown error"}),
                 500,
             )
 
@@ -103,7 +108,8 @@ class Issue(db.Model):
             else:
                 return {"success": False, "message": "Issue not found"}
         except SQLAlchemyError as e:
-            print(f"Database error: {e}")
+            if current_app:
+                current_app.handle_errors_and_logging(e)
             return (
                 jsonify({"error": "Failed to delete issue. Database error"}),
                 500,
@@ -117,7 +123,8 @@ class Issue(db.Model):
             db.session.commit()
             return {"success": True, "message": "Issue successfully edited"}
         except SQLAlchemyError as e:
-            print(f"Database error: {e}")
+            if current_app:
+                current_app.handle_errors_and_logging(e)
             return (
                 jsonify({"error": "Failed to edit issue. Database error"}),
                 500,

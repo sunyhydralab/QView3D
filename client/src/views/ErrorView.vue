@@ -115,8 +115,6 @@ onMounted(async () => {
         totalPages.value = Math.ceil(totalJobs.value / pageSize.value);
         totalPages.value = Math.max(totalPages.value, 1);
 
-        console.log(displayJobs.value);
-
         document.addEventListener('click', closeDropdown);
 
         const imageModal = document.getElementById('gcodeImageModal');

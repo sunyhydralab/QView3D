@@ -12,10 +12,9 @@ server/qview3dserver.egg-info/
 server/dist
 
 printeremu/testserver/node_modules/
-
-.DS_Store
 /qodana.yaml
 /Tests/logs/
 /Tests/server/
 /logs/
 /server/logs/
+/server/__Hidden__/

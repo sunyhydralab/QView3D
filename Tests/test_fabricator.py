@@ -47,7 +47,7 @@ def test_pause_and_resume(app, fabricator):
 
     def parse_gcode():
         try:
-            file = "../server/pauseAndResumeTest.gcode"
+            file = "__Hidden__/pauseAndResumeTest.gcode"
             from Classes.Fabricators.Fabricator import getFileConfig
             config = getFileConfig(file)
             from Classes.Fabricators.Printers.Printer import Printer

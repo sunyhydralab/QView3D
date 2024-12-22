@@ -246,7 +246,7 @@ class Printer(Device, metaclass=ABCMeta):
             logger.nukeLogs(error=True)
             return e
         
-    def sendGcode(self, gcode: bytes | str, isVerbose: bool = False, logger: JobLogger = None) -> bool:
+    def sendGcode(self, gcode: bytes | str, isVerbose: bool = True, logger: JobLogger = None) -> bool:
         """
         Method to send gcode to the printer
         :param bytes | str | LiteralString gcode: the line of gcode to send to the printer
@@ -254,6 +254,7 @@ class Printer(Device, metaclass=ABCMeta):
         :param JobLogger logger: the logger to use
         :rtype: bool
         """
+        should_log = isVerbose and logger is not None
         if logger is None: logger = self.logger
         assert self.serialConnection is not None, "Serial connection is None"
         assert self.serialConnection.is_open, "Serial connection is not open"
@@ -261,7 +262,6 @@ class Printer(Device, metaclass=ABCMeta):
             if gcode[-1] != "\n": gcode += "\n"
             gcode = gcode.encode("utf-8")
         assert isinstance(gcode, bytes), f"Expected bytes, got {type(gcode)}"
-        assert isinstance(isVerbose, bool), f"Expected bool, got {type(isVerbose)}"
         callables = self.callablesHashtable.get(self.extractIndex(gcode, logger), [checkOK])
         current_app.socketio.emit("gcode_line", {"line": (gcode.decode() if isinstance(gcode, bytes) else gcode).strip(), "printerid": self.dbID})
         self.serialConnection.write(gcode)
@@ -279,10 +279,10 @@ class Printer(Device, metaclass=ABCMeta):
                             continue
                     if func(line, self):
                         break
-                    if logger is not None: logger.debug(f"{gcode.decode().strip()}: {decLine}")
+                    if should_log: logger.debug(f"{gcode.decode().strip()}: {decLine}")
                     # current_app.socketio.emit("console_update",{"message": decLine, "level": "debug", "printerid": self.dbID})
                 except UnicodeDecodeError:
-                    if logger is not None: logger.debug(f"{gcode.decode().strip()}: {line.strip()}")
+                    if should_log: logger.debug(f"{gcode.decode().strip()}: {line.strip()}")
                     else: print(f"{gcode.decode().strip()}: {line.strip()}")
                     # current_app.socketio.emit("console_update",{"message": gcode.decode().strip(), "level": "debug", "printerid": self.dbID})
                 except Exception as e:
@@ -291,10 +291,10 @@ class Printer(Device, metaclass=ABCMeta):
                     return False
         if not callables:
             # current_app.socketio.emit("console_update", {"message": f"{gcode.decode().strip()}: ok", "level": "info", "printerid": self.dbID})
-            if logger is not None: logger.info(f"{gcode.decode().strip()}: ok")
+            if should_log: logger.info(f"{gcode.decode().strip()}: ok")
         else:
             # current_app.socketio.emit("console_update", {"message": f"{gcode.decode().strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}", "level": "info", "printerid": self.dbID})
-            if logger is not None: logger.info(
+            if should_log: logger.info(
                 f"{gcode.decode().strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}")
         return True
 
@@ -435,19 +435,24 @@ class Printer(Device, metaclass=ABCMeta):
             return current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
 
     def connect(self) -> bool:
-        super().connect()
+        assert super().connect(), "Failed to connect to printer"
         try:
-            if self.serialConnection and self.serialConnection.is_open:
-                self.sendGcode(b"M155 S1\n", isVerbose=True)
-                return True
+            assert self.serialConnection is not None, "Serial connection is None"
+            assert self.serialConnection.is_open, "Serial connection is not open"
+            self.sendGcode(b"M155 S1\n")
+            return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self.logger)
 
-    def disconnect(self) -> None:
-        if self.serialConnection and self.serialConnection.is_open:
-            self.sendGcode(b"M155 S100\n")
-            self.sendGcode(b"M155 S0\n")
-            self.sendGcode(b"M104 S0\n")
-            self.sendGcode(b"M140 S0\n")
-            self.sendGcode(b"M84\n")
-            self.serialConnection.close()
+    def disconnect(self) -> bool:
+        try:
+            if self.serialConnection and self.serialConnection.is_open:
+                self.sendGcode(b"M155 S100\n")
+                self.sendGcode(b"M155 S0\n")
+                self.sendGcode(b"M104 S0\n")
+                self.sendGcode(b"M140 S0\n")
+                self.sendGcode(b"M84\n")
+                self.serialConnection.close()
+            return True
+        except Exception as e:
+            return current_app.handle_errors_and_logging(e, self.logger)
