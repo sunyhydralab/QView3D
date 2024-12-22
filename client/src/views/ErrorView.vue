@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import { printers, type Device } from '../model/ports'
-import { type Issue, useGetIssues, useCreateIssues, useAssignIssue, useDeleteIssue, useEditIssue } from '../model/issues'
-import { pageSize, useGetJobs, type Job, useAssignComment, useGetJobFile, useGetFile, useGetLogFile, useRemoveIssue, useDownloadCsv, isLoading } from '../model/jobs';
+import { printers, type Device } from '@/model/ports'
+import {
+  type Issue,
+  useGetIssues,
+  useCreateIssues,
+  useAssignIssue,
+  useDeleteIssue,
+  useEditIssue,
+  useGetIssueByJob
+} from '@/model/issues'
+import { pageSize, useGetJobs, type Job, useAssignComment, useGetJobFile, useGetFile, useGetLogFile, useRemoveIssue, useDownloadCsv, isLoading } from '@/model/jobs';
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
@@ -11,6 +19,7 @@ import '@vuepic/vue-datepicker/dist/main.css';
 
 const { jobhistory, getFavoriteJobs } = useGetJobs()
 const { issues } = useGetIssues()
+const { issue } = useGetIssueByJob()
 const { createIssue } = useCreateIssues()
 const { assign } = useAssignIssue()
 const { assignComment } = useAssignComment()
@@ -90,13 +99,15 @@ onMounted(async () => {
     try {
         isLoading.value = true;
 
-        const retrieveissues = await issues();
-        issuelist.value = retrieveissues;
+        issuelist.value = await issues();
 
         const printerIds = selectedPrinters.value.map(p => p).filter(id => id !== undefined) as number[];
 
         // Fetch jobs into `fetchedJobs` and total into `totalJobs`
         [fetchedJobs.value, totalJobs.value] = await jobhistory(page.value, pageSize.value, printerIds, 1);
+        for (let i = 0; i < fetchedJobs.value.length; i++) {
+            fetchedJobs.value[i].error = await issue(fetchedJobs.value[i].id)
+        }
 
         // Update `displayJobs` with the fetched jobs
         displayJobs.value = fetchedJobs.value;
@@ -242,8 +253,7 @@ const ensureOneCheckboxChecked = () => {
 const doCreateIssue = async () => {
     isLoading.value = true
     await createIssue(newIssue.value.slice(0, charLimit))
-    const newIssues = await issues()
-    issuelist.value = newIssues
+    issuelist.value = await issues()
     resetIssueValues()
     isLoading.value = false
 }
@@ -252,8 +262,7 @@ const doDeleteIssue = async (issue: Issue) => {
     isLoading.value = true
     if (issue === undefined) return
     await deleteIssue(issue)
-    const newIssues = await issues()
-    issuelist.value = newIssues
+    issuelist.value = await issues()
     submitFilter()
     resetIssueValues()
     isLoading.value = false
@@ -700,6 +709,9 @@ const onlyNumber = ($event: KeyboardEvent) => {
                     <td class="truncate" :title="job.file_name_original">{{ job.file_name_original }}</td>
                     <td class="truncate" :title="job.error" v-if="job.error">
                         {{ job.error }}
+                    </td>
+                    <td class="truncate" v-else>
+                        <span class="ttext-center">No issue</span>
                     </td>
                     <td class="truncate" :title="job.date?.toString()">{{ job.date }}</td>
                     <td class="truncate" :title="job.comments">{{ job.comments }}</td>

@@ -1,9 +1,11 @@
 import { api } from './ports'
 import { toast } from './toast'
+import { type Job } from './jobs'
 
 export interface Issue {
     id: number,
-    issue: string
+    issue: string,
+    job?: Job
 }
 
 export function useGetIssues() {
@@ -13,6 +15,22 @@ export function useGetIssues() {
                 const response = await api('getissues') // pass rerun job the Job object and desired printer
                 if (response.success === true) {
                     return response.issues
+                }
+            } catch (error) {
+                console.error(error)
+                toast.error('An error occurred while fetching issues')
+            }
+        }
+    }
+}
+
+export function useGetIssueByJob() {
+    return {
+        async issue(jobId: number) {
+            try {
+                const response = await api('getissuebyjob', { jobId })
+                if (response.success === true) {
+                    return response.issue
                 }
             } catch (error) {
                 console.error(error)

@@ -11,14 +11,24 @@ def getIssues():
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
+
+@issue_bp.route('/getissuebyjob', methods=["POST"])
+def getIssueByJob():
+    try:
+        data = request.get_json()
+        job_id = data['jobId']
+        return Issue.get_issue_by_job(job_id)
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify({"error": "Unexpected error occurred"}), 500
     
 @issue_bp.route('/createissue', methods=["POST"])
 def createIssue(): 
     try:
         data = request.get_json()
         issue = data['issue']
-        res = Issue.create_issue(issue)
-        return res
+        job = data.get('job', None)
+        return Issue.create_issue(issue, job_id=job)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500

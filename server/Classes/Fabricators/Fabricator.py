@@ -347,7 +347,7 @@ class Fabricator(db.Model):
             self.setStatus("error")
             # create issue
             from models.issues import Issue
-            Issue.create_issue(f"CODE ISSUE: Print Failed: {self.name} - {self.job.file_name_original}", self.error)
+            Issue.create_issue(f"CODE ISSUE: Print Failed: {self.name} - {self.job.file_name_original}", self.error, self.job.id)
             # send log to discord
             if Config['discord_enabled']:
                 printFile = self.job.file_name_original.split(".gcode")[0]

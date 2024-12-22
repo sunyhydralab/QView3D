@@ -356,7 +356,7 @@ const handleDragEnd = async () => {
                   </button>
 
                   <button class="btn btn-danger"
-                          v-if="printer.status == 'configuring' || printer.status == 'ready' || printer.status == 'error' || printer.status == 'complete' || printer.status == 'idle'"
+                          v-if="printer.status == 'ready' || printer.status == 'error' || printer.status == 'complete' || printer.status == 'idle'"
                           @click="setPrinterStatus(printer, 'offline')">
                     Turn Offline
                   </button>
@@ -647,7 +647,7 @@ const handleDragEnd = async () => {
                 </button>
 
                 <button class="btn btn-danger"
-                        v-if="printer.status == 'configuring' || printer.status == 'ready' || printer.status == 'error' || printer.status == 'complete' || printer.status == 'idle'"
+                        v-if="printer.status == 'ready' || printer.status == 'error' || printer.status == 'complete' || printer.status == 'idle'"
                         @click="setPrinterStatus(printer, 'offline')">
                   Turn Offline
                 </button>

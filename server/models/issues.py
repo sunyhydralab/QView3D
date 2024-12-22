@@ -45,7 +45,23 @@ class Issue(db.Model):
             )
 
     @classmethod
-    def create_issue(cls, issue, exception=None):
+    def get_issue_by_job(cls, job_id):
+        try:
+            issue = cls.query.filter_by(job_id=job_id).first()
+            if issue:
+                return {"success": True, "issue": issue.issue}
+            else:
+                return {"success": False, "issue": None}
+        except SQLAlchemyError as e:
+            if current_app:
+                current_app.handle_errors_and_logging(e)
+            return (
+                jsonify({"error": "Failed to get issue. Database error"}),
+                500,
+            )
+
+    @staticmethod
+    def create_issue(issue, exception=None, job_id: int = None):
         try:
             from app import sync_send_discord_embed
             new_issue = cls(issue)
