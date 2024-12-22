@@ -46,6 +46,8 @@ class Device(ABC):
         self.status = "idle"
         self.verdict = ""
         self.websocket_connection = websocket_connection
+        if self.serialPort:
+            self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort.device, websocket_connections=self.websocket_connection, fabricator_id=str(self.dbID))
 
     def __repr__(self):
         return f"port: {self.serialPort.device}, status: {self.status}, websocket_connection: {self.websocket_connection if self.websocket_connection else 'None'}"
@@ -79,17 +81,20 @@ class Device(ABC):
             assert self.serialPort.device != "", "Serial port device is empty"
             if self.serialConnection is None:
                 self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort.device, baudrate=115200, timeout=60, websocket_connections=self.websocket_connection, fabricator_id=str(self.dbID))
-            self.serialConnection.reset_input_buffer()
+            if self.serialConnection.is_open: self.serialConnection.reset_input_buffer()
             return True
         except Exception as e:
-            current_app.handle_errors_and_logging(e, self.logger)
-            return False
+            return current_app.handle_errors_and_logging(e, self.logger)
 
     def disconnect(self):
         """Disconnect from the hardware by closing the serial connection."""
-        if self.serialConnection:
-            self.serialConnection.close()
-            self.serialConnection = None
+        try:
+            if self.serialConnection and self.serialConnection.is_open:
+                self.serialConnection.close()
+                self.serialConnection = None
+            return True
+        except Exception as e:
+            return current_app.handle_errors_and_logging(e, self.logger)
 
     def home(self, isVerbose: bool = False):
         """
