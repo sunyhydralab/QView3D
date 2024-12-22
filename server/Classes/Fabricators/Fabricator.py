@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from globals import current_app, root_path
 
 class Fabricator(db.Model):
+    __tablename__ = "Fabricators"
     """Fabricator class for the database. This is used for all io operations with the database, the hardware, and the front end."""
     dbID = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(50), nullable=False)

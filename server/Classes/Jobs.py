@@ -14,6 +14,8 @@ import csv
 from flask import send_file
 
 class Job(db.Model):
+    __tablename__ = 'Jobs'
+
     id = db.Column(db.Integer, primary_key=True)
     file = db.Column(db.LargeBinary(16777215), nullable=True)
     name = db.Column(db.String(50), nullable=False)
@@ -21,7 +23,7 @@ class Job(db.Model):
     date = db.Column(db.DateTime, default=lambda: datetime.now(
         timezone.utc).astimezone(), nullable=False)
     # foreign key relationship to match jobs to the printer printed on
-    fabricator_id = db.Column(db.Integer, db.ForeignKey('fabricator.dbID'), nullable=True)
+    fabricator_id = db.Column(db.Integer, db.ForeignKey('Fabricators.dbID'), nullable=True)
 
     fabricator = db.relationship('Fabricator', backref='Job')
 
@@ -31,7 +33,7 @@ class Job(db.Model):
     td_id = db.Column(db.Integer, nullable=True)
 
     # FK to issue
-    error_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=True)
+    error_id = db.Column(db.Integer, db.ForeignKey('Issues.id'), nullable=True)
     error = db.relationship('Issue', backref='Issue')
 
     # comments

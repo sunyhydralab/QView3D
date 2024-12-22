@@ -8,11 +8,22 @@ from models.config import Config
 from globals import current_app
 
 class Issue(db.Model):
+    __tablename__ = "Issues"
     id = db.Column(db.Integer, primary_key=True)
     issue = db.Column(db.String(200), nullable=False)
+    job_id = db.Column(db.Integer, nullable=True)
 
-    def __init__(self, issue):
+    def __init__(self, issue, job_id = None):
         self.issue = issue
+        self.job_id = job_id
+        if current_app:
+            db.session.add(self)
+            db.session.commit()
+        if job_id is not None:
+            from Classes.Jobs import Job
+            job = Job.query.get(job_id)
+            job.error_id = self.id
+            db.session.commit()
 
     @classmethod
     def get_issues(cls):
