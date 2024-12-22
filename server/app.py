@@ -1,5 +1,6 @@
 import asyncio
 import threading
+from os import PathLike
 from threading import Thread
 import traceback
 import uuid
@@ -226,10 +227,10 @@ def sync_send_discord_embed(embed):
 
 # this gets called like
 # await send_discord_file(channel, file_path, "Here's an important file:")
-def sync_send_discord_file(file_path: str, message: str = None):
+def sync_send_discord_file(file_path: str | bytes | PathLike, message: str = None):
     """
     Sends a file to a specified Discord channel with an optional message.
-    :param str file_path: The path to the file to be uploaded.
+    :param str | bytes | PathLike file_path: The path to the file to be uploaded.
     :param str message: The optional message to send with the file.
     """
     # Check if the bot is ready

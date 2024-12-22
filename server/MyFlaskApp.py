@@ -3,7 +3,6 @@ import os
 import subprocess
 import sys
 from flask import request, Response, send_from_directory, Flask
-from flask_cors import CORS
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 from flask_socketio import SocketIO
@@ -47,8 +46,6 @@ class MyFlaskApp(Flask):
 
         self.emulator_connections = emulator_connections
         self.event_emitter = event_emitter
-
-        CORS(self)
 
         # Register all routes
         defineRoutes(self)

@@ -302,8 +302,13 @@ class Fabricator(db.Model):
         try:
             assert newStatus in ["idle", "printing", "paused", "complete", "error", "cancelled", "misprint", "ready", "offline"], f"Invalid status: {newStatus}"
             assert self.device is not None, "Device is None"
-            if self.status == "error" and newStatus!= "error":
+            if self.status == "error" and newStatus != "error":
                 self.device.hardReset(newStatus)
+            # this is a hack to make sure that the serial connection is open before setting the status to ready,
+            # this should be a temp fix until the serial connection is handled better
+            if newStatus == "ready":
+                assert self.device.serialConnection is not None, "Serial connection is None"
+                if not self.device.serialConnection.is_open: assert self.device.connect(), "Failed to connect"
             self.status = newStatus
             self.device.status = newStatus
             if self.job is None and len(self.queue) > 0:

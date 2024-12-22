@@ -6,6 +6,9 @@ def defineRoutes(app: Flask):
     from controllers.statusService import status_bp
     from controllers.issues import issue_bp
     from controllers.emulator import emulator_bp
+    from flask_cors import CORS
+
+    CORS(app)
 
     # # Register the display_bp Blueprint
     app.register_blueprint(ports_bp)
