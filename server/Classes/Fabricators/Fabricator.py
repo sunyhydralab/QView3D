@@ -221,6 +221,8 @@ class Fabricator(db.Model):
         :rtype: bool
         """
         try:
+            if not self.device.serialConnection.is_open: assert self.device.connect(), "Failed to connect"
+            assert self.device.serialConnection.is_open, "Serial connection is not open"
             assert self.status == "printing", f"Fabricator is not printing, status: {self.status}"
             assert self.queue is not None, "Queue is None"
             assert len(self.queue) > 0, "Queue is empty"
