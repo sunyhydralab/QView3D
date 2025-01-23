@@ -4,6 +4,7 @@ import { type Device } from '@/model/ports';
 import * as GCodePreview from 'gcode-preview';
 import { withConsoleSuppression } from '@/model/gcodeWorker';
 
+// this is because Ari is talking to the gcode-preview people about getting the whole thing moved to web threads. The code is complete for it to work with web threads on this end, but the package itself doesn't support it.
 const figuredOutWorkers = false;
 
 const props = defineProps<{ device: Device }>();
@@ -86,10 +87,15 @@ onMounted(async () => {
     () => props.device?.gcodeLines,
     (newGCodeLines) => {
       if (figuredOutWorkers) {
-          worker?.postMessage({ type: 'clear' });
-        } else {
-          preview?.clear();
-          preview?.render();
+        worker?.postMessage({ type: 'clear' });
+      } else {
+        preview?.clear();
+        preview?.render();
+        preview?.dispose();
+        preview = GCodePreview.init({
+          canvas: canvas.value,
+          ...settings,
+        });
         }
       if (!newGCodeLines || newGCodeLines.length === 0) {
         // Clear existing render data
