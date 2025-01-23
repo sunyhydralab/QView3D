@@ -6,7 +6,7 @@ from flask import request, Response, send_from_directory, Flask
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 from flask_socketio import SocketIO
-from globals import root_path, emulator_connections, event_emitter
+from globals import root_path, emulator_connections, event_emitter, tabs
 from routes import defineRoutes
 from models.config import Config
 from Classes.FabricatorList import FabricatorList
@@ -15,8 +15,20 @@ from models.db import db
 
 class MyFlaskApp(Flask):
     def __init__(self):
+        print(f"{tabs(tab_change=1)}call to super...", end="")
         super().__init__(__name__, static_folder=os.path.abspath(os.path.join(root_path, "client", "dist")))
+        print(" Done")
+        print(f"{tabs()}loading config...")
+        print(f"{tabs(tab_change=1)}loading dotenv...", end="")
         load_dotenv()
+        print(" Done")
+        print(f"{tabs()}loading config from file...", end="")
+        self.config.from_object(__name__)  # update application instantly
+        # start database connection
+        self.config["environment"] = Config.get('environment')
+        self.config["ip"] = Config.get('ip')
+        self.config["port"] = Config.get('port')
+        self.config["base_url"] = Config.get('base_url')
         basedir = os.path.abspath(os.path.join(root_path, "server"))
         database_file = os.path.abspath(os.path.join(basedir, Config.get('database_uri')))
         if isinstance(database_file, bytes):
@@ -24,8 +36,12 @@ class MyFlaskApp(Flask):
         databaseuri = 'sqlite:///' + database_file
         self.config['SQLALCHEMY_DATABASE_URI'] = databaseuri
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        print(" Done")
+        print(f"{tabs(tab_change=-1)}initializing db...", end="")
         db.init_app(self)
         Migrate(self, db)
+        print(" Done")
+        print(f"{tabs()}setting up custom variables...", end="")
         self._fabricator_list = None
         self._logger = None
         from Classes.Loggers.Logger import Logger
@@ -33,12 +49,6 @@ class MyFlaskApp(Flask):
         os.makedirs(logs, exist_ok=True)
         self.logger = Logger("App", consoleLogger=sys.stdout, fileLogger=os.path.abspath(os.path.join(logs, f"{__name__}.log")),
                             consoleLevel=logging.ERROR)
-        self.config.from_object(__name__) # update application instantly
-        # start database connection
-        self.config["environment"] = Config.get('environment')
-        self.config["ip"] = Config.get('ip')
-        self.config["port"] = Config.get('port')
-        self.config["base_url"] = Config.get('base_url')
 
         self.socketio = SocketIO(self, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False,
                             async_mode='eventlet' if self.config["environment"] == 'production' else 'threading',
@@ -46,11 +56,14 @@ class MyFlaskApp(Flask):
 
         self.emulator_connections = emulator_connections
         self.event_emitter = event_emitter
-
+        print(" Done")
+        print(f"{tabs()}defining routes...")
         # Register all routes
         defineRoutes(self)
-
+        print(f"{tabs(tab_change=-1)}routes defined")
+        print(f"{tabs()}initializing fabricator list...")
         self.fabricator_list = FabricatorList(self)
+        print(f"{tabs(tab_change=-1)}fabricator list initialized")
         # TODO: figure out how to run the emu from here
         # emu_path = os.path.abspath(os.path.join(".", root_path, "printeremu", "cmd", "test_printer.go"))
         # self.run_go_command(f"go run .\\{emu_path} 1 -conn")
@@ -71,6 +84,8 @@ class MyFlaskApp(Flask):
                 res.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
                 return res
 
+        print(f"{tabs()}setting up static routes...", end="")
+
         # Serve static files
         @self.route('/')
         def serve_static(path='index.html'):
@@ -87,6 +102,12 @@ class MyFlaskApp(Flask):
         @self.socketio.on('connect')
         def handle_connect():
             print("Client connected")
+
+        @self.socketio.on('disconnect')
+        def handle_disconnect():
+            print("Client disconnected")
+
+        print(" Done")
 
 
     @property

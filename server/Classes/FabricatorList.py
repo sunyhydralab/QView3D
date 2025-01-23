@@ -8,21 +8,35 @@ from Classes.Jobs import Job
 from Classes.Queue import Queue
 from threading import Thread
 import time
-from globals import current_app as app
+from globals import current_app as app, tabs
 from models.db import db
 
 class FabricatorList:
     def __init__(self, passed_app=app):
+        print(f"{tabs(tab_change=1)}setting app...", end="")
         self.app = passed_app
+        print(" Done")
         with self.app.app_context():
-            if not inspect(db.engine).has_table('fabricator') or not Fabricator.metadata.tables:
+            print(f"{tabs()}initializing fabricator table...", end="")
+            if not inspect(db.engine).has_table('Fabricators') or not Fabricator.metadata.tables:
                 Fabricator.metadata.create_all(db.engine)
+            print(" Done")
+            print(f"{tabs()}querying fabricators...", end="")
             self.fabricators = Fabricator.queryAll()
+            print(f" Done: {len(self.fabricators)} fabricator[s] found")
+            print(f"{tabs()}initializing fabricator threads...")
             self.fabricator_threads = []
             self.ping_thread = None
             for fabricator in self.fabricators:
+                print(f"{tabs(tab_change=1)}initializing fabricator for {fabricator.getName()}...")
+                print(f"{tabs(tab_change=1)}connecting to {fabricator.devicePort}...")
                 fabricator.device.connect()
+                print(f"{tabs(tab_change=-1)}connected to {fabricator.devicePort}")
+                print(f"{tabs()}initializing thread for {fabricator.getName()}...", end="")
                 self.fabricator_threads.append(self.start_fabricator_thread(fabricator))
+                print(" Done")
+                print(f"{tabs(tab_change=-1)}fabricator for {fabricator.getName()} initialized")
+            print(f"{tabs()}fabricator threads initialized")
 
     def __iter__(self):
         return iter(self.fabricators)

@@ -50,3 +50,10 @@ def compress_with_gzip(log_file_path):
         raise FileNotFoundError(f"The file '{log_file_path}' does not exist.")
     except IOError as e:
         raise IOError(f"An error occurred while compressing the file: {e}")
+
+def tabs(tab_change: int = 0):
+    global tab_num
+    if 'tab_num' not in globals():
+        tab_num = 0
+    tab_num += tab_change
+    return "\t" * tab_num

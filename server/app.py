@@ -9,7 +9,7 @@ import shutil
 import websockets
 from websockets.asyncio.server import Server
 from MyFlaskApp import MyFlaskApp
-from globals import emulator_connections, event_emitter
+from globals import emulator_connections, event_emitter, tabs
 import discord
 from discord.ext import commands
 import certifi
@@ -79,10 +79,12 @@ websocket_thread.start()
 
 # moved this up here so we can pass the app to the PrinterStatusService
 # Basic app setup
-
+print(f"{tabs()}Starting Flask application...")
 app = MyFlaskApp()
+print(f"{tabs(tab_change=-1)}Flask application started")
 
 # Set up the bot with the necessary intents
+print("Loading Discord bot config...")
 intents = discord.Intents.default()
 intents.messages = True  # Enable messages
 intents.message_content = True  # Enable message content
@@ -256,10 +258,14 @@ def sync_send_discord_file(file_path: str | bytes | PathLike, message: str = Non
             asyncio.run_coroutine_threadsafe(channel.send(message or "", file=file), bot.loop)
     except Exception as e:
         print(f"An error occurred while sending the embed: {type(e).__name__} - {e}")
-
+print("Discord bot configuration loaded")
 
 if Config['discord_enabled']:
+    print("Starting Discord bot...")
     start_discord_bot()
+    print("Discord bot started")
+else:
+    print("Discord bot is disabled")
 
 # own thread
 with app.app_context():
