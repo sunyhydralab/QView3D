@@ -44,8 +44,9 @@ class PrusaMK3(PrusaPrinter):
             self.serialConnection.reset_input_buffer()
             from time import sleep
             sleep(4)
-            if self.serialConnection and self.serialConnection.is_open:
-                self.sendGcode(b"M155 S1\n")
-                return True
+            assert self.serialConnection, "Serial Connection is None"
+            assert self.serialConnection.is_open, "Serial Connection is closed"
+            self.sendGcode(b"M155 S1\n")
+            return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self.logger)
