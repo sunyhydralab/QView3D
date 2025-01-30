@@ -31,7 +31,13 @@ class FabricatorConnection(ABC):
 
 class SerialConnection(FabricatorConnection, serial.Serial):
     def __init__(self, port: str, baudrate: int, timeout: float):
-        super().__init__(port, baudrate, timeout=timeout)
+        # TODO: undo temp fix and make sure that queryAll doesnt try to re-instantiate the serial connection.
+        try:
+            super().__init__(port, baudrate, timeout=timeout)
+        except serial.SerialException as e:
+            if not "Access is denied" in str(e):
+                print(f"Failed to open serial connection: {e}")
+                raise ConnectionError(f"Failed to open serial connection: {e}")
 
 
 class SocketConnection(FabricatorConnection):
