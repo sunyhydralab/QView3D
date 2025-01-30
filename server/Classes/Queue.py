@@ -4,6 +4,12 @@ from Classes.Jobs import Job
 
 class Queue(deque):
     """Represents a queue of jobs, used to manage the order of jobs to be fabricated."""
+
+    def __list__(self):
+        my_list = []
+        for job in self: my_list.append(job.__to_JSON__())
+        return my_list
+
     def setToInQueue(self): 
         for job in self:
             job.status = "inqueue"
@@ -198,4 +204,4 @@ class Queue(deque):
             return None
         self.pop()
         if current_app:
-            current_app.socketio.emit("job_removed", {"queue": list(self)})
+            current_app.socketio.emit("job_removed", {"queue": self.__list__()})
