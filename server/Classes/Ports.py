@@ -63,7 +63,7 @@ class Ports:
                 return EmuListPortInfo(emu_port, description="Emulator", hwid=emu_hwid)
         for port in ports:
             if not port: continue
-            if port.device.lstrip("/dev/") == name:
+            if port.device.strip("/").split("/")[-1] in name:
                 return port
         return None
 
