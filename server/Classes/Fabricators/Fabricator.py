@@ -48,7 +48,7 @@ class Fabricator(db.Model):
         self.hwid = port.hwid.split(" LOCATION=")[0]
         self.description = "New Fabricator"
         self.name: str = name
-        self.devicePort = port.device
+        self.devicePort = port.device.strip("/").split("/")[-1]
         dbFab = Fabricator.query.filter_by(hwid=self.hwid).first()
         if dbFab is None:
             db.session.add(self)
@@ -58,7 +58,7 @@ class Fabricator(db.Model):
             self.name = dbFab.name
             self.description = dbFab.description
             self.hwid = dbFab.hwid
-            self.devicePort = dbFab.devicePort
+            self.devicePort = dbFab.devicePort.strip("/").split("/")[-1]
             self.date = dbFab.date
             self.dbID = dbFab.dbID
         self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True, websocket_connection=next(iter(current_app.emulator_connections.values())) if port.device == current_app.get_emu_ports()[0] else None, name=name)
