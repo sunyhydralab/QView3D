@@ -11,13 +11,16 @@ RUN npm i -g npm@^10.x.x
 RUN mkdir qview3d
 
 # Copy the repository's files into the container
-# RUN git clone https://github.com/sunyhydralab/QView3D.git /qview3d
+RUN git clone https://github.com/sunyhydralab/QView3D.git /qview3d
 
 # Use the current working directory instead
-COPY . /qview3d
+# COPY . /qview3d
 
 # Set the working directory
 WORKDIR /qview3d
+
+# Change to the docker branch (TODO: Temporary)
+RUN git checkout docker-setup
 
 # Build the python virtual environment
 RUN python3 -m venv .python-venv
