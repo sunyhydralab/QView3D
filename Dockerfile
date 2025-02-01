@@ -1,35 +1,32 @@
-FROM python:3.9-slim
+# Using Ubuntu 24.04 to match the production server
+FROM ubuntu:24.04
 
-ARG IP
-ARG PORT
+# Install dependencies that will be used
+RUN apt update -y && apt upgrade -y && apt install git nodejs npm python3-pip python3-venv -y
 
-# download and install dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    npm \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Update npm to the latest version that's compatible with the version of node offered (Ubuntu 24.04 comes with NodeJS 18.x.x, npm 10.x.x is supported by this runtime)
+RUN npm i -g npm@^10.x.x
 
-WORKDIR /
+# Create the project folder
+RUN mkdir qview3d
 
-COPY . .
+# Copy the repository's files into the container
+# RUN git clone https://github.com/sunyhydralab/QView3D.git /qview3d
 
-RUN sed -i -e 's/\r$//' install.sh
+# Use the current working directory instead
+COPY . /qview3d
 
-RUN chmod +x ./install.sh
+# Set the working directory
+WORKDIR /qview3d
 
-RUN ./install.sh
+# Build the python virtual environment
+RUN python3 -m venv .python-venv
 
-RUN sed -i -e 's/\r$//' run_prod.sh
+# Activate the venv
+ENV PATH=".python-venv/bin:$PATH"
 
-RUN chmod +x ./run_prod.sh
+# Install Python dependencies
+RUN pip install -r requirements.txt
 
-WORKDIR /server
-
-RUN echo echo "Port: $PORT"
-
-EXPOSE $PORT
-
-WORKDIR /
-
-CMD ["sh", "./run_prod.sh"]
+# Install NodeJS dependencies
+RUN cd client && npm install

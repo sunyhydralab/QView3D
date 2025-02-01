@@ -1,32 +1,22 @@
 {
-    "name": "vue-project",
+    "name": "qview3d",
     "author": "SUNY Hydra Lab",
-    "description": "QView3D Client Electron Application",
+    "description": "QView3D Vue Client",
     "productName": "QView3D",
     "license": "MIT",
-    "version": "0.9.0",
+    "version": "0.9.1",
     "private": true,
-    "main": "electron.js",
     "type": "module",
+
     "scripts": {
-        "dev": "vite",
-        "build": "run-p type-check \"build-only {@}\" --",
-        "preview": "vite preview",
         "test:unit": "vitest",
-        "build-only": "vite build",
-        "type-check": "vue-tsc --build --force",
         "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
         "format": "prettier --write src/",
-        "start-flask": "cd ../server && flask run",
-        "run-prod": "npm run build-only && start-flask",
-        "start-vue": "npm run dev",
-        "start": "npm-run-all --parallel start-flask start-vue",
-        "start-electron": "electron-forge start",
-        "open-browser": "open http://localhost:5173",
-        "package": "electron-forge package && python cleanup.py",
-        "make": "electron-forge make",
-        "build-installer": "./Installer.js"
+        "debug": "vite build --watch > client_debug.log & VITE_SESSION=$! && cd ../server && PATH='../.python-venv/bin:$PATH' flask run & FLASK_SESSION=$! && wait $FLASK_SESSION $VITE_SESSION && kill $FLASK_SESSION $VITE_SESSION",
+        "release-build": "vue-tsc --build --force && vite build",
+        "release": "cd ../server && PATH='../.python-venv/bin:$PATH' flask run"
     },
+
     "dependencies": {
         "@cyhnkckali/vue3-color-picker": "^2.0.0",
         "@fortawesome/fontawesome-free": "^6.5.1",
@@ -38,10 +28,9 @@
         "bootstrap": "^5.3.3",
         "bootstrap-daterangepicker": "^3.1.0",
         "cors": "^2.8.5",
-        "electron-squirrel-startup": "^1.0.1",
         "file-saver": "^2.0.5",
         "gcode-preview": "^2.18.0",
-        "node": "^21.6.2",
+        "node": "^18.x.x",
         "serve-handler": "^6.1.5",
         "socket.io-client": "^4.7.4",
         "three": "^0.171.0",
@@ -53,17 +42,10 @@
         "vue3-toast": "^0.0.1",
         "vuedraggable": "^4.1.0"
     },
+    
     "devDependencies": {
-        "@electron-forge/cli": "^7.4.0",
-        "@electron-forge/maker-deb": "^7.4.0",
-        "@electron-forge/maker-rpm": "^7.4.0",
-        "@electron-forge/maker-squirrel": "^7.4.0",
-        "@electron-forge/maker-zip": "^7.4.0",
-        "@electron-forge/plugin-auto-unpack-natives": "^7.4.0",
-        "@electron-forge/plugin-fuses": "^7.4.0",
-        "@electron/fuses": "^1.8.0",
         "@rushstack/eslint-patch": "^1.3.3",
-        "@tsconfig/node18": "^18.2.2",
+        "@tsconfig/node18": "^18.x.x",
         "@types/bootstrap": "^5.2.10",
         "@types/file-saver": "^2.0.7",
         "@types/jsdom": "^21.1.6",
@@ -75,72 +57,14 @@
         "@vue/eslint-config-typescript": "^12.0.0",
         "@vue/test-utils": "^2.4.3",
         "@vue/tsconfig": "^0.5.0",
-        "electron": "^32.1.1",
         "eslint": "^8.49.0",
         "eslint-plugin-vue": "^9.17.0",
         "jsdom": "^23.0.1",
-        "npm-run-all": "^4.1.5",
-        "npm-run-all2": "^6.1.1",
         "prettier": "^3.0.3",
         "rollup": "^4.24.0",
         "typescript": "~5.3.0",
         "vite": "^5.2.9",
         "vitest": "^1.0.4",
         "vue-tsc": "^1.8.25"
-    },
-    "electron": {
-        "bundler": "builder",
-        "packager": {},
-        "builder": {
-            "appId": "com.sunyhydralab.qview3d",
-            "productName": "QView3D",
-            "icon": "client/public/favicon2",
-            "win": {
-                "target": "portable"
-            },
-            "linux": {
-                "target": "AppImage"
-            },
-            "mac": {
-                "target": "dmg"
-            },
-            "publish": {
-                "provider": "github",
-                "owner": "SUNY-Hydra-Lab",
-                "repo": "QView3D"
-            }
-        },
-        "forge": {
-            "packagerConfig": {
-                "icon": "client/public/favicon2",
-                "asar": false,
-                "prune": true
-            },
-            "makers": [
-                {
-                    "name": "@electron-forge/maker-squirrel",
-                    "config": {
-                        "name": "QView3D",
-                        "authors": "SUNY Hydra Lab",
-                        "productName": "QView3D"
-                    }
-                },
-                {
-                    "name": "@electron-forge/maker-zip",
-                    "platforms": [
-                        "darwin"
-                    ]
-                },
-                {
-                    "name": "@electron-forge/maker-deb",
-                    "config": {}
-                },
-                {
-                    "name": "@electron-forge/maker-rpm",
-                    "config": {}
-                }
-            ]
-        }
-    },
-    "config": {}
+    }
 }
