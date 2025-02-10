@@ -1,45 +1,10 @@
 <script setup lang="ts">
-import {computed, onMounted, ref, watch} from 'vue';
+import {computed} from 'vue';
 import {useRoute} from 'vue-router';
-import {api, socket, API_PORT, API_IP_ADDRESS} from '@/model/myFetch';
 
 const route = useRoute();
 
 const isSubmitRoute = computed(() => route.path.startsWith('/submit'));
-
-const clientVersion = import.meta.env.VITE_CLIENT_VERSION as string;
-const serverVersion = ref<string | null>(null);
-const ping = ref<number | null>(null);
-
-async function refreshServerConnection() {
-    try {
-        serverVersion.value = await api('serverVersion');
-    } catch (e) {
-        console.error('Failed to connect to server');
-        serverVersion.value = null;
-        ping.value = null;
-    }
-
-    socket.value.on('connect', () => {
-        console.debug('Connected to socket');
-        measurePing();
-    });
-
-    socket.value.on('disconnect', () => {
-        ping.value = null;
-    });
-}
-
-async function measurePing() {
-    const startTime = Date.now();
-    socket.value.emit('ping');
-
-    socket.value.once('pong', () => {
-        ping.value = Date.now() - startTime;
-    });
-
-}
-
 
 const observer = new MutationObserver(() => {
     const colorPrimary = getComputedStyle(document.documentElement, null).getPropertyValue('--color-primary').trim();
@@ -58,15 +23,6 @@ const observer = new MutationObserver(() => {
 });
 
 observer.observe(document.documentElement, {attributes: true, attributeFilter: ['style']});
-
-onMounted(async () => {
-    await refreshServerConnection();
-    setInterval(measurePing, 10000);
-});
-
-watch([API_IP_ADDRESS, API_PORT], async () => {
-    await refreshServerConnection();
-});
 </script>
 
 <template>
@@ -91,8 +47,6 @@ watch([API_IP_ADDRESS, API_PORT], async () => {
                               d="M214.71,180.77l-11.61-15.26c6.4-7.47,10.27-17.16,10.27-27.76,0-23.59-19.13-42.72-42.72-42.72s-42.72,19.13-42.72,42.72,19.13,42.72,42.72,42.72c4.82,0,9.45-.81,13.78-2.28l11.07,14.79,19.21-12.2ZM189.45,140.34c1.35-.33,7.9,1.37,8.48,2.52.46.91-6.52,14.39-7.57,14.46-.95.06-6.56-4.32-6.9-5.53-.35-1.25,5.04-11.21,5.99-11.45ZM183.45,123.78c.5-1.3,5.63-5.72,6.9-5.53,1.01.15,8.11,13.56,7.57,14.46-.49.81-7.28,2.93-8.48,2.52-1.23-.42-6.34-10.53-5.99-11.45ZM162.55,111.22c.6-.83,15.77-.9,16.32,0,.49.81-.78,7.81-1.7,8.68-.94.89-12.27.73-12.92,0-.92-1.04-2.45-7.64-1.7-8.68ZM157.83,151.79c-.34,1.22-5.96,5.59-6.9,5.53-1.05-.07-8.03-13.55-7.57-14.46.57-1.15,7.13-2.85,8.48-2.52.95.23,6.35,10.2,5.99,11.45ZM151.84,135.23c-1.19.41-7.99-1.71-8.48-2.52-.54-.9,6.56-14.31,7.57-14.46,1.27-.18,6.4,4.24,6.9,5.53.35.91-4.77,11.02-5.99,11.45ZM178.87,164.27c-.55.9-15.72.83-16.32,0-.75-1.04.78-7.64,1.7-8.68.65-.73,11.98-.89,12.92,0,.92.87,2.19,7.87,1.7,8.68ZM170.64,146.43c-4.8,0-8.69-3.89-8.69-8.69s3.89-8.69,8.69-8.69,8.69,3.89,8.69,8.69-3.89,8.69-8.69,8.69Z"/>
                     </svg>
                 </router-link>
-                <div class="client-version">v{{ clientVersion }} (v{{ serverVersion }}-serv)</div>
-                <div class="ping">Ping: {{ ping }} ms</div>
             </div>
 
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
@@ -156,7 +110,6 @@ watch([API_IP_ADDRESS, API_PORT], async () => {
     color: var(--color-nav-text-hover);
 }
 
-
 .form-check {
     padding-right: 20px;
 }
@@ -183,24 +136,6 @@ watch([API_IP_ADDRESS, API_PORT], async () => {
 body {
     margin: 0;
     padding: 0;
-}
-
-.client-version {
-    font-size: 0.65em;
-    color: var(--color-nav-text);
-    margin-top: 0.5rem;
-    text-align: center;
-    position: relative;
-    margin-left: -60px
-}
-
-.ping {
-    font-size: 0.65em;
-    color: var(--color-nav-text);
-
-    text-align: center;
-    position: relative;
-    margin-left: -60px;
 }
 
 svg .cls-1 {
