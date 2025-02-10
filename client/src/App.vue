@@ -4,12 +4,11 @@ import '@cyhnkckali/vue3-color-picker/dist/style.css'
 import "@/assets/main.css"
 import { RouterView } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
-import ThemePanel from '@/components/ThemePanel.vue'
-import SettingsPanel from '@/components/SettingsPanel.vue'
 import { onMounted } from 'vue';
 import {setupSockets} from '@/model/sockets';
 import {useRetrievePrintersInfo, printers} from '@/model/ports';
 import {isLoading, setupTimeSocket} from '@/model/jobs';
+import FooterComponent from './components/FooterComponent.vue'
 
 const { retrieveInfo } = useRetrievePrintersInfo();
 
@@ -44,8 +43,7 @@ onMounted(async () => {
     <div class="">
         <RouterView/>
     </div>
-    <ThemePanel/>
-    <SettingsPanel/>
+    <FooterComponent/>
 </template>
 
 <style scoped></style>
