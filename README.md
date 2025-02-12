@@ -62,11 +62,11 @@ Install [Docker](https://docs.docker.com/engine/install/)
 
 ### Run Locally:
 
-WSL 2/Linux/Mac
+WSL 2*/Linux/Mac
 
-Run the file `docker-run.sh` in the folder .docker
+Run the file `docker-run.sh` by typing `./docker-run.sh`
 
-When in the Docker container, run `qview3d-install` and then `qview3d-run` and type `dev` if you're a developer looking to add features or `prod` if you're looking to test the project
+When in the Docker container, run `qview3d-install` and then `qview3d-run` and type `dev` or `dev-client` if you're a developer looking to add features or `prod` if you're looking to test the project. `dev-client` is for testing mostly the client and `dev` is for testing mostly the server
 
 ## Pull Requests
 

@@ -11,10 +11,7 @@
     "scripts": {
         "test:unit": "vitest",
         "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
-        "format": "prettier --write src/",
-        "debug": "vite build --watch > client_debug.log & VITE_SESSION=$! && cd ../server && PATH='../.python-venv/bin:$PATH' flask run & FLASK_SESSION=$! && wait $FLASK_SESSION $VITE_SESSION && kill $FLASK_SESSION $VITE_SESSION",
-        "release-build": "vue-tsc --build --force && vite build",
-        "release": "cd ../server && PATH='../.python-venv/bin:$PATH' flask run"
+        "format": "prettier --write src/"
     },
 
     "dependencies": {

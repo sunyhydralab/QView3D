@@ -12,5 +12,11 @@ RUN npm install -g npm@^10.x.x
 # The location of the project files
 WORKDIR /usr/src/qview3d
 
+# The location of the project in the Docker image
+ENV DOCKER_APP_PATH=/usr/src/qview3d
+
+# The location of the Docker scripts that will be used while in the Docker container
+ENV PATH=$DOCKER_APP_PATH/.docker:$PATH
+
 # Make the docker scripts executable
-CMD chmod +x .docker/* && PATH=.docker:$PATH exec /bin/bash
+CMD chmod +x .docker/* && exec /bin/bash
