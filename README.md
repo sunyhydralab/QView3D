@@ -54,24 +54,19 @@ The software is currently designed to run on Ubuntu 20.04 LTS and later. MacOS a
 
 Clone the repository:
 
-```bash
+```sh
 git clone https://github.com/sunyhydralab/QView3D.git
-
 ```
+
+Install [Docker](https://docs.docker.com/engine/install/)
 
 ### Run Locally:
 
-Install:
+WSL 2/Linux/Mac
 
-```bash
-./install.sh
-```
+Run the file `docker-run.sh` in the folder .docker
 
-Run:
-
-```bash
-./run.sh
-```
+When in the Docker container, run `qview3d-install` and then `qview3d-run` and type `dev` if you're a developer looking to add features or `prod` if you're looking to test the project
 
 ## Pull Requests
 

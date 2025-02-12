@@ -24,7 +24,7 @@ if [ "${MODE@L}" == "dev" ]; then
     # Start server
     cd ../server
     flask run
-elif [ "${MODE@L}" = "prod" ]; then
+elif [ "${MODE@L}" = "prod" ]; then # TODO: Integrate CJs run_prod.sh file into this portion of the script
     # Build the client
     cd client
     npx vue-tsc --build --force && npx vite build
