@@ -4,7 +4,7 @@
 FROM ubuntu:24.04
 
 # Install runtime dependencies
-RUN apt update -y && apt install --no-install-recommends --no-install-suggests python3-pip python3-venv nodejs npm -y
+RUN apt update -y && apt upgrade -y && apt install --no-install-recommends --no-install-suggests python3-pip python3-venv nodejs npm -y
 
 # Update NPM to the latest version that works with the version of NodeJS offered in Ubuntu
 RUN npm install -g npm@^10.x.x

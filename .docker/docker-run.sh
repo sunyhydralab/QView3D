@@ -14,4 +14,6 @@ sudo docker run \
     -u $(id -u) \
     -p 127.0.0.1:8001:8001 \
     -p 127.0.0.1:8000:8000 \
+    --privileged -v /dev/bus/usb:/dev/bus/usb \
     -it qview3d/ubuntu:24.04
+

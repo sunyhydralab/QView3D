@@ -21,6 +21,7 @@ if [ "${MODE@L}" == "dev" ]; then
     npx vite build --watch > ../logs/vite_server.log 2>&1 &
     echo "Wait a little bit for the client to rebuild before opening the webpage. Else you'll get 404s"
 
+    sleep 5
     # Start server
     cd ../server
     flask run
