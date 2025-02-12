@@ -81,7 +81,6 @@ function formatTime(milliseconds: number): string {
 
 function formatETA(milliseconds: number): string {
   const date = new Date(milliseconds)
-  const timeString = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
 
   if (isNaN(milliseconds) || isNaN(date.getTime())) {
     return '<i>Waiting...</i>'

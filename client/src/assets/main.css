@@ -121,7 +121,6 @@ tr {
 .modal-body .card-body, .card-body {
   color: var(--color-background-font);
   background-color: var(--color-background);
-  border-radius: 5px;
 }
 
 .modal-body .card, .card {
