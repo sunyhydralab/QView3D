@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Run this script in the Docker container when you first clone the project
+
+# Create the venv
+python3 -m venv server/.python-venv
+
+# Activate the virtual environment
+source server/.python-venv/bin/activate
+
+# Install the Python dependencies
+python3 -m pip install -r server/dependencies.txt
+
+# Install the NodeJS dependencies
+cd client && npm i

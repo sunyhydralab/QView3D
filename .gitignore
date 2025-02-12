@@ -18,3 +18,4 @@ printeremu/testserver/node_modules/
 /logs/
 /server/logs/
 /server/__Hidden__/
+/server/.python-venv

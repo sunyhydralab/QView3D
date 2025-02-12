@@ -61,7 +61,7 @@ async def websocket_server():
                 del emulator_connections[client_id]
 
     try:
-        server: Server = await websockets.serve(handle_client, "localhost", 8001)
+        server: Server = await websockets.serve(handle_client, "0.0.0.0", 8001)
         await server.wait_closed()
     except Exception:
         print(f"WebSocket server error: {traceback.format_exc()}")

@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# This script handles starting the project container in development or production mode
+
+# Get user input
+# read is a built-in bash command that reads user input and stores it in the string(s)
+# on the right.
+# -p Causes it to print text before reading user input
+read -p "Would you like to be in development or production mode? (prod/dev) " MODE
+
+source server/.python-venv/bin/activate
+
+# Convert all uppercase characters to lower case
+if [ "${MODE@L}" == "dev" ]; then
+    echo "Setting up the client and server in development mode"
+    
+    # Start client
+    cd client
+    # Automatically rebuilds client when changes are made
+    # Also, stores all the stderr and stdout messages in vite_server.log
+    npx vite build --watch > ../logs/vite_server.log 2>&1 &
+    echo "Wait a little bit for the client to rebuild before opening the webpage. Else you'll get 404s"
+
+    # Start server
+    cd ../server
+    flask run
+elif [ "${MODE@L}" = "prod" ]; then
+    # Build the client
+    cd client
+    npx vue-tsc --build --force && npx vite build
+
+    # Start the server
+    echo hello
+    cd ../server
+    flask run
+fi
