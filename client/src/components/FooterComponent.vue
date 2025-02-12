@@ -69,7 +69,7 @@ watch([API_IP_ADDRESS, API_PORT], async () => {
   font-size: 0.9em;
   color: var(--color-nav-text);
   position: fixed;
-  bottom: 2.2rem; /
+  bottom: 2.2rem;
   left: 1rem;
   text-align: left;
   margin: 0;

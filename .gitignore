@@ -7,6 +7,7 @@ __pycache__/
 migrations/
 
 *.db
+*.gitignore
 
 server/qview3dserver.egg-info/
 server/dist
@@ -18,3 +19,4 @@ printeremu/testserver/node_modules/
 /logs/
 /server/logs/
 /server/__Hidden__/
+/.python-venv
