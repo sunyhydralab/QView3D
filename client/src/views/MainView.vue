@@ -5,11 +5,11 @@ import draggable from 'vuedraggable'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 import GCode3DLiveViewer from '@/components/GCode3DLiveViewer.vue';
-import Gcode3DLiveRenderer from "@/components/Gcode3DLiveRenderer.vue";
 import { useAssignIssue, useGetIssues, type Issue } from '@/model/issues';
 import { jobTime, useAssignComment, useGetFile, useGetJobFile, useReleaseJob, useStartJob, type Job } from '@/model/jobs';
 import { useRouter } from 'vue-router';
 import ConsoleTerminal from "@/components/ConsoleTerminal.vue";
+import NoPrinterRobot from '@/components/NoPrinterRobot.vue';
 
 const { assign } = useAssignIssue()
 const { assignComment } = useAssignComment()
@@ -191,7 +191,6 @@ const releasePrinter = async (jobToFind: Job | undefined, key: number, printerId
 const handleDragEnd = async () => {
   await movePrinterList(printers.value)
 }
-
 </script>
 
 <template>
@@ -282,10 +281,10 @@ const handleDragEnd = async () => {
   </div>
 
   <div class="container">
-    <table ref="table">
+    <table ref="table" v-if="printers.length > 0">
       <thead>
         <tr>
-          <!-- NEED TO FIX THIS FOR EVERY DISPLAYS -->
+          <!-- NEED TO FIX THIS FOR EVERY DISPLAY -->
           <th :style="{width: tdWidth[0]}">ID</th>
           <th :style="{width: tdWidth[1]}">Printer Name</th>
           <th :style="{width: tdWidth[2]}">Printer Status</th>
@@ -298,7 +297,7 @@ const handleDragEnd = async () => {
         </tr>
       </thead>
       <draggable v-model="printers" tag="tbody" :animation="300" item-key="printer.id" handle=".handle"
-                 dragClass="hidden-ghost" :onEnd="handleDragEnd" v-if="printers.length > 0" @start="collapseAll"
+                 dragClass="hidden-ghost" :onEnd="handleDragEnd" @start="collapseAll"
                  @end="restoreExpandedState" style="width: inherit">
         <template #item="{ element: printer }">
           <div v-if="printer.isInfoExpanded" class="expanded-info">
@@ -810,16 +809,12 @@ const handleDragEnd = async () => {
         </template>
       </draggable>
     </table>
-    <div v-if="printers.length === 0" style="margin-top: 1rem;">
-      No printers available. Either register a printer <RouterLink class="routerLink" to="/registration">here
-      </RouterLink>,
-      or restart the
-      server.
-    </div>
+    <NoPrinterRobot/>
   </div>
 </template>
 
 <style scoped>
+
 .borderless-bottom {
   border-bottom: none !important;
   line-height: 11.5px;

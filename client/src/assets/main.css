@@ -120,13 +120,13 @@ tr {
 
 .modal-body .card-body, .card-body {
   color: var(--color-background-font);
-  background-color: var(--color-background);
+  background-color: var(--color-background) !important;
 }
 
 .modal-body .card, .card {
   background-color: var(--color-background);
   color: var(--color-background-font);
-  border: 1px solid var(--color-modal-background-inverted);
+  border: 2px solid var(--color-modal-background-inverted);
 }
 
 .tooltip {
@@ -393,7 +393,7 @@ tr {
 }
 
 .offcanvas-body {
-  background-color: var(--color-background-soft);
+  background-color: var(--color-background);
   color: var(--color-background-font);
   position: relative;
 }
