@@ -102,19 +102,19 @@ tr {
 
 .modal-content {
   color: var(--color-background-font);
-  background-color: var(--color-background);
+  background-color: var(--color-background) !important;
   border: 1px solid var(--color-modal-background-inverted);
 }
 
 .modal-header {
   color: var(--color-background-font);
-  background-color: var(--color-background-mute);
+  background-color: var(--color-background-soft);
   border-bottom: 1px solid var(--color-modal-background-inverted);
 }
 
 .modal-footer {
   color: var(--color-background-font);
-  background-color: var(--color-background-mute);
+  background-color: var(--color-background-soft);
   border-top: 1px solid var(--color-modal-background-inverted);
 }
 
@@ -124,7 +124,7 @@ tr {
 }
 
 .modal-body .card, .card {
-  background-color: var(--color-background);
+  background-color: var(--color-background) !important;
   color: var(--color-background-font);
   border: 2px solid var(--color-modal-background-inverted);
 }
