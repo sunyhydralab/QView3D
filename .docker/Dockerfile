@@ -19,4 +19,4 @@ ENV DOCKER_APP_PATH=/usr/src/qview3d
 ENV PATH=$DOCKER_APP_PATH/.docker:$PATH
 
 # Make the docker scripts executable
-CMD chmod +x .docker/* && exec /bin/bash
+CMD ["/bin/sh", "-c", "chmod +x .docker/* && exec /bin/bash"]
