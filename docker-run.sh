@@ -12,19 +12,18 @@ sudo docker build \
 
 # Run the docker container
 # -v "$(pwd)":/usr/src/qview3d/ \   ### Gives the Docker container access to the current directory
-# -u "$(id -u)" \                   ### Sets the user of the Docker container to the current user
+# -u "$(id -u):20" \                ### Sets the user of the Docker container to the current user and the group to dialout (20)
 # -p 127.0.0.1:8002:8002 \          ### Binds the address:port on the host to the :port on the client address:port:port
 # -p 127.0.0.1:8001:8001 \          
 # -p 127.0.0.1:8000:8000 \
-# -v /dev/bus/usb:/dev/bus/usb \    ### Gives the container access to every usb device on the host (To connect to the printers)
-# --privileged \                    ### Allows the Docker container to easily access the 3D printers
-# -it qview3d/ubuntu:24.04          ### Runs the container in interactive mode so that we can use it in a terminal
+# --privileged -v /dev/bus/usb:/dev/bus/usb \    ### Gives the container access to every usb device on the host (To connect to the printers)
+                                                 ### Allows the Docker container to easily access the 3D printers
+# -it qview3d/ubuntu:24.04                       ### Runs the container in interactive mode so that we can use it in a terminal
 sudo docker run \
     -v "$(pwd)":/usr/src/qview3d/ \
-    -u "$(id -u)" \
+    -u "$(id -u):20" \
     -p 127.0.0.1:8002:8002 \
     -p 127.0.0.1:8001:8001 \
     -p 127.0.0.1:8000:8000 \
-    -v /dev/bus/usb:/dev/bus/usb \
-    --privileged \
+    --privileged -v /dev/bus/usb:/dev/bus/usb \
     -it qview3d/ubuntu:24.04
