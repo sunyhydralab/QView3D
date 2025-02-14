@@ -3,6 +3,7 @@ import { ref, watch, watchEffect, onMounted, onBeforeUnmount } from 'vue'
 import { Vue3ColorPicker } from '@cyhnkckali/vue3-color-picker'
 import { vOnClickOutside } from '@vueuse/components'
 import '@/assets/base.css'
+import { color } from 'three/tsl'
 
 const prefersDarkScheme = ref(window.matchMedia('(prefers-color-scheme: dark)').matches)
 
@@ -353,8 +354,8 @@ onBeforeUnmount(() => {
 })
 
 watch(isDarkMode, (newValue) => {
-  background.value = newValue ? '#1a1a1a' : '#ffffff'
-  document.body.style.backgroundColor = newValue ? '#1a1a1a' : '#ffffff'
+  background.value = newValue ? '#1a1a1a' : '#E7E7E7'
+  document.body.style.backgroundColor = newValue ? '#1a1a1a' : '#E7E7E7'
   document.body.style.color = newValue ? '#ffffff' : '#000000'
   saveColors()
 })

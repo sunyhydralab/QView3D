@@ -302,10 +302,7 @@ const doCloseRegisterModal = async () => {
     border: 1px solid var(--color-border);
 }
 
-.modal-dialog {
-    max-width: 500px;
-    /* Adjust modal width */
-}
+
 
 .card-body {
     color: var(--color-background-font);

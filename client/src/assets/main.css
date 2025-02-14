@@ -25,6 +25,10 @@ table {
   border-collapse: collapse;
 }
 
+tr {
+  background-color: var(--color-background) ;
+}
+
 .table td,
 .table th {
   border-left: none !important;
@@ -73,6 +77,7 @@ tr {
 
 .accordion-item {
   border: 1px solid var(--color-modal-background-inverted);
+  background-color: var(--color-background);
 }
 
 .dropdown-menu.show,
@@ -250,6 +255,10 @@ tr {
   box-shadow: none;
 }
 
+.form-control {
+  color: var(--color-background);
+}
+
 .btn-primary {
   --bs-btn-color: var(--color-primary-font);
   --bs-btn-bg: var(--color-primary);
@@ -406,5 +415,8 @@ button:not(.btn-primary):not(.btn-secondary):hover i {
   color: var(--color-background-font);
 }
 
+.ellipsis {
+  color: var(--color-background-font);
+}
 
 

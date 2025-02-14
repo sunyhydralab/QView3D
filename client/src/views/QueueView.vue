@@ -264,7 +264,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
             <div :class="{ 'scrollable': printer.queue!.length > 3 }">
               <table class="table-striped">
                 <thead>
-                  <tr style="position: sticky; top: 0; z-index: 100; background-color: white;">
+                  <tr style="position: sticky; top: 0; z-index: 100;">
                     <th style="width: 102px;">Ticket ID</th>
                     <th style="width: 143px;">Rerun Job</th>
                     <th style="width: 76px;">Position</th>

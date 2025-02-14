@@ -560,7 +560,6 @@ const getFilament = (file: File) => {
 
 .form-control,
 .list-group-item {
-  color: var(--color-text);
   background-color: var(--color-background-soft);
   border-color: var(--color-modal-background-inverted);
 }
