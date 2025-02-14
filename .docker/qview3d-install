@@ -12,4 +12,4 @@ source $DOCKER_APP_PATH/server/.python-venv/bin/activate
 python3 -m pip install -r $DOCKER_APP_PATH/server/dependencies.txt
 
 # Install the NodeJS dependencies
-cd $DOCKER_APP_PATH/client && npm i
+cd $DOCKER_APP_PATH/client && npm i --cache /tmp/.npm-cache
