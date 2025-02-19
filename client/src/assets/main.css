@@ -136,6 +136,12 @@ tr {
   border: 2px solid var(--color-modal-background-inverted);
 }
 
+.tooltip-modal {
+  position: relative;
+  display: inline-block;
+  opacity: 1;
+}
+
 .tooltip {
   position: absolute;
   transform: translateY(-50%);
@@ -148,14 +154,14 @@ tr {
   opacity: 0.9;
 }
 
-.tooltip .tooltiptext {
+.tooltip-modal .tooltiptext {
   visibility: hidden;
   opacity: 0;
   transition: opacity 0.2s linear,
   visibility 0.2s linear 0.2s;
   width: 200px;
-  background-color: var(--color-background-mute);
-  color: var(--color-background-font);
+  background-color: var(--color-modal-background-inverted);
+  color: var(--color-background);
   text-align: center;
   border-radius: 6px;
   padding: 5px 0;
@@ -166,7 +172,7 @@ tr {
   margin-left: -100px;
 }
 
-.tooltip .tooltiptext::after {
+.tooltip-modal .tooltiptext::after {
   content: '';
   position: absolute;
   top: 100%;
@@ -177,13 +183,13 @@ tr {
   border-color: var(--color-modal-background-inverted) transparent transparent transparent;
 }
 
-.tooltip:hover .tooltiptext {
+.tooltip-modal:hover .tooltiptext {
   visibility: visible;
   opacity: 1;
   transition: opacity 0.2s linear;
 }
 
-.tooltip .tooltiptext:hover {
+.tooltip-modal .tooltiptext:hover {
   visibility: hidden;
   opacity: 0;
 }

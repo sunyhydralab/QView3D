@@ -413,7 +413,7 @@ const getFilament = (file: File) => {
 
           <div class="mb-3">
             <label for="file" class="form-label">Upload your .gcode file</label>
-            <div class="tooltip">
+            <div class="tooltip-modal">
               <span v-if="isAsteriksVisible" class="text-danger">*</span>
               <span class="tooltiptext">The file name should not be longer than 50 characters</span>
             </div>
@@ -462,7 +462,7 @@ const getFilament = (file: File) => {
 
           <div class="mb-3">
             <label for="quantity" class="form-label">Quantity</label>
-            <div v-if="isAsteriksVisible" class="text-danger tooltip">
+            <div v-if="isAsteriksVisible" class="text-danger tooltip-modal">
               *
               <span class="tooltiptext">Quantity cannot be greater than 1000</span>
             </div>
@@ -521,7 +521,7 @@ const getFilament = (file: File) => {
 
           <div class="mb-3">
             <label for="name" class="form-label">Name</label>
-            <div class="tooltip">
+            <div class="tooltip-modal">
               <span v-if="isAsteriksVisible" class="text-danger">*</span>
               <span class="tooltiptext">Assign a name for the job.</span>
             </div>
