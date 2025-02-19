@@ -23,6 +23,7 @@ table {
   border: 1px solid var(--color-border-invert);
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 tr {
@@ -40,6 +41,7 @@ th {
   color: var(--color-background-font);
   border-left: none !important;
   border-right: none !important;
+  user-select: none;
 }
 
 td,
@@ -135,9 +137,16 @@ tr {
 }
 
 .tooltip {
-  position: relative;
-  display: inline-block;
-  opacity: 1;
+  position: absolute;
+  transform: translateY(-50%);
+  margin-left: 3rem;
+  padding: 6px 10px;
+  border-radius: 4px;
+  color: rgb(0, 0, 0);
+  font-size: 15px;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  opacity: 0.9;
 }
 
 .tooltip .tooltiptext {

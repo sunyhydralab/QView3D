@@ -24,7 +24,7 @@ const { movePrinterList } = useMovePrinterList()
 
 const router = useRouter()
 
-const consoles = [{ name: "Critical", color: "#ff00ff" }, { name: "Error", color: "#ff0000" }, { name: "Warning", color: "#ffff00" }, { name: "Info", color: "#ffffff" }, { name: "Debug", color: "#00ffff" }]
+const consoles = [{name: "Critical", icon: "fa-solid fa-radiation fa-lg", color: "#CE77FF" }, { name: "Error", icon: "fa-solid fa-triangle-exclamation fa-lg", color: "#ff0000" }, { name: "Warning", icon: "fa-solid fa-exclamation fa-xl", color: "#FF9F20" }, { name: "Info", icon: "fa-solid fa-question fa-xl", color: "#ffffff" }, { name: "Debug", icon: "fa-solid fa-spider fa-lg", color: "#00ffff" }]
 const tdWidth = ["64px", "130px", "142px", "110px", "110px", "314px", "315px", "75px", "58px"]
 const displayLevel = ref(2)
 const selectedIssue = ref<Issue>()
@@ -40,6 +40,10 @@ const isGcodeImageVisible = ref(false)
 const isImageVisible = ref(true)
 
 const isGcodeLiveViewVisible = ref(false)
+
+const hoverIndex = ref(null);
+let hoverTimeout = null;
+
 
 let expandedState: (string | undefined)[] = [];
 
@@ -66,6 +70,17 @@ onMounted(async () => {
     }
   }
 });
+
+const startHover = (index) => {
+  hoverTimeout= setTimeout(() => {
+    hoverIndex.value = index;
+  }, 2000);
+};
+
+const stopHover = () => {
+  clearTimeout(hoverTimeout);
+  hoverIndex.value = null;
+}
 
 function formatTime(milliseconds: number): string {
   const seconds = Math.floor((milliseconds / 1000) % 60)
@@ -577,22 +592,28 @@ const handleDragEnd = async () => {
                   v-html="printer?.status === 'colorchange' ? 'Waiting...' : (printer.queue[0]?.extruded ? formatETA(printer.queue[0]?.job_client?.eta) : '<i>Waiting...</i>')"></span>
               </td>
             </tr>
-            <tr>
-              <td colspan="4" style="vertical-align: top">
+            <tr style="background-color: black">
+              <td colspan="4" class="console" style="vertical-align: top">
                 <ConsoleTerminal :lines="printer.consoles![displayLevel]" />
+              </td>
+              <td colspan="4" class="viewer">
+                <GCode3DLiveViewer v-if="printer.isInfoExpanded" :device="printer" />
               </td>
               <td colspan="1" style="vertical-align: middle">
                 <div class="btn-group-vertical">
-                  <button class="btn" v-for="(console, index) in consoles" :key="index"
-                    :style="{ backgroundColor: console.color }" @click="displayLevel = index">
-                    {{ console.name }}
+                  <button class="btn-console" v-for="(console, index) in consoles" :key="index" :class="console.icon" :style="{ backgroundColor: console.color }" 
+                  @click="displayLevel = index" 
+                  @mouseenter="startHover(index)"
+                  @mouseleave="stopHover">
+                    <span
+                      v-if="hoverIndex === index"
+                      class="tooltip"
+                      :style="{ backgroundColor: console.color }">
+                      {{ console.name }}
+                    </span>
                   </button>
                 </div>
               </td>
-              <td colspan="4">
-                <GCode3DLiveViewer v-if="printer.isInfoExpanded" :device="printer" />
-              </td>
-
             </tr>
           </div>
           <tr v-else :id="printer.id">
@@ -843,6 +864,19 @@ const handleDragEnd = async () => {
 </template>
 
 <style scoped>
+.btn-console {
+  height: 2.5rem;
+  width: 2.5rem;
+  justify-content: center;
+  border-radius: 20px;
+}
+
+.console, .viewer {
+  padding: 0; 
+  margin: 0; 
+  border-spacing: 0;
+}
+
 .borderless-bottom {
   border-bottom: none !important;
   line-height: 11.5px;
@@ -856,14 +890,6 @@ const handleDragEnd = async () => {
 .sortable-chosen {
   opacity: 0.5;
   background-color: #f2f2f2;
-}
-
-table {
-  table-layout: fixed;
-}
-
-th {
-  user-select: none;
 }
 
 .expanded-info {
