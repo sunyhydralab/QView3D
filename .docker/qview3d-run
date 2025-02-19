@@ -56,5 +56,4 @@ elif [ "${MODE@L}" = "dev-client" ]; then # Added so that the client can be edit
     # Vite is used to very quickly rebuild the client when changes are made
     # Error messages will be shown to user
     npx vite --port 8002 --host "0.0.0.0" --cors true
-    echo "Connect to the client at: 127.0.0.1:8002"
 fi
