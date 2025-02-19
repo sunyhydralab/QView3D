@@ -41,8 +41,8 @@ const isImageVisible = ref(true)
 
 const isGcodeLiveViewVisible = ref(false)
 
-const hoverIndex = ref(null);
-let hoverTimeout = null;
+const hoverIndex = ref<number | null>(null);
+let hoverTimeout: NodeJS.Timeout | null = null; // Explicitly typed
 
 
 let expandedState: (string | undefined)[] = [];
@@ -71,16 +71,19 @@ onMounted(async () => {
   }
 });
 
-const startHover = (index) => {
-  hoverTimeout= setTimeout(() => {
+const startHover = (index: number) => {
+  hoverTimeout = setTimeout(() => {
     hoverIndex.value = index;
   }, 2000);
 };
 
 const stopHover = () => {
-  clearTimeout(hoverTimeout);
+  if (hoverTimeout) {
+    clearTimeout(hoverTimeout);
+    hoverTimeout = null;
+  }
   hoverIndex.value = null;
-}
+};
 
 function formatTime(milliseconds: number): string {
   const seconds = Math.floor((milliseconds / 1000) % 60)
