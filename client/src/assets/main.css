@@ -267,6 +267,7 @@ tr {
 .form-control:focus {
   outline: none;
   box-shadow: none;
+  color: var(--color-modal-background-inverted);
 }
 
 .form-control {

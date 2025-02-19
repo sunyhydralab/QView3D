@@ -3,7 +3,6 @@ import { ref, watch, watchEffect, onMounted, onBeforeUnmount } from 'vue'
 import { Vue3ColorPicker } from '@cyhnkckali/vue3-color-picker'
 import { vOnClickOutside } from '@vueuse/components'
 import '@/assets/base.css'
-import { color } from 'three/tsl'
 
 const prefersDarkScheme = ref(window.matchMedia('(prefers-color-scheme: dark)').matches)
 
