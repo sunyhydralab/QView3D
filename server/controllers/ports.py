@@ -52,7 +52,7 @@ def registerFabricator():
         return jsonify({"error": "Database error occurred"}), 500
     except Exception as e:
         app.handle_errors_and_logging(e)
-        return jsonify({"error": format_exc()}), 500
+        return jsonify({"error": e.args}), 500
 
 @ports_bp.route("/deletefabricator", methods=["POST"])
 def deleteFabricator():
