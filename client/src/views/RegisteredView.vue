@@ -208,7 +208,7 @@ const doCloseRegisterModal = async () => {
                                                 <span class="ms-2">Edit Name</span>
                                             </a>
                                         </li>
-                                        <div class="tooltip" style="width: 100%;">
+                                        <div class="tooltip-modal" style="width: 100%;">
                                             <li>
                                                 <a class="dropdown-item d-flex align-items-center"
                                                     style="font-size: 1rem;" data-bs-toggle="modal"

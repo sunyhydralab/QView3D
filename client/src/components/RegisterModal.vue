@@ -121,7 +121,7 @@ const doMove = async (printer: Device) => {
                     <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" v-bind:disabled="!customname"
                         @click="doRegister">Register</button>
                     <div v-if="selectedDevice">
-                        <div class="tooltip">
+                        <div class="tooltip-modal">
                             <div type="button" class="btn btn-primary" @click="doMove(selectedDevice as Device)">Home
                                 Printer</div>
                             <span class="tooltiptext">This will auto home the selected printer.</span>
