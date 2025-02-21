@@ -10,6 +10,7 @@ import { onMounted } from 'vue';
 import {setupSockets} from '@/model/sockets';
 import {useRetrievePrintersInfo, printers} from '@/model/ports';
 import {isLoading, setupTimeSocket} from '@/model/jobs';
+import {watch} from 'vue';
 
 const { retrieveInfo } = useRetrievePrintersInfo();
 
@@ -19,6 +20,14 @@ onMounted(async () => {
   // sockets
   setupSockets(printers.value)
   setupTimeSocket(printers.value)
+})
+
+// For updating the frontend when information on the printer changes
+watch(printers, (updatedPrinter) => {
+  if (updatedPrinter) {
+    setupSockets(printers.value)
+    setupTimeSocket(printers.value)
+  }
 })
 </script>
 
