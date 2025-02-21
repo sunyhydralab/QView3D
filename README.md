@@ -17,6 +17,10 @@ The project is maintained by computer science students at SUNY New Paltz, under 
 - [**Nathan Gopee**](https://github.com/ndg8743)
 - [**Ari Yeger**](https://github.com/L10nhunter)
 - [**CJ Jenks**](https://github.com/iron768)
+- [**Stiviyan Dragiev**](https://github.com/dragiev1)
+- [**Christopher Jamieson**](https://github.com/shift16)
+- [**Youssup Song**](https://github.com/youssup)
+
 
 ## Features
 
@@ -54,24 +58,19 @@ The software is currently designed to run on Ubuntu 20.04 LTS and later. MacOS a
 
 Clone the repository:
 
-```bash
+```sh
 git clone https://github.com/sunyhydralab/QView3D.git
-
 ```
+
+Install [Docker](https://docs.docker.com/engine/install/)
 
 ### Run Locally:
 
-Install:
+WSL 2*/Linux/Mac
 
-```bash
-./install.sh
-```
+Run the file `docker-run.sh` by typing `./docker-run.sh`
 
-Run:
-
-```bash
-./run.sh
-```
+When in the Docker container, run `qview3d-install` and then `qview3d-run` and type `dev` or `dev-client` if you're a developer looking to add features or `prod` if you're looking to test the project. `dev-client` is for testing mostly the client and `dev` is for testing mostly the server
 
 ## Pull Requests
 

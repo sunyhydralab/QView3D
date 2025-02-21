@@ -81,14 +81,11 @@ const doMove = async (printer: Device) => {
 </script>
 
 <template>
-    <div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true"
-        data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-light">
                 <div class="modal-header">
                     <h5 class="modal-title" id="registerModalLabel">Register Printers</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
-                        @click="clearSelectedDevice"></button>
                 </div>
                 <div class="modal-body">
                     <form @submit.prevent="$emit('submit-form')">
@@ -124,7 +121,7 @@ const doMove = async (printer: Device) => {
                     <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" v-bind:disabled="!customname"
                         @click="doRegister">Register</button>
                     <div v-if="selectedDevice">
-                        <div class="tooltip">
+                        <div class="tooltip-modal">
                             <div type="button" class="btn btn-primary" @click="doMove(selectedDevice as Device)">Home
                                 Printer</div>
                             <span class="tooltiptext">This will auto home the selected printer.</span>
@@ -138,19 +135,20 @@ const doMove = async (printer: Device) => {
     </div>
 </template>
 
+
 <style scoped>
 .modal-body {
     background: var(--color-background-mute);
 }
 
 .form-text {
-    color: var(--color-text);
+    color: var(--color-text) !important;
     background: var(--color-background-mute);
     border: 1px solid var(--color-modal-background-inverted);
 }
 
 .form-select {
-    color: var(--color-text) !important;
+    color: var(--color-nav-text);
     background-color: var(--color-background-soft) !important;
     border-color: var(--color-modal-background-inverted) !important;
 }

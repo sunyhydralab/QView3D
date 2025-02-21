@@ -4,9 +4,9 @@ import { printers, type Device } from '../model/ports'
 import { useRerunJob, useRemoveJob, type Job, useMoveJob, useGetFile, useGetJobFile, isLoading } from '../model/jobs'
 import draggable from 'vuedraggable'
 import { toast } from '@/model/toast'
-import { useRouter } from 'vue-router'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
+import NoPrinterRobot from '@/components/NoPrinterRobot.vue'
 
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
@@ -234,12 +234,9 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
       </div>
     </div>
 
-    <div v-if="printers.length === 0">
-      No printers available. Either register a printer
-      <RouterLink class="routerLink" to="/registration"> here </RouterLink>, or restart the server.
-    </div>
+    <NoPrinterRobot/>
 
-    <div v-else class="accordion" id="accordionPanelsStayOpenExample">
+    <div v-if="printers.length > 0" class="accordion" id="accordionPanelsStayOpenExample">
       <div class="accordion-item" v-for="(printer, index) in printers" :key="printer.id">
         <h2 class="accordion-header" :id="'panelsStayOpen-heading' + index">
           <button class="accordion-button" type="button" data-bs-toggle="collapse"
@@ -267,7 +264,7 @@ const openModal = async (job: Job, printerName: string, num: number, printer: De
             <div :class="{ 'scrollable': printer.queue!.length > 3 }">
               <table class="table-striped">
                 <thead>
-                  <tr style="position: sticky; top: 0; z-index: 100; background-color: white;">
+                  <tr style="position: sticky; top: 0; z-index: 100;">
                     <th style="width: 102px;">Ticket ID</th>
                     <th style="width: 143px;">Rerun Job</th>
                     <th style="width: 76px;">Position</th>
