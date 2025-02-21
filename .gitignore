@@ -19,3 +19,5 @@ printeremu/testserver/node_modules/
 /server/logs/
 /server/__Hidden__/
 /server/.python-venv
+/uploads
+/tempcsv
