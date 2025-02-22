@@ -51,7 +51,7 @@ th {
   border-left: none !important;
   border-right: none !important;
   text-align: center !important;
-  padding: 8px;
+  padding: 0.5rem;
 }
 
 tr {
@@ -271,7 +271,7 @@ tr {
 }
 
 .form-control {
-  color: var(--color-background);
+  color: var(--color-background-font);
 }
 
 .btn-primary {
@@ -357,6 +357,7 @@ tr {
   --bs-btn-disabled-color: #fff;
   --bs-btn-disabled-bg: #ad6060;
   --bs-btn-disabled-border-color: #ad6060;
+  margin: auto;
 }
 
 .btn-link {

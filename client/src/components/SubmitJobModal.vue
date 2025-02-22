@@ -375,7 +375,7 @@ const getFilament = (file: File) => {
                   </div>
                   <div
                     class="border-top"
-                    style="border-width: 1px; margin-left: -16px; margin-right: -16px"
+                    style="border-width: 1px; margin: 7px -16px 7px -16px"
                   ></div>
                 </li>
                 <li v-for="printer in printers" :key="printer.id">
@@ -562,6 +562,7 @@ const getFilament = (file: File) => {
 .list-group-item {
   background-color: var(--color-background-soft);
   border-color: var(--color-modal-background-inverted);
+  color: var(--color-background-font);
 }
 
 .ellipsis {

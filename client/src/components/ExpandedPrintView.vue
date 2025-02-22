@@ -228,7 +228,27 @@ const handleDragEnd = async () => {
 
               <td :style="{ width: tdWidth[5] }">
                 <div class="buttons">
-
+                    <!-- Submit Job modal trigger -->
+                    <button v-if ="printer.status == 'ready' || printer.status == 'printing'"
+                    type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal"
+                    @click="setJob(printer.queue[0])">
+                    Submit Job
+                    </button>
+                <!-- Modal -->
+                <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h1 class="modal-title fs-5" id="exampleModalLabel">Submit Job</h1>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" style="background-color: gray;" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <SubmitJobModal />
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                   <button class="btn btn-primary"
                     v-if="printer.status == 'configuring' || printer.status == 'offline' || printer.status == 'error'"
@@ -526,9 +546,8 @@ const handleDragEnd = async () => {
 
             <td>
               <div class="buttons">
-
                 <!-- Submit Job modal trigger -->
-                <button v-if ="(printer.status == 'ready' && printer) || printer.status == 'printing'"
+                <button v-if ="printer.status == 'ready' || printer.status == 'printing'"
                 type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal"
                   @click="setJob(printer.queue[0])">
                   Submit Job
@@ -540,18 +559,14 @@ const handleDragEnd = async () => {
                     <div class="modal-content">
                       <div class="modal-header">
                         <h1 class="modal-title fs-5" id="exampleModalLabel">Submit Job</h1>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" style="background-color: gray;" aria-label="Close"></button>
                       </div>
                       <div class="modal-body">
                         <SubmitJobModal />
                       </div>
-                      <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                      </div>
                     </div>
                   </div>
                 </div>
-
 
                 <button class="btn btn-primary"
                   v-if="printer.status == 'configuring' || printer.status == 'offline' || printer.status == 'error'"
@@ -667,7 +682,6 @@ const handleDragEnd = async () => {
                 {{ printer?.error }}
               </div>
               <div v-else></div>
-
             </td>
 
             <td style="width: 1%; white-space: nowrap;">
@@ -731,7 +745,6 @@ const handleDragEnd = async () => {
   height: 2.5rem;
   width: 2.5rem;
   justify-content: center;
-  border-radius: 20px;
 }
 
 .console, .viewer {
