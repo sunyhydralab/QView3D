@@ -57,16 +57,12 @@ onMounted(async () => {
     if (preview) {
       preview.clear();
     }
-    const oldDebug = console.debug;
-    const oldInfo = console.info;
-    console.debug = () => {};
-    preview = GCodePreview.init({
-      canvas: canvas.value,
-      ...settings,
+    withConsoleSuppression(() => {
+      preview = GCodePreview.init({
+        canvas: canvas.value,
+        ...settings,
+      });
     });
-    preview.camera.lookAt(0, 0, 0);
-    console.debug = oldDebug;
-    console.info = oldInfo;
   }
 
   // Function to render GCode lines
@@ -92,11 +88,13 @@ onMounted(async () => {
         preview?.clear();
         preview?.render();
         preview?.dispose();
-        preview = GCodePreview.init({
-          canvas: canvas.value,
-          ...settings,
-        });
-        }
+        withConsoleSuppression(() => {
+          preview = GCodePreview.init({
+            canvas: canvas.value,
+            ...settings,
+          });
+        })
+      }
       if (!newGCodeLines || newGCodeLines.length === 0) {
         // Clear existing render data
         return
