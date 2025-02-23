@@ -32,9 +32,8 @@ jobs:
 
       - name: Setup server
         run: |
-          cd ./
-          pip install -r requirements.txt 
-          cd server/
+          cd ./server/
+          pip install -r dependencies.txt
           flask db init 
           flask db migrate 
           flask db upgrade
