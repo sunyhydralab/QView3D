@@ -122,7 +122,7 @@ await nextTick()
 }
 
 const setJob = async (job: Job) => {
-  jobComments.value = job.comments || '';
+  jobComments.value = job?.comments ?? '';
   selectedJob.value = job;
 }
 
