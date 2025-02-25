@@ -140,7 +140,7 @@ with app.app_context():
     # school Ender 3
     if Ports.getPortByName("COM4") is not None:
         Ender3 = Fabricator(Ports.getPortByName("COM4"), "Ender 3")
-        # Ender3.device.sendGcode(b"M109 S50\n", isVerbose=True)
+        # Ender3.device.sendGcode("M109 S50\n", isVerbose=True)
 
     # school Makerbot
     if Ports.getPortByName("COM7") is not None:

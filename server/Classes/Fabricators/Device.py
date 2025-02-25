@@ -21,15 +21,15 @@ class Device(ABC):
     serialConnection: SocketConnection | Resource | None = None
     homePosition: Vector3 | None = None
 
-    homeCMD: bytes | None= b"G28\n"
-    cancelCMD: bytes | None = None
-    keepAliveCMD: bytes | None = None
-    doNotKeepAliveCMD: bytes | None = None
-    statusCMD: bytes | None = None
-    getLocationCMD: bytes | None = None
-    pauseCMD: bytes | None = None
-    resumeCMD: bytes | None = None
-    getMachineNameCMD: bytes | None = None
+    homeCMD: str | None= "G28\n"
+    cancelCMD: str | None = None
+    keepAliveCMD: str | None = None
+    doNotKeepAliveCMD: str | None = None
+    statusCMD: str | None = None
+    getLocationCMD: str | None = None
+    pauseCMD: str | None = None
+    resumeCMD: str | None = None
+    getMachineNameCMD: str | None = None
 
     callablesHashtable = {
         "G28": [checkXYZ],  # Home
@@ -203,10 +203,10 @@ class Device(ABC):
         """
         pass
 
-    def sendGcode(self, gcode: bytes, isVerbose: bool = False) -> bool:
+    def sendGcode(self, gcode: str, isVerbose: bool = False) -> bool:
         """
         Send a G-code command to the device.
-        :param bytes gcode: The line to send to the hardware
+        :param str gcode: The line to send to the hardware
         :param bool isVerbose: Whether to log the command
         :rtype: bool
         :raises AssertionError: if the serial connection is not open, if gcode is not bytes, or if isVerbose is not a bool
@@ -214,12 +214,12 @@ class Device(ABC):
         assert isinstance(self, Device)
         assert self.serialConnection is not None
         assert self.serialConnection.is_open
-        assert isinstance(gcode, bytes)
+        assert isinstance(gcode, str)
         assert isinstance(isVerbose, bool)
         self.serialConnection.write(gcode)
         if isVerbose:
-            if self.logger is not None: self.logger.debug(gcode.decode("utf-8"))
-            else: print(gcode.decode("utf-8"))
+            if self.logger is not None: self.logger.debug(gcode)
+            else: print(gcode)
         return True
 
     def getToolHeadLocation(self, isVerbose: bool = False) -> Vector3:
@@ -283,7 +283,7 @@ class Device(ABC):
                 return "Diagnosis failed: unable to connect."
 
             if self.logger is not None: self.logger.info("Sending diagnostic G-code command (e.g., M115).")
-            self.sendGcode(b"M115\n")
+            self.sendGcode("M115\n")
 
             response = self.serialConnection.read().strip()
 

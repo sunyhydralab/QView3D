@@ -12,14 +12,14 @@ from Mixins.hasResponseCodes import checkTime, checkExtruderTemp, checkXYZ, chec
 
 
 class Printer(Device, metaclass=ABCMeta):
-    cancelCMD: bytes = b"M112\n"
-    keepAliveCMD: bytes = b"M113 S1\n"
-    doNotKeepAliveCMD: bytes = b"M113 S0\n"
-    statusCMD: bytes = b"M115\n"
-    getLocationCMD: bytes = b"M114\n"
-    pauseCMD: bytes = b"M601\n"
-    resumeCMD: bytes = b"M602\n"
-    getMachineNameCMD: bytes = b"M997\n"
+    cancelCMD: str = "M112\n"
+    keepAliveCMD: str = "M113 S1\n"
+    doNotKeepAliveCMD: str = "M113 S0\n"
+    statusCMD: str = "M115\n"
+    getLocationCMD: str = "M114\n"
+    pauseCMD: str = "M601\n"
+    resumeCMD: str = "M602\n"
+    getMachineNameCMD: str = "M997\n"
     startTimeCMD: str = "M75"
 
     callablesHashtable = {
@@ -439,7 +439,7 @@ class Printer(Device, metaclass=ABCMeta):
         try:
             assert self.serialConnection is not None, "Serial connection is None"
             assert self.serialConnection.is_open, "Serial connection is not open"
-            self.sendGcode(b"M155 S1\n")
+            self.sendGcode("M155 S1\n")
             return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self.logger)
@@ -447,11 +447,11 @@ class Printer(Device, metaclass=ABCMeta):
     def disconnect(self) -> bool:
         try:
             if self.serialConnection and self.serialConnection.is_open:
-                self.sendGcode(b"M155 S100\n")
-                self.sendGcode(b"M155 S0\n")
-                self.sendGcode(b"M104 S0\n")
-                self.sendGcode(b"M140 S0\n")
-                self.sendGcode(b"M84\n")
+                self.sendGcode("M155 S100\n")
+                self.sendGcode("M155 S0\n")
+                self.sendGcode("M104 S0\n")
+                self.sendGcode("M140 S0\n")
+                self.sendGcode("M84\n")
                 self.serialConnection.close()
             return True
         except Exception as e:

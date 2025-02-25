@@ -93,7 +93,7 @@ def test_pause_and_resume(app, fabricator):
     fabricator.device.logger.critical(f"app.socketio: ,{current_app.socketio}")
     from Classes.Fabricators.Printers.Prusa.PrusaMK3 import PrusaMK3
     if isinstance(fabricator.device, PrusaMK3):
-        fabricator.device.sendGcode(b"G28 W\n")
+        fabricator.device.sendGcode("G28 W\n")
     else:
         assert fabricator.device.home(), f"Failed to home on {fabricator.getDescription()}"
     from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -133,7 +133,7 @@ def test_gcode_print_time(app, fabricator):
         fabricator.begin(isVerbose=isVerbose)
     time = datetime.now() - time
     if isVerbose: fabricator.device.logger.debug(f"Actual print time: {time}")
-    fabricator.device.serialConnection.write(b"M31\n")
+    fabricator.device.serialConnection.write("M31\n")
     line = ""
     from Mixins.hasResponseCodes import checkTime
     while not checkTime(line):

@@ -78,6 +78,7 @@ class Ports:
         :param str hwid: The hardware ID of the device.
         :rtype: ListPortInfo | SysFS | None
         """
+        # TODO: make this return the pyvisa version of the port. not critical
         assert isinstance(hwid, str), f"HWID must be a string: {hwid} : {type(hwid)}"
         ports = serial.tools.list_ports.comports()
         for port in ports:

@@ -6,13 +6,13 @@ from globals import current_app
 
 class PrusaPrinter(Printer, hasEndingSequence, metaclass=ABCMeta):
     VENDORID = 0x2C99
-    cancelCMD: bytes = b"M112\n"
-    keepAliveCMD: bytes = b"M113 S1\n"
-    doNotKeepAliveCMD: bytes = b"M113 S0\n"
-    statusCMD: bytes = b"M115\n"
-    getLocationCMD: bytes = b"M114\n"
-    pauseCMD: bytes = b"M601\n"
-    resumeCMD: bytes = b"M602\n"
+    cancelCMD: str = "M112\n"
+    keepAliveCMD: str = "M113 S1\n"
+    doNotKeepAliveCMD: str = "M113 S0\n"
+    statusCMD: str = "M115\n"
+    getLocationCMD: str = "M114\n"
+    pauseCMD: str = "M601\n"
+    resumeCMD: str = "M602\n"
 
     callablesHashtable = {
         "G28": [checkXYZ, checkOK],  # Home

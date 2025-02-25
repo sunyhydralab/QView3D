@@ -32,7 +32,7 @@ class Fabricator(db.Model):
     def __init__(self, port: str | None, name: str = "", consoleLogger: TextIO | None = None, fileLogger: str | None = None):
         """
         Initialize a new Fabricator instance.
-        :param ListPortInfo | SysFS | None port: the serial port to connect to
+        :param str | None port: the serial port to connect to
         :param str name: the name to show the frontend
         :param TextIO | None consoleLogger: the console to log to
         :param str | None fileLogger: the file path to log to
@@ -91,14 +91,14 @@ class Fabricator(db.Model):
         }
 
     @staticmethod
-    def getModelFromGcodeCommand(serialPort: ListPortInfo | SysFS | None) -> str:
+    def getModelFromGcodeCommand(serialPort: Resource | None) -> str:
         """
         returns the model of the printer based on the response to M997, NOTE: this is meant for use with Ender printers only for now.
-        :param ListPortInfo | SysFS | None serialPort: the serial port to connect to
+        :param Resource | None serialPort: the serial port to connect to
         :rtype: str
         """
-        testName = FabricatorConnection.staticCreateConnection(port=serialPort.device, baudrate=115200, timeout=60)
-        testName.write(b"M997\n")
+        testName = FabricatorConnection.staticCreateConnection(port=serialPort, baudrate=115200, timeout=60)
+        testName.write("M997\n")
         while True:
             response = testName.read()
             if "MACHINE_NAME" in response:
@@ -108,11 +108,11 @@ class Fabricator(db.Model):
         return response
 
     @staticmethod
-    def staticCreateDevice(serialPort: ListPortInfo | SysFS | None, consoleLogger: TextIO | None = None, fileLogger: str | None = None, websocket_connection=None) -> Device | None:
+    def staticCreateDevice(serialPort: Resource | None, consoleLogger: TextIO | None = None, fileLogger: str | None = None, websocket_connection=None) -> Device | None:
         """
         creates the correct printer object based on the serial port info
         :param Websocket | None websocket_connection: the websocket connection to the emulator, if it exists
-        :param ListPortInfo | SysFS | None serialPort: the serial port info
+        :param Resource | None serialPort: the serial port info
         :param TextIO | None consoleLogger: the console stream to output to
         :param str | None fileLogger: the file path to log to
         :return: device without a fabricator object

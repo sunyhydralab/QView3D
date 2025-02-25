@@ -11,8 +11,8 @@ class PrusaMK3(PrusaPrinter):
     DESCRIPTION = "Original Prusa MK3 - CDC"
     MAXFEEDRATE = 12000
     homePosition = Vector3(0.2, -3.78, 0.15)
-    cancelCMD = b"M603\n"
-    homeCMD = b"G28\n"
+    cancelCMD = "M603\n"
+    homeCMD = "G28\n"
     keepAliveCMD = None
     doNotKeepAliveCMD = None
     startTimeCMD = "M107"
@@ -28,11 +28,11 @@ class PrusaMK3(PrusaPrinter):
     callablesHashtable = {**PrusaPrinter.callablesHashtable, **callablesHashtable}
 
     def endSequence(self):
-        self.sendGcode(b"M104 S0\n") # turn off extruder
-        self.sendGcode(b"M140 S0\n") # turn off heatbed
-        self.sendGcode(b"M107\n") # turn off fan
-        self.sendGcode(b"G1 X0 Y210 F36000\n") # home X axis and push Y forward
-        self.sendGcode(b"M84\n") # disable motors
+        self.sendGcode("M104 S0\n") # turn off extruder
+        self.sendGcode("M140 S0\n") # turn off heatbed
+        self.sendGcode("M107\n") # turn off fan
+        self.sendGcode("G1 X0 Y210 F36000\n") # home X axis and push Y forward
+        self.sendGcode("M84\n") # disable motors
 
     def getPrintTime(self):
         pass
@@ -46,7 +46,7 @@ class PrusaMK3(PrusaPrinter):
             sleep(4)
             assert self.serialConnection, "Serial Connection is None"
             assert self.serialConnection.is_open, "Serial Connection is closed"
-            self.sendGcode(b"M155 S1\n")
+            self.sendGcode("M155 S1\n")
             return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self.logger)

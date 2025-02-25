@@ -52,5 +52,5 @@ def test_go_to_center(app, fabricator):
 @pytest.mark.dependency(depends=["test_go_to_center"])
 @pytest.mark.skipif(condition=testLevelToRun < 5, reason="Not doing lvl 5 tests")
 def test_draw_circle(app, fabricator):
-    assert fabricator.device.sendGcode(b"G2 X125 Y100 I25 J0\n"), f"Failed to draw circle on {fabricator.device.DESCRIPTION}"
-    assert fabricator.device.sendGcode(b"G2 X125 Y100 I-25 J0\n"), f"Failed to draw circle on {fabricator.device.DESCRIPTION}"
+    assert fabricator.device.sendGcode("G2 X125 Y100 I25 J0\n"), f"Failed to draw circle on {fabricator.device.DESCRIPTION}"
+    assert fabricator.device.sendGcode("G2 X125 Y100 I-25 J0\n"), f"Failed to draw circle on {fabricator.device.DESCRIPTION}"
