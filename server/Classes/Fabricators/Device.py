@@ -59,7 +59,7 @@ class Device(ABC):
             "MAXFEEDRATE": self.MAXFEEDRATE,
             "serialConnection": {
                 "port": self.serialConnection.comm_port,
-                "baudrate": self.serialConnection.baud_rate,
+                "baud_rate": self.serialConnection.baud_rate,
                 "timeout": self.serialConnection.timeout,
                 "is_open": self.serialConnection.is_open,
             } if self.serialConnection else None,
@@ -78,7 +78,7 @@ class Device(ABC):
             assert self.serialPort != "", "Serial port device is empty"
             if self.serialConnection is None or not self.serialConnection.is_open:
                 print(f"{tabs(tab_change=1)}creating connection to {self.serialPort}...", end="")
-                self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort, baudrate=115200, timeout=60, websocket_connections=self.websocket_connection, fabricator_id=str(self.dbID))
+                self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort, baud_rate=115200, timeout=60, websocket_connections=self.websocket_connection, fabricator_id=str(self.dbID))
             if self.serialConnection.is_open:
                 print(f"{tabs(tab_change=1)}{self.serialPort} is open, resetting input buffer...", end="")
                 self.serialConnection.reset_input_buffer()
@@ -128,8 +128,8 @@ class Device(ABC):
         assert isinstance(loc, Vector3), f"Expected Vector3, got {type(loc)}"
         assert isinstance(isVerbose, bool), f"Expected bool, got {type(isVerbose)}"
         assert isinstance(self, Device), f"Expected Device, got {type(self)}"
-        self.sendGcode(f"G0 X{loc.x} Y{loc.y} Z{loc.z} F{str(self.MAXFEEDRATE)}\n".encode("utf-8"), isVerbose=isVerbose)
-        self.sendGcode(f'M114\n'.encode("utf-8"), isVerbose=isVerbose)
+        self.sendGcode(f"G0 X{loc.x} Y{loc.y} Z{loc.z} F{str(self.MAXFEEDRATE)}\n", isVerbose=isVerbose)
+        self.sendGcode(f'M114\n', isVerbose=isVerbose)
         if hasattr(self, "getLocationCMD"):
             return loc == self.getToolHeadLocation()
         return True
@@ -178,7 +178,7 @@ class Device(ABC):
                         return True
                     if ";" in line:
                         line = line.split(";")[0].strip() + "\n"
-                    self.sendGcode(line.encode("utf-8"), isVerbose=isVerbose)
+                    self.sendGcode(line, isVerbose=isVerbose)
             self.verdict = "complete"
             if self.logger is not None: self.logger.info("Job complete")
             return True
@@ -307,7 +307,7 @@ class Device(ABC):
         return self.MODEL
 
     def getHWID(self):
-        return self.serialConnection.hwid
+        return self.serialConnection.hwid if hasattr(self.serialConnection,"hwid") else None
 
     def getSerialConnection(self):
         return self.serialConnection

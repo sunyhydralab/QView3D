@@ -40,11 +40,11 @@ class FabricatorConnection(ABC):
 
 
 class SocketConnection(FabricatorConnection):
-    def __init__(self, port: str, baudrate: int, websocket_connection, fabricator_id: str , timeout: float = 10.0):
+    def __init__(self, port: str, baud_rate: int, websocket_connection, fabricator_id: str, timeout: float = 10.0):
         """
         Initialize a websocket-based connection for a 3D printer with optional mock response generation.
         :param str port: Serial port to connect to
-        :param int baudrate: Baudrate for the serial connection
+        :param int baud_rate: Baud rate for the serial connection
         :param websocket_connection: the websocket connection
         :param str fabricator_id: Unique identifier for the printer
         :param float timeout: Maximum time to wait for a response (default: 10)
@@ -68,7 +68,7 @@ class SocketConnection(FabricatorConnection):
         self._setup_listeners()
         self.emuListPortInfo = EmuListPortInfo(device=port, description="Emulator", hwid="")
         self.port = self.emuListPortInfo.device
-        self.baudrate = baudrate
+        self.baud_rate = baud_rate
         self.timeout = timeout
 
     def _setup_listeners(self):
