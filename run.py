@@ -23,6 +23,8 @@ VITE_LOG_LEVEL = "error"
 if not (os.path.exists(CLIENT_LOCAL_PATH) and os.path.exists(SERVER_LOCAL_PATH)):
     raise Exception("Please run this script in the root directory of the project")
 
+# TODO Enforce Python version (Lock to 3.12)
+
 def start_client():
     global VITE_CLIENT_IP
     if VITE_CLIENT_IP == "SAME_AS_SERVER":
