@@ -21,3 +21,4 @@ printeremu/testserver/node_modules/
 /server/.python-venv
 /uploads
 /tempcsv
+/.venv/
