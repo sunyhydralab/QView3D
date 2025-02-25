@@ -1,3 +1,5 @@
+import re
+
 import serial
 import serial.tools.list_ports
 from serial.tools.list_ports_common import ListPortInfo
@@ -42,9 +44,9 @@ class Ports:
     def getListPorts():
         """
         Get a list of all connected serial ports.
-        :rtype: list[ListPortInfo | SysFS]
+        :rtype: list[str]
         """
-        return serial.tools.list_ports.comports()
+        return app.resource_manager.list_resources()
 
     @staticmethod
     def getPortByName(name: str):
@@ -63,7 +65,9 @@ class Ports:
                 return EmuListPortInfo(emu_port, description="Emulator", hwid=emu_hwid)
         for port in ports:
             if not port: continue
-            if port.device.strip("/").split("/")[-1] in name:
+            if re.match(r'ASRL\d+::INSTR', port):
+                port = re.sub(r'ASRL', 'COM', re.sub(r'::INSTR', '', port))
+            if port in name:
                 return port
         return None
 
@@ -75,7 +79,7 @@ class Ports:
         :rtype: ListPortInfo | SysFS | None
         """
         assert isinstance(hwid, str), f"HWID must be a string: {hwid} : {type(hwid)}"
-        ports = Ports.getListPorts()
+        ports = serial.tools.list_ports.comports()
         for port in ports:
             if hwid in port.hwid:
                 return port
@@ -112,7 +116,7 @@ class Ports:
 
             device.connect()
             sendGcode("M115")
-            response = device.getSerialConnection().readline().decode("utf-8").strip()
+            response = device.getSerialConnection().read().strip()
             device.disconnect()
 
             return f"Diagnosis result for {port.device}: {response}"

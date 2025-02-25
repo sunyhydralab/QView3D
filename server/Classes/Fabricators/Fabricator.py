@@ -4,7 +4,7 @@ from flask import jsonify, Response
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from sqlalchemy.exc import SQLAlchemyError
-from Classes.FabricatorConnection import FabricatorConnection
+from Classes.FabricatorConnection import FabricatorConnection, CustomSerialInstrument
 from Classes.Fabricators.Device import Device
 from typing_extensions import TextIO
 from Classes.Jobs import Job
@@ -13,6 +13,7 @@ from models.config import Config
 from models.db import db
 from datetime import datetime, timezone
 from globals import current_app, root_path
+from pyvisa.resources.resource import Resource
 
 class Fabricator(db.Model):
     __tablename__ = "Fabricators"
@@ -28,7 +29,7 @@ class Fabricator(db.Model):
     )
     devicePort = db.Column(db.String(50), nullable=False)
 
-    def __init__(self, port: ListPortInfo | SysFS | None, name: str = "", consoleLogger: TextIO | None = None, fileLogger: str | None = None):
+    def __init__(self, port: str | None, name: str = "", consoleLogger: TextIO | None = None, fileLogger: str | None = None):
         """
         Initialize a new Fabricator instance.
         :param ListPortInfo | SysFS | None port: the serial port to connect to
@@ -38,17 +39,18 @@ class Fabricator(db.Model):
         """
         if port is None:
             return
-        assert isinstance(port, ListPortInfo) or isinstance(port, SysFS), f"Invalid port type: {type(port)}"
+        assert isinstance(port, str), f"Invalid port type: {type(port)}"
         assert isinstance(name, str), f"Invalid name type: {type(name)}"
+        port: CustomSerialInstrument = current_app.resource_manager.open_resource(port, baud_rate=115200, timeout=5000)
         from Classes.Queue import Queue
         self.dbID = None  # Initialize dbID
         self.job: Job | None = None
         self.queue: Queue = Queue()
         self.status: str = "configuring"
-        self.hwid = port.hwid.split(" LOCATION=")[0]
+        self.hwid = port.hwid
         self.description = "New Fabricator"
         self.name: str = name
-        self.devicePort = port.device.strip("/").split("/")[-1]
+        self.devicePort = port.comm_port
         dbFab = Fabricator.query.filter_by(hwid=self.hwid).first()
         if dbFab is None:
             db.session.add(self)
@@ -61,7 +63,7 @@ class Fabricator(db.Model):
             self.devicePort = dbFab.devicePort.strip("/").split("/")[-1]
             self.date = dbFab.date
             self.dbID = dbFab.dbID
-        self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True, websocket_connection=next(iter(current_app.emulator_connections.values())) if port.device == current_app.get_emu_ports()[0] else None, name=name)
+        self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True, websocket_connection=next(iter(current_app.emulator_connections.values())) if port.comm_port == current_app.get_emu_ports()[0] else None, name=name)
         if self.description == "New Fabricator": self.description = self.device.getDescription()
         self.error = None
         db.session.commit()
@@ -98,12 +100,11 @@ class Fabricator(db.Model):
         testName = FabricatorConnection.staticCreateConnection(port=serialPort.device, baudrate=115200, timeout=60)
         testName.write(b"M997\n")
         while True:
-            response = testName.readline()
-            if b"MACHINE_NAME" in response:
+            response = testName.read()
+            if "MACHINE_NAME" in response:
                 testName.reset_input_buffer()
                 testName.close()
                 break
-        response = response.decode("utf-8")
         return response
 
     @staticmethod
@@ -151,7 +152,7 @@ class Fabricator(db.Model):
             #TODO: assume generic printer, do stuff
             return None
 
-    def createDevice(self, serialPort: ListPortInfo | SysFS | None, consoleLogger: TextIO | None = None, fileLogger: str | None = None, addLogger: bool = False, websocket_connection=None, name: str = None) -> Device | None:
+    def createDevice(self, serialPort: Resource | None, consoleLogger: TextIO | None = None, fileLogger: str | None = None, addLogger: bool = False, websocket_connection=None, name: str = None) -> Device | None:
         """
         creates the correct printer object based on the serial port info
         :param WebSocket | None websocket_connection: the websocket connection to the emulator, if it exists
@@ -221,8 +222,7 @@ class Fabricator(db.Model):
         :rtype: bool
         """
         try:
-            if not self.device.serialConnection.is_open: assert self.device.connect(), "Failed to connect"
-            assert self.device.serialConnection.is_open, "Serial connection is not open"
+            if not self.device.serialConnection or not self.device.serialConnection.is_open: assert self.device.connect(), "Failed to connect"
             assert self.status == "printing", f"Fabricator is not printing, status: {self.status}"
             assert self.queue is not None, "Queue is None"
             assert len(self.queue) > 0, "Queue is empty"

@@ -1,12 +1,17 @@
 import asyncio
+import re
 import threading
-from abc import ABC
 import uuid
 import serial
-from queue import Queue, Empty
 import json
+from queue import Queue, Empty
+from abc import ABC
+from serial.tools.list_ports import grep
 from serial.tools.list_ports_common import ListPortInfo
 from globals import current_app as app
+from pyvisa.resources.resource import Resource
+from pyvisa.resources import SerialInstrument
+from pyvisa import ResourceManager, constants
 
 
 class FabricatorConnection(ABC):
@@ -20,12 +25,20 @@ class FabricatorConnection(ABC):
         :param dict websocket_connections: Dictionary of websocket connections
         :param str fabricator_id: Unique identifier for the printer
         :return: FabricatorConnection instance
-        :rtype: SerialConnection | SocketConnection
+        :rtype: Resource | SocketConnection
         """
         if websocket_connections is not None and fabricator_id is not None:
             return SocketConnection(port, baudrate, websocket_connections, fabricator_id, timeout=timeout)
         elif port is not None and baudrate is not None:
-            return SerialConnection(port, baudrate, timeout=timeout)
+            if re.match(r"COM\d+", port):
+                port = f"ASRL{re.sub(r"COM", "", port)}::INSTR"
+            elif not re.match(r"ASRL\d+::INSTR", port):
+                raise ValueError(f"Invalid serial port format: {port}")
+            if app.resource_manager.list_opened_resources():
+                for resource in app.resource_manager.list_opened_resources():
+                    if port == resource.resource_name:
+                        return resource
+            return app.resource_manager.open_resource(port, baud_rate=baudrate, timeout=timeout)
         else:
             raise ValueError("Invalid connection parameters")
 
@@ -84,7 +97,7 @@ class SocketConnection(FabricatorConnection):
         """
         if not self._is_open:
             raise ConnectionError("WebSocket connection is not open")
-        
+
         # Clear any previous responses
         self._response_event.clear()
         while not self._receive_queue.empty():
@@ -258,3 +271,91 @@ class EmuListPortInfo(ListPortInfo):
     @hwid.setter
     def hwid(self, value):
         self._hwid = value
+
+class CustomResourceManager(ResourceManager):
+    def __init__(self):
+        super().__init__()
+
+    def open_resource(self, resource_name, **kwargs):
+        """Ensure serial instruments are instantiated using CustomSerialInstrument."""
+        if resource_name and re.match(r"COM\d+", resource_name):
+            resource_name = f"{re.sub(r'COM', 'ASRL', resource_name)}::INSTR"
+        open_resources = self.list_opened_resources()
+        if open_resources and any(resource.resource_name == resource_name for resource in open_resources):
+            return next((res for res in self.list_opened_resources() if res.resource_name == resource_name), None)
+        if re.match(r"ASRL\d+::INSTR", resource_name):
+            printer = CustomSerialInstrument(self, resource_name, **kwargs)
+            self._created_resources.add(printer)
+            return printer
+
+        return super().open_resource(resource_name, **kwargs)
+
+    def list_resources(self, query=""):
+        return super().list_resources(query)
+
+    def list_opened_resources(self):
+        return super().list_opened_resources()
+
+class CustomSerialInstrument(SerialInstrument):
+    baud_rate: int = 115200
+    comm_port: str | None = None
+    def __init__(self, resource_manager, resource_name, **kwargs):
+        """Extend SerialInstrument to include VID, PID, and serial number."""
+        super().__init__(resource_manager, resource_name)
+        self.comm_port = re.sub(r"ASRL", "COM", re.sub(r"::INSTR", "", resource_name))
+        pyserial_port = next((dev for dev in grep(self.comm_port)), None)
+        self._vid = pyserial_port.vid if pyserial_port else None
+        self._pid = pyserial_port.pid if pyserial_port else None
+        self._serial_number = pyserial_port.serial_number if pyserial_port else ""
+        self._hwid = f"USB VID:PID={self.vid:04X}:{self.pid:04X} SER={self.serial_number}" if self.vid and self.pid else None
+        self.baud_rate = kwargs.get("baud_rate", 115200)
+        self._timeout = kwargs.get("open_timeout", 60000)
+        self.open(kwargs.get("access_mode", constants.AccessModes.no_lock), kwargs.get("open_timeout", 60000))
+        self.write_termination = '\n'
+        self.read_termination = '\n'
+        self.timeout = self._timeout
+        self.write("M155 S1")
+
+
+    def get_device_info(self):
+        """Return device identification details."""
+        return {
+            "resource_name": self.resource_name,
+            "VID": self.vid or None,
+            "PID": self.pid or None,
+            "Serial Number": self.serial_number or None,
+        }
+
+    def open(self, access_mode: constants.AccessModes = constants.AccessModes.no_lock, open_timeout: int = 5000):
+        """Open the serial connection."""
+        return super().open(access_mode, open_timeout)
+
+    def close(self) -> None:
+        """Close the serial connection."""
+        if self.is_open:
+            self.write("M155 S0")
+        return super().close()
+
+    @property
+    def hwid(self):
+        return self._hwid
+
+    @property
+    def vid(self):
+        return self._vid
+
+    @property
+    def pid(self):
+        return self._pid
+
+    @property
+    def serial_number(self):
+        return self._serial_number
+
+    @property
+    def is_open(self):
+        try:
+            return self.session is not None
+        except AttributeError:
+            return False
+

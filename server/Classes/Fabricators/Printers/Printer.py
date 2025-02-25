@@ -55,7 +55,7 @@ class Printer(Device, metaclass=ABCMeta):
                 jobName = str(job.file_name_original)
                 if jobName:
                     jobName = "-".join(jobName.split(".")[0].split("_"))
-                logger = JobLogger(self.name, jobName, job.date.strftime('%m-%d-%Y_%H-%M-%S'), self.serialPort.device, consoleLogger=sys.stdout if isVerbose else None, fileLogger=None)
+                logger = JobLogger(self.name, jobName, job.date.strftime('%m-%d-%Y_%H-%M-%S'), self.serialPort, consoleLogger=sys.stdout if isVerbose else None, fileLogger=None)
 
                 logger.info(f"Starting {job.name} on {self.name} at {job.date.strftime('%m-%d-%Y %H:%M:%S')}")
                 # Read the file and store the lines in a list
@@ -177,7 +177,7 @@ class Printer(Device, metaclass=ABCMeta):
                         job.setTime(datetime.now(), 3)
                         while self.status == "paused":
                             sleep(.5)
-                            readline = self.serialConnection.readline().decode("utf-8").strip()
+                            readline = self.serialConnection.read().strip()
                             if readline:
                                 logger.debug(readline)
                                 if "T:" in readline and "B:" in readline:
@@ -258,10 +258,10 @@ class Printer(Device, metaclass=ABCMeta):
         if logger is None: logger = self.logger
         assert self.serialConnection is not None, "Serial connection is None"
         assert self.serialConnection.is_open, "Serial connection is not open"
-        if isinstance(gcode, str):
+        if isinstance(gcode, bytes):
             if gcode[-1] != "\n": gcode += "\n"
-            gcode = gcode.encode("utf-8")
-        assert isinstance(gcode, bytes), f"Expected bytes, got {type(gcode)}"
+            gcode = gcode.decode("utf-8")
+        assert isinstance(gcode, str), f"Expected string, got {type(gcode)}"
         callables = self.callablesHashtable.get(self.extractIndex(gcode, logger), [checkOK])
         current_app.socketio.emit("gcode_line", {"line": (gcode.decode() if isinstance(gcode, bytes) else gcode).strip(), "printerid": self.dbID})
         self.serialConnection.write(gcode)
@@ -270,8 +270,8 @@ class Printer(Device, metaclass=ABCMeta):
             while True:
                 if self.status == "cancelled": return True
                 try:
-                    line = self.serialConnection.readline()
-                    decLine = line.decode("utf-8").strip()
+                    line = self.serialConnection.read()
+                    decLine = line.strip()
                     if "processing" in decLine or "echo" in decLine: continue
                     if "T:" in decLine and "B:" in decLine:
                         self.handleTempLine(decLine)
@@ -279,23 +279,23 @@ class Printer(Device, metaclass=ABCMeta):
                             continue
                     if func(line, self):
                         break
-                    if should_log: logger.debug(f"{gcode.decode().strip()}: {decLine}")
+                    if should_log: logger.debug(f"{gcode.strip()}: {decLine}")
                     # current_app.socketio.emit("console_update",{"message": decLine, "level": "debug", "printerid": self.dbID})
                 except UnicodeDecodeError:
-                    if should_log: logger.debug(f"{gcode.decode().strip()}: {line.strip()}")
-                    else: print(f"{gcode.decode().strip()}: {line.strip()}")
-                    # current_app.socketio.emit("console_update",{"message": gcode.decode().strip(), "level": "debug", "printerid": self.dbID})
+                    if should_log: logger.debug(f"{gcode.strip()}: {line.strip()}")
+                    else: print(f"{gcode.strip()}: {line.strip()}")
+                    # current_app.socketio.emit("console_update",{"message": gcode.strip(), "level": "debug", "printerid": self.dbID})
                 except Exception as e:
                     if current_app: return current_app.handle_errors_and_logging(e, logger)
                     else: print(traceback.format_exc())
                     return False
         if not callables:
-            # current_app.socketio.emit("console_update", {"message": f"{gcode.decode().strip()}: ok", "level": "info", "printerid": self.dbID})
-            if should_log: logger.info(f"{gcode.decode().strip()}: ok")
+            # current_app.socketio.emit("console_update", {"message": f"{gcode.strip()}: ok", "level": "info", "printerid": self.dbID})
+            if should_log: logger.info(f"{gcode.strip()}: ok")
         else:
-            # current_app.socketio.emit("console_update", {"message": f"{gcode.decode().strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}", "level": "info", "printerid": self.dbID})
+            # current_app.socketio.emit("console_update", {"message": f"{gcode.strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}", "level": "info", "printerid": self.dbID})
             if should_log: logger.info(
-                f"{gcode.decode().strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}")
+                f"{gcode.strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}")
         return True
 
     def changeFilament(self, filamentType: str, filamentDiameter: float, logger: JobLogger = None):
@@ -353,22 +353,22 @@ class Printer(Device, metaclass=ABCMeta):
         except Exception as e:
             current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
 
-    def extractIndex(self, gcode: bytes, logger=None) -> str:
+    def extractIndex(self, gcode: str, logger=None) -> str:
         """
         Method to extract the index of the gcode for use in the callablesHashtable
-        :param bytes gcode: the line of gcode to extract the index from
+        :param str gcode: the line of gcode to extract the index from
         :param JobLogger | None logger: the logger to use
         :rtype: str
         """
         if logger is None: logger = self.logger
-        hashIndex = gcode.decode().split("\n")[0].split(" ")[0]
+        hashIndex = gcode.split("\n")[0].split(" ")[0]
 
         if hashIndex == "M109":
             try:
-                temp = gcode.decode().split("S")[1].split("\n")[0]
+                temp = gcode.split("S")[1].split("\n")[0]
             except IndexError:
                 try:
-                    temp = gcode.decode().split("R")[1].split("\n")[0]
+                    temp = gcode.split("R")[1].split("\n")[0]
                 except IndexError:
                     temp = None
             if temp:
@@ -383,7 +383,7 @@ class Printer(Device, metaclass=ABCMeta):
                                        "printerid": self.dbID})
         if hashIndex == "M190":
             try:
-                temp = gcode.decode().split("S")[1].split("\n")[0]
+                temp = gcode.split("S")[1].split("\n")[0]
             except IndexError:
                 temp = None
             if temp:

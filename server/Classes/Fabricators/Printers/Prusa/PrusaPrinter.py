@@ -23,11 +23,11 @@ class PrusaPrinter(Printer, hasEndingSequence, metaclass=ABCMeta):
 
     callablesHashtable = {**Printer.callablesHashtable, **callablesHashtable}
 
-    def extractIndex(self, gcode: bytes, logger=None) -> str:
+    def extractIndex(self, gcode: str, logger=None) -> str:
         hashIndex = super().extractIndex(gcode, logger)
         if hashIndex == "G29":
             try:
-                g29addon = gcode.decode().split("\n")[0].split(" ")[1]
+                g29addon = gcode.split("\n")[0].split(" ")[1]
                 hashIndex += ".01" if g29addon == "P1" else ".02"
             except IndexError:
                 hashIndex += ".01"

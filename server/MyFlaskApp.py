@@ -2,6 +2,7 @@ import logging
 import os
 import subprocess
 import sys
+from Classes.FabricatorConnection import CustomResourceManager
 from flask import request, Response, send_from_directory, Flask
 from flask_migrate import Migrate
 from dotenv import load_dotenv
@@ -42,6 +43,7 @@ class MyFlaskApp(Flask):
         Migrate(self, db)
         print(" Done")
         print(f"{tabs()}setting up custom variables...", end="")
+        self._resource_manager = CustomResourceManager()
         self._fabricator_list = None
         self._logger = None
         from Classes.Loggers.Logger import Logger
@@ -118,10 +120,6 @@ class MyFlaskApp(Flask):
     def logger(self, logger):
         self._logger = logger
 
-    @logger.getter
-    def logger(self):
-        return self._logger
-
     @property
     def fabricator_list(self):
         return self._fabricator_list
@@ -130,9 +128,10 @@ class MyFlaskApp(Flask):
     def fabricator_list(self, fabricator_list):
         self._fabricator_list = fabricator_list
 
-    @fabricator_list.getter
-    def fabricator_list(self):
-        return self._fabricator_list
+    @property
+    def resource_manager(self):
+        return self._resource_manager
+
 
     def handle_errors_and_logging(self, e: Exception | str, logger=None, level=logging.ERROR):
         """

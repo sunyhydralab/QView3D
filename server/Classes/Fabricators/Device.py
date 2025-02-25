@@ -3,14 +3,13 @@ import sys
 from abc import ABC
 from time import sleep
 from globals import current_app, tabs
-from serial.tools.list_ports_common import ListPortInfo
-from serial.tools.list_ports_linux import SysFS
 from Classes.Jobs import Job
 from Classes.Vector3 import Vector3
 from Classes.Loggers.Logger import Logger
 from Mixins.hasEndingSequence import hasEndingSequence
 from Mixins.hasResponseCodes import checkXYZ
-from Classes.FabricatorConnection import SerialConnection, SocketConnection, FabricatorConnection
+from Classes.FabricatorConnection import SocketConnection, FabricatorConnection
+from pyvisa.resources.resource import Resource
 
 class Device(ABC):
     # static variables
@@ -19,7 +18,7 @@ class Device(ABC):
     PRODUCTID: int | None = None
     DESCRIPTION: str | None = None
     MAXFEEDRATE: int | None = None
-    serialConnection: SocketConnection | SerialConnection | None = None
+    serialConnection: SocketConnection | Resource | None = None
     homePosition: Vector3 | None = None
 
     homeCMD: bytes | None= b"G28\n"
@@ -36,20 +35,20 @@ class Device(ABC):
         "G28": [checkXYZ],  # Home
     }
 
-    def __init__(self, dbID: int, serialPort: ListPortInfo | SysFS, consoleLogger=sys.stdout, fileLogger=None, websocket_connection=None, addLogger: bool =False, name: str = None):
+    def __init__(self, dbID: int, serialPort: Resource, consoleLogger=sys.stdout, fileLogger=None, websocket_connection=None, addLogger: bool =False, name: str = None):
         self.name = name if name else self.DESCRIPTION
         self.dbID: int = dbID
-        self.serialPort: ListPortInfo | SysFS | None = serialPort
+        self.serialPort: str | None = serialPort.comm_port
         self.serialID: str | None = serialPort.serial_number
-        self.logger = Logger(self.name, port=self.serialPort.device, consoleLogger=consoleLogger, fileLogger=fileLogger, loggingLevel=Logger.DEBUG, consoleLevel=Logger.ERROR) if addLogger else None
+        self.logger = Logger(self.name, port=self.serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, loggingLevel=Logger.DEBUG, consoleLevel=Logger.ERROR) if addLogger else None
         self.status = "idle"
         self.verdict = ""
         self.websocket_connection = websocket_connection
         if self.serialPort:
-            self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort.device, websocket_connections=self.websocket_connection, fabricator_id=str(self.dbID))
+            self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort, websocket_connections=self.websocket_connection, fabricator_id=str(self.dbID))
 
     def __repr__(self):
-        return f"port: {self.serialPort.device}, status: {self.status}, websocket_connection: {self.websocket_connection if self.websocket_connection else 'None'}"
+        return f"port: {self.serialPort}, status: {self.status}, websocket_connection: {self.websocket_connection if self.websocket_connection else 'None'}"
 
     def __to_JSON__(self):
         return {
@@ -59,14 +58,14 @@ class Device(ABC):
             "DESCRIPTION": self.DESCRIPTION,
             "MAXFEEDRATE": self.MAXFEEDRATE,
             "serialConnection": {
-                "port": self.serialConnection.port,
-                "baudrate": self.serialConnection.baudrate,
+                "port": self.serialConnection.comm_port,
+                "baudrate": self.serialConnection.baud_rate,
                 "timeout": self.serialConnection.timeout,
                 "is_open": self.serialConnection.is_open,
             } if self.serialConnection else None,
             "homePosition": self.homePosition.__to_JSON__() if self.homePosition else None,
             "dbID": self.dbID,
-            "serialPort": self.serialPort.name if self.serialPort else None,
+            "serialPort": self.serialPort if self.serialPort else None,
             "serialID": self.serialID,
             "status": self.status,
             "verdict": self.verdict
@@ -76,13 +75,12 @@ class Device(ABC):
         """Connect to the hardware using the serial port."""
         try:
             assert self.serialPort is not None, "Serial port is not set"
-            assert self.serialPort.device is not None, "Serial port device is not set"
-            assert self.serialPort.device != "", "Serial port device is empty"
+            assert self.serialPort != "", "Serial port device is empty"
             if self.serialConnection is None or not self.serialConnection.is_open:
-                print(f"{tabs(tab_change=1)}creating connection to {self.serialPort.device}...", end="")
-                self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort.device, baudrate=115200, timeout=60, websocket_connections=self.websocket_connection, fabricator_id=str(self.dbID))
+                print(f"{tabs(tab_change=1)}creating connection to {self.serialPort}...", end="")
+                self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort, baudrate=115200, timeout=60, websocket_connections=self.websocket_connection, fabricator_id=str(self.dbID))
             if self.serialConnection.is_open:
-                print(f"{tabs(tab_change=1)}{self.serialPort.device} is open, resetting input buffer...", end="")
+                print(f"{tabs(tab_change=1)}{self.serialPort} is open, resetting input buffer...", end="")
                 self.serialConnection.reset_input_buffer()
             print(" Done")
             return True
@@ -235,7 +233,7 @@ class Device(ABC):
         self.serialConnection.write(self.getLocationCMD)
         response = ""
         while not (("X:" in response) and ("Y:" in response) and ("Z:" in response)):
-            response = self.serialConnection.readline().decode("utf-8")
+            response = self.serialConnection.read()
             if isVerbose and self.logger: self.logger.info(response)
         loc = LocationResponse(response)
         return Vector3(loc.x, loc.y, loc.z)
@@ -287,7 +285,7 @@ class Device(ABC):
             if self.logger is not None: self.logger.info("Sending diagnostic G-code command (e.g., M115).")
             self.sendGcode(b"M115\n")
 
-            response = self.serialConnection.readline().decode("utf-8").strip()
+            response = self.serialConnection.read().strip()
 
             if response:
                 if self.logger is not None: self.logger.info(f"Diagnosis response: {response}")
@@ -301,13 +299,15 @@ class Device(ABC):
     def hardReset(self, newStatus: str):
         if self.serialConnection and self.serialConnection.is_open:
             self.serialConnection.close()
+            self.serialConnection = None
         # Additional reset logic can be added here if needed.
+        self.serialConnection = current_app.resource_manager.open_resource(self.serialPort)
 
     def getModel(self):
         return self.MODEL
 
     def getHWID(self):
-        return self.serialPort.hwid.split(' LOCATION=')[0]
+        return self.serialConnection.hwid
 
     def getSerialConnection(self):
         return self.serialConnection
