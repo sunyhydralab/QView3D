@@ -208,7 +208,7 @@ const doCloseRegisterModal = async () => {
                                                 <span class="ms-2">Edit Name</span>
                                             </a>
                                         </li>
-                                        <div class="tooltip-modal" style="width: 100%;">
+                                        <div class="tooltip" style="width: 100%;">
                                             <li>
                                                 <a class="dropdown-item d-flex align-items-center"
                                                     style="font-size: 1rem;" data-bs-toggle="modal"
@@ -302,7 +302,10 @@ const doCloseRegisterModal = async () => {
     border: 1px solid var(--color-border);
 }
 
-
+.modal-dialog {
+    max-width: 500px;
+    /* Adjust modal width */
+}
 
 .card-body {
     color: var(--color-background-font);

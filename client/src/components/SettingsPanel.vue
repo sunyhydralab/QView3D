@@ -2,7 +2,7 @@
 import {ref} from 'vue';
 import {API_IP_ADDRESS, API_PORT, setServerIP, setServerPort} from '@/model/myFetch';
 
-const serverIP = ref<string>(API_IP_ADDRESS.value ?? 'localhost');
+const serverIP = ref<string>(API_IP_ADDRESS.value ?? '127.0.0.1');
 const serverPort = ref<number>(parseInt(API_PORT.value ?? '8000'));
 
 const saveSettings = () => {
