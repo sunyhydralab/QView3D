@@ -202,13 +202,21 @@ tr {
   border-color: var(--color-modal-background-inverted) !important;
 }
 
-.dp__theme_light {
-  background-color: transparent !important;
+.dp__theme_light,
+.dp__overlay {
+  background-color: var(--color-modal-background-inverted) !important;
   border-color: var(--color-modal-background-inverted) !important;
-  --dp-range-between-dates-background-color: var(--color-background) !important;
-  --dp-range-between-border-color: var(--color-background) !important;
+  --dp-range-between-dates-background-color: var(--color-background-mute-font) !important;
+  --dp-range-between-border-color: var(--color-background-mute-font) !important;
   --dp-hover-color: var(--color-form-background) !important;
   --dp-background-color: var(--color-background-mute) !important;
+}
+
+.dp__range_start,
+.dp__range_end,
+.dp__action_select {
+  background-color: var(--color-primary) !important;
+  color: var(--color-primary-font) !important;
 }
 
 .dp__arrow_bottom {

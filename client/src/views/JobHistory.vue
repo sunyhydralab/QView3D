@@ -566,7 +566,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    Thi CSV file will only contain jobs included in the current filtration criteria. Are you sure you
+                    This CSV file will only contain jobs included in the current filtration criteria. Are you sure you
                     want to download this CSV file?
                 </div>
                 <div class="modal-footer">
@@ -754,8 +754,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
                             <div class="mb-2 border-top"
                                 style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                             <div class="d-flex justify-content-center">
-                                <button @click.prevent="submitFilter" class="btn btn-primary me-3 mb-2">Submit
-                                    Filter</button>
+                                <button @click.prevent="submitFilter" class="btn btn-primary ms-5 mb-2">Submit Filter</button>
                                 <button @click.prevent="clearFilter" class="btn btn-danger mb-2">Clear Filter</button>
                             </div>
                         </div>
@@ -912,6 +911,10 @@ const onlyNumber = ($event: KeyboardEvent) => {
     </div>
 </template>
 <style scoped>
+.border-top {
+    margin: 5px;;
+}
+
 .sticky {
     position: sticky;
     bottom: 0px;
