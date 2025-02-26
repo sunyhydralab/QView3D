@@ -1,11 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-
-const route = useRoute()
-
-const isSubmitRoute = computed(() => route.path.startsWith('/submit'))
-
 const observer = new MutationObserver(() => {
   const colorPrimary = getComputedStyle(document.documentElement, null)
     .getPropertyValue('--color-primary')
@@ -94,11 +87,6 @@ observer.observe(document.documentElement, { attributes: true, attributeFilter: 
           <li class="nav-item">
             <router-link to="/registration" class="nav-link" active-class="active-tab"
               >REGISTRATION
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/submit" class="nav-link" :class="{ 'active-tab': isSubmitRoute }"
-              >SUBMIT JOB
             </router-link>
           </li>
           <li class="nav-item">
