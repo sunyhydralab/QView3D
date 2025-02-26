@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { onUnmounted, ref, computed, watchEffect, onMounted, watch } from 'vue'
 import { printers, type Device } from '../model/ports'
-import { useRerunJob, useRemoveJob, type Job, useMoveJob, useGetFile, useGetJobFile, isLoading } from '../model/jobs'
+import { useRerunJob, useRemoveJob, type Job, useMoveJob, useGetFile, useGetJobFile} from '../model/jobs'
 import draggable from 'vuedraggable'
 import { toast } from '@/model/toast'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 import NoPrinterRobot from '@/components/NoPrinterRobot.vue'
-
+const isLoading = ref(false)
 const { removeJob } = useRemoveJob()
 const { rerunJob } = useRerunJob()
 const { moveJob } = useMoveJob()
