@@ -9,7 +9,7 @@ import {
   useEditIssue,
   useGetIssueByJob
 } from '@/model/issues'
-import { pageSize, useGetJobs, type Job, useAssignComment, useGetJobFile, useGetFile, useGetLogFile, useRemoveIssue, useDownloadCsv, isLoading } from '@/model/jobs';
+import { pageSize, useGetJobs, type Job, useAssignComment, useGetJobFile, useGetFile, useGetLogFile, useRemoveIssue, useDownloadCsv} from '@/model/jobs';
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
@@ -17,6 +17,7 @@ import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 
+const isLoading = ref(false)
 const { jobhistory, getFavoriteJobs } = useGetJobs()
 const { issues } = useGetIssues()
 const { issue } = useGetIssueByJob()

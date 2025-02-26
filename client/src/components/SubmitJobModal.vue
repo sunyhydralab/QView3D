@@ -12,8 +12,7 @@ import {
   filament,
   useAddJobToQueue,
   useGetFile,
-  useAutoQueue,
-  isLoading
+  useAutoQueue
 } from '@/model/jobs'
 import { ref, onMounted, watchEffect, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -21,6 +20,7 @@ import { toast } from '@/model/toast'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 import GCodeThumbnail from '@/components/GCodeThumbnail.vue'
 
+const isLoading = ref(false)
 const { addJobToQueue } = useAddJobToQueue()
 const { auto } = useAutoQueue()
 const { getFile } = useGetFile()

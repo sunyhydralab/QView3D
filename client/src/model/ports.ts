@@ -69,16 +69,12 @@ export function useRegisterPrinter() {
   }
 }
 
-export function useRetrievePrinters() {
-  return {
-    async retrieve() {
+export async function useRetrievePrinters() {
       try {
         return await api('getprinterinfo')
       } catch (error) {
         console.error(error)
       }
-    }
-  }
 }
 
 // gets the printers that have threads information from the server

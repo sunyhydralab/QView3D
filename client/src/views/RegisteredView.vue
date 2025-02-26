@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { printers, useRetrievePrintersInfo, useHardReset, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters, useMoveHead } from '@/model/ports'
-import { isLoading } from '@/model/jobs'
 import { ref, onMounted } from 'vue';
 import { toast } from '@/model/toast'
 import RegisterModal from '@/components/RegisterModal.vue'
 import router from '@/router';
+import { watch } from 'fs';
 
-const { retrieve } = useRetrievePrinters();
 const { retrieveInfo } = useRetrievePrintersInfo();
 const { hardReset } = useHardReset();
 const { deletePrinter } = useDeletePrinter();
@@ -31,21 +30,22 @@ const modalMessage = ref('');
 const modalAction = ref('');
 const selectedPrinter = ref<Device | null>(null);
 
+const isLoading = ref(false)
+
 // fetch list of connected ports from backend and automatically load them into the form dropdown 
 onMounted(async () => {
     isLoading.value = true
-    registered.value = await retrieve(); // load all registered printers
+    registered.value = await useRetrievePrinters(); // load all registered printers
     isLoading.value = false
 });
 
-const doHardReset = async (printer: Device) => {
+const doHardReset = async (printer: Device | null) => {
     isLoading.value = true
-    await hardReset(printer.id).then(() => {
-        router.go(0)
+    hardReset(printer?.id).then(() => {
+        isLoading.value = false
     }).catch(() => {
         toast.error('Failed to reset printer')
     })
-    isLoading.value = false
 }
 
 const doDelete = async (printer: Device) => {
@@ -82,7 +82,7 @@ const doDelete = async (printer: Device) => {
     }
 
     printers.value = await retrieveInfo();
-    registered.value = await retrieve();
+    registered.value = await useRetrievePrinters();
     isLoading.value = false
     // await removeThread(printer.id)
 }
@@ -154,7 +154,7 @@ const toggleMessage = (printer: Device) => {
 }
 
 const doCloseRegisterModal = async () => {
-    registered.value = await retrieve();
+    registered.value = await useRetrievePrinters();
 }
 
 </script>
@@ -173,7 +173,7 @@ const doCloseRegisterModal = async () => {
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button v-if="modalAction === 'doHardReset'" type="button" class="btn btn-danger"
-                        data-bs-dismiss="modal" @click="doHardReset(selectedPrinter!)">Reset</button>
+                        data-bs-dismiss="modal" @click="doHardReset(selectedPrinter)">Reset</button>
                     <button v-if="modalAction === 'doDelete'" type="button" class="btn btn-danger"
                         data-bs-dismiss="modal" @click="doDelete(selectedPrinter!)">Deregister</button>
                 </div>
