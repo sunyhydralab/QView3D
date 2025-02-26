@@ -13,7 +13,7 @@ import {watch} from 'vue';
 import IsLoading from './components/IsLoading.vue'
 
 const { retrieveInfo } = useRetrievePrintersInfo();
-const isLoading = ref(true)
+const isLoading = ref(false)
 
 onMounted(async () => {
   printers.value = await retrieveInfo()
