@@ -47,8 +47,14 @@ def start_client():
 def start_server(fresh_database):
     # Delete the database file if the developer wants a fresh database for the server
     if fresh_database == True:
-        os.remove(os.path.join(SERVER_LOCAL_PATH, DATABASE_FILE_NAME))
-        print("Deleted database file")
+        # Ensure the database file actually exists
+        database_file_path = os.path.join(SERVER_LOCAL_PATH, DATABASE_FILE_NAME)
+        if (os.path.exists(database_file_path)):
+            try:
+                os.remove(database_file_path)
+                print("Deleted the database file")
+            except OSError as ose:
+                print(ose)
 
     # Start the server in the background
     return subprocess.Popen(
