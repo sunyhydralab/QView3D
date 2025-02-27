@@ -12,14 +12,14 @@ from Mixins.hasResponseCodes import checkTime, checkExtruderTemp, checkXYZ, chec
 
 
 class Printer(Device, metaclass=ABCMeta):
-    cancelCMD: str = "M112\n"
-    keepAliveCMD: str = "M113 S1\n"
-    doNotKeepAliveCMD: str = "M113 S0\n"
-    statusCMD: str = "M115\n"
-    getLocationCMD: str = "M114\n"
-    pauseCMD: str = "M601\n"
-    resumeCMD: str = "M602\n"
-    getMachineNameCMD: str = "M997\n"
+    cancelCMD: str = "M112"
+    keepAliveCMD: str = "M113 S1"
+    doNotKeepAliveCMD: str = "M113 S0"
+    statusCMD: str = "M115"
+    getLocationCMD: str = "M114"
+    pauseCMD: str = "M601"
+    resumeCMD: str = "M602"
+    getMachineNameCMD: str = "M997"
     startTimeCMD: str = "M75"
 
     callablesHashtable = {
@@ -259,7 +259,6 @@ class Printer(Device, metaclass=ABCMeta):
         assert self.serialConnection is not None, "Serial connection is None"
         assert self.serialConnection.is_open, "Serial connection is not open"
         if isinstance(gcode, bytes):
-            if gcode[-1] != "\n": gcode += "\n"
             gcode = gcode.decode("utf-8")
         assert isinstance(gcode, str), f"Expected string, got {type(gcode)}"
         callables = self.callablesHashtable.get(self.extractIndex(gcode, logger), [checkOK])
@@ -439,7 +438,7 @@ class Printer(Device, metaclass=ABCMeta):
         try:
             assert self.serialConnection is not None, "Serial connection is None"
             assert self.serialConnection.is_open, "Serial connection is not open"
-            self.sendGcode("M155 S1\n")
+            self.sendGcode("M155 S1")
             return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self.logger)
@@ -447,11 +446,11 @@ class Printer(Device, metaclass=ABCMeta):
     def disconnect(self) -> bool:
         try:
             if self.serialConnection and self.serialConnection.is_open:
-                self.sendGcode("M155 S100\n")
-                self.sendGcode("M155 S0\n")
-                self.sendGcode("M104 S0\n")
-                self.sendGcode("M140 S0\n")
-                self.sendGcode("M84\n")
+                self.sendGcode("M155 S100")
+                self.sendGcode("M155 S0")
+                self.sendGcode("M104 S0")
+                self.sendGcode("M140 S0")
+                self.sendGcode("M84")
                 self.serialConnection.close()
             return True
         except Exception as e:

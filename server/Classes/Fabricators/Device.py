@@ -21,7 +21,7 @@ class Device(ABC):
     serialConnection: SocketConnection | Resource | None = None
     homePosition: Vector3 | None = None
 
-    homeCMD: str | None= "G28\n"
+    homeCMD: str | None= "G28"
     cancelCMD: str | None = None
     keepAliveCMD: str | None = None
     doNotKeepAliveCMD: str | None = None
@@ -34,6 +34,11 @@ class Device(ABC):
     callablesHashtable = {
         "G28": [checkXYZ],  # Home
     }
+
+    def __new__(cls, *args, **kwargs):
+        if cls is Device:
+            raise TypeError("Device class may not be instantiated directly.")
+        return object.__new__(cls)
 
     def __init__(self, dbID: int, serialPort: Resource, consoleLogger=sys.stdout, fileLogger=None, websocket_connection=None, addLogger: bool =False, name: str = None):
         self.name = name if name else self.DESCRIPTION
@@ -79,10 +84,7 @@ class Device(ABC):
             if self.serialConnection is None or not self.serialConnection.is_open:
                 print(f"{tabs(tab_change=1)}creating connection to {self.serialPort}...", end="")
                 self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort, baud_rate=115200, timeout=60, websocket_connections=self.websocket_connection, fabricator_id=str(self.dbID))
-            if self.serialConnection.is_open:
-                print(f"{tabs(tab_change=1)}{self.serialPort} is open, resetting input buffer...", end="")
-                self.serialConnection.reset_input_buffer()
-            print(" Done")
+                print(" Done")
             return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self.logger)
@@ -128,8 +130,8 @@ class Device(ABC):
         assert isinstance(loc, Vector3), f"Expected Vector3, got {type(loc)}"
         assert isinstance(isVerbose, bool), f"Expected bool, got {type(isVerbose)}"
         assert isinstance(self, Device), f"Expected Device, got {type(self)}"
-        self.sendGcode(f"G0 X{loc.x} Y{loc.y} Z{loc.z} F{str(self.MAXFEEDRATE)}\n", isVerbose=isVerbose)
-        self.sendGcode(f'M114\n', isVerbose=isVerbose)
+        self.sendGcode(f"G0 X{loc.x} Y{loc.y} Z{loc.z} F{str(self.MAXFEEDRATE)}", isVerbose=isVerbose)
+        self.sendGcode(f'M114', isVerbose=isVerbose)
         if hasattr(self, "getLocationCMD"):
             return loc == self.getToolHeadLocation()
         return True
@@ -152,7 +154,7 @@ class Device(ABC):
             with open(file, "r") as f:
                 if self.logger is not None: self.logger.info(f"Printing {file}")
                 for line in f:
-                    if line.startswith(";") or line == "\n":
+                    if line.startswith(";") or line == "":
                         continue
                     if current_app:
                         with current_app.app_context():
@@ -177,7 +179,7 @@ class Device(ABC):
                         if self.logger is not None: self.logger.info("Job cancelled")
                         return True
                     if ";" in line:
-                        line = line.split(";")[0].strip() + "\n"
+                        line = line.split(";")[0].strip()
                     self.sendGcode(line, isVerbose=isVerbose)
             self.verdict = "complete"
             if self.logger is not None: self.logger.info("Job complete")
@@ -283,7 +285,7 @@ class Device(ABC):
                 return "Diagnosis failed: unable to connect."
 
             if self.logger is not None: self.logger.info("Sending diagnostic G-code command (e.g., M115).")
-            self.sendGcode("M115\n")
+            self.sendGcode("M115")
 
             response = self.serialConnection.read().strip()
 
@@ -327,7 +329,7 @@ class Device(ABC):
 class LocationResponse:
     def __init__(self, response: str):
         import re
-        loc = [item.strip() for item in re.split(r' Count X:| Count Y:| Count Z:|X:| Y:| Z:| E:|\n', response) if item]
+        loc = [item.strip() for item in re.split(r' Count X:| Count Y:| Count Z:|X:| Y:| Z:| E:', response) if item]
         self.x = float(loc[0])
         self.y = float(loc[1])
         self.z = float(loc[2])

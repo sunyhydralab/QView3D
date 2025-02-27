@@ -3,6 +3,7 @@ from werkzeug.local import LocalProxy
 from Classes.EventEmitter import EventEmitter
 import gzip
 import shutil
+from enum import Enum
 
 # Global variables
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -57,3 +58,15 @@ def tabs(tab_change: int = 0):
         tab_num = 0
     tab_num += tab_change
     return "\t" * tab_num
+
+class VID(int, Enum):
+    PRUSA    = 0x2C99
+    CREALITY = 0x1A86
+    MAKERBOT = 0x23C1
+
+class PID(int, Enum):
+    MK3         = 0x0002
+    MK4         = 0x000D
+    MK4S        = 0x001A
+    ENDER3      = 0x7523
+    REPLICATOR2 = 0xB016

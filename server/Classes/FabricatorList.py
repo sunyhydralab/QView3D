@@ -1,6 +1,7 @@
 from flask import jsonify, Response
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
+from pyvisa.resources.resource import Resource
 from sqlalchemy import inspect
 from Classes.Ports import Ports
 from Classes.Fabricators.Fabricator import Fabricator
@@ -151,11 +152,11 @@ class FabricatorList:
     def getFabricatorByPort(self, port) -> Fabricator | None:
         """
         find the first fabricator with the given port
-        :param str | ListPortInfo | SysFS port: the port to search for
+        :param str | Resource port: the port to search for
         :return: the first fabricator with the given port, or None if no fabricator has that port
         :rtype: Fabricator | None
         """
-        if isinstance(port, ListPortInfo or SysFS): port = port.device
+        if isinstance(port, Resource): port = port.comm_port
         assert isinstance(port, str), f"port={port}, type(port)={type(port)}"
         for fabricator in self:
             assert isinstance(fabricator.devicePort, str), f"fabricator.devicePort={fabricator.devicePort}, type(fabricator.devicePort)={type(fabricator.devicePort)}"

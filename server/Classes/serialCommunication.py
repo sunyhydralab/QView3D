@@ -40,7 +40,7 @@ def parseGcode(path):
 # Function to send gcode commands
 def sendGcode(message):
     # Encode and send the message to the printer. 
-    ser.write(f"{message}\n".encode('utf-8'))
+    ser.write(f"{message}".encode('utf-8'))
     # Sleep the printer to give it enough time to get the instuction. 
     time.sleep(0.1)
     # Save and print out the response from the printer. We can use this for error handling and status updates.

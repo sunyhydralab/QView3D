@@ -1,12 +1,19 @@
 import logging
 import os
+import re
 import subprocess
 import sys
-from Classes.FabricatorConnection import CustomResourceManager
+
+from pyvisa import constants
 from flask import request, Response, send_from_directory, Flask
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 from flask_socketio import SocketIO
+
+# from Classes.MyPyVISA.CustomResourceManager import CustomResourceManager
+from pyvisa import ResourceManager
+from Classes.MyPyVISA.CustomSerialInstrument import CustomSerialInstrument
+from Classes.MyPyVISA.CustomTCPIPInstrument import CustomTCPIPInstrument
 from globals import root_path, emulator_connections, event_emitter, tabs
 from routes import defineRoutes
 from models.config import Config
@@ -34,16 +41,27 @@ class MyFlaskApp(Flask):
         database_file = os.path.abspath(os.path.join(basedir, Config.get('database_uri')))
         if isinstance(database_file, bytes):
             database_file = database_file.decode('utf-8')
-        databaseuri = 'sqlite:///' + database_file
-        self.config['SQLALCHEMY_DATABASE_URI'] = databaseuri
+        database_uri = 'sqlite:///' + database_file
+        self.config['SQLALCHEMY_DATABASE_URI'] = database_uri
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        print(" Done")
-        print(f"{tabs(tab_change=-1)}initializing db...", end="")
+        print(f" Done")
+        print(f"{tabs(tab_change=-1)}config loaded")
+        print(f"{tabs()}initializing db...", end="")
         db.init_app(self)
         Migrate(self, db)
-        print(" Done")
-        print(f"{tabs()}setting up custom variables...", end="")
-        self._resource_manager = CustomResourceManager()
+        print(f" Done")
+        print(f"{tabs()}setting up custom variables...")
+        self._resource_manager = ResourceManager("@py")
+        self.resource_manager.register_resource_class(constants.InterfaceType.asrl, "INSTR", CustomSerialInstrument)
+        self.resource_manager.register_resource_class(constants.InterfaceType.tcpip, "INSTR", CustomTCPIPInstrument)
+        self.resource_manager.register_resource_class(constants.InterfaceType.tcpip, "SOCKET", CustomTCPIPInstrument)
+        # self._resource_manager = CustomResourceManager()
+        print(f"{tabs(tab_change=1)}checking for registered resource classes...")
+        print(f"{tabs(tab_change=1)}registered resource classes:")
+        tabs(tab_change=1)
+        for cls in self.resource_manager._resource_classes:
+            print(f"{tabs()}{cls}: {self.resource_manager._resource_classes[cls]}")
+        print(f"{tabs(tab_change=-1)}Done")
         self._fabricator_list = None
         self._logger = None
         from Classes.Loggers.Logger import Logger
@@ -58,7 +76,8 @@ class MyFlaskApp(Flask):
 
         self.emulator_connections = emulator_connections
         self.event_emitter = event_emitter
-        print(" Done")
+        print(f"{tabs(tab_change=-1)} Done")
+        print(f"{tabs(tab_change=-1)} Done")
         print(f"{tabs()}defining routes...")
         # Register all routes
         defineRoutes(self)
@@ -131,7 +150,6 @@ class MyFlaskApp(Flask):
     @property
     def resource_manager(self):
         return self._resource_manager
-
 
     def handle_errors_and_logging(self, e: Exception | str, logger=None, level=logging.ERROR):
         """

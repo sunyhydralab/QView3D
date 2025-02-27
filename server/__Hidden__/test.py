@@ -1,4 +1,3 @@
-import time
 from datetime import datetime
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.Jobs import Job
@@ -135,12 +134,12 @@ with app.app_context():
     if Ports.getPortByName("COM3") is not None:
         PrusaMK4 = Fabricator(Ports.getPortByName("COM3"), "Prusa MK4")
         # PrusaMK4.device.logger.setLevel(PrusaMK4.device.logger.DEBUG)
-        # PrusaMK4.device.sendGcode(b'G29 A\n', isVerbose=True)
+        # PrusaMK4.device.sendGcode(b'G29 A', isVerbose=True)
 
     # school Ender 3
     if Ports.getPortByName("COM4") is not None:
         Ender3 = Fabricator(Ports.getPortByName("COM4"), "Ender 3")
-        # Ender3.device.sendGcode("M109 S50\n", isVerbose=True)
+        # Ender3.device.sendGcode("M109 S50", isVerbose=True)
 
     # school Makerbot
     if Ports.getPortByName("COM7") is not None:

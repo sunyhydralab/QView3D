@@ -2,17 +2,17 @@ from abc import ABCMeta
 from Classes.Fabricators.Printers.Printer import Printer
 from Mixins.hasEndingSequence import hasEndingSequence
 from Mixins.hasResponseCodes import checkXYZ, checkOK, checkTime
-from globals import current_app
+from globals import current_app, VID
 
 class PrusaPrinter(Printer, hasEndingSequence, metaclass=ABCMeta):
-    VENDORID = 0x2C99
-    cancelCMD: str = "M112\n"
-    keepAliveCMD: str = "M113 S1\n"
-    doNotKeepAliveCMD: str = "M113 S0\n"
-    statusCMD: str = "M115\n"
-    getLocationCMD: str = "M114\n"
-    pauseCMD: str = "M601\n"
-    resumeCMD: str = "M602\n"
+    VENDORID = VID.PRUSA
+    cancelCMD: str = "M112"
+    keepAliveCMD: str = "M113 S1"
+    doNotKeepAliveCMD: str = "M113 S0"
+    statusCMD: str = "M115"
+    getLocationCMD: str = "M114"
+    pauseCMD: str = "M601"
+    resumeCMD: str = "M602"
 
     callablesHashtable = {
         "G28": [checkXYZ, checkOK],  # Home

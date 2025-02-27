@@ -5,7 +5,7 @@ from Mixins.hasResponseCodes import checkXYZ
 
 
 class usesVanillaGcode:
-    homeCMD: str = "G28\n"
+    homeCMD: str = "G28"
 
     callablesHashtable = {
         "G28": [checkXYZ],  # Home
@@ -15,7 +15,7 @@ class usesVanillaGcode:
         assert isinstance(loc, Vector3)
         assert isinstance(isVerbose, bool)
         assert isinstance(self, Device)
-        self.sendGcode(f"G0 X{loc.x} Y{loc.y} Z{loc.z} F{str(self.MAXFEEDRATE)}\n", isVerbose=isVerbose)
+        self.sendGcode(f"G0 X{loc.x} Y{loc.y} Z{loc.z} F{str(self.MAXFEEDRATE)}", isVerbose=isVerbose)
 
     def home(self, isVerbose: bool = False):
         try:

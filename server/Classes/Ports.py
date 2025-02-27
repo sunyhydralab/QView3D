@@ -5,9 +5,9 @@ import serial.tools.list_ports
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from Classes.Fabricators.Fabricator import Fabricator
+from Classes.MyPyVISA.CustomTCPIPInstrument import EmuTCPIPInstrument
 from Classes.serialCommunication import sendGcode
 from globals import current_app as app
-from Classes.FabricatorConnection import EmuListPortInfo
 
 class Ports:
     @staticmethod
@@ -16,23 +16,31 @@ class Ports:
         Get a list of all connected serial ports in JSON format
         :rtype: list[dict]
         """
-        ports = serial.tools.list_ports.comports()
+        ports_str = Ports.getListPorts()
+        print(f"Ports strings: {ports_str}")
+        ports = [app.resource_manager.open_resource(port) for port in ports_str]
+        print(f"Ports: {ports}")
         emu_port, emu_name, emu_hwid = app.get_emu_ports()
+        #TODO: make the emu class a subclass of Resource instead of ListPortInfo
         if emu_port and emu_name and emu_hwid:
-            ports.append(EmuListPortInfo(emu_port, description="Emulator", hwid=emu_hwid))
+            ports.append(EmuTCPIPInstrument(app.resource_manager, emu_port, description="Emulator", hwid=emu_hwid))
         full_devices = []
         for port in ports:
             if app:
                 if app.fabricator_list.getFabricatorByPort(port) is None:
-                    if port.device == emu_port:
+                    print(f"Creating device for port: {port}")
+                    if port.comm_port == emu_port:
                         values = app.emulator_connections.values()
                         ws = next(iter(values), None)
                         device = Fabricator.staticCreateDevice(port, websocket_connection=ws)
                     else:
+                        print("not an emu")
                         device = Fabricator.staticCreateDevice(port)
+                    print(f"created device: {device}")
                     full_devices.append(device)
             else:
-                full_devices.append(Fabricator(port).device)
+                full_devices.append(Fabricator(port.comm_port).device)
+        print(f"Full devices: {full_devices}")
         devices = [{
             "device": device.__to_JSON__(),
             "hwid": device.getHWID(),
@@ -55,14 +63,14 @@ class Ports:
         :param name: The name of the device.
         :type name: str
         :return: The port object
-        :rtype: ListPortInfo | SysFS
+        :rtype: str | None
         """
         assert isinstance(name, str), f"Name must be a string: {name} : {type(name)}"
         ports = Ports.getListPorts()
         if len(app.emulator_connections) > 0:
             emu_port, emu_name, emu_hwid = app.get_emu_ports()
             if emu_port and emu_name and emu_hwid and emu_port == name:
-                return EmuListPortInfo(emu_port, description="Emulator", hwid=emu_hwid)
+                return EmuTCPIPInstrument(emu_port, description="Emulator", hwid=emu_hwid)
         for port in ports:
             if not port: continue
             if re.match(r'ASRL\d+::INSTR', port):

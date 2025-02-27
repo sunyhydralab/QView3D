@@ -1,10 +1,11 @@
 import os
+import re
 
 from flask import jsonify, Response
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from sqlalchemy.exc import SQLAlchemyError
-from Classes.FabricatorConnection import FabricatorConnection, CustomSerialInstrument
+from Classes.FabricatorConnection import FabricatorConnection
 from Classes.Fabricators.Device import Device
 from typing_extensions import TextIO
 from Classes.Jobs import Job
@@ -12,7 +13,8 @@ from Mixins.hasEndingSequence import hasEndingSequence
 from models.config import Config
 from models.db import db
 from datetime import datetime, timezone
-from globals import current_app, root_path
+from globals import current_app, root_path, VID
+from Classes.Device_Classes import device_classes
 from pyvisa.resources.resource import Resource
 
 class Fabricator(db.Model):
@@ -41,7 +43,14 @@ class Fabricator(db.Model):
             return
         assert isinstance(port, str), f"Invalid port type: {type(port)}"
         assert isinstance(name, str), f"Invalid name type: {type(name)}"
-        port: CustomSerialInstrument = current_app.resource_manager.open_resource(port, baud_rate=115200, timeout=5000)
+        port_string = port
+        if re.match(r"COM\d+", port):
+            port_string = f"ASRL{re.sub(r'COM', '', port)}::INSTR"
+        if current_app.resource_manager.list_opened_resources():
+            resource = next((resource for resource in current_app.resource_manager.list_opened_resources() if resource.resource_name == port_string), None)
+            if resource: port = resource
+            else: port = current_app.resource_manager.open_resource(port_string, baud_rate=115200, open_timeout=5000)
+        else: port: Resource = current_app.resource_manager.open_resource(port_string, baud_rate=115200, open_timeout=5000)
         from Classes.Queue import Queue
         self.dbID = None  # Initialize dbID
         self.job: Job | None = None
@@ -98,7 +107,7 @@ class Fabricator(db.Model):
         :rtype: str
         """
         testName = FabricatorConnection.staticCreateConnection(port=serialPort, baud_rate=115200, timeout=60)
-        testName.write("M997\n")
+        testName.write("M997")
         while True:
             response = testName.read()
             if "MACHINE_NAME" in response:
@@ -119,7 +128,8 @@ class Fabricator(db.Model):
         :rtype: Device | None
         """
         assert serialPort is not None, "Serial port is None"
-        from Classes.Fabricators.Printers.Ender.EnderPrinter import EnderPrinter
+        assert issubclass(type(serialPort), Resource), f"Serial port is not a Resource object: {serialPort}"
+        from Classes.Fabricators.Printers.Creality.CrealityPrinter import EnderPrinter
         from Classes.Fabricators.Printers.MakerBot.MakerBotPrinter import MakerBotPrinter
         from Classes.Fabricators.Printers.Prusa.PrusaPrinter import PrusaPrinter
         if serialPort.vid == PrusaPrinter.VENDORID:
@@ -135,8 +145,8 @@ class Fabricator(db.Model):
             else:
                 return None
         elif serialPort.vid == EnderPrinter.VENDORID:
-            from Classes.Fabricators.Printers.Ender.Ender3 import Ender3
-            from Classes.Fabricators.Printers.Ender.Ender3Pro import Ender3Pro
+            from Classes.Fabricators.Printers.Creality.Ender3 import Ender3
+            from Classes.Fabricators.Printers.Creality.Ender3Pro import Ender3Pro
             model = Fabricator.getModelFromGcodeCommand(serialPort)
             if "Ender-3 Pro" in model:
                 return Ender3Pro(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False, websocket_connection=websocket_connection)
@@ -168,24 +178,12 @@ class Fabricator(db.Model):
             return None
         assert isinstance(self, Fabricator), f"self is not a Fabricator object: {self}"
         assert self.dbID is not None, "dbID is None, so there is no way to add the fabricator to the database"
-        from Classes.Fabricators.Printers.Ender.EnderPrinter import EnderPrinter
-        from Classes.Fabricators.Printers.MakerBot.MakerBotPrinter import MakerBotPrinter
-        from Classes.Fabricators.Printers.Prusa.PrusaPrinter import PrusaPrinter
-        if serialPort.vid == PrusaPrinter.VENDORID:
-            from Classes.Fabricators.Printers.Prusa.PrusaMK3 import PrusaMK3
-            from Classes.Fabricators.Printers.Prusa.PrusaMK4 import PrusaMK4
-            from Classes.Fabricators.Printers.Prusa.PrusaMK4S import PrusaMK4S
-            if serialPort.pid == PrusaMK4.PRODUCTID:
-                return PrusaMK4(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
-            elif serialPort.pid == PrusaMK4S.PRODUCTID:
-                return PrusaMK4S(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
-            elif serialPort.pid == PrusaMK3.PRODUCTID:
-                return PrusaMK3(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
-            else:
-                return None
-        elif serialPort.vid == EnderPrinter.VENDORID:
-            from Classes.Fabricators.Printers.Ender.Ender3 import Ender3
-            from Classes.Fabricators.Printers.Ender.Ender3Pro import Ender3Pro
+        cls = device_classes.get((serialPort.vid, serialPort.pid), None)
+        if cls is not None:
+            return cls(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
+        elif serialPort.vid == VID.CREALITY:
+            from Classes.Fabricators.Printers.Creality.Ender3 import Ender3
+            from Classes.Fabricators.Printers.Creality.Ender3Pro import Ender3Pro
             model = Fabricator.getModelFromGcodeCommand(serialPort)
             if "Ender-3 Pro" in model:
                 return Ender3Pro(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
@@ -193,10 +191,6 @@ class Fabricator(db.Model):
                 return Ender3(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
             else:
                 return None
-        elif serialPort.vid == MakerBotPrinter.VENDORID:
-            from Classes.Fabricators.Printers.MakerBot.Replicator2 import Replicator2
-            if serialPort.pid == Replicator2.PRODUCTID:
-                return Replicator2(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
         else:
             #TODO: assume generic printer, do stuff
             return None

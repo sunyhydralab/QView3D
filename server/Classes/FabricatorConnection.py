@@ -6,6 +6,7 @@ import json
 from queue import Queue, Empty
 from abc import ABC
 from serial.tools.list_ports_common import ListPortInfo
+from Classes.MyPyVISA.CustomTCPIPInstrument import EmuTCPIPInstrument
 from globals import current_app as app
 from pyvisa.resources.resource import Resource
 
@@ -66,8 +67,8 @@ class SocketConnection(FabricatorConnection):
 
         # Setup connection listeners
         self._setup_listeners()
-        self.emuListPortInfo = EmuListPortInfo(device=port, description="Emulator", hwid="")
-        self.port = self.emuListPortInfo.device
+        self.emuTCPIPInst = EmuTCPIPInstrument(app.resource_manager, resource_name=port, description="Emulator", hwid="")
+        self.port = self.emuTCPIPInst.comm_port
         self.baud_rate = baud_rate
         self.timeout = timeout
 
@@ -140,9 +141,9 @@ class SocketConnection(FabricatorConnection):
 
         try:
             response = self._receive_queue.get(timeout=self._timeout)
-            return response.encode('utf-8') if response else b''  # Convert string to bytes
+            return response if response else ''
         except Empty:
-            return b''
+            return ''
         finally:
             # Unregister the listener to prevent memory leaks
             app.event_emitter.remove_event("message_received")
@@ -201,7 +202,7 @@ class SocketConnection(FabricatorConnection):
         """
         response = self.read()
         if response is None:
-            response = b''
+            response = ''
 
         return response
 
