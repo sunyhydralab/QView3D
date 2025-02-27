@@ -17,6 +17,10 @@ The project is maintained by computer science students at SUNY New Paltz, under 
 - [**Nathan Gopee**](https://github.com/ndg8743)
 - [**Ari Yeger**](https://github.com/L10nhunter)
 - [**CJ Jenks**](https://github.com/iron768)
+- [**Stiviyan Dragiev**](https://github.com/dragiev1)
+- [**Christopher Jamieson**](https://github.com/shift16)
+- [**Youssup Song**](https://github.com/youssup)
+
 
 ## Features
 
