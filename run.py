@@ -4,11 +4,17 @@ import os
 
 # NPM and Python3 with venv and pip must be installed to use this script
 
+# TODO Allow a .env file to overwrite the below configurations
 # Relative locations of the client and server directories from the root directory
 CLIENT_LOCAL_PATH = "client"
 SERVER_LOCAL_PATH = "server"
 
-# TODO Allow .env file to overwrite below configurations
+# The name of the database file
+DATABASE_FILE_NAME="hvamc.db"
+
+# If the database file should be deleted before running the server, then set this to true
+START_FROM_NEW_DATABASE = True
+
 # Server configuration
 FLASK_SERVER_IP = "localhost" # TODO Have this affect the server
 FLASK_SERVER_PORT = 8000 # TODO Have this affect the server
@@ -38,7 +44,12 @@ def start_client():
         cwd=CLIENT_LOCAL_PATH
     )
 
-def start_server():
+def start_server(fresh_database):
+    # Delete the database file if the developer wants a fresh database for the server
+    if fresh_database == True:
+        os.remove(os.path.join(SERVER_LOCAL_PATH, DATABASE_FILE_NAME))
+        print("Deleted database file")
+
     # Start the server in the background
     return subprocess.Popen(
         # Command for the server
@@ -96,8 +107,8 @@ def get_user_configuration():
             # Continue the loop if the user puts the wrong input
             return get_user_configuration()
         
-def start_debug():
-    return start_client(), start_server()
+def start_debug(fresh_database):
+    return start_client(), start_server(fresh_database)
 
 
 flask_process = None
@@ -118,7 +129,7 @@ match user_configuration:
         elif current_os in ["Linux", "Darwin"]:
             install_software("LINUX")
     case "D":
-        vite_process, flask_process = start_debug()
+        vite_process, flask_process = start_debug(START_FROM_NEW_DATABASE)
     case "R":
         print("Doesn't do anything yet")
         pass # TODO Add release mode
