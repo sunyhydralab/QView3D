@@ -29,15 +29,16 @@ class FabricatorConnection(ABC):
         if websocket_connections is not None and fabricator_id is not None:
             return SocketConnection(port, baud_rate, websocket_connections, fabricator_id, timeout=timeout)
         elif port is not None and baud_rate is not None:
-            if re.match(system_device_prefix + r"\d+", port):
-                port = f"ASRL{re.sub(system_device_prefix, "", port)}::INSTR"
+            if re.match(r"(COM\d+|/ttyACM\d+)", port):
+                port = f"ASRL{re.sub(r"COM", "", port)}::INSTR"
+                print(f"port: {port}")
             elif re.match(r"TCPIP\d+", port):
                 ip = re.match(r"(\d+\.\d+\.\d+\.\d+)", port).group(1)
                 port = f"TCPIP::{ip}::INSTR"
             if app.resource_manager.list_opened_resources():
                 resource = next((resource for resource in app.resource_manager.list_opened_resources() if resource.resource_name == port), None)
                 if resource: return resource
-            return app.resource_manager.open_resource(port, baud_rate=baud_rate, timeout=timeout)
+            return app.resource_manager.open_resource(port, open_timeout=timeout)
         else:
             raise ValueError("Invalid connection parameters")
 

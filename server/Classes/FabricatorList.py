@@ -77,9 +77,9 @@ class FabricatorList:
         :param str serialPortName: the name of the serial port to add
         :param str name: the name of the fabricator to add
         """
-        serialPort: ListPortInfo | SysFS | None = Ports.getPortByName(serialPortName)
-        dbFab: Fabricator | None = next((fabricator for fabricator in Fabricator.queryAll() if fabricator.getHwid() == serialPort.hwid.split(' LOCATION=')[0]), None)
-        listFab: Fabricator | None = next((fabricator for fabricator in self if fabricator.getHwid() == serialPort.hwid.split(' LOCATION=')[0]), None)
+        serialPort: Resource | None = Ports.getPortByName(serialPortName)
+        dbFab: Fabricator | None = next((fabricator for fabricator in Fabricator.queryAll() if fabricator.getHwid() == serialPort.hwid), None)
+        listFab: Fabricator | None = next((fabricator for fabricator in self if fabricator.getHwid() == serialPort.hwid), None)
         newFab: Fabricator | None = None
         if dbFab is not None: # means that the fabricator is in the db
             if listFab is not None: # means that the fabricator is in the list and the db

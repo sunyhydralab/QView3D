@@ -10,8 +10,8 @@ class CustomResourceManager(ResourceManager):
 
     def open_resource(self, resource_name, **kwargs):
         """Ensure serial instruments are instantiated using CustomSerialInstrument."""
-        if resource_name and re.match(system_device_prefix + r"\d+", resource_name):
-            resource_name = f"{re.sub(system_device_prefix, 'ASRL', resource_name)}::INSTR"
+        if resource_name and re.match(r"COM\d+", resource_name):
+            resource_name = f"{re.sub("COM", 'ASRL', resource_name)}::INSTR"
         open_resources = self.list_opened_resources()
         if open_resources:
             resource = next((res for res in open_resources if res.resource_name == resource_name), None)

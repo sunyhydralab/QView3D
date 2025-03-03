@@ -57,17 +57,33 @@ class CustomSerialInstrument(SerialInstrument):
     def hwid(self):
         return self._hwid
 
+    @hwid.setter
+    def hwid(self, hwid):
+        self._hwid = f"USB VID:PID={self.vid:04X}:{self.pid:04X} SER={self.serial_number}" if (self.vid and self.pid) else None
+
     @property
     def vid(self):
         return self._vid
+
+    @vid.setter
+    def vid(self, vid: int):
+        self._vid = vid
 
     @property
     def pid(self):
         return self._pid
 
+    @pid.setter
+    def pid(self, pid: int):
+        self._pid = pid
+
     @property
     def serial_number(self):
         return self._serial_number
+
+    @serial_number.setter
+    def serial_number(self, serial_number):
+        self._serial_number = serial_number
 
     @property
     def comm_port(self):

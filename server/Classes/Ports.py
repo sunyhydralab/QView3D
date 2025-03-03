@@ -56,7 +56,7 @@ class Ports:
         Get a list of all connected serial ports.
         :rtype: list[str]
         """
-        return app.resource_manager.list_resources()
+        return [resource for resource in app.resource_manager.list_resources() if not "ttyS" in resource]
 
     @staticmethod
     def getPortByName(name: str):
@@ -65,7 +65,7 @@ class Ports:
         :param name: The name of the device.
         :type name: str
         :return: The port object
-        :rtype: str | None
+        :rtype: Resource | None
         """
         assert isinstance(name, str), f"Name must be a string: {name} : {type(name)}"
         ports = Ports.getListPorts()
@@ -75,10 +75,11 @@ class Ports:
                 return EmuTCPIPInstrument(app.resource_manager, emu_port, description="Emulator", hwid=emu_hwid)
         for port in ports:
             if not port: continue
-            if re.match(r'ASRL\d+::INSTR', port):
-                port = re.sub(r'ASRL', system_device_prefix, re.sub(r'::INSTR', '', port))
-            if port in name:
-                return port
+            if re.match(r'ASRL\d+::INSTR', port) or re.match(r'ASRL/ttyACM\d+::INSTR', port) or re.match(r'ASRL/dev/ttyACM\d+::INSTR', port):
+                test_name = re.sub(r'ASRL', system_device_prefix, re.sub(r'::INSTR', '', port))
+            else: test_name = port
+            if test_name in name:
+                return app.resource_manager.open_resource(port)
         return None
 
     @staticmethod

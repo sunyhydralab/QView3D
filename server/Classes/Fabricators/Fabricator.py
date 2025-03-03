@@ -31,35 +31,36 @@ class Fabricator(db.Model):
     )
     devicePort = db.Column(db.String(50), nullable=False)
 
-    def __init__(self, port: str | None, name: str = "", consoleLogger: TextIO | None = None, fileLogger: str | None = None):
+    def __init__(self, port: str | Resource | None, name: str = "", consoleLogger: TextIO | None = None, fileLogger: str | None = None):
         """
         Initialize a new Fabricator instance.
-        :param str | None port: the serial port to connect to
+        :param str | Resource | None port: the serial port to connect to
         :param str name: the name to show the frontend
         :param TextIO | None consoleLogger: the console to log to
         :param str | None fileLogger: the file path to log to
         """
         if port is None:
             return
-        assert isinstance(port, str), f"Invalid port type: {type(port)}"
+        if isinstance(port, Resource): port_string = port.resource_name
+        elif isinstance(port, str): port_string = port
+        else: raise AssertionError(f"Invalid port type: {type(port)}")
         assert isinstance(name, str), f"Invalid name type: {type(name)}"
-        port_string = port
-        if re.match(system_device_prefix + r"\d+", port):
-            port_string = f"ASRL{re.sub(system_device_prefix, '', port)}::INSTR"
+        if re.match(system_device_prefix + r"\d+", port_string):
+            port_string = f"ASRL{re.sub(system_device_prefix, '', port_string)}::INSTR"
         if current_app.resource_manager.list_opened_resources():
             resource = next((resource for resource in current_app.resource_manager.list_opened_resources() if resource.resource_name == port_string), None)
             if resource: port = resource
             else: port = current_app.resource_manager.open_resource(port_string, baud_rate=115200, open_timeout=5000)
-        else: port: Resource = current_app.resource_manager.open_resource(port_string, baud_rate=115200, open_timeout=5000)
+        else: port = current_app.resource_manager.open_resource(port_string, baud_rate=115200, open_timeout=5000)
         from Classes.Queue import Queue
         self.dbID = None  # Initialize dbID
         self.job: Job | None = None
         self.queue: Queue = Queue()
         self.status: str = "configuring"
-        self.hwid = port.hwid
+        self.hwid = port.hwid if hasattr(port, "hwid") else ""
         self.description = "New Fabricator"
         self.name: str = name
-        self.devicePort = port.comm_port
+        self.devicePort = port.comm_port if hasattr(port, "comm_port") else ""
         dbFab = Fabricator.query.filter_by(hwid=self.hwid).first()
         if dbFab is None:
             db.session.add(self)
@@ -179,6 +180,8 @@ class Fabricator(db.Model):
             return None
         assert isinstance(self, Fabricator), f"self is not a Fabricator object: {self}"
         assert self.dbID is not None, "dbID is None, so there is no way to add the fabricator to the database"
+        assert hasattr(serialPort, "vid"), "serial port has no VID"
+        assert hasattr(serialPort, "pid"), "serial port has no PID"
         cls = device_classes.get((serialPort.vid, serialPort.pid), None)
         if cls is not None:
             return cls(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)

@@ -9,7 +9,7 @@ import platform
 # Global variables
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 uploads_folder = os.path.abspath(os.path.join(root_path, 'uploads'))
-system_device_prefix = "COM" if platform.system() == "Windows" else "TTYACM"
+system_device_prefix = "COM" if platform.system() == "Windows" else ""
 emulator_connections = {}
 event_emitter = EventEmitter()
 

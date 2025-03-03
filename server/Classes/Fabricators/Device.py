@@ -43,8 +43,8 @@ class Device(ABC):
     def __init__(self, dbID: int, serialPort: Resource, consoleLogger=sys.stdout, fileLogger=None, websocket_connection=None, addLogger: bool =False, name: str = None):
         self.name = name if name else self.DESCRIPTION
         self.dbID: int = dbID
-        self.serialPort: str | None = serialPort.comm_port
-        self.serialID: str | None = serialPort.serial_number
+        self.serialPort: str | None = serialPort.comm_port if hasattr(serialPort,"comm_port") else None
+        self.serialID: str | None = serialPort.serial_number if hasattr(serialPort, "serial_number") else None
         self.logger = Logger(self.name, port=self.serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, loggingLevel=Logger.DEBUG, consoleLevel=Logger.ERROR) if addLogger else None
         self.status = "idle"
         self.verdict = ""
