@@ -525,7 +525,7 @@ const getFilament = (file: File) => {
               <span v-if="isAsteriksVisible" class="text-danger">*</span>
               <span class="tooltiptext">Assign a name for the job.</span>
             </div>
-            <input v-model="name" class="form-control" type="text" id="name" name="name" />
+            <input v-model="name" class="form-control" type="text" id="name" name="name"/>
           </div>
 
           <div>

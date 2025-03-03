@@ -7,6 +7,7 @@ import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 import VueDatePicker from '@vuepic/vue-datepicker';
+import FavoritesOffCanvasBox from '@/components/FavoritesOffCanvasBox.vue';
 import '@vuepic/vue-datepicker/dist/main.css';
 
 const isLoading = ref(false)
@@ -349,11 +350,6 @@ const favoriteJob = async (job: Job, fav: boolean) => {
     jobToUnfavorite = null;
 }
 
-const toggleButton = () => {
-    buttonTransform.value = buttonTransform.value === 0 ? -700 : 0;
-    isOffcanvasOpen.value = !isOffcanvasOpen.value;
-}
-
 const openGCodeModal = async (job: Job, printerName: string) => {
     currentJob.value = job
     currentJob.value.printer = printerName
@@ -507,56 +503,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
         </div>
     </div>
 
-    <!-- bootstrap off canvas to the right -->
-    <div class="offcanvas offcanvas-end" data-bs-backdrop="static" tabindex="-1" id="offcanvasRight"
-        aria-labelledby="offcanvasRightLabel">
-        <div class="offcanvas-header">
-            <div class="container-fluid">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <h5 class="offcanvas-title" id="offcanvasRightLabel">Favorite Prints</h5>
-                    </div>
-                    <div class="col-auto">
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
-                            aria-label="Close" v-on:click="toggleButton"></button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="offcanvas-body" style="max-height: 100vh; overflow-y: auto;">
-            <div class="grid-container header">
-                <h5>Job Name</h5>
-                <h5>File Name</h5>
-                <h5>Actions</h5>
-            </div>
-            <div v-if="favoriteJobs.length > 0">
-              <div v-for="job in favoriteJobs" :key="job.id" class="mb-3">
-                <div class="grid-container job">
-                  <p class="my-auto truncate-name">{{ job.name }}</p>
-                  <p class="my-auto truncate-file">{{ job.file_name_original }}</p>
-                  <div class="d-flex align-items-center">
-                    <i class="fas fa-star" style="margin-right: 10px;" data-bs-toggle="modal"
-                      data-bs-target="#favoriteModal" @click="jobToUnfavorite = job"></i>
-                    <button class="btn btn-secondary download" style="margin-right: 10px;"
-                      @click="getFileDownload(job.id)" :disabled="job.file_name_original.includes('.gcode:')">
-                      <i class="fas fa-download"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <p v-else class="text-center" style="color: var(--color-nav-text)">No favorite jobs found. Favorite your first job!</p>
-        </div>
-    </div>
-    <div class="offcanvas-btn-box" :style="{ transform: `translateX(${buttonTransform}px)` }">
-        <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight"
-            aria-controls="offcanvasRight" v-on:click="toggleButton"
-            style="border-top-right-radius: 0; border-bottom-right-radius: 0; padding: 5px 10px;">
-            <span v-if="isOffcanvasOpen"><i class="fas fa-star"></i></span>
-            <span><i class="fas" :class="isOffcanvasOpen ? 'fa-chevron-right' : 'fa-chevron-left'"></i></span>
-            <span v-if="!isOffcanvasOpen"><i class="fas fa-star"></i></span>
-        </button>
-    </div>
+    <FavoritesOffCanvasBox />
 
     <div class="modal fade" id="csvModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
         data-bs-backdrop="static">
@@ -997,22 +944,6 @@ const onlyNumber = ($event: KeyboardEvent) => {
     background-color: var(--color-background-mute);
 }
 
-.offcanvas {
-    width: 700px;
-}
-
-.offcanvas-btn-box {
-    transition: transform .3s ease-in-out;
-    position: fixed;
-    top: 50%;
-    right: 0;
-    z-index: 1041;
-}
-
-.offcanvas-end {
-    border-left: 0;
-}
-
 table {
     width: 100%;
     border-collapse: collapse;
@@ -1025,28 +956,5 @@ ul.dropdown-menu.w-100.show li {
 
 ul.dropdown-menu.w-100.show li.divider {
     margin-left: 0;
-}
-
-/*.form-check-input:focus,
-.form-control:focus {
-    outline: none;
-    box-shadow: none;
-    border-color: #e2e2e2;
-}*/
-
-label.form-check-label {
-    cursor: pointer;
-}
-
-.form-control {
-    background: var(--color-background);
-    color: var(--color-background-font);
-    border: 1px solid var(--color-border);
-}
-
-.form-select {
-    background-color: var(--color-background);
-    color: var(--color-background-font);
-    border-color: var(--color-border);
 }
 </style>
