@@ -5,7 +5,7 @@ import re
 class CustomTCPIPInstrument(TCPIPInstrument):
     def __init__(self, resource_manager, resource_name, **kwargs):
         super().__init__(resource_manager, resource_name)
-        self.comm_port = re.sub(r"TCPIP\d+::", "", re.sub(r"::INSTR", "", resource_name))
+        self.comm_port = re.sub(r"TCPIP\d+::", "", re.sub(r"::(INSTR|SOCKET)", "", resource_name))
         self._timeout = kwargs.get("open_timeout", 60000)
         self._vid = kwargs.get("vid", None)
         self._pid = kwargs.get("pid", None)
@@ -59,10 +59,16 @@ class CustomTCPIPInstrument(TCPIPInstrument):
 class EmuTCPIPInstrument(CustomTCPIPInstrument):
     def __init__(self, resource_manager, resource_name, **kwargs):
         super().__init__(resource_manager, resource_name, **kwargs)
-        self._vid = kwargs.get("vid", 0x0403)
-        self._pid = kwargs.get("pid", 0x6001)
-        self._serial_number = kwargs.get("serial_number", "FT123456")
-        self._hwid = f"TCPIP VID:PID={self.vid:04X}:{self.pid:04X} SER={self.serial_number}" if self.vid and self.pid else None
+        if kwargs.get("hwid", False):
+            self._hwid = kwargs.get("hwid")
+            self._vid = self.hwid.split("VID:PID=")[1].split(":")[0]
+            self._pid = self.hwid.split("VID:PID=")[1].split(":")[1].split(" ")[0]
+            self._serial_number = self.hwid.split("SER=")[1]
+        else:
+            self._vid = kwargs.get("vid", 0x0403)
+            self._pid = kwargs.get("pid", 0x6001)
+            self._serial_number = kwargs.get("serial_number", "FT123456")
+            self._hwid = f"TCPIP VID:PID={self.vid:04X}:{self.pid:04X} SER={self.serial_number}" if self.vid and self.pid else None
         self.open(kwargs.get("access_mode", constants.AccessModes.no_lock), kwargs.get("open_timeout", 60000))
         self.timeout = self._timeout
         self.write_termination = '\n'

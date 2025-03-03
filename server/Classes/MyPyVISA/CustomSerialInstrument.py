@@ -3,9 +3,7 @@ from pyvisa.errors import InvalidSession
 from pyvisa import constants
 import re
 from serial.tools.list_ports import grep
-
-from globals import tabs
-
+from globals import tabs, system_device_prefix
 
 class CustomSerialInstrument(SerialInstrument):
     baud_rate: int = 115200
@@ -13,7 +11,7 @@ class CustomSerialInstrument(SerialInstrument):
     def __init__(self, resource_manager, resource_name, **kwargs):
         """Extend SerialInstrument to include VID, PID, and serial number."""
         super().__init__(resource_manager, resource_name)
-        self._comm_port = re.sub(r"ASRL", "COM", re.sub(r"::INSTR", "", resource_name))
+        self._comm_port = re.sub(r"ASRL", system_device_prefix, re.sub(r"::INSTR", "", resource_name))
         pyserial_port = next((dev for dev in grep(self.comm_port)), None)
         self._vid = pyserial_port.vid if pyserial_port else None
         self._pid = pyserial_port.pid if pyserial_port else None

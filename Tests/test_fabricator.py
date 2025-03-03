@@ -136,7 +136,7 @@ def test_gcode_print_time(app, fabricator):
     fabricator.device.serialConnection.write("M31\n")
     line = ""
     from Mixins.hasResponseCodes import checkTime
-    while not checkTime(line):
+    while not checkTime(line, fabricator.device):
         line = fabricator.device.serialConnection.readline().decode("utf-8")
     if isVerbose: fabricator.device.logger.debug(f"not stuck in print time loop: time: {line}")
 

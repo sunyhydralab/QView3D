@@ -54,5 +54,8 @@ def checkTemp(temps, dev):
         return current_app.handle_errors_and_logging(e, dev.logger)
 
 def checkTime(line, dev):
-    line = (line.decode() if isinstance(line, bytes) else line).strip()
-    return re.search(r"\d+m \d+s", line) or re.search(r"\d+ min, \d+ sec", line)
+    try:
+        line = (line.decode() if isinstance(line, bytes) else line).strip()
+        return re.search(r"\d+m \d+s", line) or re.search(r"\d+ min, \d+ sec", line)
+    except Exception as e:
+        current_app.handle_errors_and_logging(e, dev.logger)

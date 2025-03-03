@@ -120,7 +120,7 @@ def repairFabricator():
         port = Ports.getPortByName(device_name)
 
         if port:
-            fabricator = Fabricator.staticCreateDevice(port)  # Ensure the Fabricator has this method
+            fabricator = Fabricator.staticCreateDevice(app.resource_manager.open_resource(port))  # Ensure the Fabricator has this method
             if fabricator:
                 repair_result = fabricator.repair()
                 return jsonify({"success": True, "message": repair_result})

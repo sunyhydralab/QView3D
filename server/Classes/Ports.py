@@ -4,10 +4,12 @@ import serial
 import serial.tools.list_ports
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
+from pyvisa.resources.resource import Resource
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.MyPyVISA.CustomTCPIPInstrument import EmuTCPIPInstrument
 from Classes.serialCommunication import sendGcode
 from globals import current_app as app
+from globals import system_device_prefix
 
 class Ports:
     @staticmethod
@@ -70,11 +72,11 @@ class Ports:
         if len(app.emulator_connections) > 0:
             emu_port, emu_name, emu_hwid = app.get_emu_ports()
             if emu_port and emu_name and emu_hwid and emu_port == name:
-                return EmuTCPIPInstrument(emu_port, description="Emulator", hwid=emu_hwid)
+                return EmuTCPIPInstrument(app.resource_manager, emu_port, description="Emulator", hwid=emu_hwid)
         for port in ports:
             if not port: continue
             if re.match(r'ASRL\d+::INSTR', port):
-                port = re.sub(r'ASRL', 'COM', re.sub(r'::INSTR', '', port))
+                port = re.sub(r'ASRL', system_device_prefix, re.sub(r'::INSTR', '', port))
             if port in name:
                 return port
         return None
@@ -109,17 +111,17 @@ class Ports:
         return registered_fabricators
 
     @staticmethod
-    def diagnosePort(port: ListPortInfo | SysFS) -> str:
+    def diagnosePort(port: Resource) -> str:
         """
         Diagnose a port to check if it is functional by sending basic G-code commands.
-        :param ListPortInfo | SysFS port: The port to diagnose
+        :param Resource port: The port to diagnose
         :rtype: str
         """
         try:
             if app:
                 device = app.fabricator_list.getFabricatorByPort(port).device
             else:
-                device = Fabricator(port).device
+                device = Fabricator(port.resource_name).device
             if not device:
                 return "Device creation failed."
 
@@ -128,6 +130,6 @@ class Ports:
             response = device.getSerialConnection().read().strip()
             device.disconnect()
 
-            return f"Diagnosis result for {port.device}: {response}"
+            return f"Diagnosis result for {port.resource_name}: {response}"
         except Exception as e:
-            return f"Error diagnosing port {port.device}: {e}"
+            return f"Error diagnosing port {port.resource_name}: {e}"

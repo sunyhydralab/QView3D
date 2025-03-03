@@ -13,7 +13,7 @@ from Mixins.hasEndingSequence import hasEndingSequence
 from models.config import Config
 from models.db import db
 from datetime import datetime, timezone
-from globals import current_app, root_path, VID
+from globals import current_app, root_path, VID, system_device_prefix
 from Classes.Device_Classes import device_classes
 from pyvisa.resources.resource import Resource
 
@@ -44,8 +44,8 @@ class Fabricator(db.Model):
         assert isinstance(port, str), f"Invalid port type: {type(port)}"
         assert isinstance(name, str), f"Invalid name type: {type(name)}"
         port_string = port
-        if re.match(r"COM\d+", port):
-            port_string = f"ASRL{re.sub(r'COM', '', port)}::INSTR"
+        if re.match(system_device_prefix + r"\d+", port):
+            port_string = f"ASRL{re.sub(system_device_prefix, '', port)}::INSTR"
         if current_app.resource_manager.list_opened_resources():
             resource = next((resource for resource in current_app.resource_manager.list_opened_resources() if resource.resource_name == port_string), None)
             if resource: port = resource
@@ -107,6 +107,7 @@ class Fabricator(db.Model):
         :rtype: str
         """
         testName = FabricatorConnection.staticCreateConnection(port=serialPort, baud_rate=115200, timeout=60)
+        testName = FabricatorConnection.staticCreateConnection(port=str(serialPort.resource_name), baud_rate=115200, timeout=60000)
         testName.write("M997")
         while True:
             response = testName.read()

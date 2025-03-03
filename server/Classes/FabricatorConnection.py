@@ -8,6 +8,7 @@ from abc import ABC
 from serial.tools.list_ports_common import ListPortInfo
 from Classes.MyPyVISA.CustomTCPIPInstrument import EmuTCPIPInstrument
 from globals import current_app as app
+from globals import system_device_prefix
 from pyvisa.resources.resource import Resource
 
 
@@ -24,11 +25,12 @@ class FabricatorConnection(ABC):
         :return: FabricatorConnection instance
         :rtype: Resource | SocketConnection
         """
+        assert isinstance(port, str), f"Port must be a str, got {type(port)}"
         if websocket_connections is not None and fabricator_id is not None:
             return SocketConnection(port, baud_rate, websocket_connections, fabricator_id, timeout=timeout)
         elif port is not None and baud_rate is not None:
-            if re.match(r"COM\d+", port):
-                port = f"ASRL{re.sub(r"COM", "", port)}::INSTR"
+            if re.match(system_device_prefix + r"\d+", port):
+                port = f"ASRL{re.sub(system_device_prefix, "", port)}::INSTR"
             elif re.match(r"TCPIP\d+", port):
                 ip = re.match(r"(\d+\.\d+\.\d+\.\d+)", port).group(1)
                 port = f"TCPIP::{ip}::INSTR"
