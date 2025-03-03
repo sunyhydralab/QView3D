@@ -106,7 +106,7 @@ class Fabricator(db.Model):
         :param Resource | None serialPort: the serial port to connect to
         :rtype: str
         """
-        testName = FabricatorConnection.staticCreateConnection(port=serialPort, baud_rate=115200, timeout=60)
+        print(serialPort.resource_name)
         testName = FabricatorConnection.staticCreateConnection(port=str(serialPort.resource_name), baud_rate=115200, timeout=60000)
         testName.write("M997")
         while True:
