@@ -174,7 +174,7 @@ const doCloseRegisterModal = async () => {
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button v-if="modalAction === 'doHardReset'" type="button" class="btn btn-danger"
                         data-bs-dismiss="modal" @click="doHardReset(selectedPrinter)">Reset</button>
-                    <button v-if="modalAction === 'doDelete'" type="button" class="btn btn-danger"
+                    <button v-if="modalAction === 'doDelete'" type="button" class="btn btn-primary"
                         data-bs-dismiss="modal" @click="doDelete(selectedPrinter!)">Deregister</button>
                 </div>
             </div>
@@ -247,7 +247,7 @@ const doCloseRegisterModal = async () => {
                             </div>
                             <div v-if="editMode && (editNum == printer.id)" class="d-flex align-items-center"
                                 style="margin-bottom: 5px;">
-                                <input id="editName" type="text" class="form-control me-2" v-model="newName">
+                                <input id="editName" type="text" class="form-control me-2" v-model="newName" @keydown.enter="saveName(printer)">
                                 <button class="btn btn-success me-2" @click="saveName(printer)">Save</button>
                                 <button class="btn btn-secondary"
                                     @click="editMode = false; editNum = undefined; newName = ''">Cancel</button>

@@ -6,12 +6,10 @@ import {
     useGetPorts,
     useMoveHead,
     useRegisterPrinter,
-    useRetrievePrinters,
     useRetrievePrintersInfo
 } from '@/model/ports';
 
 const { ports } = useGetPorts();
-const { retrieve } = useRetrievePrinters();
 const { retrieveInfo } = useRetrievePrintersInfo();
 const { register } = useRegisterPrinter();
 const { move } = useMoveHead();
@@ -113,13 +111,13 @@ const doMove = async (printer: Device) => {
                             </div>
                             <label for="name" class="form-label">Custom Name</label>
                             <input type="text" class="form-control" id="name" placeholder="Custom Name" maxlength="49"
-                                v-model="customname" required>
+                                v-model="customname" required @keydown.enter="doRegister">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer d-flex justify-content-between">
                     <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" v-bind:disabled="!customname"
-                        @click="doRegister">Register</button>
+                        @click="doRegister" >Register</button>
                     <div v-if="selectedDevice">
                         <div class="tooltip-modal">
                             <div type="button" class="btn btn-primary" @click="doMove(selectedDevice as Device)">Home
