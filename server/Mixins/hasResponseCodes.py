@@ -48,7 +48,7 @@ def checkTemp(temps, dev):
     try:
         if len(temps) == 2:
             if float(temps[1]) == 0.0: return True
-            return abs(float(temps[1]) - float(temps[0])) < 0.25
+            return abs(float(temps[1]) - float(temps[0])) <= 0.5
         return False
     except Exception as e:
         return current_app.handle_errors_and_logging(e, dev.logger)
