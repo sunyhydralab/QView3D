@@ -71,10 +71,8 @@ let searchCriteria = ref('');
 const isOnlyJobNameChecked = computed(() => searchByJobName.value && !searchByFileName.value);
 const isOnlyFileNameChecked = computed(() => !searchByJobName.value && searchByFileName.value);
 
-let buttonTransform = ref(0);
 let favoriteJobs = ref<Array<Job>>([])
 let jobToUnfavorite: Job | null = null;
-let isOffcanvasOpen = ref(false);
 
 let jobComments = ref('')
 const showText = ref(false)
@@ -521,27 +519,6 @@ const onlyNumber = ($event: KeyboardEvent) => {
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button @click="doDownloadCsv" type="button" class="btn btn-success"
                         data-bs-dismiss="modal">Download CSV</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- modal to unfavorite a job in the off canvas -->
-    <div class="modal fade" id="favoriteModal" tabindex="-1" aria-labelledby="favoriteModalLabel" aria-hidden="true"
-        data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="favoriteModalLabel">Unfavorite Job</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to unfavorite this job?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
-                        @click="favoriteJob(jobToUnfavorite!, false)">Unfavorite</button>
                 </div>
             </div>
         </div>

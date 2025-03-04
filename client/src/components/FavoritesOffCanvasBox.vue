@@ -41,6 +41,7 @@ const favoriteJob = async (job: Job, fav: boolean) => {
 
     jobToUnfavorite = null;
 }
+
 </script>
 
 <template>
@@ -56,7 +57,7 @@ const favoriteJob = async (job: Job, fav: boolean) => {
       <div class="container-fluid">
         <div class="row align-items-center">
           <div class="col">
-            <h5 class="offcanvas-title" id="offcanvasRightLabel">Favorite Prints</h5>
+            <h5 class="offcanvas-title " id="offcanvasRightLabel">Favorite Prints</h5>
           </div>
           <div class="col-auto">
             <button
@@ -123,6 +124,27 @@ const favoriteJob = async (job: Job, fav: boolean) => {
       <span v-if="!isOffcanvasOpen"><i class="fas fa-star"></i></span>
     </button>
   </div>
+
+  <!-- modal to unfavorite a job in the off canvas -->
+  <div class="modal fade" id="favoriteModal" tabindex="-1" aria-labelledby="favoriteModalLabel" aria-hidden="true"
+        data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="favoriteModalLabel">Unfavorite Job</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to unfavorite this job?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal"
+                        @click="favoriteJob(jobToUnfavorite!, false)">Unfavorite</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>
 
 <style scoped>
