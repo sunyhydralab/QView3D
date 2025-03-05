@@ -33,7 +33,9 @@ class Printer(Device, metaclass=ABCMeta):
     callablesHashtable = {**Device.callablesHashtable, **callablesHashtable}
     
     bedTemperature: int | float | None = None
+    bedTargetTemp: float = 0.0
     nozzleTemperature: int | float |  None = None
+    nozzleTargetTemp: float = 0.0
 
     def __init__(self, dbID, serialPort, consoleLogger=None, fileLogger=None, addLogger: bool =False, websocket_connection=None, name:str = None):
         super().__init__(dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
@@ -363,43 +365,65 @@ class Printer(Device, metaclass=ABCMeta):
         if logger is None: logger = self.logger
         hashIndex = gcode.decode().split("\n")[0].split(" ")[0]
 
-        if hashIndex == "M109":
-            try:
-                temp = gcode.decode().split("S")[1].split("\n")[0]
-            except IndexError:
+        match hashIndex:
+            case "M104":
                 try:
-                    temp = gcode.decode().split("R")[1].split("\n")[0]
+                    temp = gcode.split("S")[1].split("\n")[0]
+                except IndexError:
+                    try:
+                        temp = gcode.split("R")[1].split("\n")[0]
+                    except IndexError:
+                        temp = None
+                if temp:
+                    self.nozzleTargetTemp = float(temp)
+            case "M140":
+                try:
+                    temp = gcode.split("S")[1].split("\n")[0]
+                except IndexError:
+                    try:
+                        temp = gcode.split("R")[1].split("\n")[0]
+                    except IndexError:
+                        temp = None
+                if temp:
+                    self.bedTargetTemp = float(temp)
+            case "M109":
+                try:
+                    temp = gcode.split("S")[1].split("\n")[0]
+                except IndexError:
+                    try:
+                        temp = gcode.split("R")[1].split("\n")[0]
+                    except IndexError:
+                        temp = None
+                if temp:
+                    if logger is not None: logger.info(f"Waiting for hotend temperature to stabilize at {temp}\u00B0C...")
+                    self.nozzleTargetTemp = float(temp)
+                    current_app.socketio.emit("console_update",
+                                          {"message": f"Waiting for hotend temperature to stabilize at {temp}\u00B0C...", "level": "info",
+                                           "printerid": self.dbID})
+                else:
+                    if logger is not None: logger.info("Waiting for hotend temperature to stabilize...")
+                    current_app.socketio.emit("console_update",
+                                          {"message": "Waiting for hotend temperature to stabilize...", "level": "info",
+                                           "printerid": self.dbID})
+            case "M190":
+                try:
+                    temp = gcode.split("S")[1].split("\n")[0]
                 except IndexError:
                     temp = None
-            if temp:
-                if logger is not None: logger.info(f"Waiting for hotend temperature to stabilize at {temp}\u00C2\u00B0C...")
-                current_app.socketio.emit("console_update",
-                                      {"message": f"Waiting for hotend temperature to stabilize at {temp}\u00B0C...", "level": "info",
-                                       "printerid": self.dbID})
-            else:
-                if logger is not None: logger.info("Waiting for hotend temperature to stabilize...")
-                current_app.socketio.emit("console_update",
-                                      {"message": "Waiting for hotend temperature to stabilize...", "level": "info",
-                                       "printerid": self.dbID})
-        if hashIndex == "M190":
-            try:
-                temp = gcode.decode().split("S")[1].split("\n")[0]
-            except IndexError:
-                temp = None
-            if temp:
-                if logger is not None: logger.info(f"Waiting for bed temperature to stabilize at {temp}\u00C2\u00B0C...")
-                current_app.socketio.emit("console_update",
-                                      {"message": f"Waiting for bed temperature to stabilize at {temp}\u00B0C...", "level": "info",
-                                       "printerid": self.dbID})
-            else:
-                if logger is not None: logger.info("Waiting for bed temperature to stabilize...")
-                current_app.socketio.emit("console_update",
-                                      {"message": "Waiting for bed temperature to stabilize...", "level": "info",
-                                       "printerid": self.dbID})
-        elif hashIndex == "G28":
-            if logger is not None: logger.info("Homing...")
-            current_app.socketio.emit("console_update",
-                                      {"message": "Homing...", "level": "info", "printerid": self.dbID})
+                if temp:
+                    if logger is not None: logger.info(f"Waiting for bed temperature to stabilize at {temp}\u00B0C...")
+                    self.bedTargetTemp = float(temp)
+                    current_app.socketio.emit("console_update",
+                                          {"message": f"Waiting for bed temperature to stabilize at {temp}\u00B0C...", "level": "info",
+                                           "printerid": self.dbID})
+                else:
+                    if logger is not None: logger.info("Waiting for bed temperature to stabilize...")
+                    current_app.socketio.emit("console_update",
+                                          {"message": "Waiting for bed temperature to stabilize...", "level": "info",
+                                           "printerid": self.dbID})
+            case "G28":
+                if logger is not None: logger.info("Homing...")
+                current_app.socketio.emit("console_update", {"message": "Homing...", "level": "info", "printerid": self.dbID})
         return hashIndex
 
     def pause(self, logger: JobLogger = None):
@@ -427,8 +451,8 @@ class Printer(Device, metaclass=ABCMeta):
             assert isinstance(self, Device), "self is not an instance of Device"
             assert self.serialConnection is not None, "Serial connection is None"
             assert self.serialConnection.is_open, "Serial connection is not open"
-            if hasattr(self, "doNotKeepAliveCMD") and self.doNotKeepAliveCMD: self.sendGcode(self.doNotKeepAliveCMD)
-            self.sendGcode(self.resumeCMD)
+            if hasattr(self, "doNotKeepAliveCMD") and self.doNotKeepAliveCMD: self.sendGcode(self.doNotKeepAliveCMD, False)
+            self.sendGcode(self.resumeCMD, False)
             if self.logger is not None: self.logger.info("Job Resumed")
             return True
         except Exception as e:
@@ -439,7 +463,7 @@ class Printer(Device, metaclass=ABCMeta):
         try:
             assert self.serialConnection is not None, "Serial connection is None"
             assert self.serialConnection.is_open, "Serial connection is not open"
-            self.sendGcode(b"M155 S1\n")
+            self.sendGcode("M155 S1\n", False)
             return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self.logger)
@@ -447,11 +471,11 @@ class Printer(Device, metaclass=ABCMeta):
     def disconnect(self) -> bool:
         try:
             if self.serialConnection and self.serialConnection.is_open:
-                self.sendGcode(b"M155 S100\n")
-                self.sendGcode(b"M155 S0\n")
-                self.sendGcode(b"M104 S0\n")
-                self.sendGcode(b"M140 S0\n")
-                self.sendGcode(b"M84\n")
+                self.sendGcode("M155 S100\n", False)
+                self.sendGcode("M155 S0\n", False)
+                self.sendGcode("M104 S0\n", False)
+                self.sendGcode("M140 S0\n", False)
+                self.sendGcode("M84\n", False)
                 self.serialConnection.close()
             return True
         except Exception as e:

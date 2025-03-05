@@ -27,29 +27,39 @@ def checkEcho(line, dev):
     return line.startswith("echo")
 
 def checkBedTemp(line, dev):
-    line = (line.decode() if isinstance(line, bytes) else line).strip().lower()
+    from Classes.Fabricators.Printers.Printer import Printer
+    assert isinstance(dev, Printer), f"Expected Printer, got {type(dev)}"
+    line = (line.decode() if isinstance(line, bytes) else line).strip()
     try:
-        return checkTemp([temp.strip() for temp in line.split("b:")[1].split("t0:")[0].split("x:")[0].split("/")], dev)
-    except IndexError:
-        return False
+        match = re.search(r'B:(\d+\.?\d*) ?/?(\d+\.?\d*)?', line)
+        temps = match.groups() if match else None
+        return checkTemp(temps, dev, ["bedTemperature", "bedTargetTemperature"])
     except Exception as e:
         return current_app.handle_errors_and_logging(e, dev.logger)
 
 def checkExtruderTemp(line, dev):
+    from Classes.Fabricators.Printers.Printer import Printer
+    assert isinstance(dev, Printer), f"Expected Printer, got {type(dev)}"
     line = (line.decode() if isinstance(line, bytes) else line).strip()
     try:
-        return checkTemp([temp.strip() for temp in line.split("T:")[1].split("B:")[0].split("/")], dev)
-    except IndexError:
-        return False
+        match = re.search(r'T:(\d+\.?\d*) ?/?(\d+\.?\d*)?', line)
+        temps = match.groups() if match else None
+        return checkTemp(temps, dev, ["extruderTemperature", "extruderTargetTemperature"])
     except Exception as e:
         return current_app.handle_errors_and_logging(e, dev.logger)
 
-def checkTemp(temps, dev):
+def checkTemp(temps, dev, attrs):
     try:
-        if len(temps) == 2:
-            if float(temps[1]) == 0.0: return True
-            return abs(float(temps[1]) - float(temps[0])) <= 0.5
-        return False
+        if not temps: return False
+        match len(temps):
+            case 2:
+                setattr(dev, attrs[0], float(temps[0]))
+                setattr(dev, attrs[1], float(temps[1]))
+            case 1:
+                setattr(dev, attrs[0], float(temps[0]))
+            case _:
+                return False
+        return abs(getattr(dev, attrs[1]) - getattr(dev, attrs[0])) < 0.75
     except Exception as e:
         return current_app.handle_errors_and_logging(e, dev.logger)
 
