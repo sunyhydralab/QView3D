@@ -25,6 +25,7 @@ export function setupSockets(printers: Array<Device>) {
 
 // *** PORTS ***
 export function setupTempSocket(printers: Array<Device>) {
+  socket.value.off('temp_update')
   socket.value.on('temp_update', (data: any) => {
     const printer = printers.find((p: Device) => p.id === data.printerid)
     if (printer) {
@@ -36,6 +37,7 @@ export function setupTempSocket(printers: Array<Device>) {
 
 // function to set up the socket for status updates
 export function setupStatusSocket(printers: Array<Device>) {
+  socket.value.off('status_update')
   socket.value.on('status_update', (data: any) => {
     if (printers) {
       const printer = printers.find((p: Device) => p.id === data.fabricator_id)
@@ -50,6 +52,7 @@ export function setupStatusSocket(printers: Array<Device>) {
 
 export function setupJobStatusSocket(printers: Array<Device>) {
   // Always set up the socket connection and event listener
+  socket.value.off('job_status_update')
   socket.value.on('job_status_update', (data: any) => {
     if (printers) {
       const job = printers
@@ -66,6 +69,7 @@ export function setupJobStatusSocket(printers: Array<Device>) {
 }
 
 export function setupQueueSocket(printers: Array<Device>) {
+  socket.value.off('queue_update')
   socket.value.on('queue_update', (data: any) => {
     if (printers) {
       const printer = printers.find((p: Device) => p.id === data.printerid)
@@ -79,6 +83,7 @@ export function setupQueueSocket(printers: Array<Device>) {
 }
 
 export function setupErrorSocket(printers: Array<Device>) {
+  socket.value.off('error_update')
   socket.value.on('error_update', (data: any) => {
     if (printers) {
       const printer = printers.find((p: Device) => p.id === data.printerid)
@@ -92,6 +97,7 @@ export function setupErrorSocket(printers: Array<Device>) {
 }
 
 export function setupCanPauseSocket(printers: Array<Device>) {
+  socket.value.off('can_pause')
   socket.value.on('can_pause', (data: any) => {
     if (printers) {
       const printer = printers.find((p: Device) => p.id === data.printerid)
@@ -107,6 +113,7 @@ export function setupCanPauseSocket(printers: Array<Device>) {
 // *** JOBS ***
 export function setupPauseFeedbackSocket(printers: Array<Device>) {
   // Always set up the socket connection and event listener
+  socket.value.off('file_pause_update')
   socket.value.on('file_pause_update', (data: any) => {
     if (printers) {
       const job = printers
@@ -124,6 +131,7 @@ export function setupPauseFeedbackSocket(printers: Array<Device>) {
 
 export function setupTimeStartedSocket(printers: Array<Device>) {
   // Always set up the socket connection and event listener
+  socket.value.off('set_time_started')
   socket.value.on('set_time_started', (data: any) => {
     if (printers) {
       const job = printers
@@ -142,6 +150,7 @@ export function setupTimeStartedSocket(printers: Array<Device>) {
 // function to constantly update progress of job
 export function setupProgressSocket(printers: Array<Device>) {
   // Always set up the socket connection and event listener
+  socket.value.off('progress_update')
   socket.value.on('progress_update', (data: any) => {
     if (printers) {
       const job = printers
@@ -164,6 +173,7 @@ export function setupProgressSocket(printers: Array<Device>) {
 
 export function setupReleaseSocket(printers: Array<Device>) {
   // Always set up the socket connection and event listener
+  socket.value.off('release_job')
   socket.value.on('release_job', (data: any) => {
     if (printers) {
       const job = printers
@@ -180,6 +190,7 @@ export function setupReleaseSocket(printers: Array<Device>) {
 
 export function setupPortRepairSocket(printers: Array<Device>) {
   // Always set up the socket connection and event listener
+  socket.value.off('port_repair')
   socket.value.on('port_repair', (data: any) => {
     if (printers) {
       const printer = printers.find((p: Device) => p.id === data.printer_id)
@@ -196,6 +207,7 @@ export function setupPortRepairSocket(printers: Array<Device>) {
 }
 
 export function setupGCodeViewerSocket(printers: Array<Device>) {
+  socket.value.off('gcode_viewer')
   socket.value.on('gcode_viewer', (data: any) => {
     if (printers) {
       const job = printers
@@ -215,6 +227,7 @@ export function setupGCodeLineSocket(printers: Array<Device>) {
   for (let i = 0; i < printers.length; i++) {
     printers[i].gcodeLines = []
   }
+  socket.value.off('gcode_line')
   socket.value.on('gcode_line', (data: any) => {
     if (printers) {
       const printer: Device | undefined = printers.find((p: Device) => p.id === data.printerid)
@@ -236,7 +249,9 @@ export function setupConsoleSocket(printers: Array<Device>) {
   for (let i = 0; i < printers.length; i++) {
     printers[i].gcodeLines = []
   }
+  socket.value.off('console_update')
   socket.value.on('console_update', (data: any) => {
+    console.debug("console update", data)
     if (printers) {
       const printer = printers.find((p: Device) => p.id === data.printerid)
       if (printer && printer.consoles) {
@@ -262,6 +277,7 @@ export function setupConsoleSocket(printers: Array<Device>) {
 }
 
 export function setupExtrusionSocket(printers: Array<Device>) {
+  socket.value.off('extruded_update')
   socket.value.on('extruded_update', (data: any) => {
     if (printers) {
       const job = printers
@@ -278,6 +294,7 @@ export function setupExtrusionSocket(printers: Array<Device>) {
 }
 
 export function setupColorChangeBuffer(printers: Array<Device>) {
+  socket.value.off('color_buff')
   socket.value.on('color_buff', (data: any) => {
     if (printers) {
       const printer = printers.find((p: Device) => p.id === data.printerid)
@@ -291,6 +308,7 @@ export function setupColorChangeBuffer(printers: Array<Device>) {
 }
 
 export function setupMaxLayerHeightSocket(printers: Array<Device>) {
+  socket.value.off('max_layer_height')
   socket.value.on('max_layer_height', (data: any) => {
     if (printers) {
       const job = printers
@@ -307,6 +325,7 @@ export function setupMaxLayerHeightSocket(printers: Array<Device>) {
 }
 
 export function setupCurrentLayerHeightSocket(printers: Array<Device>) {
+  socket.value.off('current_layer_height')
   socket.value.on('current_layer_height', (data: any) => {
     if (printers) {
       const job = printers
