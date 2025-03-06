@@ -364,34 +364,35 @@ class Printer(Device, metaclass=ABCMeta):
         """
         if logger is None: logger = self.logger
         hashIndex = gcode.decode().split("\n")[0].split(" ")[0]
+        decGcode = gcode.decode()
 
         match hashIndex:
             case "M104":
                 try:
-                    temp = gcode.split("S")[1].split("\n")[0]
+                    temp = decGcode.split("S")[1].split("\n")[0]
                 except IndexError:
                     try:
-                        temp = gcode.split("R")[1].split("\n")[0]
+                        temp = decGcode.split("R")[1].split("\n")[0]
                     except IndexError:
                         temp = None
                 if temp:
                     self.nozzleTargetTemp = float(temp)
             case "M140":
                 try:
-                    temp = gcode.split("S")[1].split("\n")[0]
+                    temp = decGcode.split("S")[1].split("\n")[0]
                 except IndexError:
                     try:
-                        temp = gcode.split("R")[1].split("\n")[0]
+                        temp = decGcode.split("R")[1].split("\n")[0]
                     except IndexError:
                         temp = None
                 if temp:
                     self.bedTargetTemp = float(temp)
             case "M109":
                 try:
-                    temp = gcode.split("S")[1].split("\n")[0]
+                    temp = decGcode.split("S")[1].split("\n")[0]
                 except IndexError:
                     try:
-                        temp = gcode.split("R")[1].split("\n")[0]
+                        temp = decGcode.split("R")[1].split("\n")[0]
                     except IndexError:
                         temp = None
                 if temp:
@@ -407,7 +408,7 @@ class Printer(Device, metaclass=ABCMeta):
                                            "printerid": self.dbID})
             case "M190":
                 try:
-                    temp = gcode.split("S")[1].split("\n")[0]
+                    temp = decGcode.split("S")[1].split("\n")[0]
                 except IndexError:
                     temp = None
                 if temp:
