@@ -71,3 +71,15 @@ class PID(int, Enum):
     MK4S        = 0x001A
     ENDER3      = 0x7523
     REPLICATOR2 = 0xB016
+
+class TemporaryTimeout:
+    def __init__(self, resource, temp_timeout):
+        self.resource = resource
+        self.original_timeout = resource.timeout  # Store the original timeout
+        self.temp_timeout = temp_timeout
+
+    def __enter__(self):
+        self.resource.timeout = self.temp_timeout  # Set temporary timeout
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.resource.timeout = self.original_timeout  # Restore original timeout

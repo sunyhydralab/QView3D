@@ -8,13 +8,12 @@ from abc import ABC
 from serial.tools.list_ports_common import ListPortInfo
 from Classes.MyPyVISA.CustomTCPIPInstrument import EmuTCPIPInstrument
 from globals import current_app as app
-from globals import system_device_prefix
 from pyvisa.resources.resource import Resource
 
 
 class FabricatorConnection(ABC):
     @staticmethod
-    def staticCreateConnection(port: str = None, baud_rate: int = 115200, timeout: float = 10.0, websocket_connections: dict = None, fabricator_id: str = None):
+    def staticCreateConnection(port: str = None, baud_rate: int = 115200, timeout: float = 60000, websocket_connections: dict = None, fabricator_id: str = None):
         """
         Create a new connection to a 3D printer.
         :param str port: Serial port to connect to
@@ -29,16 +28,15 @@ class FabricatorConnection(ABC):
         if websocket_connections is not None and fabricator_id is not None:
             return SocketConnection(port, baud_rate, websocket_connections, fabricator_id, timeout=timeout)
         elif port is not None and baud_rate is not None:
-            if re.match(r"(COM\d+|/ttyACM\d+)", port):
+            if re.match(r"(COM\d+)", port):
                 port = f"ASRL{re.sub(r"COM", "", port)}::INSTR"
-                print(f"port: {port}")
             elif re.match(r"TCPIP\d+", port):
                 ip = re.match(r"(\d+\.\d+\.\d+\.\d+)", port).group(1)
                 port = f"TCPIP::{ip}::INSTR"
             if app.resource_manager.list_opened_resources():
                 resource = next((resource for resource in app.resource_manager.list_opened_resources() if resource.resource_name == port), None)
                 if resource: return resource
-            return app.resource_manager.open_resource(port, open_timeout=timeout)
+            return app.resource_manager.open_resource(port, open_timeout=timeout, timeout=timeout)
         else:
             raise ValueError("Invalid connection parameters")
 
@@ -78,6 +76,16 @@ class SocketConnection(FabricatorConnection):
     def _setup_listeners(self):
         """Configure websocket event listeners for receiving printer responses."""
         pass  # Listeners will be managed when sending/receiving messages through websockets.
+
+    def query(self, data):
+        """
+        Send data to the printer via websocket and read the response.
+
+        :param data: Data to be sent (typically G-code)
+        :return: Response from the printer as bytes
+        """
+        self.write(data)
+        return self.read()
 
     def write(self, data):
         """
