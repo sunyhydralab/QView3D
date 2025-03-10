@@ -98,7 +98,7 @@ class ABCLogger(logging.Logger, metaclass=ABCMeta):
             logLevel = self.level
         oldFormatters = [handler.formatter for handler in self.handlers]
         for handler in self.handlers:
-            handler.setFormatter(CustomColorFormatter("%(message)s"))
+            handler.setFormatter(CustomColorFormatter("%(message)s", file=getattr(self, "file", True)))
         self.handleLog(logLevel, msg, *args, stacklevel=stacklevel, **kwargs)
         for handler, formatter in zip(self.handlers, oldFormatters):
             handler.setFormatter(formatter)
@@ -127,7 +127,6 @@ class ABCLogger(logging.Logger, metaclass=ABCMeta):
         if self.consoleLogger is not None: self.consoleLogger.setLevel(level)
         if self.fileLogger is not None: self.fileLogger.setLevel(level)
 
-
 class CustomFileHandler(logging.FileHandler):
     def emit(self, record):
         try:
@@ -137,10 +136,24 @@ class CustomFileHandler(logging.FileHandler):
         except RecursionError:
             pass
 
-class CustomColorFormatter(logging.Formatter):
+class CustomFormatter(logging.Formatter):
+    def __init__(self, fmt: str | None = None, datefmt: str | None = None, style = "%",validate: bool = True, file: bool = False):
+        super().__init__(fmt, datefmt, style, validate)
+        if file:
+            self.format = self.format_file
+
+    def format_file(self, record):
+        return super().format(record).replace("\u00B0", "\u00C2\u00B0")
+
+
+class CustomColorFormatter(CustomFormatter):
     """
     A custom formatter for the logger, used to apply color to the log messages.
     """
+    def __init__(self, fmt: str, datefmt: str = None, style = '%', validate: bool = True, file: bool = False):
+        super().__init__(fmt, datefmt, style, validate)
+        if not file:
+            self.format = self.format_console
     # ANSI escape codes for colors
     COLOR_CODES = {
         "DEBUG": "\033[94m",  # Blue
@@ -151,8 +164,14 @@ class CustomColorFormatter(logging.Formatter):
     }
     RESET_CODE = "\033[0m"  # Reset to default color
 
-    def format(self, record):
+    def format_console(self, record):
         # Apply color based on log level
         color = self.COLOR_CODES.get(record.levelname, self.RESET_CODE)
         message = super().format(record)
+        return f"{color}{message}{self.RESET_CODE}"
+
+    def format_file(self, record):
+        # Apply color based on log level
+        color = self.COLOR_CODES.get(record.levelname, self.RESET_CODE)
+        message = super().format(record).replace("\u00B0", "\u00C2\u00B0")
         return f"{color}{message}{self.RESET_CODE}"
