@@ -27,7 +27,7 @@ const jobComments = ref('')
 
 const consoles = [{name: "Critical", icon: "fa-solid fa-radiation fa-lg", color: "#CE77FF" }, { name: "Error", icon: "fa-solid fa-triangle-exclamation fa-lg", color: "#ff0000" }, { name: "Warning", icon: "fa-solid fa-exclamation fa-xl", color: "#FF9F20" }, { name: "Info", icon: "fa-solid fa-question fa-xl", color: "#ffffff" }, { name: "Debug", icon: "fa-solid fa-spider fa-lg", color: "#00ffff" }]
 const tdWidth = ["64px", "130px", "142px", "110px", "110px", "314px", "315px", "75px", "58px"]
-const displayLevel = ref(2)
+const displayLevel = ref(4)
 
 const hoverIndex = ref<number | null>(null);
 let hoverTimeout: NodeJS.Timeout | null = null; // Explicitly typed
@@ -371,7 +371,7 @@ const handleDragEnd = async () => {
                     <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                       <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
                         style="background: none; border: none;">
-                        <i class="fa-solid fa-bars"
+                        <i class="fa-solid fa-bars" style="color: #929292;"
                           :class="{ 'icon-disabled': printer.queue && printer.queue.length == 0 }"></i>
                       </button>
                       <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
@@ -487,7 +487,7 @@ const handleDragEnd = async () => {
               <td colspan="1" style="vertical-align: middle">
                 <div class="btn-group-vertical">
                   <button class="btn-console" v-for="(console, index) in consoles" :key="index" :class="console.icon" :style="{ backgroundColor: console.color }" 
-                  @click="displayLevel = index" 
+                  @click="displayLevel = index"
                   @mouseenter="startHover(index)"
                   @mouseleave="stopHover">
                     <span
@@ -693,7 +693,7 @@ const handleDragEnd = async () => {
                   <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                     <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
                       style="background: none; border: none;">
-                      <i class="fa-solid fa-bars"
+                      <i class="fa-solid fa-bars" style="color: #929292;"
                         :class="{ 'icon-disabled': printer.queue && printer.queue.length == 0 }"></i>
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="settingsDropdown">

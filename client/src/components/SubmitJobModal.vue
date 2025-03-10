@@ -530,15 +530,7 @@ const getFilament = (file: File) => {
 
           <div>
             <button
-              v-if="selectedPrinters.length > 1"
-              :disabled="isLoading || isSubmitDisabled"
-              class="btn btn-primary"
-              type="submit"
-            >
-              Add to queues
-            </button>
-            <button
-              v-else
+              v-if="selectedPrinters.length >= 1"
               :disabled="isLoading || isSubmitDisabled"
               class="btn btn-primary"
               type="submit"

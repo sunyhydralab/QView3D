@@ -99,11 +99,11 @@ observer.observe(document.documentElement, { attributes: true, attributeFilter: 
               >ERROR LOG</router-link
             >
           </li>
-          <li class="nav-item">
+          <!--<li class="nav-item">
             <router-link to="/emulator" class="nav-link" active-class="active-tab"
               >EMULATOR</router-link
             >
-          </li>
+          </li>-->
         </ul>
       </div>
     </nav>

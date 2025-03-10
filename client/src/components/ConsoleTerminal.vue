@@ -33,7 +33,6 @@ const scrollToBottom = () => {
     }
   });
 };
-
 </script>
 
 <template>
@@ -75,5 +74,3 @@ const scrollToBottom = () => {
 }
 
 </style>
-
-

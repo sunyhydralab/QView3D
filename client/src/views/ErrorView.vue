@@ -392,7 +392,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    Thi CSV file will only contain jobs included in the current filtration criteria. Are you sure you
+                    This CSV file will only contain jobs included in the current filtration criteria. Are you sure you
                     want to download this CSV file?
                 </div>
                 <div class="modal-footer">
@@ -895,22 +895,6 @@ const onlyNumber = ($event: KeyboardEvent) => {
     border: 1px solid #e0e0e0;
     padding: 10px;
     border-radius: 5px;
-}
-
-.offcanvas {
-    width: 700px;
-}
-
-.offcanvas-btn-box {
-    transition: transform .3s ease-in-out;
-    position: fixed;
-    top: 50%;
-    right: 0;
-    z-index: 1041;
-}
-
-.offcanvas-end {
-    border-left: 0;
 }
 
 table {
