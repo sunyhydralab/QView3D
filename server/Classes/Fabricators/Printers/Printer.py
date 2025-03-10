@@ -462,7 +462,22 @@ class Printer(Device, metaclass=ABCMeta):
         try:
             assert self.serialConnection is not None, "Serial connection is None"
             assert self.serialConnection.is_open, "Serial connection is not open"
-            self.sendGcode("M155 S1", False)
+            for timeout in [1500, 3500, 10000]:
+                try:
+                    with TemporaryTimeout(self.serialConnection, timeout):
+                        response = self.serialConnection.query("M115 S1")
+                        assert response is not None
+                        break
+                except AssertionError as e:
+                    # failed to connect, response is empty. retrying...
+                    current_app.socketio.emit("registration_failure", {"printerid": self.dbID, "message": f"Failed to connect to printer: printer gave empty response. {'Retrying...' if timeout != 10000 else 'Please power cycle the printer and try again.'}", "level": f"{'warning' if timeout != 10000 else 'error'}"})
+                    if timeout == 10000:
+                        return current_app.handle_errors_and_logging(e, self.logger)
+                except pyvisa.errors.VisaIOError as e:
+                    # failed to connect, no response. retrying...
+                    current_app.socketio.emit("registration_failure", {"printerid": self.dbID, "message": f"Failed to connect to printer: printer gave no response within timeout. {'Retrying...' if timeout != 10000 else 'Please power cycle the printer and try again.'}", "level": f"{'warning' if timeout != 10000 else 'error'}"})
+                    if timeout == 10000:
+                        return current_app.handle_errors_and_logging(e, self.logger)
             return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self.logger)
