@@ -1,3 +1,4 @@
+#!/usr/bin/env python3.12
 import platform
 import subprocess
 import os
@@ -59,7 +60,7 @@ def start_server(fresh_database):
     # Start the server in the background
     return subprocess.Popen(
         # Command for the server
-        ['flask', 'run', "--debug"],
+        ['flask', 'run'],
         # The working directory for the command
         cwd=SERVER_LOCAL_PATH,
         # Enable the Python virtual environment
@@ -70,17 +71,16 @@ def install_software(current_os: str):
     # Setup virtual environment
     # subprocess.run waits for the process to end before continuing the script
     # this is why it's being used instead of Popen
-    if current_os == "LINUX":
+    if current_os == "LINUX/MAC":
         subprocess.run(
-            ["python3", "-m", "venv", os.path.join("server", ".python-venv")]
+            ["python3.12", "-m", "venv", os.path.join("server", ".python-venv")]
         )
     elif current_os == "WINDOWS":
         subprocess.run(
-            ["python", "-m", "venv", os.path.join("server", ".python-venv")]
+            ["py -3.12", "-m", "venv", os.path.join("server", ".python-venv")]
         )
     else:
-        # TODO Verify python binary on Mac OS is python3
-        raise Exception("Support for this OS is not verified yet. Is the binary named python3?")
+        raise Exception("What OS are you using?")
 
     # Install server dependencies
     subprocess.run(
@@ -133,7 +133,7 @@ match user_configuration:
         if current_os == "Windows":
             install_software("WINDOWS")
         elif current_os in ["Linux", "Darwin"]:
-            install_software("LINUX")
+            install_software("LINUX/MAC")
     case "D":
         vite_process, flask_process = start_debug(START_FROM_NEW_DATABASE)
     case "R":
