@@ -64,7 +64,7 @@ class Issue(db.Model):
     @staticmethod
     def create_issue(issue, exception=None, job_id: int = None):
         try:
-            from app import sync_send_discord_embed
+            from Discord_bot import sync_send_discord_embed
             Issue(issue, job_id)
 
             embed = discord.Embed(title='New Issue Created',

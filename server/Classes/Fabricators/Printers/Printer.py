@@ -51,6 +51,7 @@ class Printer(Device, metaclass=ABCMeta):
         assert isinstance(isVerbose, bool), f"Expected isVerbose to be a bool, got {type(isVerbose)}"
         assert self.serialConnection.is_open, "Serial connection is not open"
         assert self.status == "printing", f"Printer status is {self.status}, expected printing"
+        logger = None
         try:
             with open(file, "r") as g:
                 # create a logger for this job

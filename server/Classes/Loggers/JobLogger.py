@@ -111,6 +111,8 @@ class JobLogger(ABCLogger):
                     except Exception as e:
                         if current_app: current_app.handle_errors_and_logging(e, self)
                         else: print(f"Error deleting {handler.baseFilename}: {e}")
+                else:
+                    index += 1
         while self.fileLogger is not None and os.path.isdir(self.fileLogger):
             # Check if fileLogger directory is empty (including subdirectories)
             if all(self.clean_logs(entry) for entry in os.scandir(self.fileLogger)):
