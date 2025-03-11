@@ -83,7 +83,7 @@ class Device(ABC):
             assert self.serialPort != "", "Serial port device is empty"
             if self.serialConnection is None or not self.serialConnection.is_open:
                 print(f"{tabs(tab_change=1)}creating connection to {self.serialPort}...", end="")
-                self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort, baud_rate=115200, timeout=60, websocket_connections=self.websocket_connection, fabricator_id=str(self.dbID))
+                self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort, baud_rate=115200, timeout=60000, websocket_connections=self.websocket_connection, fabricator_id=str(self.dbID))
                 print(" Done")
             return True
         except Exception as e:

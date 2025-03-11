@@ -79,6 +79,9 @@ class Ports:
                 test_name = re.sub(r'ASRL', system_device_prefix, re.sub(r'::INSTR', '', port))
             else: test_name = port
             if test_name in name:
+                for resource in app.resource_manager.list_opened_resources():
+                    if port in resource.resource_name:
+                        return resource
                 return app.resource_manager.open_resource(port)
         return None
 

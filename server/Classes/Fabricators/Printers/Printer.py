@@ -6,7 +6,7 @@ from abc import ABCMeta
 import re
 from datetime import datetime
 from time import sleep
-from globals import current_app
+from globals import current_app, TemporaryTimeout
 from Classes.Fabricators.Device import Device
 from Classes.Jobs import Job
 from Mixins.hasResponseCodes import checkTime, checkExtruderTemp, checkXYZ, checkBedTemp, checkOK
