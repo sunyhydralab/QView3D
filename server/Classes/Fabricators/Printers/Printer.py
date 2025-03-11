@@ -1,5 +1,6 @@
+import logging
 import traceback
-import sys
+import pyvisa.errors
 from Classes.Loggers.JobLogger import JobLogger
 from abc import ABCMeta
 import re
@@ -57,7 +58,7 @@ class Printer(Device, metaclass=ABCMeta):
                 jobName = str(job.file_name_original)
                 if jobName:
                     jobName = "-".join(jobName.split(".")[0].split("_"))
-                logger = JobLogger(self.name, jobName, job.date.strftime('%m-%d-%Y_%H-%M-%S'), self.serialPort, consoleLogger=sys.stdout if isVerbose else None, fileLogger=None)
+                logger = JobLogger(self.name, jobName, job.date.strftime('%m-%d-%Y_%H-%M-%S'), self.serialPort, loggingLevel=logging.INFO if isVerbose else logging.WARNING, fileLogger=None)
 
                 logger.info(f"Starting {job.name} on {self.name} at {job.date.strftime('%m-%d-%Y %H:%M:%S')}")
                 # Read the file and store the lines in a list
@@ -256,7 +257,6 @@ class Printer(Device, metaclass=ABCMeta):
         :param JobLogger logger: the logger to use
         :rtype: bool
         """
-        should_log = isVerbose and logger is not None
         if logger is None: logger = self.logger
         assert self.serialConnection is not None, "Serial connection is None"
         assert self.serialConnection.is_open, "Serial connection is not open"
@@ -280,23 +280,26 @@ class Printer(Device, metaclass=ABCMeta):
                             continue
                     if func(line, self):
                         break
-                    if should_log: logger.debug(f"{gcode.strip()}: {decLine}")
+                    logger.debug(f"{gcode.strip()}: {decLine}")
                     # current_app.socketio.emit("console_update",{"message": decLine, "level": "debug", "printerid": self.dbID})
                 except UnicodeDecodeError:
-                    if should_log: logger.debug(f"{gcode.strip()}: {line.strip()}")
-                    else: print(f"{gcode.strip()}: {line.strip()}")
+                    logger.debug(f"{gcode.strip()}: {line.strip()}")
                     # current_app.socketio.emit("console_update",{"message": gcode.strip(), "level": "debug", "printerid": self.dbID})
+                except pyvisa.errors.VisaIOError as e:
+                    logger.critical(f"timeout exceeded: {gcode.strip()}, timeout length: {self.serialConnection.timeout} milliseconds")
+                    if current_app: return current_app.handle_errors_and_logging(e, logger)
+                    else: print(traceback.format_exc())
+                    return False
                 except Exception as e:
                     if current_app: return current_app.handle_errors_and_logging(e, logger)
                     else: print(traceback.format_exc())
                     return False
         if not callables:
             # current_app.socketio.emit("console_update", {"message": f"{gcode.strip()}: ok", "level": "info", "printerid": self.dbID})
-            if should_log: logger.info(f"{gcode.strip()}: ok")
+            logger.info(f"{gcode.strip()}: ok")
         else:
             # current_app.socketio.emit("console_update", {"message": f"{gcode.strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}", "level": "info", "printerid": self.dbID})
-            if should_log: logger.info(
-                f"{gcode.strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}")
+            logger.info(f"{gcode.strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}")
         return True
 
     def changeFilament(self, filamentType: str, filamentDiameter: float, logger: JobLogger = None):

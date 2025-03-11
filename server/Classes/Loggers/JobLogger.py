@@ -1,17 +1,18 @@
-import logging
 import os
 import shutil
+import sys
 from os import PathLike
 from typing import TextIO
 from globals import current_app, compress_with_gzip
 
-from Classes.Loggers.ABCLogger import ABCLogger, CustomColorFormatter, CustomFileHandler
+from Classes.Loggers.ABCLogger import ABCLogger, CustomColorFormatter, CustomFileHandler, CustomFormatter
+
 
 class JobLogger(ABCLogger):
     fileLogger: str | PathLike = None
     fileLoggers = {"CRITICAL": ABCLogger.CRITICAL, "ERROR": ABCLogger.ERROR, "WARNING": ABCLogger.WARNING, "INFO": ABCLogger.INFO, "DEBUG": ABCLogger.DEBUG}
 
-    def __init__(self, deviceName, jobName, startTime, port=None, consoleLogger: TextIO | None = None, fileLogger=None, loggingLevel=logging.INFO, showFile=True, showLevel=True, showDate=True):
+    def __init__(self, deviceName, jobName, startTime, port=None, consoleLogger: TextIO | None = sys.stdout, fileLogger=None, loggingLevel=ABCLogger.ERROR, showFile=True, showLevel=True, showDate=True):
         """
         :param str deviceName: The name of the device
         :param str jobName: The name of the job
@@ -30,7 +31,7 @@ class JobLogger(ABCLogger):
         if deviceName:
             title.append(deviceName)
         super().__init__(f"_".join(["JobLogger"] + title))
-        super().setLevel(loggingLevel)
+        super().setLevel(ABCLogger.DEBUG)
         info = []
         if showDate:
             info.append("%(asctime)s")
@@ -40,9 +41,9 @@ class JobLogger(ABCLogger):
             info.append("%(module)s.%(funcName)s:%(lineno)d")
         formatString = " - ".join(info + ["%(message)s"])
         if consoleLogger is not None:
-            consoleLogger = logging.StreamHandler(consoleLogger)
+            consoleLogger = ABCLogger.StreamHandler(consoleLogger)
             consoleLogger.setLevel(loggingLevel)
-            consoleLogger.setFormatter(CustomColorFormatter(formatString))
+            consoleLogger.setFormatter(CustomColorFormatter(formatString, file=False))
             self.consoleLogger = consoleLogger
             self.addHandler(consoleLogger)
         else: self.consoleLogger = None
@@ -62,8 +63,8 @@ class JobLogger(ABCLogger):
             os.makedirs(os.path.dirname(noColorLogger), exist_ok=True)
             colorLogger = CustomFileHandler(colorLogger, mode="w")
             noColorLogger = CustomFileHandler(noColorLogger, mode="w")
-            colorLogger.setFormatter(CustomColorFormatter(formatString))
-            noColorLogger.setFormatter(logging.Formatter(formatString))
+            colorLogger.setFormatter(CustomColorFormatter(formatString, file=True))
+            noColorLogger.setFormatter(CustomFormatter(formatString, file=True))
             level = self.fileLoggers[file]
             colorLogger.setLevel(level)
             noColorLogger.setLevel(level)

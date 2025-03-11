@@ -1,7 +1,7 @@
 import os
 import sys
 from typing import TextIO
-from Classes.Loggers.ABCLogger import ABCLogger, CustomColorFormatter, CustomFileHandler
+from Classes.Loggers.ABCLogger import ABCLogger, CustomColorFormatter, CustomFileHandler, CustomFormatter
 
 class Logger(ABCLogger):
     def __init__(self, deviceName, port=None, consoleLogger=sys.stdout, fileLogger=None, loggingLevel=ABCLogger.INFO, showFile=True, showLevel=True, showDate=True, consoleLevel=None):
@@ -23,7 +23,7 @@ class Logger(ABCLogger):
         if deviceName:
             title.append(deviceName)
         super().__init__(f"_".join(["Logger"] + title))
-        super().setLevel(loggingLevel)
+        super().setLevel(ABCLogger.DEBUG)
         info = []
         if showDate:
             info.append("%(asctime)s")
@@ -38,7 +38,7 @@ class Logger(ABCLogger):
                 consoleLogger.setLevel(consoleLevel)
             else:
                 consoleLogger.setLevel(loggingLevel)
-            consoleLogger.setFormatter(CustomColorFormatter(formatString))
+            consoleLogger.setFormatter(CustomColorFormatter(formatString, file=False))
             self.consoleLogger = consoleLogger
             self.addHandler(consoleLogger)
         else: self.consoleLogger = None
@@ -52,7 +52,7 @@ class Logger(ABCLogger):
                 fileLogger = CustomFileHandler(fileLogger, mode='w')
             else:
                 fileLogger = CustomFileHandler(fileLogger)
-        fileLogger.setFormatter(ABCLogger.Formatter(formatString))
+        fileLogger.setFormatter(CustomFormatter(formatString, file=True))
         fileLogger.setLevel(loggingLevel)
         self.fileLogger = fileLogger
         self.addHandler(fileLogger)
