@@ -3,7 +3,7 @@ from pyvisa.errors import InvalidSession
 from pyvisa import constants
 import re
 from serial.tools.list_ports import grep
-from globals import tabs, system_device_prefix
+from globals import system_device_prefix
 
 class CustomSerialInstrument(SerialInstrument):
     baud_rate: int = 115200
@@ -19,11 +19,7 @@ class CustomSerialInstrument(SerialInstrument):
         self._hwid = f"USB VID:PID={self.vid:04X}:{self.pid:04X} SER={self.serial_number}" if self.vid and self.pid else None
         self.baud_rate = kwargs.get("baud_rate", 115200)
         self.open_timeout = kwargs.get("open_timeout", 60000)
-        self.open(kwargs.get("access_mode", constants.AccessModes.no_lock), kwargs.get("open_timeout", 60000))
-        self.write_termination = '\n'
-        self.read_termination = '\n'
-        print(f"{tabs()}Sending G-code command: M115 S1")
-        self.write("M155 S1")
+        self._timeout = kwargs.get("timeout", 60000)
 
     def __str__(self):
         return f"{self.resource_name} ({self.hwid})"
@@ -44,12 +40,17 @@ class CustomSerialInstrument(SerialInstrument):
     def open(self, access_mode: constants.AccessModes = constants.AccessModes.no_lock, open_timeout: int = 5000):
         """Open the serial connection."""
         if self.is_open:
-            return self
-        return super().open(access_mode, open_timeout)
+            return
+        super().open(access_mode, open_timeout)
+        self.write_termination = '\n'
+        self.read_termination = '\n'
+        self.timeout = getattr(self,"_timeout", 60000)
+        self.write("M155 S1")
 
     def close(self) -> None:
         """Close the serial connection."""
         if self.is_open:
+            self.write("M155 S100")
             self.write("M155 S0")
         return super().close()
 
