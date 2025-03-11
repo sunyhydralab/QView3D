@@ -1,3 +1,4 @@
+import re
 from abc import ABCMeta
 from Classes.Fabricators.Printers.Printer import Printer
 from Mixins.hasEndingSequence import hasEndingSequence
@@ -31,7 +32,7 @@ class PrusaPrinter(Printer, hasEndingSequence, metaclass=ABCMeta):
                 hashIndex += ".01" if g29addon == "P1" else ".02"
             except IndexError:
                 hashIndex += ".01"
-            if hashIndex == "G29.01":
+            if hashIndex == "G29.01" and re.fullmatch(r"G29 ?P?1?", gcode) is not None:
                 if logger is not None: logger.info("Auto bed leveling...")
                 current_app.socketio.emit("console_update", {"message": "Auto bed leveling...", "level": "info", "printerid": self.dbID})
         return hashIndex

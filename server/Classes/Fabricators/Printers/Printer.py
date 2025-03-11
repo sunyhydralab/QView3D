@@ -1,6 +1,6 @@
 import logging
 import traceback
-import sys
+import pyvisa.errors
 from Classes.Loggers.JobLogger import JobLogger
 from abc import ABCMeta
 import re
@@ -257,7 +257,6 @@ class Printer(Device, metaclass=ABCMeta):
         :param JobLogger logger: the logger to use
         :rtype: bool
         """
-        should_log = isVerbose and logger is not None
         if logger is None: logger = self.logger
         assert self.serialConnection is not None, "Serial connection is None"
         assert self.serialConnection.is_open, "Serial connection is not open"
@@ -297,11 +296,10 @@ class Printer(Device, metaclass=ABCMeta):
                     return False
         if not callables:
             # current_app.socketio.emit("console_update", {"message": f"{gcode.strip()}: ok", "level": "info", "printerid": self.dbID})
-            if should_log: logger.info(f"{gcode.strip()}: ok")
+            logger.info(f"{gcode.strip()}: ok")
         else:
             # current_app.socketio.emit("console_update", {"message": f"{gcode.strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}", "level": "info", "printerid": self.dbID})
-            if should_log: logger.info(
-                f"{gcode.strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}")
+            logger.info(f"{gcode.strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}")
         return True
 
     def changeFilament(self, filamentType: str, filamentDiameter: float, logger: JobLogger = None):
