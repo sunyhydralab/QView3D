@@ -9,9 +9,13 @@ import discord
 from discord.ext import commands
 from datetime import datetime
 from models.config import Config
+from USB_Detection import setup_monitoring
 
 # moved this up here so we can pass the app to the PrinterStatusService
 # Basic app setup
+print(f"{tabs()}Starting USB detection...")
+setup_monitoring()
+print(f"{tabs()}USB detection started")
 print(f"{tabs()}Starting Flask application...")
 app = MyFlaskApp()
 print(f"{tabs(tab_change=-1)}Flask application started")
