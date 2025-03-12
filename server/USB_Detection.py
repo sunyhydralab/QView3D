@@ -35,7 +35,6 @@ def setup_monitoring():
         signal.signal(signal.SIGBREAK, stop_monitoring) # Handle break command
     ### LINUX ###
     elif OS_VERSION == "Linux":
-        signal.signal(signal.SIGKILL, stop_monitoring)  # Handle kill command
         signal.signal(signal.SIGSTOP, stop_monitoring)  # Handle stop command
     ### MAC ###
     elif OS_VERSION == "Darwin":
