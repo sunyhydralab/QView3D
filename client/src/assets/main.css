@@ -23,11 +23,6 @@ table {
   border: 1px solid var(--color-border-invert);
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
-}
-
-tr {
-  background-color: var(--color-background) ;
 }
 
 .table td,
@@ -41,7 +36,6 @@ th {
   color: var(--color-background-font);
   border-left: none !important;
   border-right: none !important;
-  user-select: none;
 }
 
 td,
@@ -79,7 +73,6 @@ tr {
 
 .accordion-item {
   border: 1px solid var(--color-modal-background-inverted);
-  background-color: var(--color-background);
 }
 
 .dropdown-menu.show,
@@ -109,59 +102,48 @@ tr {
 
 .modal-content {
   color: var(--color-background-font);
-  background-color: var(--color-background) !important;
+  background-color: var(--color-background);
   border: 1px solid var(--color-modal-background-inverted);
 }
 
 .modal-header {
   color: var(--color-background-font);
-  background-color: var(--color-background-soft);
+  background-color: var(--color-background-mute);
   border-bottom: 1px solid var(--color-modal-background-inverted);
 }
 
 .modal-footer {
   color: var(--color-background-font);
-  background-color: var(--color-background-soft);
+  background-color: var(--color-background-mute);
   border-top: 1px solid var(--color-modal-background-inverted);
 }
 
 .modal-body .card-body, .card-body {
   color: var(--color-background-font);
-  background-color: var(--color-background) !important;
+  background-color: var(--color-background);
+  border-radius: 5px;
 }
 
 .modal-body .card, .card {
-  background-color: var(--color-background) !important;
+  background-color: var(--color-background);
   color: var(--color-background-font);
-  border: 2px solid var(--color-modal-background-inverted);
+  border: 1px solid var(--color-modal-background-inverted);
 }
 
-.tooltip-modal {
+.tooltip {
   position: relative;
   display: inline-block;
   opacity: 1;
 }
 
-.tooltip {
-  position: absolute;
-  transform: translateY(-50%);
-  margin-left: 3rem;
-  padding: 6px 10px;
-  border-radius: 4px;
-  color: rgb(0, 0, 0);
-  font-size: 15px;
-  white-space: nowrap;
-  opacity: 0.9;
-}
-
-.tooltip-modal .tooltiptext {
+.tooltip .tooltiptext {
   visibility: hidden;
   opacity: 0;
   transition: opacity 0.2s linear,
   visibility 0.2s linear 0.2s;
   width: 200px;
-  background-color: var(--color-modal-background-inverted);
-  color: var(--color-background);
+  background-color: var(--color-background-mute);
+  color: var(--color-background-font);
   text-align: center;
   border-radius: 6px;
   padding: 5px 0;
@@ -172,7 +154,7 @@ tr {
   margin-left: -100px;
 }
 
-.tooltip-modal .tooltiptext::after {
+.tooltip .tooltiptext::after {
   content: '';
   position: absolute;
   top: 100%;
@@ -183,13 +165,13 @@ tr {
   border-color: var(--color-modal-background-inverted) transparent transparent transparent;
 }
 
-.tooltip-modal:hover .tooltiptext {
+.tooltip:hover .tooltiptext {
   visibility: visible;
   opacity: 1;
   transition: opacity 0.2s linear;
 }
 
-.tooltip-modal .tooltiptext:hover {
+.tooltip .tooltiptext:hover {
   visibility: hidden;
   opacity: 0;
 }
@@ -267,11 +249,6 @@ tr {
 .form-control:focus {
   outline: none;
   box-shadow: none;
-  color: var(--color-modal-background-inverted);
-}
-
-.form-control {
-  color: var(--color-background);
 }
 
 .btn-primary {
@@ -417,7 +394,7 @@ tr {
 }
 
 .offcanvas-body {
-  background-color: var(--color-background);
+  background-color: var(--color-background-soft);
   color: var(--color-background-font);
   position: relative;
 }
@@ -430,8 +407,5 @@ button:not(.btn-primary):not(.btn-secondary):hover i {
   color: var(--color-background-font);
 }
 
-.ellipsis {
-  color: var(--color-background-font);
-}
 
 

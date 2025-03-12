@@ -539,7 +539,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
         <div class="row w-100" style="margin-bottom: 0.5rem;">
             <div class="col-1 text-start" style="padding-left: 0">
                 <div style="position: relative;">
-                    <button v-if="!(issuelist.values)" type="button" class="btn btn-primary dropdown-toggle"
+                    <button type="button" class="btn btn-primary dropdown-toggle"
                         @click.stop="filterDropdown = !filterDropdown">
                         Filter
                     </button>
@@ -807,7 +807,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
 .sticky {
     position: sticky;
     bottom: 0;
-    background: var(--color-background) !important;
+    background: var(--color-background-mute);
     margin-right: -1rem;
     margin-left: -1rem;
 }
@@ -818,7 +818,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
     /* Adjust this value to increase or decrease the gap */
     width: 400px;
     z-index: 1000;
-    background: var(--color-background);
+    background: var(--color-background-mute);
     border: 1px solid var(--color-border);
     padding-bottom: 0 !important;
 }
@@ -941,11 +941,6 @@ label.form-check-label {
     color: var(--color-background-font);
     background-color: var(--color-background-mute) !important;
     border-color: var(--color-modal-background-light-inverted) !important;
-    margin-top: 1rem;
-}
-
-.form-check {
-    margin-top: 10px;
 }
 
 ::placeholder {

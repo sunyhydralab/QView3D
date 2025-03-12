@@ -55,6 +55,7 @@ export function setupStatusSocket(printers: Array<Device>) {
 export function setupJobStatusSocket(printers: Array<Device>) {
   socket.value.off('job_status_update')
   // Always set up the socket connection and event listener
+  socket.value.off('job_status_update')
   socket.value.on('job_status_update', (data: any) => {
     if (printers) {
       const job = printers
@@ -116,6 +117,7 @@ export function setupCanPauseSocket(printers: Array<Device>) {
 export function setupPauseFeedbackSocket(printers: Array<Device>) {
   socket.value.off('file_pause_feedback')
   // Always set up the socket connection and event listener
+  socket.value.off('file_pause_update')
   socket.value.on('file_pause_update', (data: any) => {
     if (printers) {
       const job = printers
@@ -134,6 +136,7 @@ export function setupPauseFeedbackSocket(printers: Array<Device>) {
 export function setupTimeStartedSocket(printers: Array<Device>) {
   socket.value.off('set_time_started')
   // Always set up the socket connection and event listener
+  socket.value.off('set_time_started')
   socket.value.on('set_time_started', (data: any) => {
     if (printers) {
       const job = printers
@@ -153,6 +156,7 @@ export function setupTimeStartedSocket(printers: Array<Device>) {
 export function setupProgressSocket(printers: Array<Device>) {
   socket.value.off('progress_update')
   // Always set up the socket connection and event listener
+  socket.value.off('progress_update')
   socket.value.on('progress_update', (data: any) => {
     if (printers) {
       const job = printers
@@ -176,6 +180,7 @@ export function setupProgressSocket(printers: Array<Device>) {
 export function setupReleaseSocket(printers: Array<Device>) {
   socket.value.off('release_job')
   // Always set up the socket connection and event listener
+  socket.value.off('release_job')
   socket.value.on('release_job', (data: any) => {
     if (printers) {
       const job = printers
@@ -193,6 +198,7 @@ export function setupReleaseSocket(printers: Array<Device>) {
 export function setupPortRepairSocket(printers: Array<Device>) {
     socket.value.off('port_repair')
   // Always set up the socket connection and event listener
+  socket.value.off('port_repair')
   socket.value.on('port_repair', (data: any) => {
     if (printers) {
       const printer = printers.find((p: Device) => p.id === data.printer_id)
@@ -253,6 +259,7 @@ export function setupConsoleSocket(printers: Array<Device>) {
   }
   socket.value.off('console_update')
   socket.value.on('console_update', (data: any) => {
+    console.debug("console update", data)
     if (printers) {
       const printer = printers.find((p: Device) => p.id === data.printerid)
       if (printer && printer.consoles) {

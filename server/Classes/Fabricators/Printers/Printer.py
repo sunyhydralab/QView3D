@@ -482,6 +482,7 @@ class Printer(Device, metaclass=ABCMeta):
                     current_app.socketio.emit("registration_failure", {"printerid": self.dbID, "message": f"Failed to connect to printer: printer gave no response within timeout. {'Retrying...' if timeout != 10000 else 'Please power cycle the printer and try again.'}", "level": f"{'warning' if timeout != 10000 else 'error'}"})
                     if timeout == 10000:
                         return current_app.handle_errors_and_logging(e, self.logger)
+
             return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self.logger)

@@ -2,18 +2,12 @@ import * as GCodePreview from 'gcode-preview';
 
 let preview: GCodePreview.WebGLPreview | null = null;
 const originalConsoleWarn = console.warn;
-const originalConsoleDebug= console.debug;
-const originalConsoleInfo = console.info;
 
 // Utility to suppress warnings
 export function withConsoleSuppression<T>(fn: () => T): T {
     console.warn = () => {};
-    console.debug = () => {};
-    console.info = () => {};
     const result = fn();
     console.warn = originalConsoleWarn;
-    console.debug = originalConsoleDebug;
-    console.info = originalConsoleInfo;
     return result;
 }
 

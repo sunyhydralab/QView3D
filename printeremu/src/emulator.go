@@ -69,7 +69,7 @@ func RunConnection(ctx context.Context, extruder *Extruder, printer *Printer, se
 		if settings.DefaultAddress != "" && settings.DefaultPort != 0 {
 			return fmt.Sprintf("%s:%d", settings.DefaultAddress, settings.DefaultPort)
 		}
-		return "localhost:8001" // default address
+		return "127.0.0.1:8001" // default address
 	}()
 
 	serverURL := "ws://" + loadedAddress
