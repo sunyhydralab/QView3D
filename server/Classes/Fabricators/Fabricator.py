@@ -352,11 +352,10 @@ class Fabricator(db.Model):
             if Config['discord_enabled']:
                 printFile = self.job.file_name_original.split(".gcode")[0]
                 printFile = "-".join(printFile.split("_"))
-                logFile = os.path.join(root_path, "logs", self.name, printFile, self.job.date.strftime('%m-%d-%Y_%H-%M-%S'), "color", "INFO.log.gz")
+                logFile = os.path.join(root_path, "logs", self.name, printFile, self.job.date.strftime('%m-%d-%Y_%H-%M-%S'), "no color", "DEBUG.log.gz")
                 role_message = '<@&{role_id}>'.format(role_id=Config['discord_issues_role'])
-                from app import sync_send_discord_file
+                from Discord_bot import sync_send_discord_file
                 sync_send_discord_file(logFile, role_message)
-                print("made it past send_discord_file")
             self.getQueue().deleteJob(self.job.id, self.dbID)
             self.device.disconnect()
         elif self.device.verdict == "cancelled":
