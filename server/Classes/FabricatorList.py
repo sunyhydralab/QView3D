@@ -1,6 +1,5 @@
+import pyvisa.errors
 from flask import jsonify, Response
-from serial.tools.list_ports_common import ListPortInfo
-from serial.tools.list_ports_linux import SysFS
 from pyvisa.resources.resource import Resource
 from sqlalchemy import inspect
 from Classes.Ports import Ports
@@ -11,6 +10,7 @@ from threading import Thread
 import time
 from globals import current_app as app, tabs
 from models.db import db
+from Classes.Fabricators.Printers.Printer import Printer
 
 class FabricatorList:
     def __init__(self, passed_app=app):
@@ -285,7 +285,7 @@ class FabricatorList:
                 if thread.fabricator.dbID == fabricator_id:
                     fabricator = thread.fabricator
                     if fabricator.getStatus() == "ready":
-                        fabricator.terminated = 1
+                        thread.terminated = True
                     self.fabricator_threads.remove(thread)
                     break
             return jsonify({"success": True, "message": "Fabricator thread reset successfully"}), 200
@@ -344,6 +344,7 @@ class FabricatorThread(Thread):
         self.fabricator: Fabricator = fabricator
         self.app = passed_app
         self.daemon = kwargs.get('daemon', False)
+        self.terminated = False
 
     def __repr__(self):
         return f"FabricatorThread(fabricator={self.fabricator}, daemon={self.daemon}, running={self.is_alive()})"
@@ -363,14 +364,22 @@ class FabricatorThread(Thread):
     def run(self):
         with self.app.app_context():
             self.fabricator.responseCount = 0
-            while True:
-                time.sleep(2)
+            while not self.terminated:
+                time.sleep(.5)
                 queueSize = len(self.fabricator.queue)
                 if self.fabricator.getStatus() == "printing" and queueSize > 0:
                     assert isinstance(self.fabricator.queue[0], Job), f"self.fabricator.queue[0]={self.fabricator.queue[0]}, type(self.fabricator.queue[0])={type(self.fabricator.queue[0])}, self.fabricator.queue={self.fabricator.queue}, type(self.fabricator.queue)={type(self.fabricator.queue)}"
                     if self.fabricator.queue[0].released == 1:
                         if not self.fabricator.begin():
                             self.app.handle_errors_and_logging(Exception(f"Fabricator {self.fabricator.getName()} failed to begin") if not self.fabricator.error else self.fabricator.error, level=50)
+                elif isinstance(self.fabricator.device, Printer):
+                    try:
+                        self.fabricator.device.handleTempLine(self.fabricator.device.serialConnection.read())
+                    except pyvisa.errors.VisaIOError:
+                        continue
+                    except Exception as e:
+                        self.app.handle_errors_and_logging(e)
 
     def stop(self):
-        self.fabricator.terminated = 1
+        # TODO: gracefully stop on shutdown, use signal
+        self.terminated = True
