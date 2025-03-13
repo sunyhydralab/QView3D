@@ -186,7 +186,7 @@ class Printer(Device, metaclass=ABCMeta):
                                 logger.debug(readline)
                                 if "T:" in readline and "B:" in readline:
                                     logger.debug(f"Temperature line: {readline}")
-                                    self.handleTempLine(readline)
+                                    self.handleTempLine(readline, logger)
                             if self.status == "cancelled":
                                 self.sendGcode(self.cancelCMD)
                                 self.verdict = "cancelled"
@@ -276,7 +276,7 @@ class Printer(Device, metaclass=ABCMeta):
                     decLine = line.strip()
                     if "processing" in decLine or "echo" in decLine: continue
                     if "T:" in decLine and "B:" in decLine:
-                        self.handleTempLine(decLine)
+                        self.handleTempLine(decLine, logger)
                         if func != checkBedTemp and func != checkExtruderTemp and "ok" not in decLine.lower():
                             continue
                     if func(line, self):
@@ -351,8 +351,9 @@ class Printer(Device, metaclass=ABCMeta):
             if temp_b:
                 self.bedTemperature = float(temp_b.group(1))
             if current_app:
-                current_app.socketio.emit('temp_update', {'printerid': self.dbID, 'extruder_temp': self.nozzleTemperature,
-                                                          'bed_temp': self.bedTemperature})
+                current_app.socketio.emit('temp_update', {'printerid': self.dbID, 'extruder_temp': self.nozzleTemperature, 'bed_temp': self.bedTemperature})
+            if logger:
+                logger.debug(f"temp update: nozzle: {self.nozzleTemperature}, bed: {self.bedTemperature}")
         except ValueError:
             pass
         except Exception as e:

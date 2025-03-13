@@ -151,9 +151,7 @@ class CustomColorFormatter(CustomFormatter):
     A custom formatter for the logger, used to apply color to the log messages.
     """
     def __init__(self, fmt: str, datefmt: str = None, style = '%', validate: bool = True, file: bool = False):
-        super().__init__(fmt, datefmt, style, validate)
-        if not file:
-            self.format = self.format_console
+        super().__init__(fmt, datefmt, style, validate, file)
     # ANSI escape codes for colors
     COLOR_CODES = {
         "DEBUG": "\033[94m",  # Blue
@@ -164,14 +162,8 @@ class CustomColorFormatter(CustomFormatter):
     }
     RESET_CODE = "\033[0m"  # Reset to default color
 
-    def format_console(self, record):
+    def format(self, record):
         # Apply color based on log level
         color = self.COLOR_CODES.get(record.levelname, self.RESET_CODE)
         message = super().format(record)
-        return f"{color}{message}{self.RESET_CODE}"
-
-    def format_file(self, record):
-        # Apply color based on log level
-        color = self.COLOR_CODES.get(record.levelname, self.RESET_CODE)
-        message = super().format(record).replace("\u00B0", "\u00C2\u00B0")
         return f"{color}{message}{self.RESET_CODE}"
