@@ -3,7 +3,7 @@ from pyvisa.errors import InvalidSession
 from pyvisa import constants
 import re
 from serial.tools.list_ports import grep
-from globals import system_device_prefix
+from globals import system_device_prefix, TemporaryTimeout
 
 class CustomSerialInstrument(SerialInstrument):
     baud_rate: int = 115200
@@ -40,6 +40,7 @@ class CustomSerialInstrument(SerialInstrument):
     def open(self, access_mode: constants.AccessModes = constants.AccessModes.no_lock, open_timeout: int = 5000):
         """Open the serial connection."""
         if self.is_open:
+            self.write("M155 S1")
             return
         super().open(access_mode, open_timeout)
         self.write_termination = '\n'
@@ -54,6 +55,13 @@ class CustomSerialInstrument(SerialInstrument):
             self.write("M155 S0")
             super().close()
         assert not self.is_open, "Port did not close properly"
+
+    def write(self, message: str, termination: str | None = None, encoding: str | None = None):
+        if re.match(r"M109|M190", message):
+            with TemporaryTimeout(self, None):
+                super().write(message, termination, encoding)
+        else:
+            super().write(message, termination, encoding)
 
     @property
     def hwid(self):
