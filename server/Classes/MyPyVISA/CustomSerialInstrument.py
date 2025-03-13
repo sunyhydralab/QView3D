@@ -52,7 +52,8 @@ class CustomSerialInstrument(SerialInstrument):
         if self.is_open:
             self.write("M155 S100")
             self.write("M155 S0")
-        return super().close()
+            super().close()
+        assert not self.is_open, "Port did not close properly"
 
     @property
     def hwid(self):
