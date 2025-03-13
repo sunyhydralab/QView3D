@@ -28,10 +28,10 @@ class FabricatorConnection(ABC):
         if websocket_connections is not None and fabricator_id is not None:
             return SocketConnection(port, baud_rate, websocket_connections, fabricator_id, timeout=timeout)
         elif port is not None and baud_rate is not None:
-            if re.match(r"(COM\d+)", port):
+            if re.search(r"(COM\d+|/ttyACM\d+)", port):
                 port = f"ASRL{re.sub(r"COM", "", port)}::INSTR"
-            elif re.match(r"TCPIP\d+", port):
-                ip = re.match(r"(\d+\.\d+\.\d+\.\d+)", port).group(1)
+            elif re.search(r"TCPIP\d+", port):
+                ip = re.search(r"(\d+\.\d+\.\d+\.\d+)", port).group(1)
                 port = f"TCPIP::{ip}::INSTR"
             if app.resource_manager.list_opened_resources():
                 resource = next((resource for resource in app.resource_manager.list_opened_resources() if resource.resource_name == port), None)
