@@ -23,12 +23,9 @@ monitor = USBMonitor()
 
 def stop_monitoring(signum, frame):
     monitor.stop_monitoring()
-    print("Monitoring stopped")
+    exit(signum if signum else 0)
 
 def setup_monitoring():
-    # Start the daemon
-    monitor.start_monitoring(on_connect=on_connect, on_disconnect=on_disconnect)
-    print("Monitoring started")
     # setup signal handlers
     ### WINDOWS ###
     if OS_VERSION == "Windows":
@@ -42,6 +39,11 @@ def setup_monitoring():
     ### OTHER ###
     else:
         print(f"USB monitoring not supported on this OS: {OS_VERSION}")
+        return
     ### COMMON ###
     signal.signal(signal.SIGINT, stop_monitoring)   # Handle Ctrl+C
     signal.signal(signal.SIGTERM, stop_monitoring)  # Handle kill command
+
+    # Start the daemon
+    monitor.start_monitoring(on_connect=on_connect, on_disconnect=on_disconnect)
+    print("Monitoring started")
