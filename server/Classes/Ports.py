@@ -5,6 +5,7 @@ import serial.tools.list_ports
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from pyvisa.resources.resource import Resource
+from Classes.Fabricators.Device_Factory import DeviceFactory
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.MyPyVISA.CustomTCPIPInstrument import EmuTCPIPInstrument
 from Classes.serialCommunication import sendGcode
@@ -34,10 +35,10 @@ class Ports:
                     if port.comm_port == emu_port:
                         values = app.emulator_connections.values()
                         ws = next(iter(values), None)
-                        device = Fabricator.staticCreateDevice(port, websocket_connection=ws)
+                        device = DeviceFactory(port, websocket_connection=ws)
                     else:
                         print("not an emu")
-                        device = Fabricator.staticCreateDevice(port)
+                        device = DeviceFactory(port)
                     print(f"created device: {device}")
                     full_devices.append(device)
             else:

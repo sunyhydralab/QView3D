@@ -2,7 +2,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from flask import Blueprint, jsonify, request
 
 from globals import current_app as app
-from Classes.Fabricators.Device import Device
+from Classes.Fabricators.Device_Factory import Device, DeviceFactory
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.Ports import Ports
 from traceback import format_exc
@@ -98,7 +98,7 @@ def diagnoseFabricator():
         if fabricator:
             device = fabricator.device
             if device is None:
-                device = Fabricator.staticCreateDevice(port)  # Ensure the Fabricator has this method
+                device = DeviceFactory(port) # Ensure the Fabricator has this method
             if device is not None:
                 assert isinstance(device, Device), f"Device must be an instance of Device: {device} : {type(device)}"
                 diagnosis_result = device.diagnose()
@@ -114,13 +114,14 @@ def diagnoseFabricator():
 @ports_bp.route("/repair", methods=["POST"])
 def repairFabricator():
     """Repair a fabricator based on its port."""
+    # TODO: this is almost certainly broken. should probably fix it.
     try:
         data = request.get_json()
         device_name = data['device']
         port = Ports.getPortByName(device_name)
 
         if port:
-            fabricator = Fabricator.staticCreateDevice(app.resource_manager.open_resource(port))  # Ensure the Fabricator has this method
+            fabricator = DeviceFactory(app.resource_manager.open_resource(port))  # Ensure the Fabricator has this method
             if fabricator:
                 repair_result = fabricator.repair()
                 return jsonify({"success": True, "message": repair_result})
@@ -145,9 +146,9 @@ def moveHead():
                 if fab: 
                     device = fab.device
                 elif port.startswith("EMU"):
-                    device = Fabricator.staticCreateDevice(Ports.getPortByName(port), websocket_connection=next(iter(app.emulator_connections.values())))
+                    device = DeviceFactory(Ports.getPortByName(port), websocket_connection=next(iter(app.emulator_connections.values())))
                 else:
-                    device = Fabricator.staticCreateDevice(Ports.getPortByName(port)) 
+                    device = DeviceFactory(Ports.getPortByName(port))
             else: 
                 device = Fabricator(port).device
             device.connect()
