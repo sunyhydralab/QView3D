@@ -279,10 +279,10 @@ class Printer(Device, metaclass=ABCMeta):
                         self.handleTempLine(decLine, logger)
                         if func != checkBedTemp and func != checkExtruderTemp and "ok" not in decLine.lower():
                             continue
-                    if func(line, self):
-                        break
                     logger.debug(f"{gcode.strip()}: {decLine}")
                     # current_app.socketio.emit("console_update",{"message": decLine, "level": "debug", "printerid": self.dbID})
+                    if func(line, self):
+                        break
                 except UnicodeDecodeError:
                     logger.debug(f"{gcode.strip()}: {line.strip()}")
                     # current_app.socketio.emit("console_update",{"message": gcode.strip(), "level": "debug", "printerid": self.dbID})
@@ -470,7 +470,7 @@ class Printer(Device, metaclass=ABCMeta):
             for timeout in [1500, 3500, 10000]:
                 try:
                     with TemporaryTimeout(self.serialConnection, timeout):
-                        response = self.serialConnection.query("M115 S1")
+                        response = self.serialConnection.query("M155 S1")
                         assert response is not None
                         break
                 except AssertionError as e:
@@ -496,7 +496,7 @@ class Printer(Device, metaclass=ABCMeta):
                 self.sendGcode("M104 S0", False)
                 self.sendGcode("M140 S0", False)
                 self.sendGcode("M84", False)
-                self.serialConnection.close()
+                del self.serialConnection
             return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self.logger)

@@ -372,7 +372,10 @@ class FabricatorThread(Thread):
                     if self.fabricator.queue[0].released == 1:
                         if not self.fabricator.begin():
                             self.app.handle_errors_and_logging(Exception(f"Fabricator {self.fabricator.getName()} failed to begin") if not self.fabricator.error else self.fabricator.error, level=50)
-                elif isinstance(self.fabricator.device, Printer):
+                elif self.fabricator.device.status == "homing":
+                    while self.fabricator.device.status == "homing":
+                        time.sleep(.5)
+                elif isinstance(self.fabricator.device, Printer) and self.fabricator.getStatus() == "ready":
                     try:
                         self.fabricator.device.handleTempLine(self.fabricator.device.serialConnection.read())
                     except pyvisa.errors.VisaIOError:
@@ -381,6 +384,8 @@ class FabricatorThread(Thread):
                         self.app.resource_manager.open_resource(getattr(self.fabricator.device.serialConnection, "resource_name_no_session"))
                     except Exception as e:
                         self.app.handle_errors_and_logging(e)
+                else:
+                    time.sleep(.5)
 
     def stop(self):
         # TODO: gracefully stop on shutdown, use signal

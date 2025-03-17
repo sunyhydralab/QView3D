@@ -98,7 +98,7 @@ def diagnoseFabricator():
         if fabricator:
             device = fabricator.device
             if device is None:
-                device = DeviceFactory(port) # Ensure the Fabricator has this method
+                device = DeviceFactory(port, dbID=fabricator.dbID, name=device_name) # Ensure the Fabricator has this method
             if device is not None:
                 assert isinstance(device, Device), f"Device must be an instance of Device: {device} : {type(device)}"
                 diagnosis_result = device.diagnose()
@@ -152,8 +152,12 @@ def moveHead():
             else: 
                 device = Fabricator(port).device
             device.connect()
+            old_status = device.status
+            device.status = "homing"
             result = device.home(isVerbose=False)  # Use home() method from Device
-            device.disconnect()
+            device.status = old_status
+            if device.dbID == 100000:
+                device.disconnect()
             return jsonify({"success": True, "message": "Head move successful"}) if result else jsonify({"success": False, "message": "Head move unsuccessful"})
         else:
             return jsonify({"error": "Device not found"}), 404

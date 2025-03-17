@@ -94,8 +94,7 @@ class Device(ABC):
         """Disconnect from the hardware by closing the serial connection."""
         try:
             if self.serialConnection and self.serialConnection.is_open:
-                self.serialConnection.close()
-                self.serialConnection = None
+                del self.serialConnection
             return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self.logger)

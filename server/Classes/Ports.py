@@ -21,7 +21,14 @@ class Ports:
         """
         ports_str = Ports.getListPorts()
         print(f"Ports strings: {ports_str}")
-        ports = [app.resource_manager.open_resource(port) for port in ports_str]
+        ports = []
+        # TODO: this is O(n^2) and should be optimized
+        for port in ports_str:
+            match = next((resource for resource in app.resource_manager.list_opened_resources() if port in resource.resource_name), None)
+            if not match:
+                ports.append(app.resource_manager.open_resource(port))
+            else:
+                ports.append(match)
         print(f"Ports: {ports}")
         emu_port, emu_name, emu_hwid = app.get_emu_ports()
         #TODO: make the emu class a subclass of Resource instead of ListPortInfo
@@ -30,7 +37,8 @@ class Ports:
         full_devices = []
         for port in ports:
             if app:
-                if app.fabricator_list.getFabricatorByPort(port) is None:
+                fab = app.fabricator_list.getFabricatorByPort(port)
+                if fab is None:
                     print(f"Creating device for port: {port}")
                     if port.comm_port == emu_port:
                         values = app.emulator_connections.values()
@@ -41,6 +49,8 @@ class Ports:
                         device = DeviceFactory(port)
                     print(f"created device: {device}")
                     full_devices.append(device)
+                else:
+                    full_devices.append(fab.device)
             else:
                 full_devices.append(Fabricator(port.comm_port).device)
         print(f"Full devices: {full_devices}")

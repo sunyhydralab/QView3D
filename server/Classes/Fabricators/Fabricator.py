@@ -70,7 +70,7 @@ class Fabricator(db.Model):
             self.devicePort = dbFab.devicePort.strip("/").split("/")[-1]
             self.date = dbFab.date
             self.dbID = dbFab.dbID
-        self.device = DeviceFactory(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True, websocket_connection=next(iter(current_app.emulator_connections.values())) if port.comm_port == current_app.get_emu_ports()[0] else None, name=name)
+        self.device = DeviceFactory(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True, websocket_connection=next(iter(current_app.emulator_connections.values())) if port.comm_port == current_app.get_emu_ports()[0] else None, dbID=self.dbID, name=name)
         if self.description == "New Fabricator": self.description = self.device.getDescription()
         self.error = None
         db.session.commit()
