@@ -63,9 +63,10 @@ class Device(ABC):
             "DESCRIPTION": self.DESCRIPTION,
             "MAXFEEDRATE": self.MAXFEEDRATE,
             "serialConnection": {
-                "port": self.serialConnection.comm_port,
-                "baud_rate": self.serialConnection.baud_rate,
-                "timeout": self.serialConnection.timeout,
+                "pyvisa_string": getattr(self.serialConnection, "resource_name_no_session"),
+                "comm_port": getattr(self.serialConnection, "comm_port"),
+                "baud_rate": getattr(self.serialConnection,"baud_rate_no_session"),
+                "timeout": getattr(self.serialConnection, "timeout_no_session"),
                 "is_open": self.serialConnection.is_open,
             } if self.serialConnection else None,
             "homePosition": self.homePosition.__to_JSON__() if self.homePosition else None,

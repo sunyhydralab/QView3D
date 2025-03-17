@@ -377,6 +377,8 @@ class FabricatorThread(Thread):
                         self.fabricator.device.handleTempLine(self.fabricator.device.serialConnection.read())
                     except pyvisa.errors.VisaIOError:
                         continue
+                    except pyvisa.errors.InvalidSession:
+                        self.app.resource_manager.open_resource(getattr(self.fabricator.device.serialConnection, "resource_name_no_session"))
                     except Exception as e:
                         self.app.handle_errors_and_logging(e)
 
