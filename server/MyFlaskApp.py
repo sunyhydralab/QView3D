@@ -1,6 +1,5 @@
 import logging
 import os
-import re
 import subprocess
 import sys
 
@@ -20,17 +19,28 @@ from models.config import Config
 from Classes.FabricatorList import FabricatorList
 from Classes.Loggers.ABCLogger import ABCLogger
 from models.db import db
+from werkzeug.serving import WSGIRequestHandler
 
 class MyFlaskApp(Flask):
     def __init__(self):
-        print(f"{tabs(tab_change=1)}call to super...", end="")
+        print(f"{tabs(tab_change=1)}call to super...", end=" ")
         super().__init__(__name__, static_folder=os.path.abspath(os.path.join(root_path, "client", "dist")))
-        print(" Done")
+        print("Done")
+        print(f"{tabs()}setting up werkzeug logging...", end=" ")
+        # Get the werkzeug logger
+        logger = logging.getLogger('werkzeug')
+        # Change the output stream to stdout
+        for handler in logger.handlers:
+            if isinstance(handler, logging.StreamHandler):
+                handler.setStream(sys.stdout)
+        # Ensure Werkzeug's request handler also logs to stdout
+        WSGIRequestHandler.log = lambda self, type, message, *args: print(f"{self.address_string().replace("%", "%%")} - - [{self.log_date_time_string()}] {message % args}", file=sys.stdout)
+        print("Done")
         print(f"{tabs()}loading config...")
-        print(f"{tabs(tab_change=1)}loading dotenv...", end="")
+        print(f"{tabs(tab_change=1)}loading dotenv...", end=" ")
         load_dotenv()
-        print(" Done")
-        print(f"{tabs()}loading config from file...", end="")
+        print("Done")
+        print(f"{tabs()}loading config from file...", end=" ")
         self.config.from_object(__name__)  # update application instantly
         # start database connection
         self.config["environment"] = Config.get('environment')
@@ -44,12 +54,12 @@ class MyFlaskApp(Flask):
         database_uri = 'sqlite:///' + database_file
         self.config['SQLALCHEMY_DATABASE_URI'] = database_uri
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        print(f" Done")
+        print(f"Done")
         print(f"{tabs(tab_change=-1)}config loaded")
-        print(f"{tabs()}initializing db...", end="")
+        print(f"{tabs()}initializing db...", end=" ")
         db.init_app(self)
         Migrate(self, db)
-        print(f" Done")
+        print(f"Done")
         print(f"{tabs()}setting up custom variables...")
         self._resource_manager = ResourceManager("@py")
         self.resource_manager.register_resource_class(constants.InterfaceType.asrl, "INSTR", CustomSerialInstrument)
@@ -76,8 +86,8 @@ class MyFlaskApp(Flask):
 
         self.emulator_connections = emulator_connections
         self.event_emitter = event_emitter
-        print(f"{tabs(tab_change=-1)} Done")
-        print(f"{tabs(tab_change=-1)} Done")
+        print(f"{tabs(tab_change=-1)}Done")
+        print(f"{tabs(tab_change=-1)}Done")
         print(f"{tabs()}defining routes...")
         # Register all routes
         defineRoutes(self)
@@ -105,7 +115,7 @@ class MyFlaskApp(Flask):
                 res.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
                 return res
 
-        print(f"{tabs()}setting up static routes...", end="")
+        print(f"{tabs()}setting up static routes...", end=" ")
 
         # Serve static files
         @self.route('/')
@@ -128,7 +138,7 @@ class MyFlaskApp(Flask):
         def handle_disconnect():
             print("Client disconnected")
 
-        print(" Done")
+        print("Done")
 
 
     @property
