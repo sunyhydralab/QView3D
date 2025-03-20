@@ -7,13 +7,9 @@
     "version": "0.9.1",
     "private": true,
     "type": "module",
+
     "scripts": {
-        "dev": "vite",
-        "build": "run-p type-check \"build-only {@}\" --",
-        "preview": "vite preview",
         "test:unit": "vitest",
-        "build-only": "vite build",
-        "type-check": "vue-tsc --build --force",
         "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
         "format": "prettier --write src/",
         "start-flask": "cd ../server && flask run",
@@ -21,6 +17,7 @@
         "start-vue": "npm run dev",
         "start": "npm-run-all --parallel start-flask start-vue"
     },
+
     "dependencies": {
         "@cyhnkckali/vue3-color-picker": "^2.0.0",
         "@fortawesome/fontawesome-free": "^6.5.1",
