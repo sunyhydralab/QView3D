@@ -1,21 +1,10 @@
 <script setup lang="ts">
-import { printers, useRetrievePrintersInfo, useHardReset, useDeletePrinter, useNullifyJobs, useEditName, useRemoveThread, useEditThread, useDiagnosePrinter, useRepair, type Device, useRetrievePrinters, useMoveHead } from '@/model/ports'
+import { printers, retrievePrintersInfo, hardReset, deletePrinter, nullifyJobs, editName, removeThread, editThread, diagnosePrinter, repair, type Device, useRetrievePrinters, moveHead } from '@/model/ports'
 import { ref, onMounted } from 'vue';
 import { toast } from '@/model/toast'
 import RegisterModal from '@/components/RegisterModal.vue'
 import router from '@/router';
 import { watch } from 'fs';
-
-const { retrieveInfo } = useRetrievePrintersInfo();
-const { hardReset } = useHardReset();
-const { deletePrinter } = useDeletePrinter();
-const { nullifyJobs } = useNullifyJobs();
-const { editName } = useEditName();
-const { removeThread } = useRemoveThread();
-const { editThread } = useEditThread();
-const { diagnose } = useDiagnosePrinter();
-const { repair } = useRepair();
-const { move } = useMoveHead();
 
 const registered = ref<Array<Device>>([]) // Stores array of printers already registered in the system
 const editMode = ref(false)
@@ -81,7 +70,7 @@ const doDelete = async (printer: Device) => {
         toast.error('Failed to delete printer. Unexpected response')
     }
 
-    printers.value = await retrieveInfo();
+    printers.value = await retrievePrintersInfo();
     registered.value = await useRetrievePrinters();
     isLoading.value = false
     // await removeThread(printer.id)
@@ -93,7 +82,7 @@ const saveName = async (printer: Device) => {
     await editName(printer.id, newName.value.trim())
     printer.name = newName.value.trim();
 
-    printers.value = await retrieveInfo();
+    printers.value = await retrievePrintersInfo();
     isLoading.value = false
 
     editMode.value = false
@@ -113,7 +102,7 @@ const doRepair = async () => {
 
 const doMove = async (port: string) => {
     isLoading.value = true
-    await move(port).then(() => {
+    await moveHead(port).then(() => {
         toast.success('Printer moved to home position')
     }).catch(() => {
         toast.error('Failed to move printer to home position')
@@ -125,7 +114,7 @@ const doDiagnose = async (printer: Device) => {
     isLoading.value = true
     message.value = `Diagnosing <b>${printer.name}</b>:<br/><br/>This printer is registered under port <b>${printer.device['serialPort']}</b>.`
     showMessage.value = true
-    let str = await diagnose(printer.device['serialPort'])
+    let str = await diagnosePrinter(printer.device['serialPort'])
     let resstr = str.diagnoseString
     message.value += "<br><br>" + resstr
     isLoading.value = false

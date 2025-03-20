@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { printers, useSetStatus, useMovePrinterList, type Device  } from '@/model/ports';
+import { printers, setStatus, movePrinterList, type Device  } from '@/model/ports';
 import draggable from 'vuedraggable'
 import GCode3DLiveViewer from '@/components/GCode3DLiveViewer.vue';
 import ConsoleTerminal from "@/components/ConsoleTerminal.vue";
@@ -10,9 +10,7 @@ import { useRouter } from 'vue-router';
 
 const { getFileDownload } = useGetJobFile()
 const { getFile } = useGetFile()
-const { setStatus } = useSetStatus();
 const { start } = useStartJob()
-const { movePrinterList } = useMovePrinterList()
 const isGcodeLiveViewVisible = ref(false)
 const isGcodeImageVisible = ref(false)
 const { releaseJob } = useReleaseJob()

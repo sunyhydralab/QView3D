@@ -6,17 +6,16 @@ import { RouterView } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
 import { onMounted, ref} from 'vue';
 import {setupSockets} from '@/model/sockets';
-import {useRetrievePrintersInfo, printers} from '@/model/ports';
+import {retrievePrintersInfo, printers} from '@/model/ports';
 import {setupTimeSocket} from '@/model/jobs';
 import FooterComponent from './components/FooterComponent.vue'
 import {watch} from 'vue';
 import IsLoading from './components/IsLoading.vue'
 
-const { retrieveInfo } = useRetrievePrintersInfo();
 const isLoading = ref(false)
 
 onMounted(async () => {
-  printers.value = await retrieveInfo()
+  printers.value = await retrievePrintersInfo()
 
   // sockets
   setupSockets(printers.value)
