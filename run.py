@@ -77,13 +77,7 @@ def install_software(current_os: str):
         )
     elif current_os == "WINDOWS":
         subprocess.run(
-<<<<<<< HEAD
             ["py -3.12", "-m", "venv", os.path.join("server", ".python-venv")]
-=======
-            ["python3.12", "-m", "venv", os.path.join("server", ".python-venv")]
-            # It seems Python actually has the same name on Windows and Linux
-            # TODO: Delete this elif if that's the case
->>>>>>> frontend-refactor
         )
     else:
         raise Exception("What OS are you using?")
