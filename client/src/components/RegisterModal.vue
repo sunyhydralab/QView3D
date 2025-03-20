@@ -3,18 +3,11 @@ import {onMounted, ref} from 'vue';
 import {
     type Device,
     printers,
-    useGetPorts,
-    useMoveHead,
-    useRegisterPrinter,
-    useRetrievePrinters,
-    useRetrievePrintersInfo
+    getPorts,
+    moveHead,
+    registerPrinter,
+    retrievePrintersInfo
 } from '@/model/ports';
-
-const { ports } = useGetPorts();
-const { retrieve } = useRetrievePrinters();
-const { retrieveInfo } = useRetrievePrintersInfo();
-const { register } = useRegisterPrinter();
-const { move } = useMoveHead();
 
 let customname = ref('') // Stores the user input name of printer
 let selectedDevice = ref<Device | null>(null)
@@ -24,7 +17,7 @@ const emit = defineEmits(['close', 'submit-form'])
 
 onMounted(async () => {
       // load all ports
-    devices.value = await ports()
+    devices.value = await getPorts()
 
     const modalElement = document.getElementById('registerModal')
     if (modalElement) {
@@ -39,7 +32,7 @@ onMounted(async () => {
 })
 
 const doGetPorts = async () => {
-    devices.value = await ports();
+    devices.value = await getPorts();
 }
 
 const doRegister = async () => {
@@ -51,13 +44,13 @@ const doRegister = async () => {
             name: customname.value.trim(), // Trim to remove leading and trailing spaces
         };
 
-        await register(selectedDevice.value);
+        await registerPrinter(selectedDevice.value);
 
         // Fetch the updated list after registration
-        printers.value = await retrieveInfo();
+        printers.value = await retrievePrintersInfo();
 
         // Refresh the devices list
-        const allDevices = await ports();
+        const allDevices = await getPorts();
         devices.value = allDevices.filter((device: Device) =>
             printers.value ? !printers.value.some(registeredDevice => registeredDevice.device === device.device) : true
         );
@@ -75,7 +68,7 @@ const clearSelectedDevice = () => {
 }
 
 const doMove = async (printer: Device) => {
-    await move(printer.device['serialPort'])
+    await moveHead(printer.device['serialPort'])
 }
 
 </script>
@@ -113,13 +106,13 @@ const doMove = async (printer: Device) => {
                             </div>
                             <label for="name" class="form-label">Custom Name</label>
                             <input type="text" class="form-control" id="name" placeholder="Custom Name" maxlength="49"
-                                v-model="customname" required>
+                                v-model="customname" required @keydown.enter="doRegister">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer d-flex justify-content-between">
                     <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" v-bind:disabled="!customname"
-                        @click="doRegister">Register</button>
+                        @click="doRegister" >Register</button>
                     <div v-if="selectedDevice">
                         <div class="tooltip-modal">
                             <div type="button" class="btn btn-primary" @click="doMove(selectedDevice as Device)">Home

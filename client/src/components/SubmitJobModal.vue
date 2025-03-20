@@ -12,8 +12,7 @@ import {
   filament,
   useAddJobToQueue,
   useGetFile,
-  useAutoQueue,
-  isLoading
+  useAutoQueue
 } from '@/model/jobs'
 import { ref, onMounted, watchEffect, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -21,6 +20,7 @@ import { toast } from '@/model/toast'
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 import GCodeThumbnail from '@/components/GCodeThumbnail.vue'
 
+const isLoading = ref(false)
 const { addJobToQueue } = useAddJobToQueue()
 const { auto } = useAutoQueue()
 const { getFile } = useGetFile()
@@ -375,7 +375,7 @@ const getFilament = (file: File) => {
                   </div>
                   <div
                     class="border-top"
-                    style="border-width: 1px; margin-left: -16px; margin-right: -16px"
+                    style="border-width: 1px; margin: 7px -16px 7px -16px"
                   ></div>
                 </li>
                 <li v-for="printer in printers" :key="printer.id">
@@ -525,20 +525,12 @@ const getFilament = (file: File) => {
               <span v-if="isAsteriksVisible" class="text-danger">*</span>
               <span class="tooltiptext">Assign a name for the job.</span>
             </div>
-            <input v-model="name" class="form-control" type="text" id="name" name="name" />
+            <input v-model="name" class="form-control" type="text" id="name" name="name"/>
           </div>
 
           <div>
             <button
-              v-if="selectedPrinters.length > 1"
-              :disabled="isLoading || isSubmitDisabled"
-              class="btn btn-primary"
-              type="submit"
-            >
-              Add to queues
-            </button>
-            <button
-              v-else
+              v-if="selectedPrinters.length >= 1"
               :disabled="isLoading || isSubmitDisabled"
               class="btn btn-primary"
               type="submit"
@@ -562,6 +554,7 @@ const getFilament = (file: File) => {
 .list-group-item {
   background-color: var(--color-background-soft);
   border-color: var(--color-modal-background-inverted);
+  color: var(--color-background-font);
 }
 
 .ellipsis {

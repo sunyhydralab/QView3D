@@ -51,7 +51,7 @@ th {
   border-left: none !important;
   border-right: none !important;
   text-align: center !important;
-  padding: 8px;
+  padding: 0.5rem;
 }
 
 tr {
@@ -202,13 +202,21 @@ tr {
   border-color: var(--color-modal-background-inverted) !important;
 }
 
-.dp__theme_light {
-  background-color: transparent !important;
+.dp__theme_light,
+.dp__overlay {
+  background-color: var(--color-modal-background-inverted) !important;
   border-color: var(--color-modal-background-inverted) !important;
-  --dp-range-between-dates-background-color: var(--color-background) !important;
-  --dp-range-between-border-color: var(--color-background) !important;
+  --dp-range-between-dates-background-color: var(--color-background-mute-font) !important;
+  --dp-range-between-border-color: var(--color-background-mute-font) !important;
   --dp-hover-color: var(--color-form-background) !important;
   --dp-background-color: var(--color-background-mute) !important;
+}
+
+.dp__range_start,
+.dp__range_end,
+.dp__action_select {
+  background-color: var(--color-primary) !important;
+  color: var(--color-primary-font) !important;
 }
 
 .dp__arrow_bottom {
@@ -271,7 +279,7 @@ tr {
 }
 
 .form-control {
-  color: var(--color-background);
+  color: var(--color-background-font);
 }
 
 .btn-primary {
@@ -357,6 +365,7 @@ tr {
   --bs-btn-disabled-color: #fff;
   --bs-btn-disabled-bg: #ad6060;
   --bs-btn-disabled-border-color: #ad6060;
+  margin: auto;
 }
 
 .btn-link {

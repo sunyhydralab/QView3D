@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { printers, useSetStatus, useMovePrinterList, type Device  } from '@/model/ports';
+import { printers, setStatus, movePrinterList, type Device  } from '@/model/ports';
 import draggable from 'vuedraggable'
 import GCode3DLiveViewer from '@/components/GCode3DLiveViewer.vue';
 import ConsoleTerminal from "@/components/ConsoleTerminal.vue";
@@ -10,9 +10,7 @@ import { useRouter } from 'vue-router';
 
 const { getFileDownload } = useGetJobFile()
 const { getFile } = useGetFile()
-const { setStatus } = useSetStatus();
 const { start } = useStartJob()
-const { movePrinterList } = useMovePrinterList()
 const isGcodeLiveViewVisible = ref(false)
 const isGcodeImageVisible = ref(false)
 const { releaseJob } = useReleaseJob()
@@ -27,7 +25,7 @@ const jobComments = ref('')
 
 const consoles = [{name: "Critical", icon: "fa-solid fa-radiation fa-lg", color: "#CE77FF" }, { name: "Error", icon: "fa-solid fa-triangle-exclamation fa-lg", color: "#ff0000" }, { name: "Warning", icon: "fa-solid fa-exclamation fa-xl", color: "#FF9F20" }, { name: "Info", icon: "fa-solid fa-question fa-xl", color: "#ffffff" }, { name: "Debug", icon: "fa-solid fa-spider fa-lg", color: "#00ffff" }]
 const tdWidth = ["64px", "130px", "142px", "110px", "110px", "314px", "315px", "75px", "58px"]
-const displayLevel = ref(2)
+const displayLevel = ref(4)
 
 const hoverIndex = ref<number | null>(null);
 let hoverTimeout: NodeJS.Timeout | null = null; // Explicitly typed
@@ -228,7 +226,27 @@ const handleDragEnd = async () => {
 
               <td :style="{ width: tdWidth[5] }">
                 <div class="buttons">
-
+                    <!-- Submit Job modal trigger -->
+                    <button v-if ="printer.status == 'ready' || printer.status == 'printing'"
+                    type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal"
+                    @click="setJob(printer.queue[0])">
+                    Submit Job
+                    </button>
+                <!-- Modal -->
+                <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h1 class="modal-title fs-5" id="exampleModalLabel">Submit Job</h1>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" style="background-color: gray;" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <SubmitJobModal />
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                   <button class="btn btn-primary"
                     v-if="printer.status == 'configuring' || printer.status == 'offline' || printer.status == 'error'"
@@ -351,7 +369,7 @@ const handleDragEnd = async () => {
                     <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                       <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
                         style="background: none; border: none;">
-                        <i class="fa-solid fa-bars"
+                        <i class="fa-solid fa-bars" style="color: #929292;"
                           :class="{ 'icon-disabled': printer.queue && printer.queue.length == 0 }"></i>
                       </button>
                       <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
@@ -467,7 +485,7 @@ const handleDragEnd = async () => {
               <td colspan="1" style="vertical-align: middle">
                 <div class="btn-group-vertical">
                   <button class="btn-console" v-for="(console, index) in consoles" :key="index" :class="console.icon" :style="{ backgroundColor: console.color }" 
-                  @click="displayLevel = index" 
+                  @click="displayLevel = index"
                   @mouseenter="startHover(index)"
                   @mouseleave="stopHover">
                     <span
@@ -526,9 +544,8 @@ const handleDragEnd = async () => {
 
             <td>
               <div class="buttons">
-
                 <!-- Submit Job modal trigger -->
-                <button v-if ="(printer.status == 'ready' && printer) || printer.status == 'printing'"
+                <button v-if ="printer.status == 'ready' || printer.status == 'printing'"
                 type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal"
                   @click="setJob(printer.queue[0])">
                   Submit Job
@@ -540,18 +557,14 @@ const handleDragEnd = async () => {
                     <div class="modal-content">
                       <div class="modal-header">
                         <h1 class="modal-title fs-5" id="exampleModalLabel">Submit Job</h1>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" style="background-color: gray;" aria-label="Close"></button>
                       </div>
                       <div class="modal-body">
                         <SubmitJobModal />
                       </div>
-                      <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                      </div>
                     </div>
                   </div>
                 </div>
-
 
                 <button class="btn btn-primary"
                   v-if="printer.status == 'configuring' || printer.status == 'offline' || printer.status == 'error'"
@@ -667,7 +680,6 @@ const handleDragEnd = async () => {
                 {{ printer?.error }}
               </div>
               <div v-else></div>
-
             </td>
 
             <td style="width: 1%; white-space: nowrap;">
@@ -679,7 +691,7 @@ const handleDragEnd = async () => {
                   <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
                     <button type="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
                       style="background: none; border: none;">
-                      <i class="fa-solid fa-bars"
+                      <i class="fa-solid fa-bars" style="color: #929292;"
                         :class="{ 'icon-disabled': printer.queue && printer.queue.length == 0 }"></i>
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
@@ -731,7 +743,6 @@ const handleDragEnd = async () => {
   height: 2.5rem;
   width: 2.5rem;
   justify-content: center;
-  border-radius: 20px;
 }
 
 .console, .viewer {

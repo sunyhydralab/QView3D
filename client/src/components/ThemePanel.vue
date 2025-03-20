@@ -432,11 +432,11 @@ watch(isDarkMode, (newValue) => {
             <label for="backgroundColorPicker">Background Color</label>
             <h2>
               <i
-                :class="isDarkMode ? 'fa-regular fa-sun fa-xl' : 'fa-solid fa-sun fa-xl'"
+                :class="isDarkMode ? 'fa-solid fa-sun fa-xl' : 'fa-regular fa-sun fa-xl'"
                 @click="isDarkMode = false"
               ></i>
               <i
-                :class="isDarkMode ? 'fa-solid fa-moon fa-xl' : 'fa-regular fa-moon fa-xl'"
+                :class="isDarkMode ? 'fa-regular fa-moon fa-xl' : 'fa-solid fa-moon fa-xl'"
                 @click="isDarkMode = true"
               ></i>
             </h2>
