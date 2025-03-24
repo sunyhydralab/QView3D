@@ -1,11 +1,7 @@
 from threading import Thread
-from models.printers import Printer
-import serial
-import serial.tools.list_ports
+from __Hidden__.Deprecated.printers import Printer
 import time
-import requests
-from Classes.Queue import Queue
-from flask import jsonify 
+from flask import jsonify
 
 class PrinterThread(Thread):
     def __init__(self, printer, *args, **kwargs):
@@ -107,7 +103,7 @@ class PrinterStatusService:
     def queueRestore(self, printer_id, status):
         try: 
             for thread in self.printer_threads:
-                if thread.printer.id == printer_id:    
+                if thread.printer.id == printer_id:
                     printer = thread.printer
                     printer.terminated = 1 
                     thread_data = {
