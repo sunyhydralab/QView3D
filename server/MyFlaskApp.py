@@ -20,6 +20,7 @@ from Classes.FabricatorList import FabricatorList
 from Classes.Loggers.ABCLogger import ABCLogger
 from models.db import db
 from werkzeug.serving import WSGIRequestHandler
+from My_Signal import setup_signal
 
 class MyFlaskApp(Flask):
     def __init__(self):
@@ -94,6 +95,7 @@ class MyFlaskApp(Flask):
         print(f"{tabs(tab_change=-1)}routes defined")
         print(f"{tabs()}initializing fabricator list...")
         self.fabricator_list = FabricatorList(self)
+        setup_signal(self.teardown)
         print(f"{tabs(tab_change=-1)}fabricator list initialized")
         # TODO: figure out how to run the emu from here
         # emu_path = os.path.abspath(os.path.join(".", root_path, "printeremu", "cmd", "test_printer.go"))
@@ -160,6 +162,13 @@ class MyFlaskApp(Flask):
     @property
     def resource_manager(self):
         return self._resource_manager
+
+    def teardown(self, signum, frame):
+        self.fabricator_list.teardown()
+        from USB_Detection import monitor
+        monitor.stop_monitoring()
+        exit(signum if signum else 0)
+
 
     def handle_errors_and_logging(self, e: Exception | str, logger=None, level=logging.ERROR):
         """

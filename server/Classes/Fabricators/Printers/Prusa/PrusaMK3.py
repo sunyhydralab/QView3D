@@ -41,7 +41,7 @@ class PrusaMK3(PrusaPrinter):
     def connect(self):
         try:
             import serial
-            self.serialConnection = FabricatorConnection.staticCreateConnection(self.serialPort.device, 115200, timeout=60)
+            self.serialConnection = FabricatorConnection.staticCreateConnection(self.serialPort, 115200, timeout=60)
             self.serialConnection.reset_input_buffer()
             from time import sleep
             sleep(4)

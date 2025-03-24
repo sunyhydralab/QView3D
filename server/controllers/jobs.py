@@ -2,7 +2,6 @@ import shutil
 from flask import Blueprint, jsonify, request, Response
 from Classes.Jobs import Job
 from models.db import db
-from models.printers import Printer
 import json
 import os 
 import gzip
@@ -603,7 +602,7 @@ def repair_ports():
         for port in ports:
             hwid = port.hwid # get hwid
             hwid_without_location = hwid.split(' LOCATION=')[0]
-            printer = Printer.getPrinterByHwid(hwid_without_location)
+            printer = current_app.fabricator_list.getFabricatorByHwid(hwid_without_location)
             if printer is not None:
                 if(printer.getDevice()!=port.device):
                     printer.editPort(printer.getId(), port.device)

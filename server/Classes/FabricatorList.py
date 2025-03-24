@@ -12,6 +12,7 @@ from globals import current_app as app, tabs
 from models.db import db
 from Classes.Fabricators.Printers.Printer import Printer
 
+
 class FabricatorList:
     def __init__(self, passed_app=app):
         print(f"{tabs(tab_change=1)}setting app...", end="")
@@ -37,6 +38,9 @@ class FabricatorList:
                 self.fabricator_threads.append(self.start_fabricator_thread(fabricator))
                 print(" Done")
                 print(f"{tabs(tab_change=-1)}fabricator for {fabricator.getName()} initialized")
+            print(f"{tabs()}Setting up Signal for clean close out...", end=" ")
+
+            print("Done")
             print(f"{tabs(tab_change=-1)}fabricator threads initialized")
 
     def __iter__(self):
@@ -68,8 +72,14 @@ class FabricatorList:
 
     def teardown(self):
         """stop all fabricator threads"""
-        [thread.stop() for thread in self.fabricator_threads]
-        self.fabricator_threads = []
+        while len(self.fabricator_threads) > 0:
+            thread = self.fabricator_threads[0]
+            if thread.fabricator.status == "printing":
+                thread.fabricator.setStatus("complete")
+            thread.stop()
+            self.fabricator_threads.remove(thread)
+            del thread
+        assert self.fabricator_threads == [], f"fabricator threads aren't empty, {self.fabricator_threads}"
 
     def addFabricator(self, serialPortName: str, name: str = ""):
         """
@@ -390,3 +400,4 @@ class FabricatorThread(Thread):
     def stop(self):
         # TODO: gracefully stop on shutdown, use signal
         self.terminated = True
+        time.sleep(2)
