@@ -77,7 +77,7 @@ def install_software(current_os: str):
         )
     elif current_os == "WINDOWS":
         subprocess.run(
-            ["py -3.12", "-m", "venv", os.path.join("server", ".python-venv")]
+            ["py", "-3.12", "-m", "venv", os.path.join("server", ".python-venv")]
         )
     else:
         raise Exception("What OS are you using?")
