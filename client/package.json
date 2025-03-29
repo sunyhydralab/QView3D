@@ -9,10 +9,16 @@
     "type": "module",
 
     "scripts": {
+        "dev": "vite",
+        "build": "run-p type-check \"build-only {@}\" --",
+        "preview": "vite preview",
         "test:unit": "vitest",
+        "build-only": "vite build",
+        "type-check": "vue-tsc --build --force",
         "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
         "format": "prettier --write src/",
-        "start-flask": "cd ../server && flask run",
+        "start-flask-with-reload": "cd .. && .venv\\Scripts\\activate && cd ./server && flask run --debug --extra-files ../server/",
+        "start-flask": "cd .. && .venv\\Scripts\\activate && cd ./server && flask run",
         "run-prod": "npm run build-only && start-flask",
         "start-vue": "npm run dev",
         "start": "npm-run-all --parallel start-flask start-vue"
