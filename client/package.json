@@ -10,6 +10,7 @@
 
     "scripts": {
         "test:unit": "vitest",
+        "build": "run-p type-check \"build-only {@}\" --",
         "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
         "format": "prettier --write src/",
         "start-flask": "cd ../server && flask run",
