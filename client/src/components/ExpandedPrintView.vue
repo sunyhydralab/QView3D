@@ -32,6 +32,8 @@ let hoverTimeout: NodeJS.Timeout | null = null; // Explicitly typed
 
 let expandedState: (string | undefined)[] = [];
 
+const waitingForResponse = ref(false)
+
 
 const startHover = (index: number) => {
   hoverTimeout = setTimeout(() => {
@@ -132,7 +134,9 @@ const sendToQueueView = (printer: Device | undefined) => {
 }
 
 const setPrinterStatus = async (printer: Device, status: string) => {
+  waitingForResponse.value = true
   await setStatus(printer.id, status); // update the status in the backend
+  waitingForResponse.value = false;
   setTimeout(() => {
     // Using setTimeout to ensure the value is reset after the change event is processed
     const selectElement = document.querySelector('select');
@@ -256,7 +260,8 @@ const handleDragEnd = async () => {
 
                   <button class="btn btn-danger"
                     v-if="printer.status == 'ready' || printer.status == 'error' || printer.status == 'complete' || printer.status == 'idle'"
-                    @click="setPrinterStatus(printer, 'offline')">
+                    @click="setPrinterStatus(printer, 'offline')"
+                    :disabled="waitingForResponse">
                     Turn Offline
                   </button>
 
@@ -568,13 +573,18 @@ const handleDragEnd = async () => {
 
                 <button class="btn btn-primary"
                   v-if="printer.status == 'configuring' || printer.status == 'offline' || printer.status == 'error'"
-                  @click="setPrinterStatus(printer, 'ready')">
+                  @click="setPrinterStatus(printer, 'ready')"
+                  :disabled="waitingForResponse">
+                  <span class="spinner-border spinner-border-sm" v-if="waitingForResponse" role="status" aria-hidden="true"></span>
+    
                   Set to Ready
                 </button>
 
                 <button class="btn btn-danger"
                   v-if="printer.status == 'ready' || printer.status == 'error' || printer.status == 'complete' || printer.status == 'idle'"
-                  @click="setPrinterStatus(printer, 'offline')">
+                  @click="setPrinterStatus(printer, 'offline')"
+                  :disabled="waitingForResponse">
+                  <span class="spinner-border spinner-border-sm" v-if="waitingForResponse" role="status" aria-hidden="true"></span>
                   Turn Offline
                 </button>
 
