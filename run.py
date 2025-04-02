@@ -24,7 +24,7 @@ FLASK_SERVER_WEB_SOCKET_PORT = 8001 # TODO Have this affect the server
 # Client configuration
 VITE_CLIENT_IP = "SAME_AS_SERVER"
 VITE_CLIENT_PORT = 8002
-VITE_LOG_LEVEL = "info"
+VITE_LOG_LEVEL = "error"
 
 # Checks to make sure the script is being run in the root directory of the project (it assumes this by default)
 if not (os.path.exists(CLIENT_LOCAL_PATH) and os.path.exists(SERVER_LOCAL_PATH)):
