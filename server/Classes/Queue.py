@@ -117,7 +117,7 @@ class Queue(deque):
         :return: list of job dictionaries
         :rtype: list[dict]
         """
-        return [job.__to_JSON__() for job in self]
+        return [job.__to_JSON__() for job in self if job is not None]
 
     def bumpExtreme(self, front: bool, jobid: int, fabricator_id: int):
         """
@@ -202,6 +202,6 @@ class Queue(deque):
         """
         if len(self) == 0:
             return None
-        self.pop()
+        self.popleft()
         if current_app:
             current_app.socketio.emit("job_removed", {"queue": self.__list__()})
