@@ -9,6 +9,7 @@ from globals import current_app
 from Classes.Fabricators.Device import Device
 from Classes.Jobs import Job
 from Mixins.hasResponseCodes import checkTime, checkExtruderTemp, checkXYZ, checkBedTemp, checkOK
+from serial.serialutil import SerialException, SerialTimeoutException
 
 
 class Printer(Device, metaclass=ABCMeta):
@@ -283,6 +284,14 @@ class Printer(Device, metaclass=ABCMeta):
                         break
                     if should_log: logger.debug(f"{gcode.decode().strip()}: {decLine}")
                     # current_app.socketio.emit("console_update",{"message": decLine, "level": "debug", "printerid": self.dbID})
+                except SerialTimeoutException as e:
+                    if "no data" in e:
+                        if should_log: logger.debug(f"No report temp line sent.")
+                        self.serialConnection.write("M155 S1")
+                    else:
+                        if current_app: return current_app.handle_errors_and_logging(e, logger)
+                        else: print(traceback.format_exc())
+                        return False
                 except UnicodeDecodeError:
                     if should_log: logger.debug(f"{gcode.decode().strip()}: {line.strip()}")
                     else: print(f"{gcode.decode().strip()}: {line.strip()}")
