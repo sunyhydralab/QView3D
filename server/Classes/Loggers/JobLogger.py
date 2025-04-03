@@ -30,7 +30,7 @@ class JobLogger(ABCLogger):
         if deviceName:
             title.append(deviceName)
         super().__init__(f"_".join(["JobLogger"] + title))
-        super().setLevel(loggingLevel)
+        super().setLevel(ABCLogger.DEBUG)
         info = []
         if showDate:
             info.append("%(asctime)s")
