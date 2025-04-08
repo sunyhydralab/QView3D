@@ -313,8 +313,6 @@ class Fabricator(db.Model):
                 if self.device.serialConnection is not None and self.device.serialConnection.is_open: assert self.device.disconnect(), "Failed to disconnect"
             self.status = newStatus
             self.device.status = newStatus
-            if self.queue[0] is None and len(self.queue) > 0:
-                self.queue[0] = self.queue[0]
             if len(self.queue) > 0:
                 assert self.queue[0] == self.queue[0], "Job is not the first in the queue"
                 if self.queue[0] is not None:
