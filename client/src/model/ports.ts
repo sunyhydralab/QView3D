@@ -27,6 +27,7 @@ export interface Device {
   colorbuff?: number,
   consoles?: [string[], string[], string[], string[], string[]] // array of debug, info, warning, error and critical console messages
   gcodeLines?: string[] // array of gocde lines sent to the printer
+  waitingForResponse?: boolean
 }
 
 export const printers = ref<Device[]>([])
