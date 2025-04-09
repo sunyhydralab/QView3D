@@ -49,7 +49,8 @@ class MyFlaskApp(Flask):
         os.makedirs(logs, exist_ok=True)
         self.logger = Logger("App", consoleLogger=sys.stdout, fileLogger=os.path.abspath(os.path.join(logs, f"{__name__}.log")),
                             consoleLevel=logging.ERROR)
-
+        self.connected_clients = set()
+        self.unknown_clients = 0
         self.socketio = SocketIO(self, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False,
                             async_mode='eventlet' if self.config["environment"] == 'production' else 'threading',
                             transport=['websocket', 'polling'])  # make it eventlet on production!
@@ -95,17 +96,42 @@ class MyFlaskApp(Flask):
         def serve_assets(filename):
             return send_from_directory(os.path.join(self.static_folder, 'assets'), filename)
 
+        def no_client_emit(event_name, *args, **kwargs):
+            """this function is used to disable the client emit function if there is no client connected"""
+            pass
+
+        self.socketio.old_emit = self.socketio.emit
+        self.socketio.emit = no_client_emit
+
         @self.socketio.on('ping')
         def handle_ping():
             self.socketio.emit('pong')
 
         @self.socketio.on('connect')
         def handle_connect():
-            print("Client connected")
+            if hasattr(request, "sid"):
+                print(f"Client connected")
+                self.connected_clients.add(request.sid)
+            else:
+                self.unknown_clients += 1
+                print(f"Client connected with unknown sid")
+            if len(self.connected_clients) > 0 or self.unknown_clients > 0:
+                self.socketio.emit = self.socketio.old_emit
 
         @self.socketio.on('disconnect')
         def handle_disconnect():
-            print("Client disconnected")
+            if hasattr(request, "sid"):
+                print(f"Client disconnected")
+                self.connected_clients.discard(request.sid)
+            elif self.unknown_clients > 0:
+                print(f"Client disconnected with unknown sid")
+                self.unknown_clients -= 1
+            else:
+                self.handle_errors_and_logging(Exception("Client disconnected with unknown sid"))
+            if len(self.connected_clients) == 0 and self.unknown_clients <= 0:
+                print(f"All clients disconnected")
+                self.unknown_clients = 0
+                self.socketio.emit = no_client_emit
 
         print(" Done")
 
