@@ -119,5 +119,5 @@ wss.on('connection', (ws) => {
 });
 
 httpServer.listen(8001, () => {
-    console.log("WebSocket server is running on http://127.0.0.1:8001");
+    console.log("WebSocket server is running on http://localhost:8001");
 });

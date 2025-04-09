@@ -23,6 +23,11 @@ table {
   border: 1px solid var(--color-border-invert);
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
+}
+
+tr {
+  background-color: var(--color-background) ;
 }
 
 .table td,
@@ -36,6 +41,7 @@ th {
   color: var(--color-background-font);
   border-left: none !important;
   border-right: none !important;
+  user-select: none;
 }
 
 td,
@@ -45,7 +51,7 @@ th {
   border-left: none !important;
   border-right: none !important;
   text-align: center !important;
-  padding: 8px;
+  padding: 0.5rem;
 }
 
 tr {
@@ -73,6 +79,7 @@ tr {
 
 .accordion-item {
   border: 1px solid var(--color-modal-background-inverted);
+  background-color: var(--color-background);
 }
 
 .dropdown-menu.show,
@@ -102,48 +109,59 @@ tr {
 
 .modal-content {
   color: var(--color-background-font);
-  background-color: var(--color-background);
+  background-color: var(--color-background) !important;
   border: 1px solid var(--color-modal-background-inverted);
 }
 
 .modal-header {
   color: var(--color-background-font);
-  background-color: var(--color-background-mute);
+  background-color: var(--color-background-soft);
   border-bottom: 1px solid var(--color-modal-background-inverted);
 }
 
 .modal-footer {
   color: var(--color-background-font);
-  background-color: var(--color-background-mute);
+  background-color: var(--color-background-soft);
   border-top: 1px solid var(--color-modal-background-inverted);
 }
 
 .modal-body .card-body, .card-body {
   color: var(--color-background-font);
-  background-color: var(--color-background);
-  border-radius: 5px;
+  background-color: var(--color-background) !important;
 }
 
 .modal-body .card, .card {
-  background-color: var(--color-background);
+  background-color: var(--color-background) !important;
   color: var(--color-background-font);
-  border: 1px solid var(--color-modal-background-inverted);
+  border: 2px solid var(--color-modal-background-inverted);
 }
 
-.tooltip {
+.tooltip-modal {
   position: relative;
   display: inline-block;
   opacity: 1;
 }
 
-.tooltip .tooltiptext {
+.tooltip {
+  position: absolute;
+  transform: translateY(-50%);
+  margin-left: 3rem;
+  padding: 6px 10px;
+  border-radius: 4px;
+  color: rgb(0, 0, 0);
+  font-size: 15px;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+
+.tooltip-modal .tooltiptext {
   visibility: hidden;
   opacity: 0;
   transition: opacity 0.2s linear,
   visibility 0.2s linear 0.2s;
   width: 200px;
-  background-color: var(--color-background-mute);
-  color: var(--color-background-font);
+  background-color: var(--color-modal-background-inverted);
+  color: var(--color-background);
   text-align: center;
   border-radius: 6px;
   padding: 5px 0;
@@ -154,7 +172,7 @@ tr {
   margin-left: -100px;
 }
 
-.tooltip .tooltiptext::after {
+.tooltip-modal .tooltiptext::after {
   content: '';
   position: absolute;
   top: 100%;
@@ -165,13 +183,13 @@ tr {
   border-color: var(--color-modal-background-inverted) transparent transparent transparent;
 }
 
-.tooltip:hover .tooltiptext {
+.tooltip-modal:hover .tooltiptext {
   visibility: visible;
   opacity: 1;
   transition: opacity 0.2s linear;
 }
 
-.tooltip .tooltiptext:hover {
+.tooltip-modal .tooltiptext:hover {
   visibility: hidden;
   opacity: 0;
 }
@@ -184,13 +202,21 @@ tr {
   border-color: var(--color-modal-background-inverted) !important;
 }
 
-.dp__theme_light {
-  background-color: transparent !important;
+.dp__theme_light,
+.dp__overlay {
+  background-color: var(--color-modal-background-inverted) !important;
   border-color: var(--color-modal-background-inverted) !important;
-  --dp-range-between-dates-background-color: var(--color-background) !important;
-  --dp-range-between-border-color: var(--color-background) !important;
+  --dp-range-between-dates-background-color: var(--color-background-mute-font) !important;
+  --dp-range-between-border-color: var(--color-background-mute-font) !important;
   --dp-hover-color: var(--color-form-background) !important;
   --dp-background-color: var(--color-background-mute) !important;
+}
+
+.dp__range_start,
+.dp__range_end,
+.dp__action_select {
+  background-color: var(--color-primary) !important;
+  color: var(--color-primary-font) !important;
 }
 
 .dp__arrow_bottom {
@@ -249,6 +275,11 @@ tr {
 .form-control:focus {
   outline: none;
   box-shadow: none;
+  color: var(--color-modal-background-inverted);
+}
+
+.form-control {
+  color: var(--color-background-font);
 }
 
 .btn-primary {
@@ -334,6 +365,7 @@ tr {
   --bs-btn-disabled-color: #fff;
   --bs-btn-disabled-bg: #ad6060;
   --bs-btn-disabled-border-color: #ad6060;
+  margin: auto;
 }
 
 .btn-link {
@@ -394,7 +426,7 @@ tr {
 }
 
 .offcanvas-body {
-  background-color: var(--color-background-soft);
+  background-color: var(--color-background);
   color: var(--color-background-font);
   position: relative;
 }
@@ -407,5 +439,8 @@ button:not(.btn-primary):not(.btn-secondary):hover i {
   color: var(--color-background-font);
 }
 
+.ellipsis {
+  color: var(--color-background-font);
+}
 
 

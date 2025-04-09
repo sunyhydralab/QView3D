@@ -247,7 +247,7 @@ class Fabricator(db.Model):
                 role_message = '<@&{role_id}>'.format(role_id=Config['discord_issues_role'])
                 from Discord_bot import sync_send_discord_file
                 sync_send_discord_file(logFile, role_message)
-            self.getQueue().deleteJob(self.job.id, self.dbID)
+            self.getQueue().deleteJob(self.queue[0].id, self.dbID)
             self.device.disconnect()
         elif self.device.verdict == "cancelled":
             if isinstance(self.device, hasEndingSequence): self.device.endSequence()

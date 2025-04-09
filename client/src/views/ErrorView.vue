@@ -9,7 +9,7 @@ import {
   useEditIssue,
   useGetIssueByJob
 } from '@/model/issues'
-import { pageSize, useGetJobs, type Job, useAssignComment, useGetJobFile, useGetFile, useGetLogFile, useRemoveIssue, useDownloadCsv, isLoading } from '@/model/jobs';
+import { pageSize, useGetJobs, type Job, useAssignComment, useGetJobFile, useGetFile, useGetLogFile, useRemoveIssue, useDownloadCsv} from '@/model/jobs';
 import { computed, onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
@@ -17,6 +17,7 @@ import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 
+const isLoading = ref(false)
 const { jobhistory, getFavoriteJobs } = useGetJobs()
 const { issues } = useGetIssues()
 const { issue } = useGetIssueByJob()
@@ -391,7 +392,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    Thi CSV file will only contain jobs included in the current filtration criteria. Are you sure you
+                    This CSV file will only contain jobs included in the current filtration criteria. Are you sure you
                     want to download this CSV file?
                 </div>
                 <div class="modal-footer">
@@ -539,7 +540,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
         <div class="row w-100" style="margin-bottom: 0.5rem;">
             <div class="col-1 text-start" style="padding-left: 0">
                 <div style="position: relative;">
-                    <button type="button" class="btn btn-primary dropdown-toggle"
+                    <button v-if="!(issuelist.values)" type="button" class="btn btn-primary dropdown-toggle"
                         @click.stop="filterDropdown = !filterDropdown">
                         Filter
                     </button>
@@ -807,7 +808,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
 .sticky {
     position: sticky;
     bottom: 0;
-    background: var(--color-background-mute);
+    background: var(--color-background) !important;
     margin-right: -1rem;
     margin-left: -1rem;
 }
@@ -818,7 +819,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
     /* Adjust this value to increase or decrease the gap */
     width: 400px;
     z-index: 1000;
-    background: var(--color-background-mute);
+    background: var(--color-background);
     border: 1px solid var(--color-border);
     padding-bottom: 0 !important;
 }
@@ -896,22 +897,6 @@ const onlyNumber = ($event: KeyboardEvent) => {
     border-radius: 5px;
 }
 
-.offcanvas {
-    width: 700px;
-}
-
-.offcanvas-btn-box {
-    transition: transform .3s ease-in-out;
-    position: fixed;
-    top: 50%;
-    right: 0;
-    z-index: 1041;
-}
-
-.offcanvas-end {
-    border-left: 0;
-}
-
 table {
     width: 100%;
     border-collapse: collapse;
@@ -941,6 +926,11 @@ label.form-check-label {
     color: var(--color-background-font);
     background-color: var(--color-background-mute) !important;
     border-color: var(--color-modal-background-light-inverted) !important;
+    margin-top: 1rem;
+}
+
+.form-check {
+    margin-top: 10px;
 }
 
 ::placeholder {

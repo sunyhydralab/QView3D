@@ -156,9 +156,6 @@ class Device(ABC):
                 for line in f:
                     if line.startswith(";") or line == "":
                         continue
-                    if current_app:
-                        with current_app.app_context():
-                            current_app.socketio.emit("gcode_line", {"line": line.strip("\n"), "printerid": self.dbID})
                     if isVerbose and self.logger: self.logger.debug(line.strip("\n"))
                     if self.status == "paused":
                         self.pause()

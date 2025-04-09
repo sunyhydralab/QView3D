@@ -274,8 +274,6 @@ def releasejob():
             assert len(fabricator.queue) > 0, "Queue is empty"
             assert fabricator.queue[0].getJobId() == jobpk, "Job not at front of queue"
             fabricator.queue.removeJob()
-        if fabricator.job is not None:
-            fabricator.job = None
 
         printerid = data['printerid']
 
@@ -527,12 +525,10 @@ def startPrint():
         printerobject = findPrinterObject(printerid)
         queue = printerobject.getQueue()
         assert queue is not None, "Queue not found."
-        printerobject.job = queue.getJobById(jobid)
-        assert printerobject.job is not None, "Job not found."
-        if printerobject.job.getStatus() == "inqueue": printerobject.job.setStatus("ready")
-        assert printerobject.job.getStatus() == "ready", f"Job not ready to print. Status: {printerobject.job.getStatus()}"
-        assert printerobject.job == queue[0], "Job not at front of queue."
-        printerobject.job.setReleased(1)
+        assert printerobject.queue[0] is not None, f"Job not found: jobid: {jobid}"
+        if printerobject.queue[0].getStatus() == "inqueue": printerobject.queue[0].setStatus("ready")
+        assert printerobject.queue[0].getStatus() == "ready", f"Job not ready to print. Status: {printerobject.queue[0].getStatus()}"
+        printerobject.queue[0].setReleased(1)
         printerobject.setStatus("printing")
 
 

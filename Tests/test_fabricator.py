@@ -64,7 +64,7 @@ def test_pause_and_resume(app, fabricator):
             import traceback
             assert not isinstance(result, Exception), f"Failed to begin on {fabricator.getDescription()}: {result}:\n{''.join(traceback.format_exception(None, result, result.__traceback__))}"
             assert fabricator.getStatus() == fabricator.device.status == "cancelled", f"Failed to cancel on {fabricator.getDescription()}, expected cancel, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
-            assert fabricator.job is None, f"Failed to complete on {fabricator.getDescription()}, expected job to be None, got {fabricator.job}"
+            assert fabricator.queue[0] is None, f"Failed to complete on {fabricator.getDescription()}, expected job to be None, got {fabricator.queue[0]}"
         except Exception as f:
             fabricator.setStatus("error")
             raise f

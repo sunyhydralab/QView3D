@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { printers, type Device } from '@/model/ports'
-import { pageSize, useGetJobs, type Job, useGetJobFile, useGetLogFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useDownloadCsv, useRemoveIssue, isLoading } from '@/model/jobs';
+import { pageSize, useGetJobs, type Job, useGetJobFile, useGetLogFile, useDeleteJob, useClearSpace, useFavoriteJob, useGetFile, useAssignComment, useDownloadCsv, useRemoveIssue} from '@/model/jobs';
 import { computed, onMounted, onBeforeUnmount, ref, watchEffect, onUnmounted } from 'vue';
 import { type Issue, useGetIssues, useAssignIssue } from '@/model/issues'
 import { useRouter } from 'vue-router';
 import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
 import GCodeThumbnail from '@/components/GCodeThumbnail.vue';
 import VueDatePicker from '@vuepic/vue-datepicker';
+import FavoritesOffCanvasBox from '@/components/FavoritesOffCanvasBox.vue';
 import '@vuepic/vue-datepicker/dist/main.css';
 
+const isLoading = ref(false)
 const { jobhistory, getFavoriteJobs } = useGetJobs()
 const { getFileDownload } = useGetJobFile()
 const { getFile } = useGetFile()
@@ -69,10 +71,8 @@ let searchCriteria = ref('');
 const isOnlyJobNameChecked = computed(() => searchByJobName.value && !searchByFileName.value);
 const isOnlyFileNameChecked = computed(() => !searchByJobName.value && searchByFileName.value);
 
-let buttonTransform = ref(0);
 let favoriteJobs = ref<Array<Job>>([])
 let jobToUnfavorite: Job | null = null;
-let isOffcanvasOpen = ref(false);
 
 let jobComments = ref('')
 const showText = ref(false)
@@ -348,11 +348,6 @@ const favoriteJob = async (job: Job, fav: boolean) => {
     jobToUnfavorite = null;
 }
 
-const toggleButton = () => {
-    buttonTransform.value = buttonTransform.value === 0 ? -700 : 0;
-    isOffcanvasOpen.value = !isOffcanvasOpen.value;
-}
-
 const openGCodeModal = async (job: Job, printerName: string) => {
     currentJob.value = job
     currentJob.value.printer = printerName
@@ -506,56 +501,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
         </div>
     </div>
 
-    <!-- bootstrap off canvas to the right -->
-    <div class="offcanvas offcanvas-end" data-bs-backdrop="static" tabindex="-1" id="offcanvasRight"
-        aria-labelledby="offcanvasRightLabel">
-        <div class="offcanvas-header">
-            <div class="container-fluid">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <h5 class="offcanvas-title" id="offcanvasRightLabel">Favorite Prints</h5>
-                    </div>
-                    <div class="col-auto">
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
-                            aria-label="Close" v-on:click="toggleButton"></button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="offcanvas-body" style="max-height: 100vh; overflow-y: auto;">
-            <div class="grid-container header">
-                <h5>Job Name</h5>
-                <h5>File Name</h5>
-                <h5>Actions</h5>
-            </div>
-            <div v-if="favoriteJobs.length > 0">
-              <div v-for="job in favoriteJobs" :key="job.id" class="mb-3">
-                <div class="grid-container job">
-                  <p class="my-auto truncate-name">{{ job.name }}</p>
-                  <p class="my-auto truncate-file">{{ job.file_name_original }}</p>
-                  <div class="d-flex align-items-center">
-                    <i class="fas fa-star" style="margin-right: 10px;" data-bs-toggle="modal"
-                      data-bs-target="#favoriteModal" @click="jobToUnfavorite = job"></i>
-                    <button class="btn btn-secondary download" style="margin-right: 10px;"
-                      @click="getFileDownload(job.id)" :disabled="job.file_name_original.includes('.gcode:')">
-                      <i class="fas fa-download"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <p v-else class="text-center" style="color: var(--color-nav-text)">No favorite jobs found. Favorite your first job!</p>
-        </div>
-    </div>
-    <div class="offcanvas-btn-box" :style="{ transform: `translateX(${buttonTransform}px)` }">
-        <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight"
-            aria-controls="offcanvasRight" v-on:click="toggleButton"
-            style="border-top-right-radius: 0; border-bottom-right-radius: 0; padding: 5px 10px;">
-            <span v-if="isOffcanvasOpen"><i class="fas fa-star"></i></span>
-            <span><i class="fas" :class="isOffcanvasOpen ? 'fa-chevron-right' : 'fa-chevron-left'"></i></span>
-            <span v-if="!isOffcanvasOpen"><i class="fas fa-star"></i></span>
-        </button>
-    </div>
+    <FavoritesOffCanvasBox />
 
     <div class="modal fade" id="csvModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
         data-bs-backdrop="static">
@@ -566,34 +512,13 @@ const onlyNumber = ($event: KeyboardEvent) => {
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    Thi CSV file will only contain jobs included in the current filtration criteria. Are you sure you
+                    This CSV file will only contain jobs included in the current filtration criteria. Are you sure you
                     want to download this CSV file?
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button @click="doDownloadCsv" type="button" class="btn btn-success"
                         data-bs-dismiss="modal">Download CSV</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- modal to unfavorite a job in the off canvas -->
-    <div class="modal fade" id="favoriteModal" tabindex="-1" aria-labelledby="favoriteModalLabel" aria-hidden="true"
-        data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="favoriteModalLabel">Unfavorite Job</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to unfavorite this job?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
-                        @click="favoriteJob(jobToUnfavorite!, false)">Unfavorite</button>
                 </div>
             </div>
         </div>
@@ -754,8 +679,7 @@ const onlyNumber = ($event: KeyboardEvent) => {
                             <div class="mb-2 border-top"
                                 style="border-width: 1px; margin-left: -16px; margin-right: -16px;"></div>
                             <div class="d-flex justify-content-center">
-                                <button @click.prevent="submitFilter" class="btn btn-primary me-3 mb-2">Submit
-                                    Filter</button>
+                                <button @click.prevent="submitFilter" class="btn btn-primary ms-5 mb-2">Submit Filter</button>
                                 <button @click.prevent="clearFilter" class="btn btn-danger mb-2">Clear Filter</button>
                             </div>
                         </div>
@@ -912,6 +836,10 @@ const onlyNumber = ($event: KeyboardEvent) => {
     </div>
 </template>
 <style scoped>
+.border-top {
+    margin: 5px;;
+}
+
 .sticky {
     position: sticky;
     bottom: 0px;
@@ -993,22 +921,6 @@ const onlyNumber = ($event: KeyboardEvent) => {
     background-color: var(--color-background-mute);
 }
 
-.offcanvas {
-    width: 700px;
-}
-
-.offcanvas-btn-box {
-    transition: transform .3s ease-in-out;
-    position: fixed;
-    top: 50%;
-    right: 0;
-    z-index: 1041;
-}
-
-.offcanvas-end {
-    border-left: 0;
-}
-
 table {
     width: 100%;
     border-collapse: collapse;
@@ -1021,28 +933,5 @@ ul.dropdown-menu.w-100.show li {
 
 ul.dropdown-menu.w-100.show li.divider {
     margin-left: 0;
-}
-
-/*.form-check-input:focus,
-.form-control:focus {
-    outline: none;
-    box-shadow: none;
-    border-color: #e2e2e2;
-}*/
-
-label.form-check-label {
-    cursor: pointer;
-}
-
-.form-control {
-    background: var(--color-background);
-    color: var(--color-background-font);
-    border: 1px solid var(--color-border);
-}
-
-.form-select {
-    background-color: var(--color-background);
-    color: var(--color-background-font);
-    border-color: var(--color-border);
 }
 </style>
