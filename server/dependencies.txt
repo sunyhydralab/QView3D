@@ -24,5 +24,6 @@ typing_extensions>=4.12.2
 setuptools>=76.0.0
 PyVISA>=1.15
 PyVISA-py>=0.8
+psutil>=7.0.0
 usb-monitor>=1.23
 zeroconf>=0.146.1
