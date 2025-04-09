@@ -10,6 +10,7 @@ from globals import current_app, TemporaryTimeout
 from Classes.Fabricators.Device import Device
 from Classes.Jobs import Job
 from Mixins.hasResponseCodes import checkTime, checkExtruderTemp, checkXYZ, checkBedTemp, checkOK
+from serial.serialutil import SerialTimeoutException
 
 
 class Printer(Device, metaclass=ABCMeta):
@@ -265,7 +266,6 @@ class Printer(Device, metaclass=ABCMeta):
             gcode = gcode.decode("utf-8")
         assert isinstance(gcode, str), f"Expected string, got {type(gcode)}"
         callables = self.callablesHashtable.get(self.extractIndex(gcode, logger), [checkOK])
-        current_app.socketio.emit("gcode_line", {"line": (gcode.decode() if isinstance(gcode, bytes) else gcode).strip(), "printerid": self.dbID})
         self.serialConnection.write(gcode)
         line = ''
         for func in callables:
@@ -283,6 +283,16 @@ class Printer(Device, metaclass=ABCMeta):
                     # current_app.socketio.emit("console_update",{"message": decLine, "level": "debug", "printerid": self.dbID})
                     if func(line, self):
                         break
+                    logger.debug(f"{gcode.strip()}: {decLine}")
+                    # current_app.socketio.emit("console_update",{"message": decLine, "level": "debug", "printerid": self.dbID})
+                except SerialTimeoutException as e:
+                    if "no data" in e:
+                        logger.debug(f"No report temp line sent.")
+                        self.serialConnection.write("M155 S1")
+                    else:
+                        if current_app: return current_app.handle_errors_and_logging(e, logger)
+                        else: print(traceback.format_exc())
+                        return False
                 except UnicodeDecodeError:
                     logger.debug(f"{gcode.strip()}: {line.strip()}")
                     # current_app.socketio.emit("console_update",{"message": gcode.strip(), "level": "debug", "printerid": self.dbID})

@@ -51,7 +51,6 @@ class Fabricator(db.Model):
         else: port = current_app.resource_manager.open_resource(port_string, baud_rate=115200, open_timeout=5000)
         from Classes.Queue import Queue
         self.dbID = None  # Initialize dbID
-        self.job: Job | None = None
         self.queue: Queue = Queue()
         self.status: str = "configuring"
         self.hwid = port.hwid if hasattr(port, "hwid") else ""
@@ -76,7 +75,7 @@ class Fabricator(db.Model):
         db.session.commit()
 
     def __repr__(self):
-        return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}, logger: {self.device.logger if hasattr(self, 'device') and hasattr(self.device, 'logger') else 'None'}, port open: {self.device.serialConnection.is_open if hasattr(self, 'device') and self.device and self.device.serialConnection else None}, queue: {self.queue}, job: {self.job}"
+        return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}, logger: {self.device.logger if hasattr(self, 'device') and hasattr(self.device, 'logger') else 'None'}, port open: {self.device.serialConnection.is_open if hasattr(self, 'device') and self.device and self.device.serialConnection else None}, queue: {self.queue}, job: {self.queue[0]}"
 
     def __to_JSON__(self) -> dict:
         """
@@ -92,7 +91,7 @@ class Fabricator(db.Model):
             "id": self.dbID,
             "date": self.date.strftime("%a, %d %b %Y %H:%M:%S"),
             "queue": self.queue.convertQueueToJson(),
-            "job": self.job.__to_JSON__() if self.job is not None else None,
+            "job": self.queue[0].__to_JSON__() if len(self.queue) > 0 and self.queue[0] is not None else None,
             "device": self.device.__to_JSON__(),
             "consoles": [[],[],[],[],[]],
         }
@@ -122,20 +121,19 @@ class Fabricator(db.Model):
             assert self.status == "printing", f"Fabricator is not printing, status: {self.status}"
             assert self.queue is not None, "Queue is None"
             assert len(self.queue) > 0, "Queue is empty"
-            self.job = self.queue.getNext()
-            assert self.job is not None, "Job is None"
+            assert self.queue[0] is not None, "Job is None"
             self.checkValidJob()
             assert self.status != "error", "Invalid job"
             # if isinstance(self.device, hasStartupSequence):
             #     self.device.startupSequence()
             assert self.setStatus("printing"), "Failed to set status to printing"
-            self.error = self.device.parseGcode(self.job, isVerbose=isVerbose) # this is the actual command to read the file and fabricate.
+            self.error = self.device.parseGcode(self.queue[0], isVerbose=isVerbose) # this is the actual command to read the file and fabricate.
             self.handleVerdict()
             if isVerbose and self.device.logger is not None: self.device.logger.debug(f"Verdict handled, status: {self.status}")
             return True
         except Exception as e:
             self.error = e
-            current_app.socketio.emit("error_update", {"fabricator_id": self.dbID, "job_id": self.job.id ,"error": str(e)})
+            current_app.socketio.emit("error_update", {"fabricator_id": self.dbID, "job_id": self.queue[0].id ,"error": str(e)})
             return current_app.handle_errors_and_logging(e, self.device.logger, level=50)
 
     def pause(self) -> bool:
@@ -176,7 +174,7 @@ class Fabricator(db.Model):
         :raises AssertionError: if the fabricator isn't printing, or if the fabricator hasn't cancelled despite being capable of it
         """
         try:
-            assert self.job is not None, "Job is None"
+            assert self.queue[0] is not None, "Job is None"
             assert self.device is not None, "Device is None"
             if self.status != "printing" and self.status != "paused":
                 return current_app.handle_errors_and_logging("Nothing to cancel, Fabricator isn't printing", self)
@@ -211,20 +209,15 @@ class Fabricator(db.Model):
                 if self.device.serialConnection is not None and self.device.serialConnection.is_open: assert self.device.disconnect(), "Failed to disconnect"
             self.status = newStatus
             self.device.status = newStatus
-            if self.job is None and len(self.queue) > 0:
-                self.job = self.queue[0]
-            if len(self.queue) > 0:
-                assert self.job == self.queue[0], "Job is not the first in the queue"
-                if self.job is not None:
-                    self.job.status = newStatus
-                    self.queue[0].status = newStatus
-                    db.session.commit()
+            if len(self.queue) > 0 and self.queue[0] is not None:
+                self.queue[0].status = newStatus
+                db.session.commit()
             if current_app:
                 current_app.socketio.emit(
                     "status_update", {"fabricator_id": self.dbID, "status": newStatus}
                 )
-                if self.job is not None:
-                    Job.update_job_status(self.job.id, newStatus)
+                if self.queue[0] is not None:
+                    Job.update_job_status(self.queue[0].id, newStatus)
             else:
                 print(f"current app is None, status: {newStatus}")
             return True
@@ -238,17 +231,17 @@ class Fabricator(db.Model):
     def handleVerdict(self):
         """handles the verdict of the device, this is used for handling the completion of a job"""
         assert self.device.verdict in ["complete", "error", "cancelled", "misprint"], f"Invalid verdict: {self.device.verdict}"
-        assert self.job is not None, "Job is None"
+        assert self.queue[0] is not None, "Job is None"
         if self.device.verdict == "complete":
             self.setStatus("complete")
         elif self.device.verdict == "error":
             self.setStatus("error")
             # create issue
             from models.issues import Issue
-            Issue.create_issue(f"CODE ISSUE: Print Failed: {self.name} - {self.job.file_name_original}", self.error, self.job.id)
+            Issue.create_issue(f"CODE ISSUE: Print Failed: {self.name} - {self.queue[0].file_name_original}", self.error, self.queue[0].id)
             # send log to discord
             if Config['discord_enabled']:
-                printFile = self.job.file_name_original.split(".gcode")[0]
+                printFile = self.queue[0].file_name_original.split(".gcode")[0]
                 printFile = "-".join(printFile.split("_"))
                 logFile = os.path.join(root_path, "logs", self.name, printFile, self.job.date.strftime('%m-%d-%Y_%H-%M-%S'), "no color", "DEBUG.log.gz")
                 role_message = '<@&{role_id}>'.format(role_id=Config['discord_issues_role'])
@@ -261,7 +254,7 @@ class Fabricator(db.Model):
             else: self.device.home()
             self.setStatus("cancelled")
             self.queue.removeJob()
-            self.job = None
+            self.queue[0] = None
         elif self.device.verdict== "misprint":
             self.setStatus("misprint")
 
@@ -304,10 +297,10 @@ class Fabricator(db.Model):
     def checkValidJob(self):
         """checks if the job is valid for the fabricator"""
         try:
-            assert self.job is not None, "Job is None"
+            assert self.queue[0] is not None, "Job is None"
             assert self.device is not None, "Device is None"
-            self.job.saveToFolder()
-            settingsDict = getFileConfig(self.job.file_path)
+            self.queue[0].saveToFolder()
+            settingsDict = getFileConfig(self.queue[0].file_path)
             from Classes.Fabricators.Printers.Printer import Printer
             from Classes.Fabricators.CNCMachines.CNCMachine import CNCMachine
             from Classes.Fabricators.LaserCutters.LaserCutter import LaserCutter
@@ -330,7 +323,7 @@ class Fabricator(db.Model):
             current_app.handle_errors_and_logging(e, self.device.logger)
             self.setStatus("error")
             self.queue.removeJob()
-            self.job = None
+            self.queue[0] = None
 
 
 def getFileConfig(file: str) -> dict:
