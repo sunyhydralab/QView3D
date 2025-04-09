@@ -235,7 +235,11 @@ const colors = ['\x1b[95m', '\x1b[91m', '\x1b[93m', '\x1b[0m', '\x1b[94m']
 
 export function setupConsoleSocket(printers: Array<Device>) {
   for (let i = 0; i < printers.length; i++) {
-    printers[i].gcodeLines = []
+    if (printers[i].consoles) {
+      for (let j = 0; j < 5; j++) {
+        printers[i].consoles![j] = []
+      }
+    }
   }
   socket.value.off('console_update')
   socket.value.on('console_update', (data: any) => {
@@ -252,7 +256,6 @@ export function setupConsoleSocket(printers: Array<Device>) {
               printer.consoles[i].push(colors[maxLevelToAdd] + data.message + '\x1b[0m')
             }
           }
-          if (data.level === 'info') printer.gcodeLines!.push(data.message.split(':')[0]);
 
         } else {
           console.error('data.level is undefined')

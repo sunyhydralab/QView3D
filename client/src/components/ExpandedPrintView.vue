@@ -113,7 +113,6 @@ if (printer) {
   printer.bed_temp = 0;
   printer.queue?.shift(); // Remove the first job in the queue
   printer.consoles = [[], [], [], [], []]
-  printer.gcodeLines = undefined
   //TODO: marker
 }
 

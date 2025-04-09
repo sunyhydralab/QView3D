@@ -407,9 +407,7 @@ export function useReleaseJob() {
             toast.error(response.message)
           } else if (response.success === true) {
             toast.success(response.message)
-            const printer = printers!.value!.find((p: Device) => p.id === printerid)
-            if(printer) printer.gcodeLines = []
-          } else {
+            } else {
             console.error('Unexpected response:', response)
             toast.error('Failed to release job. Unexpected response.')
           }
