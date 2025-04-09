@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { printers, setStatus, movePrinterList, type Device  } from '@/model/ports';
 import draggable from 'vuedraggable'
-import GCode3DLiveViewer from '@/components/GCode3DLiveViewer.vue';
 import ConsoleTerminal from "@/components/ConsoleTerminal.vue";
 import SubmitJobModal from '@/components/SubmitJobModal.vue';
 import { jobTime, useGetFile, useGetJobFile, useReleaseJob, useStartJob, type Job } from '@/model/jobs';
 import { nextTick, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import GCode3DImageViewer from "@/components/GCode3DImageViewer.vue";
 
 const { getFileDownload } = useGetJobFile()
 const { getFile } = useGetFile()
@@ -484,7 +484,7 @@ const handleDragEnd = async () => {
                 <ConsoleTerminal :lines="printer.consoles![displayLevel]" />
               </td>
               <td colspan="4" class="viewer">
-                <GCode3DLiveViewer v-if="printer.isInfoExpanded" :device="printer" />
+                <GCode3DImageViewer v-if="printer.isInfoExpanded" :device="printer" />
               </td>
               <td colspan="1" style="vertical-align: middle">
                 <div class="btn-group-vertical">
