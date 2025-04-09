@@ -266,7 +266,6 @@ class Printer(Device, metaclass=ABCMeta):
             gcode = gcode.encode("utf-8")
         assert isinstance(gcode, bytes), f"Expected bytes, got {type(gcode)}"
         callables = self.callablesHashtable.get(self.extractIndex(gcode, logger), [checkOK])
-        current_app.socketio.emit("gcode_line", {"line": (gcode.decode() if isinstance(gcode, bytes) else gcode).strip(), "printerid": self.dbID})
         self.serialConnection.write(gcode)
         line = ''
         for func in callables:

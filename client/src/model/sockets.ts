@@ -15,7 +15,6 @@ export function setupSockets(printers: Array<Device>) {
     setupJobStatusSocket(printers)
     setupPortRepairSocket(printers)
     setupGCodeViewerSocket(printers)
-    setupGCodeLineSocket(printers)
     setupExtrusionSocket(printers)
     setupColorChangeBuffer(printers)
     setupMaxLayerHeightSocket(printers)
@@ -216,25 +215,6 @@ export function setupGCodeViewerSocket(printers: Array<Device>) {
 
       if (job) {
         job.gcode_num = data.gcode_num
-      }
-    } else {
-      console.error('printers is undefined')
-    }
-  })
-}
-
-export function setupGCodeLineSocket(printers: Array<Device>) {
-  for (let i = 0; i < printers.length; i++) {
-    printers[i].gcodeLines = []
-  }
-  socket.value.off('gcode_line')
-  socket.value.on('gcode_line', (data: any) => {
-    if (printers) {
-      const printer: Device | undefined = printers.find((p: Device) => p.id === data.printerid)
-      if (printer) {
-        printer.gcodeLines!.push(data.line)
-      } else {
-        console.error('printer is undefined')
       }
     } else {
       console.error('printers is undefined')
