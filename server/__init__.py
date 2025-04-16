@@ -12,8 +12,8 @@ app = Flask(__name__)
 
 # Load configuration from environment variables
 app.config.from_mapping(
-    SECRET_KEY=os.getenv('SECRET_KEY'),
-    DATABASE=os.path.join(".","server" , os.getenv('DATABASE_NAME'))
+    SERVER_IP_ADDRESS=os.environ.get('SERVER_IP_ADDRESS'),
+    SERVER_PORT=os.environ.get('SERVER_PORT'),
 )
 
 # initialize the database
