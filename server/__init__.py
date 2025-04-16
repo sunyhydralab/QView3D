@@ -15,6 +15,7 @@ app.config.from_mapping(
     DATABASE=os.getenv('DATABASE')
 )
 
+# define a test route to check if the server is running
 @app.route('/')
 def test():
     return 'Server is running'
