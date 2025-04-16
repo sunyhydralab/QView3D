@@ -1,5 +1,9 @@
 WIP
 
+<!-- # Initial Setup
+Since we're using Flask, you must first set up a Python virtual environment -->
+
+
 # The .env file
 The .env file provides configurable values for the frontend and backend
 An example .env file is provided below:
@@ -13,3 +17,10 @@ SERVER_PORT=8000
 CLIENT_IP_ADDRESS=same_as_server
 CLIENT_PORT=same_as_server
 ```
+
+# Using the debugger in Visual Studio Code
+Install [Visual Studio Code](https://code.visualstudio.com/), and the [Python Extension pack](https://marketplace.visualstudio.com/items/?itemName=ms-python.python).
+Then, [select and activate](https://code.visualstudio.com/docs/python/environments#_working-with-python-interpreters) the virtual environment you created. If done properly, the bottom right corner should look similar to this:
+![alt text](extension_sees_venv.png)
+
+Now, you can use the debugger in VSCode to debug Flask
