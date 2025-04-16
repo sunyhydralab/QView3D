@@ -1,4 +1,7 @@
 .venv/
+.env
+
+hvamc.db
 
 *.pyc
 __pycache__/
