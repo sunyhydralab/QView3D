@@ -1,7 +1,7 @@
 .venv/
 .env
 
-hvamc.db
+qview3d.db
 
 *.pyc
 __pycache__/

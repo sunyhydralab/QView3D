@@ -23,3 +23,11 @@ db.init_app(app)
 @app.route('/')
 def test():
     return 'Server is running'
+
+@app.route('/test_db_conn')
+def test_db_conn():
+    try:
+        db.get_db()
+        return 'Database connection successful'
+    except Exception as e:
+        return f'Database connection failed: {str(e)}'

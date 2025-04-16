@@ -4,11 +4,12 @@ from datetime import datetime
 import click
 from flask import current_app, g
 
+DATABASE_PATH = 'server/qview3d.db'
 # connect to the database and return a connection object
 def get_db():
     if 'db' not in g:
         g.db = sqlite3.connect(
-            current_app.config['DATABASE'],
+            DATABASE_PATH,
             detect_types=sqlite3.PARSE_DECLTYPES
         )
         g.db.row_factory = sqlite3.Row
@@ -36,9 +37,7 @@ def init_db_command():
     click.echo('Initialized the database.')
 
 # convert database timestamp to python datetime object
-sqlite3.register_converter(
-    "timestamp", lambda v: datetime.fromisoformat(v.decode())
-)
+sqlite3.register_converter("timestamp", lambda v: datetime.fromisoformat(v.decode()))
 
 def init_app(app):
     app.teardown_appcontext(close_db)
