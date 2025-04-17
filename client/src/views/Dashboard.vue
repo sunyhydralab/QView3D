@@ -1,7 +1,11 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import PrintModule from "@/components/PrintModule.vue"
+</script>
 
 <template>
-  <h1 class="text-2xl font-bold underline dark:text-8xl">Hello world!</h1>
+  <PrintModule class="pt-12"/>
 </template>
 
-<style scoped></style>
+<style scoped>
+
+</style>
