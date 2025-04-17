@@ -3,6 +3,7 @@ import { ref } from 'vue'
 // Keeps track of all registered fabricators
 export const fabrictorList = ref<Fabricator[]>([])
 
+// Represents the Fabricator object
 interface Fabricator 
 {
 	id? : number
@@ -16,7 +17,7 @@ interface Fabricator
 	isWaitingForResponse : boolean
 }
 
-// Sets the fabricator information, adds a fabricator to the fabricatorList, and returns a fabricator
+// Sets the fabricator information, adds a Fabricator to the fabricatorList, and returns a Fabricator
 export function registerFabricator(userSubmission : {customName: string; description: string; modelName: string, date: number;}) : Fabricator
 {
 	const newFabricator : Fabricator = {
