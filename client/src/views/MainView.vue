@@ -1,7 +1,7 @@
 <script setup lang="ts"></script>
 
 <template>
-  <div>
+  <div class="dark:bg-gray-800">
     <h1 className="text-2xl font-bold underline">Hello world!</h1>
   </div>
 </template>
