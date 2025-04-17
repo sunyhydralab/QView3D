@@ -9,21 +9,23 @@ You might be wondering, Why not use true or false instead of 'light' or 'dark'?
 */
 
 // state for the mode
-export const mode = ref<'light' | 'dark'>('light')
+let mode: 'light' | 'dark' = 'dark'
 
-// computed property to check if the mode is dark
-export const isDark = computed(() => mode.value === 'dark')
+// get mode
+export function isDark(): boolean {
+  return mode === 'dark'
+}
 
 // set the mode and update mode on local storage
 export function setMode(newMode: 'light' | 'dark'): void {
-  mode.value = newMode
+  mode = newMode
   document.documentElement.classList.toggle('dark', newMode === 'dark')
   localStorage.setItem('mode', newMode)
 }
 
 // toggle the mode between light and dark
 export function toggleMode(): void {
-  if (mode.value === 'dark') {
+  if (mode === 'dark') {
     setMode('light')
   } else {
     setMode('dark')
