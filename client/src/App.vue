@@ -4,10 +4,8 @@ import Navbar from '@/components/Navbar.vue'
 </script>
 
 <template>
-  <div class="min-h-screen bg-light-primary dark:bg-dark-primary">
-    <Navbar />
-    <RouterView class="h-full"/>
-  </div>
+  <Navbar />
+  <RouterView class="pt-10 px-10 h-screen bg-light-primary dark:bg-dark-primary"/>
 </template>
 
 <style scoped></style>
