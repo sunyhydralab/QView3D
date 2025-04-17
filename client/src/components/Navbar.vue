@@ -39,7 +39,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <nav class="bg-white shadow-sm dark:bg-gray-800 text-white">
+    <nav class="bg-white shadow-lg dark:bg-gray-800 text-white">
         <div class="mx-auto pl-2 pr-4 sm:pr-6 lg:pr-8">
             <div class="flex h-16 justify-between">
                 <div class="flex items-center">
