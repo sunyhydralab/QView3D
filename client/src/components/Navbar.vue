@@ -44,7 +44,7 @@ onMounted(() => {
             <div class="flex h-16 justify-between">
                 <div class="flex items-center">
                     <!-- Logo -->
-                    <div class="flex-shrink-0 flex items-center">
+                    <div className="flex-shrink-0 flex items-center">
                         <router-link to="/">
                             <img class="h-12 w-auto" src="@/assets/images/QView3Dlogo.png" alt="Logo" />
                         </router-link>
@@ -58,7 +58,7 @@ onMounted(() => {
                             'inline-flex items-center px-1 pt-1 border-b-2 text-xl font-semibold transition-colors duration-200 ease-in-out',
                             isActive(item.route)
                                 ? 'border-b-2 border-[#7561A9] text-[#7E66B9]'
-                                : 'border-transparent text-gray-700 hover:text-[#7561A9] hover:border-gray-300 dark:text-white'
+                                : 'border-transparent text-gray-700 hover:text-[#7561A9] hover:border-gray-500 dark:hover:border-white dark:text-white'
                         ]" aria-current="page">
                             {{ item.name }}
                         </router-link>
@@ -69,10 +69,10 @@ onMounted(() => {
                 <div class="flex items-center">
                     <!-- Toggle always visible -->
                     <ToggleMode class="mr-3" />
-                    
+
                     <!-- Divider Line -->
                     <div class="lg:hidden h-8 w-px bg-gray-300 mr-3"></div>
-                    
+
                     <!-- Mobile menu button -->
                     <div class="lg:hidden">
                         <button @click="isOpen = !isOpen"
@@ -113,5 +113,4 @@ onMounted(() => {
     </nav>
 </template>
 
-<style scoped>
-</style>
+<style scoped></style>
