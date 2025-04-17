@@ -1,3 +1,43 @@
+<script setup>
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+
+// State for mobile menu
+const isOpen = ref(false);
+
+const navigationItems = ref([
+    { name: 'Dashboard', route: '/' },
+    { name: 'Registration', route: '/register' },
+    { name: 'Queues', route: '/queue' },
+    { name: 'Job History', route: '/history' },
+    { name: 'Login', route: '/login' },
+    { name: 'Error Log', route: '/errors' },
+]);
+
+// Get current route
+const route = useRoute();
+
+// Function to check if route is active
+const isActive = (path) => {
+    return route.path === path;
+};
+
+// Close mobile menu when window is resized
+onMounted(() => {
+    const handleResize = () => {
+        if (window.innerWidth >= 640 && isOpen.value) {
+            isOpen.value = false;
+        }
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+        window.removeEventListener('resize', handleResize);
+    };
+});
+</script>
+
 <template>
     <nav class="bg-white shadow-sm">
         <div class="mx-auto pl-2 pr-4 sm:pr-6 lg:pr-8">
@@ -65,42 +105,6 @@
     </nav>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+<style scoped>
 
-// State for mobile menu
-const isOpen = ref(false);
-
-const navigationItems = ref([
-    { name: 'Dashboard', route: '/' },
-    { name: 'Registration', route: '/register' },
-    { name: 'Queues', route: '/queue' },
-    { name: 'Job History', route: '/history' },
-    { name: 'Login', route: '/login' },
-    { name: 'Error Log', route: '/errors' },
-]);
-
-// Get current route
-const route = useRoute();
-
-// Function to check if route is active
-const isActive = (path) => {
-    return route.path === path;
-};
-
-// Close mobile menu when window is resized
-onMounted(() => {
-    const handleResize = () => {
-        if (window.innerWidth >= 640 && isOpen.value) {
-            isOpen.value = false;
-        }
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-        window.removeEventListener('resize', handleResize);
-    };
-});
-</script>
+</style>
