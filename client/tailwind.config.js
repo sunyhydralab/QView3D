@@ -9,10 +9,14 @@ export default {
     extend: {
       // set custom colors for tailwind
       colors: {
-       'accent-primary': '#7461A8',
-       'accent-primary-light': '#9688bd',
-       'accent-secondary': '#60ACAD',
-       'accent-secondary-light': '#9dc6c7',
+        'light-primary': '#E5E7EB',
+        'light-primary-light': '#FFFFFF',
+        'dark-primary': '#333333',
+        'dark-primary-light': '#3D3D3D',
+        'accent-primary': '#7461A8',
+        'accent-primary-light': '#9688bd',
+        'accent-secondary': '#60ACAD',
+        'accent-secondary-light': '#9dc6c7',
       }
     }
   },

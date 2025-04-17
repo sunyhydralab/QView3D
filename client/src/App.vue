@@ -5,7 +5,7 @@ import Navbar from '@/components/Navbar.vue'
 
 <template>
   <Navbar />
-  <RouterView class="h-screen bg-gray-200 dark:bg-gray-900"/>
+  <RouterView class="h-screen bg-light-primary dark:bg-dark-primary"/>
 </template>
 
 <style scoped></style>
