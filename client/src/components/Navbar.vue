@@ -39,7 +39,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <nav class="bg-white shadow-sm dark:bg-gray-800 text-white">
+    <nav class="bg-white shadow-sm">
         <div class="mx-auto pl-2 pr-4 sm:pr-6 lg:pr-8">
             <div class="flex h-16 justify-between">
                 <div class="flex items-center">
@@ -57,8 +57,8 @@ onMounted(() => {
                         <router-link v-for="(item, index) in navigationItems" :key="index" :to="item.route" :class="[
                             'inline-flex items-center px-1 pt-1 border-b-2 text-xl font-semibold transition-colors duration-200 ease-in-out',
                             isActive(item.route)
-                                ? 'border-b-2 border-[#7561A9] text-[#7E66B9]'
-                                : 'border-transparent text-gray-700 hover:text-[#7561A9] hover:border-gray-300 dark:text-white'
+                                ? 'border-b-2 border-[#7561A9] text-[#7561A9]'
+                                : 'border-transparent text-gray-500 hover:text-[#7561A9] hover:border-gray-300'
                         ]" aria-current="page">
                             {{ item.name }}
                         </router-link>
@@ -103,8 +103,8 @@ onMounted(() => {
                 <router-link v-for="(item, index) in navigationItems" :key="index" :to="item.route" :class="[
                     'block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors duration-200 ease-in-out',
                     isActive(item.route)
-                        ? 'border-[#7561A9] text-[#7E66B9] bg-purple-50 dark:bg-gray-700 dark:hover:bg-gray-700'
-                        : 'border-transparent text-gray-800 hover:bg-purple-50 hover:border-gray-300 hover:text-[#7E66B9] dark:text-gray-100 dark:hover:bg-gray-700'
+                        ? 'border-[#7561A9] text-[#7561A9] bg-purple-50'
+                        : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-[#7561A9]'
                 ]">
                     {{ item.name }}
                 </router-link>
