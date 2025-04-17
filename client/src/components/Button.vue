@@ -28,7 +28,7 @@ const variantClass = computed(() => {
 
 // Combine all classes for the button
 const buttonClasses = computed(() => [
-  'px-4 py-2 rounded-full font-semibold transition-colors duration-200',
+  'px-4 py-2 rounded-md font-semibold transition-colors duration-200',
   variantClass.value,
   props.isDisabled ? 'opacity-50 cursor-not-allowed' : '',
 ]);
