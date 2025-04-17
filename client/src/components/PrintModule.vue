@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import * as GCodePreview from 'gcode-preview'
+import GCodePreview from "@/components/GCodePreview.vue"
 import { ref } from 'vue'
 
 const showDetails = ref(false)
@@ -93,7 +93,7 @@ function toggleDetails() {
             <p class="text-light-primary">Console (Placeholder)</p>
           </div>
           <div class="w-2/3 dark:text-light-primary p-2">
-            <p class="text-light-primary">Viewer (Placeholder)</p>
+            <GCodePreview />
           </div>
         </div>
       </div>
