@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 
+// Keeps track of all registered fabricators
 export const fabrictorList = ref<Fabricator[]>([])
 
 interface Fabricator 
