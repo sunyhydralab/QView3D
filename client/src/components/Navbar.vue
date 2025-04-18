@@ -41,8 +41,8 @@ onMounted(() => {
 <template>
     <nav class="bg-white drop-shadow-sm shadow-lg dark:bg-dark-primary-light text-white">
         <div class="mx-auto pl-2 pr-4 sm:pr-6 lg:pr-8">
-            <div class="flex h-16 justify-between">
-                <div class="flex items-center">
+            <div class="flex h-16 items-center justify-between">
+                <div class="flex items-center space-x-6">
                     <!-- Logo -->
                     <div className="flex-shrink-0 flex items-center">
                         <router-link to="/">
@@ -52,7 +52,7 @@ onMounted(() => {
                 </div>
 
                 <!-- Navigation Links-->
-                <div class="hidden lg:flex lg:items-center">
+                <div class="hidden mx-5 mb-3 lg:flex lg:items-center">
                     <div class="flex space-x-8">
                         <router-link v-for="(item, index) in navigationItems" :key="index" :to="item.route" :class="[
                             'inline-flex items-center px-1 pt-1 border-b-2 text-xl font-semibold transition-colors duration-200 ease-in-out',
@@ -66,7 +66,7 @@ onMounted(() => {
                 </div>
 
                 <!-- Toggle Mode and Mobile Menu Button -->
-                <div class="flex items-center">
+                <div class="flex items-center ml-auto">
                     <!-- Toggle always visible -->
                     <ToggleMode class="mr-3" />
 
