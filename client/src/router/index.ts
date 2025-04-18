@@ -13,6 +13,11 @@ const router = createRouter({
       name: 'register',
       component: () => import('../views/Registration.vue'),
     },
+    {
+      path: '/queue',
+      name: 'queue',
+      component: () => import('../views/Queues.vue'),
+    },
   ],
 })
 
