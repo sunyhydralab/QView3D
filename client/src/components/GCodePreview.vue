@@ -1,12 +1,14 @@
-<script>
+<script setup lang="ts">
+import { onMounted, onBeforeUnmount, ref } from 'vue'
 import * as GCodePreview from 'gcode-preview'
 
-export default {
-  name: 'GCodePreview',
-  mounted() {
-    // Initialize the GCodePreview
-    this.preview = GCodePreview.init({
-      canvas: this.$refs.gcodeCanvas,
+const gcodeCanvas = ref<HTMLCanvasElement | null>(null)
+let preview: ReturnType<typeof GCodePreview.init> | null = null
+
+onMounted(() => {
+  if (gcodeCanvas.value) {
+    preview = GCodePreview.init({
+      canvas: gcodeCanvas.value,
       extrusionColor: 'turquoise',
       backgroundColor: 'black',
       buildVolume: { x: 250, y: 210, z: 220 },
@@ -19,17 +21,16 @@ export default {
       renderTubes: true,
     })
 
-    // Example GCode
     const gcode = 'G0 X0 Y0 Z0.2\nG1 X42 Y42 E10'
-    this.preview.processGCode(gcode)
-  },
-  beforeDestroy() {
-    // Clean up preview when the component is collapsed
-    if (this.preview) {
-      this.preview.clear()
-    }
-  },
-}
+    preview.processGCode(gcode)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (preview) {
+    preview.clear()
+  }
+})
 </script>
 
 <template>
