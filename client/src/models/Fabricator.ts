@@ -5,6 +5,7 @@ export const fabrictorList = ref<Fabricator[]>([])
 
 // Represents the Fabricator object
 export interface Fabricator 
+
 {
 	id? : number
 	hardwareId? : string
