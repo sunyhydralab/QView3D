@@ -5,5 +5,5 @@ import Navbar from '@/components/Navbar.vue'
 
 <template>
   <Navbar />
-  <RouterView class="h-screen bg-light-primary dark:bg-dark-primary"/>
+  <RouterView class="min-h-screen h-full bg-light-primary dark:bg-dark-primary"/>
 </template>

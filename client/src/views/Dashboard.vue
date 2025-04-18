@@ -3,7 +3,7 @@ import PrintModule from '@/components/PrintModule.vue'
 </script>
 
 <template>
-  <div class="mt-12">
+  <div class="pt-12">
     <PrintModule />
     <PrintModule />
     <PrintModule />

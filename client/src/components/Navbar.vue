@@ -52,7 +52,7 @@ onMounted(() => {
                 </div>
 
                 <!-- Navigation Links-->
-                <div class="hidden mx-5 mb-3 lg:flex lg:items-center">
+                <div class="hidden mx-5 my-auto lg:flex lg:items-center">
                     <div class="flex space-x-8">
                         <router-link v-for="(item, index) in navigationItems" :key="index" :to="item.route" :class="[
                             'inline-flex items-center px-1 pt-1 border-b-2 text-xl font-semibold transition-colors duration-200 ease-in-out',
