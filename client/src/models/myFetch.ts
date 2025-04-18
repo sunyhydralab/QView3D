@@ -1,6 +1,6 @@
 // TODO: Allow env file to update config.
-const API_IP_ADDRESS = import.meta.env.DEV ? "localhost" : import.meta.env.API_IP_ADDRESS
-const API_PORT = import.meta.env.DEV ? "8000" : import.meta.env.API_PORT
+const API_IP_ADDRESS = import.meta.env.DEV ? "localhost" : import.meta.env.VITE_API_IP_ADDRESS
+const API_PORT = import.meta.env.DEV ? "8000" : import.meta.env.VITE_API_PORT
 const API_URL = "/api"
 
 export function rest(url: string, body: object | null, method: 'GET' | 'POST' | 'PATCH' | 'DELETE') {
