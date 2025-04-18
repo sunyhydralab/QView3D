@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import ToggleMode from '@/components/ToggleMode.vue';
@@ -18,7 +18,7 @@ const navigationItems = ref([
 const route = useRoute();
 
 // Function to check if route is active
-const isActive = (path) => {
+const isActive = (path: string) => {
     return route.path === path;
 };
 
