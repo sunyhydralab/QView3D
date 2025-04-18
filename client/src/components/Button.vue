@@ -1,11 +1,11 @@
 <!-- src/components/BaseButton.vue -->
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
 
 // Props: customize behavior and look
 const props = defineProps({
   variant: {
-    type: String,
+    type: String as () => 'primary' | 'secondary',
     default: 'primary',
   },
   isDisabled: {
@@ -23,7 +23,7 @@ const variantClass = computed(() => {
     primary: 'bg-accent-primary text-white hover:bg-accent-primary-light',
     secondary: 'bg-accent-secondary text-black hover:bg-accent-secondary-light',
   };
-  return styles[props.variant] || '';
+  return styles[props.variant];
 });
 
 // Combine all classes for the button
@@ -34,7 +34,7 @@ const buttonClasses = computed(() => [
 ]);
 
 // Handle click if not disabled
-function handleClick(event) {
+function handleClick(event: any) {
   if (!props.isDisabled) {
     emit('click', event);
   }
