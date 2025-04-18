@@ -37,8 +37,9 @@ function toggleDetails() {
           <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">example.gcode</td>
           <td class="w-36 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">
             <div class="flex flex-wrap gap-2">
+              <!-- Functions will be added to these buttons when implemented. -->
               <!-- Turn Offline -->
-              <button class="btn-green" 
+              <button class="btn-blue" 
                 v-if="!isOnline"
                 @click="isOnline = true">
                 Turn Online
@@ -86,11 +87,13 @@ function toggleDetails() {
                 Unpause
               </button>
 
-              <!-- Note: this will be uncommented when we have access to the queue -->
-              <!-- Rerun 
-              <button class="btn-gradient">
+              <!-- Note: this will be updated when we have access to the queue -->
+              <!-- Rerun -->
+              <button class="btn-blue"
+                v-if="!isPrinting && isOnline"
+                @click="isPrinting=true">
                 Rerun Job
-              </button> -->
+              </button> 
             </div>
           </td>
           <td class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">
@@ -184,7 +187,7 @@ function toggleDetails() {
   @apply rounded-md w-32 py-2 text-white font-semibold bg-red-400 hover:bg-red-300 transition-all duration-300;
 }
 
-.btn-green {
+.btn-blue {
   @apply rounded-md w-32 py-2 text-white font-semibold bg-accent-secondary hover:from-green-200 hover:bg-accent-secondary-light transition-all duration-300;
 }
 </style>
