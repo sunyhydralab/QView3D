@@ -14,7 +14,7 @@ function toggleDetails() {
 
 <template>
     <!-- Developer Note: This is simply a beginning setup. Subject to change eventually. -->
-  <div class="container mx-auto">
+  <div class="container mx-auto mt-3">
     <!-- Main Table -->
     <table class="min-w-full">
       <thead>
@@ -137,14 +137,14 @@ function toggleDetails() {
           </thead>
           <tbody>
             <tr class="text-center align-middle">
-              <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"></td>
-              <td class="w-20 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"></td>
-              <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"></td>
-              <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"></td>
-              <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"></td>
-              <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"></td>
-              <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"></td>
-              <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"></td>
+              <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">0</td>
+              <td class="w-20 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">PLA</td>
+              <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">0</td>
+              <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">0</td>
+              <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">00:00</td>
+              <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">00:00</td>
+              <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">00:00</td>
+              <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">00:00</td>
             </tr>
           </tbody>
         </table>

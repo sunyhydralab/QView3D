@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import PrintModule from "@/components/PrintModule.vue"
+import PrintModule from '@/components/PrintModule.vue'
 </script>
 
 <template>
-  <PrintModule class="pt-12"/>
+  <div class="mt-12">
+    <PrintModule />
+    <PrintModule />
+    <PrintModule />
+  </div>
 </template>
-
-<style scoped>
-
-</style>
