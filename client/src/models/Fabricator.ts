@@ -4,7 +4,8 @@ import { ref } from 'vue'
 export const fabrictorList = ref<Fabricator[]>([])
 
 // Represents the Fabricator object
-interface Fabricator 
+export interface Fabricator 
+
 {
 	id? : number
 	hardwareId? : string
