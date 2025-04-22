@@ -22,7 +22,7 @@ export interface Fabricator {
 }
 
 // list of all registered Fabricators
-export const FabricatorList = ref<Fabricator[]>([])
+export const fabricatorList = ref<Fabricator[]>([])
 
 export async function getConnectedFabricators() {
   return api('getports');
