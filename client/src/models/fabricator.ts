@@ -28,7 +28,7 @@ export async function getConnectedFabricators() {
   return api('getports');
 }
 
-export async function retrievePrinters() {
+export async function retrieveRegisteredFabricators() {
   return await api('getprinterinfo')
 }
 
