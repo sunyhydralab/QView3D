@@ -21,7 +21,7 @@ export interface Fabricator {
   colorbuff?: number,
 }
 
-
+// list of all registered Fabricators
 export const FabricatorList = ref<Fabricator[]>([])
 
 export async function getConnectedFabricators() {
