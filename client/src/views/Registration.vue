@@ -3,6 +3,7 @@ TODO: Whenever the database is wiped, so should the localStorage for connectedFa
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { type Fabricator, FabricatorList, getConnectedFabricators, registerFabricator, retrieveRegisteredFabricators } from '@/models/fabricator';
+import FabricatorCard from '@/components/RegisteredFabricatorCard.vue';
 
 // all connected fabricators
 const connectedFabricatorList = ref<Fabricator[]>([]);
@@ -59,7 +60,7 @@ async function handleSubmit() {
 
 <template>
   <div>
-    <div class="mx-auto max-w-md space-y-4">
+    <div class="mx-auto max-w-md space-y-4 my-10">
       <!-- Select Fabricator -->
       <div>
         <label for="fabricatorSelect" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-100">Select a
@@ -85,12 +86,12 @@ async function handleSubmit() {
       </div>
 
       <!-- Description
-  <div class="space-y-1">
-    <label for="description" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-100">Description</label>
-    <textarea id="description" rows="3"
-      class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:border-accent-primary-light focus:ring-accent-primary-light"
-      placeholder="Enter description"></textarea>
-  </div> -->
+        <div class="space-y-1">
+          <label for="description" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-100">Description</label>
+          <textarea id="description" rows="3"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:border-accent-primary-light focus:ring-accent-primary-light"
+            placeholder="Enter description"></textarea>
+        </div> -->
 
       <!-- Model (Disabled) -->
       <div class="space-y-1">
@@ -107,5 +108,12 @@ async function handleSubmit() {
         Submit
       </button>
     </div>
+    <FabricatorCard
+        v-for="fabricator in FabricatorList"
+        :key="fabricator.id"
+        :name="fabricator.name || ''"
+        :model="fabricator.description"
+        :date="fabricator.date ? fabricator.date : ''"
+      />
   </div>
 </template>
