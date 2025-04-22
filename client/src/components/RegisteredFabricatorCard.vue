@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { defineProps } from 'vue';
-
 interface FabricatorProps {
     name: string;
     model: string;

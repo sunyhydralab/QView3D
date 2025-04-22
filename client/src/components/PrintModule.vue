@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import GCodePreview from "@/components/GCodePreview.vue"
 import { ref } from 'vue'
+import { type Fabricator } from '@/models/fabricator'
+
+const props = defineProps<{ fabricator: Fabricator }>();
+const currentFabricator = props.fabricator;
 
 const isPrinting = ref(false)
 const isPaused = ref(false)
@@ -14,7 +18,7 @@ function toggleDetails() {
 
 <template>
   <div class="container mx-auto mt-3 px-2 md:px-0">
-    <!-- Main Printer Status Table - Responsive Design -->
+    <!-- Main Printer Status Table -->
     <div class="overflow-x-auto">
       <!-- Mobile Card View (visible only on small screens) -->
       <div class="block md:hidden">
@@ -101,7 +105,7 @@ function toggleDetails() {
             </th>
             <th class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Controls
             </th>
-            <th class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Progress
+            <th class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Progressname
             </th>
             <th class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Details
             </th>
@@ -109,12 +113,10 @@ function toggleDetails() {
         </thead>
         <tbody>
           <tr class="text-center">
-            <td class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">1</td>
-            <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">mk4</td>
-            <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">example
-            </td>
-            <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">
-              example.gcode</td>
+            <td class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">{{ currentFabricator.id }}</td>
+            <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"> {{ currentFabricator.description }}</td>
+            <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">{{ currentFabricator.queue?.[0] ?? 'N/A' }}</td>
+            <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">{{ currentFabricator.queue?.[0]?.file_name_original ?? 'N/A' }}</td>
             <td class="w-36 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">
               <!-- Controls -->
               <div class="flex flex-wrap gap-2">
@@ -188,35 +190,35 @@ function toggleDetails() {
             <div class="grid grid-cols-2 gap-3 mb-4">
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Layer</div>
-                <div>0</div>
+                <div>{{ currentFabricator.queue?.[0]?.current_layer_height ?? 'N/A' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Filament</div>
-                <div>PLA</div>
+                <div>{{ currentFabricator.queue?.[0]?.filament ?? 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Nozzle</div>
-                <div>0</div>
+                <div>{{ currentFabricator.extruder_temp ?? 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Bed</div>
-                <div>0</div>
+                <div>{{ currentFabricator.bed_temp ?? 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Elapsed</div>
-                <div>00:00</div>
+                <div>{{ currentFabricator.queue?.[0]?.job_client?.elapsed_time ?? 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Remaining</div>
-                <div>00:00</div>
+                <div>{{ currentFabricator.queue?.[0]?.job_client?.remaining_time ?? 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Total</div>
-                <div>00:00</div>
+                <div>{{ currentFabricator.queue?.[0]?.job_client?.total_time ?? 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">ETA</div>
-                <div>00:00</div>
+                <div>{{ currentFabricator.queue?.[0]?.job_client?.eta ?? 'Idle' }}</div>
               </div>
             </div>
 
@@ -242,42 +244,26 @@ function toggleDetails() {
           <table class="min-w-full border border-light-primary dark:border-dark-primary dark:text-light-primary mt-4">
             <thead>
               <tr class="bg-light-primary-light dark:bg-dark-primary-light">
-                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Layer
-                </th>
-                <th class="w-20 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">
-                  Filament
-                </th>
-                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Nozzle
-                </th>
-                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Bed
-                </th>
-                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">
-                  Elapsed
-                </th>
-                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">
-                  Remaining
-                </th>
-                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Total
-                </th>
-                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">ETA
-                </th>
+                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Layer </th>
+                <th class="w-20 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Filament</th>
+                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Nozzle</th>
+                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Bed</th>
+                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Elapsed </th>
+                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"> Remaining</th>
+                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Total</th>
+                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">ETA</th>
               </tr>
             </thead>
             <tbody>
               <tr class="text-center align-middle">
-                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">0</td>
-                <td class="w-20 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">PLA
-                </td>
-                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">0</td>
-                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">0</td>
-                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">00:00
-                </td>
-                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">00:00
-                </td>
-                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">00:00
-                </td>
-                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">00:00
-                </td>
+                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">{{ currentFabricator.queue?.[0]?.current_layer_height ?? 'N/A' }}</td>
+                <td class="w-20 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">{{ currentFabricator.queue?.[0]?.filament ?? 'Idle' }}</td>
+                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">{{ currentFabricator.extruder_temp ?? 'Idle' }}</td>
+                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">{{ currentFabricator.bed_temp ?? 'Idle' }}</td>
+                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">{{ currentFabricator.queue?.[0]?.job_client?.elapsed_time ?? 'Idle' }}</td>
+                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">{{ currentFabricator.queue?.[0]?.job_client?.remaining_time ?? 'Idle' }}</td>
+                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">{{ currentFabricator.queue?.[0]?.job_client?.total_time ?? 'Idle' }}</td>
+                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">{{ currentFabricator.queue?.[0]?.job_client?.eta ?? 'Idle' }}</td>
               </tr>
             </tbody>
           </table>
