@@ -34,7 +34,22 @@ onMounted(async () => {
 
 // update the list of connected Fabricators but filter out the registered ones
 async function refreshFabricatorList() {
+  let updatedList = await getConnectedFabricators();
+  // filter out fabricators that have already been registered
+  connectedFabricatorList.value = updatedList.filter((fabricator: Fabricator) => {
+    // checks if the fabricator is registered and already has a name by it's serialPort id 
+    const isRegisteredFabricator = searchFabricatorById(fabricator.device.serialPort);
 
+    // returns true if the fabricator is not registered
+    return !isRegisteredFabricator;
+  });
+}
+
+// helper function to search by fabricatorList.value serialPort id
+function searchFabricatorById(id: string) {
+  return fabricatorList.value.find((fabricator: Fabricator) => {
+    return fabricator.device.serialPort === id;
+  });
 }
 
 
@@ -138,7 +153,12 @@ async function handleSubmit() {
         Submit
       </button>
     </div>
-    <FabricatorCard v-for="fabricator in fabricatorList" :key="fabricator.id" :name="fabricator.name || ''"
-      :model="fabricator.description" :date="fabricator.date ? fabricator.date : ''" />
+    <div v-if="fabricatorList.length > 0">
+      <h2 class="text-2xl text-center font-bold text-gray-700 dark:text-gray-100">Registered Fabricators</h2>
+      <div class="flex items-center justify-center">
+        <FabricatorCard v-for="fabricator in fabricatorList" :key="fabricator.id" :name="fabricator.name || ''"
+          :model="fabricator.description" :date="fabricator.date ? fabricator.date : ''" />
+      </div>
+    </div>
   </div>
 </template>
