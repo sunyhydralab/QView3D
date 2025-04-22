@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, watchEffect } from 'vue'
 import { type Job } from '@/models/job'
 import { api } from '@/models/api'
 
@@ -24,12 +24,18 @@ export interface Fabricator {
 // list of all registered Fabricators
 export const fabricatorList = ref<Fabricator[]>([])
 
+// update any time the fabricatorList changes
+watchEffect(() => {
+  console.log('fabricatorList updated:', fabricatorList.value);
+});
+
 export async function getConnectedFabricators() {
   return api('getports');
 }
 
 export async function retrieveRegisteredFabricators() {
-  return await api('getprinterinfo')
+  fabricatorList.value = await api('getprinterinfo')
+  return fabricatorList.value
 }
 
 export async function registerFabricator(fabricator: Fabricator) {

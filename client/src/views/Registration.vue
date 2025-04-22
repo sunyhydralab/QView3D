@@ -26,6 +26,10 @@ onMounted(async () => {
     connectedFabricatorList.value = await getConnectedFabricators();
     console.log('Loaded connectedFabricatorList from server');
   }
+
+  // get the list of registered fabricators from the server
+  retrieveRegisteredFabricators()
+  console.log('Loaded fabricatorList from server');
 });
 
 // update the list of connected Fabricators but filter out the registered ones
