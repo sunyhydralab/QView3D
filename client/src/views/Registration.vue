@@ -38,7 +38,7 @@ async function refreshFabricatorList() {
   // filter out fabricators that have already been registered
   connectedFabricatorList.value = updatedList.filter((fabricator: Fabricator) => {
     // checks if the fabricator is registered and already has a name by it's serialPort id 
-    const isRegisteredFabricator = searchFabricatorById(fabricator.device.serialPort);
+    const isRegisteredFabricator = searchFabricatorById(fabricator.device.serialPort); // TODO Change how we uniquely identify printers
 
     // returns true if the fabricator is not registered
     return !isRegisteredFabricator;
@@ -48,7 +48,7 @@ async function refreshFabricatorList() {
 // helper function to search by fabricatorList.value serialPort id
 function searchFabricatorById(id: string) {
   return fabricatorList.value.find((fabricator: Fabricator) => {
-    return fabricator.device.serialPort === id;
+    return fabricator.device.serialPort === id; // TODO Change how we uniquely identify printers
   });
 }
 
