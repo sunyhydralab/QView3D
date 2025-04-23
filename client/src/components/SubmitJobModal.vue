@@ -1,10 +1,41 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { fabricatorList, retrieveRegisteredFabricators } from '@/models/fabricator'
+
+onMounted(async () => {
+  retrieveRegisteredFabricators()
+});
 
 // File handling refs - functionality to be implemented by you
 const selectedFile = ref<File | null>(null)
 const fileName = ref<string>("No file selected.")
 const filamentDetected = ref<string | null>(null)
+
+const selectedFabricators = ref<number[]>([])
+
+// Toggle single fabricator selection
+const toggleFabricator = (id: number) => {
+  const index = selectedFabricators.value.indexOf(id)
+  if (index === -1) {
+    selectedFabricators.value.push(id)
+  } else {
+    selectedFabricators.value.splice(index, 1)
+  }
+}
+
+// Toggle all fabricators
+const toggleAll = () => {
+  if (selectedFabricators.value.length === fabricatorList.value.length) {
+    selectedFabricators.value = []
+  } else {
+    selectedFabricators.value = fabricatorList.value.map(fab => fab.id).filter((id): id is number => id !== undefined)
+  }
+}
+
+// Check if all fabricators are selected
+const allSelected = computed(() => {
+  return selectedFabricators.value.length === fabricatorList.value.length
+})
 </script>
 
 <template>
@@ -31,23 +62,42 @@ const filamentDetected = ref<string | null>(null)
         <!-- Fabricator Selection -->
         <div class="space-y-2">
           <h4 class="text-sm font-medium text-center text-gray-700 dark:text-gray-300">Select Fabricator</h4>
-          <div class="bg-gray-100 dark:bg-light-primary-light rounded-md p-2 space-y-1">
-            <div class="flex items-center px-2 py-1">
-              <input type="checkbox" id="select-all"
-                class="mr-3 h-4 w-4 rounded border-gray-300 focus:ring-accent-primary-light">
-              <label for="select-all" class="text-sm text-gray-700 dark:text-black">Select All</label>
-            </div>
-            <div class="border-b border-light-primary-dark dark:border-dark-primary-light"></div>
-            <div class="flex items-center px-2 py-1">
-              <input type="checkbox" id="mk4"
-                class="mr-3 h-4 w-4 rounded border-gray-300 focus:ring-accent-primary-light">
-              <label for="mk4" class="text-sm text-gray-700 dark:text-black">Some Fabricator</label>
-            </div>
+          
+          
+          <!-- Select/Deselect All button -->
+          <div class="flex justify-center mt-2">
+            <button 
+              type="button" 
+              class="px-3 py-1 bg-accent-primary  hover:bg-accent-primary-dark text-black dark:text-white rounded-md transition-colors"
+              @click="toggleAll"
+            >
+              {{ allSelected ? 'Deselect All' : 'Select All' }}
+            </button>
           </div>
-          <p class="text-xs text-center text-gray-500 dark:text-gray-400">
+
+          <!-- Grid of fabricator buttons - replaces the checkbox list -->
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-2 p-2">
+            <button 
+              v-for="fabricator in fabricatorList" 
+              :key="fabricator.id"
+              type="button"
+              class="px-3 py-2 rounded-md text-center text-white transition-colors duration-200 text-sm font-medium"
+              :class="[
+                fabricator.id !== undefined && selectedFabricators.includes(fabricator.id) 
+                  ? 'bg-accent-secondary hover:bg-accent-secondary-dark' 
+                  : 'bg-accent-secondary hover:bg-accent-secondary-dark opacity-50',
+              ]"
+              @click="fabricator.id !== undefined && toggleFabricator(fabricator.id)"
+            >
+              {{ fabricator.name }}
+            </button>
+          </div>
+        </div>
+
+          <!-- Message when no fabricator is selected -->
+          <p class="text-xs text-center text-gray-500 dark:text-gray-400" v-if="selectedFabricators.length < 1">
             No fabricator selected, will <span class="text-accent-primary-light">auto queue</span>
           </p>
-        </div>
 
         <!-- File Upload -->
         <div class="space-y-1">
