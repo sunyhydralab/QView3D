@@ -2,54 +2,60 @@
 import { ref, computed, onMounted } from 'vue'
 import { fabricatorList, retrieveRegisteredFabricators } from '@/models/fabricator'
 
-onMounted(async () => {
+// Load fabricators when modal is mounted
+onMounted(() => {
   retrieveRegisteredFabricators()
-});
+})
 
-// File handling refs - functionality to be implemented by you
+// File Upload Handling
+const fileInput = ref<HTMLInputElement | null>(null)
 const selectedFile = ref<File | null>(null)
-const fileName = ref<string>("No file selected.")
-const filamentDetected = ref<string | null>(null)
+const fileName = ref("No file selected.")
 
+// Fabricator Selection Handling
 const selectedFabricators = ref<number[]>([])
 
-// Toggle single fabricator selection
-const toggleFabricator = (id: number) => {
-  const index = selectedFabricators.value.indexOf(id)
-  if (index === -1) {
-    selectedFabricators.value.push(id)
-  } else {
-    selectedFabricators.value.splice(index, 1)
+const handleFileUpload = () => fileInput.value?.click()
+const handleFileChange = (e: Event) => {
+  const files = (e.target as HTMLInputElement).files
+  if (files && files.length > 0) {
+    selectedFile.value = files[0]
+    fileName.value = files[0].name
   }
 }
 
-// Toggle all fabricators
+const toggleFabricator = (id: number) => {
+  const index = selectedFabricators.value.indexOf(id)
+  if (index === -1) selectedFabricators.value.push(id)
+  else selectedFabricators.value.splice(index, 1)
+}
+
 const toggleAll = () => {
   if (selectedFabricators.value.length === fabricatorList.value.length) {
     selectedFabricators.value = []
   } else {
-    selectedFabricators.value = fabricatorList.value.map(fab => fab.id).filter((id): id is number => id !== undefined)
+    selectedFabricators.value = fabricatorList.value
+      .map(f => f.id)
+      .filter((id): id is number => id !== undefined)
   }
 }
 
-// Check if all fabricators are selected
-const allSelected = computed(() => {
-  return selectedFabricators.value.length === fabricatorList.value.length
-})
+const allSelected = computed(() =>
+  selectedFabricators.value.length === fabricatorList.value.length
+)
 </script>
 
 <template>
-  <!-- Modal backdrop with blur and click-outside handling -->
+  <!-- Modal Overlay -->
   <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
     @click.self="$emit('close')">
-    <!-- Modal container -->
     <div class="bg-light-primary dark:bg-dark-primary-light rounded-lg shadow-lg max-w-md w-full mx-4 animate-fade-in">
-      <!-- Modal header -->
+      <!-- Header -->
       <div class="p-4 flex justify-between items-center">
         <h3 class="text-lg font-medium text-black dark:text-white">Submit Job</h3>
         <button @click="$emit('close')"
           class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd"
               d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
               clip-rule="evenodd" />
@@ -57,111 +63,86 @@ const allSelected = computed(() => {
         </button>
       </div>
 
-      <!-- Modal body -->
+      <!-- Body -->
       <div class="p-4 space-y-5">
         <!-- Fabricator Selection -->
         <div class="space-y-2">
-          <h4 class="text-sm font-medium text-center text-gray-700 dark:text-gray-300">Select Fabricator</h4>
-          
-          
-          <!-- Select/Deselect All button -->
-          <div class="flex justify-center mt-2">
-            <button 
-              type="button" 
-              class="px-3 py-1 bg-accent-primary  hover:bg-accent-primary-dark text-black dark:text-white rounded-md transition-colors"
-              @click="toggleAll"
-            >
+          <h4 class="text-md font-medium text-center text-gray-700 dark:text-gray-300">Select Fabricator</h4>
+          <div class="flex justify-center">
+            <button @click="toggleAll"
+              class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark">
               {{ allSelected ? 'Deselect All' : 'Select All' }}
             </button>
           </div>
 
-          <!-- Grid of fabricator buttons - replaces the checkbox list -->
+          <!-- Grid of fabricator buttons -->
           <div class="grid grid-cols-2 md:grid-cols-3 gap-2 p-2">
-            <button 
-              v-for="fabricator in fabricatorList" 
-              :key="fabricator.id"
-              type="button"
-              class="px-3 py-2 rounded-md text-center text-white transition-colors duration-200 text-sm font-medium"
-              :class="[
-                fabricator.id !== undefined && selectedFabricators.includes(fabricator.id) 
-                  ? 'bg-accent-secondary hover:bg-accent-secondary-dark' 
-                  : 'bg-accent-secondary hover:bg-accent-secondary-dark opacity-50',
-              ]"
-              @click="fabricator.id !== undefined && toggleFabricator(fabricator.id)"
-            >
-              {{ fabricator.name }}
+            <button v-for="fabricator in fabricatorList" :key="fabricator.id" type="button"
+              class="px-3 py-2 rounded-md text-center text-sm font-medium transition-all duration-200 relative" :class="[
+                fabricator.id !== undefined && selectedFabricators.includes(fabricator.id)
+                  ? 'bg-accent-secondary text-white hover:bg-accent-secondary-dark font-bold shadow-lg transform scale-105'
+                  : 'bg-accent-secondary text-white hover:bg-accent-secondary-dark opacity-50'
+              ]" @click="fabricator.id !== undefined && toggleFabricator(fabricator.id)">
+              <div class="flex items-center justify-center space-x-1">
+                <span v-if="fabricator.id !== undefined && selectedFabricators.includes(fabricator.id)"
+                  class="absolute -left-1 -top-1 bg-white rounded-full p-1 shadow-md">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-500" viewBox="0 0 20 20"
+                    fill="currentColor">
+                    <path fill-rule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clip-rule="evenodd" />
+                  </svg>
+                </span>
+                {{ fabricator.name }}
+              </div>
             </button>
           </div>
-        </div>
 
-          <!-- Message when no fabricator is selected -->
-          <p class="text-xs text-center text-gray-500 dark:text-gray-400" v-if="selectedFabricators.length < 1">
+          <!-- File Upload -->
+          <div class="space-y-1">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Upload your .gcode file<span
+                class="text-red-500 ml-1">*</span></label>
+            <div class="flex space-x-2">
+              <button @click="handleFileUpload" type="button"
+                class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark">Browse</button>
+              <div class="flex-1 px-3 py-2 bg-gray-100 dark:bg-light-primary-light rounded-md flex items-center">
+                <span class="text-gray-500 dark:text-gray-400 truncate">{{ fileName }}</span>
+              </div>
+              <input ref="fileInput" type="file" accept=".gcode" class="hidden" @change="handleFileChange" />
+            </div>
+          </div>
+
+          <!-- Quantity Input -->
+          <div>
+            <label for="quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantity</label>
+            <input id="quantity" type="number" min="1" value="1" class="w-full px-3 py-2 border rounded-md text-gray-700 focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
+          </div>
+
+          <!-- Ticket ID -->
+          <div>
+            <label for="ticketId" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Ticket ID</label>
+            <input id="ticketId" type="number" min="0" value="0" class="w-full px-3 py-2 border rounded-md text-gray-700 focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
+          </div>
+
+          <!-- Job Name -->
+          <div>
+            <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name<span
+                class="text-red-500 ml-1">*</span></label>
+            <input id="name" type="text" required placeholder="Enter job name" v-model="fileName"
+              class="w-full px-3 py-2 border rounded-md text-gray-700 focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
+          </div>
+
+          <!-- No Fabricator Message -->
+          <p v-if="selectedFabricators.length < 1" class="text-xs text-center text-gray-500 dark:text-gray-400">
             No fabricator selected, will <span class="text-accent-primary-light">auto queue</span>
           </p>
 
-        <!-- File Upload -->
-        <div class="space-y-1">
-          <div class="flex items-center">
-            <label for="file-upload" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Upload your
-              .gcode file<span class="text-red-500 ml-1">*</span></label>
-          </div>
-          <div class="flex space-x-2">
+          <!-- Footer -->
+          <div class="flex justify-end">
             <button type="button"
-              class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark transition">
-              Browse
-            </button>
-            <div class="flex-1 px-3 py-2 bg-gray-100 dark:bg-light-primary-light rounded-md flex items-center">
-              <span class="text-gray-500 dark:text-gray-400 truncate">{{ fileName }}</span>
-            </div>
-            <button type="button" class="bg-accent-primary hover:bg-accent-primary-dark p-2 px-3 rounded-md">
-              <i class="fa-regular fa-image text-white"></i>
-            </button>
-            <input ref="fileInput" type="file" accept=".gcode" class="hidden" />
+              class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark">Submit</button>
           </div>
         </div>
-
-        <!-- Quantity -->
-        <div class="space-y-1">
-          <label for="quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantity</label>
-          <div class="relative">
-            <input id="quantity" type="number" min="1" value="1"
-              class="w-full px-3 py-2 border border-gray-300 bg-gray-50 dark:bg-light-primary-light rounded-md shadow-sm focus:outline-none focus:ring-2 focus:border-accent-primary-light focus:ring-accent-primary-light" />
-            <button type="button"
-              class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
-            </button>
-          </div>
-        </div>
-
-        <!-- Ticket ID -->
-        <div class="space-y-1">
-          <label for="ticketId" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Ticket ID</label>
-          <div class="relative">
-            <input id="ticketId" type="number" min="0" value="0"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-light-primary-light rounded-md shadow-sm focus:outline-none focus:ring-2 focus:border-accent-primary-light focus:ring-accent-primary-light" />
-            <button type="button"
-              class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
-            </button>
-          </div>
-        </div>
-
-        <!-- Name -->
-        <div class="space-y-1">
-          <div class="flex items-center">
-            <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
-            <span class="text-red-500 ml-1">*</span>
-          </div>
-          <input id="name" type="text" required
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-light-primary-light rounded-md shadow-sm focus:outline-none focus:ring-2 focus:border-accent-primary-light focus:ring-accent-primary-light dark:text-white"
-            placeholder="Enter job name" />
-        </div>
-      </div>
-
-      <!-- Modal footer -->
-      <div class="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end">
-        <button type="button"
-          class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark transition disabled:opacity-50 disabled:cursor-not-allowed">
-          Submit
-        </button>
       </div>
     </div>
   </div>
