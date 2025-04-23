@@ -153,8 +153,8 @@ async function handleSubmit() {
         Submit
       </button>
     </div>
-    <div v-if="fabricatorList.length > 0">
-      <h2 class="text-2xl text-center font-bold text-gray-700 dark:text-gray-100">Registered Fabricators</h2>
+    <div v-if="fabricatorList.length > 0" class="rounded-md bg-gray-100 dark:bg-dark-primary-light">
+      <h2 class="bg-light-primary-dark p-2 text-2xl text-center font-bold text-black dark:text-white">Registered Fabricators</h2>
       <div class="flex items-center justify-center">
         <FabricatorCard v-for="fabricator in fabricatorList" :key="fabricator.id" :name="fabricator.name || ''"
           :model="fabricator.description" :date="fabricator.date ? fabricator.date : ''" />
