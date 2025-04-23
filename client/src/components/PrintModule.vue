@@ -1,17 +1,23 @@
 <script setup lang="ts">
 import GCodePreview from './GCodePreview.vue'
 import { ref } from 'vue'
-import { type Fabricator } from '../models/fabricator'
 import DashboardButtons from './DashboardButtons.vue'
+import { type Fabricator } from '@/models/fabricator'
+import SubmitJobModal from "@/components/SubmitJobModal.vue";
 
 const props = defineProps<{ fabricator: Fabricator }>()
 const currentFabricator = props.fabricator
 const currentJob = currentFabricator.queue?.[0]
 
 const showDetails = ref(false)
+const isSubmitModalOpen = ref(false)
 
 function toggleDetails() {
   showDetails.value = !showDetails.value
+}
+
+function toggleSubmitModal() {
+  isSubmitModalOpen.value = !isSubmitModalOpen.value
 }
 </script>
 
@@ -317,6 +323,7 @@ function toggleDetails() {
       </div>
     </transition>
   </div>
+  <SubmitJobModal v-if="isSubmitModalOpen" @close="toggleSubmitModal" />
 </template>
 
 <style>
