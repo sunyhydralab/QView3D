@@ -2,6 +2,7 @@
 import GCodePreview from "@/components/GCodePreview.vue"
 import { ref } from 'vue'
 import { type Fabricator } from '@/models/fabricator'
+import SubmitJobModal from "@/components/SubmitJobModal.vue";
 
 const props = defineProps<{ fabricator: Fabricator }>();
 const currentFabricator = props.fabricator;
@@ -10,9 +11,14 @@ const isPrinting = ref(false)
 const isPaused = ref(false)
 const isOnline = ref(false)
 const showDetails = ref(false)
+const isSubmitModalOpen = ref(false)
 
 function toggleDetails() {
   showDetails.value = !showDetails.value
+}
+
+function toggleSubmitModal() {
+  isSubmitModalOpen.value = !isSubmitModalOpen.value
 }
 </script>
 
@@ -64,7 +70,7 @@ function toggleDetails() {
             </button>
 
             <!-- Submit Job -->
-            <button class="btn-primary">
+            <button class="btn-primary" :onclick="toggleSubmitModal">
               Submit Job
             </button>
 
@@ -114,9 +120,9 @@ function toggleDetails() {
         <tbody>
           <tr class="text-center">
             <td class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">{{ currentFabricator.id }}</td>
-            <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"> {{ currentFabricator.description }}</td>
-            <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">{{ currentFabricator.queue?.[0] ?? 'N/A' }}</td>
-            <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">{{ currentFabricator.queue?.[0]?.file_name_original ?? 'N/A' }}</td>
+            <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">{{ currentFabricator.description }}</td>
+            <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">{{ currentFabricator.queue?.[0] ?? '-' }}</td>
+            <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">{{ currentFabricator.queue?.[0]?.file_name_original ?? '-' }}</td>
             <td class="w-36 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">
               <!-- Controls -->
               <div class="flex flex-wrap gap-2">
@@ -129,7 +135,7 @@ function toggleDetails() {
                 </button>
 
                 <!-- Submit Job -->
-                <button class="btn-primary">
+                <button class="btn-primary" :onclick="toggleSubmitModal">
                   Submit Job
                 </button>
 
@@ -160,10 +166,10 @@ function toggleDetails() {
               <div class="relative w-full rounded-full h-4 overflow-hidden dark:bg-dark-primary">
                 <div
                   class="h-full bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full transition-all duration-500 ease-in-out"
-                  style="width: 60%"></div>
+                  :style="{ width: (currentFabricator.queue?.[0]?.progress || 0) + '%' }"></div>
                 <div
                   class="absolute inset-0 flex items-center justify-center text-xs font-medium text-black dark:text-white">
-                  60%
+                  {{ currentFabricator.queue?.[0]?.progress ? `${currentFabricator.queue?.[0]?.progress.toFixed(2)}%` : '0.00%' }}
                 </div>
               </div>
             </td>
@@ -281,6 +287,7 @@ function toggleDetails() {
       </div>
     </transition>
   </div>
+  <SubmitJobModal v-if="isSubmitModalOpen" @close="toggleSubmitModal" />
 </template>
 
 <style>
