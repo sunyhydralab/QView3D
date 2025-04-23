@@ -105,7 +105,7 @@ function toggleDetails() {
             </th>
             <th class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Controls
             </th>
-            <th class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Progressname
+            <th class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Progress
             </th>
             <th class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Details
             </th>
@@ -249,7 +249,7 @@ function toggleDetails() {
                 <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Nozzle</th>
                 <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Bed</th>
                 <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Elapsed </th>
-                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"> Remaining</th>
+                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Remaining</th>
                 <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Total</th>
                 <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">ETA</th>
               </tr>
