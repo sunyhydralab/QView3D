@@ -1,47 +1,100 @@
 <script setup lang="ts">
-import GCodePreview from "@/components/GCodePreview.vue"
-import { ref } from 'vue'
+import { computed } from 'vue'
+import { type Fabricator } from '@/models/fabricator'
+
+const props = defineProps<{ fabricator: Fabricator }>()
+const currentFabricator = props.fabricator
+const currentJob = currentFabricator.queue?.[0]?.job_client
 </script>
 
 <template>
-    <!-- Developer Note: This is simply a beginning setup. Subject to change eventually. -->
+  <!-- Developer Note: This is simply a beginning setup. Subject to change eventually. -->
   <div class="container mx-auto mt-3">
     <!-- Main Table -->
     <table class="min-w-full">
       <thead>
         <tr class="bg-light-primary-light dark:bg-dark-primary-light">
-          <th class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">ID</th>
-          <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Printer</th>
-          <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Job Name</th>
-          <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">File Name</th>
-          <th class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Options</th>
-          <th class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Progress</th>
           <th
-            class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Options</th>
+            class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+          >
+            ID
+          </th>
+          <th
+            class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+          >
+            Printer
+          </th>
+          <th
+            class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+          >
+            Job Name
+          </th>
+          <th
+            class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+          >
+            File Name
+          </th>
+          <th
+            class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+          >
+            Progress
+          </th>
+          <th
+            class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+          >
+            Options
+          </th>
         </tr>
       </thead>
       <tbody>
         <tr class="text-center">
-          <td class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">1</td>
-          <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">mk4</td>
-          <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">example</td>
-          <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">example.gcode</td>
-          <td class="w-36 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">
+          <td
+            class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+          >
+            {{ currentFabricator.id }}
           </td>
-          <td class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">
+          <td
+            class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+          >
+            {{ currentFabricator.description }}
+          </td>
+          <td
+            class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+          >
+            {{ currentJob?.name ?? '-' }}
+          </td>
+          <td
+            class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+          >
+            {{ currentJob?.file_name_original ?? '-' }}
+          </td>
+          <td
+            class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+          >
             <div class="relative w-full rounded-full h-4 overflow-hidden dark:bg-dark-primary">
               <!-- Progress fill bar -->
-                  <div class="h-full bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full transition-all duration-500 ease-in-out"
-                      :style="{ width: '60%' }"
-                  ></div>
+              <div
+                class="h-full bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full transition-all duration-500 ease-in-out"
+                :style="{ width: currentJob?.progress != null ? currentJob.progress + '%' : '0%' }"
+              ></div>
               <!-- Overlayed percentage -->
-              <div class="absolute inset-0 flex items-center justify-center text-xs font-medium text-black dark:text-white">
-              {{ '60%' }}
+              <div
+                class="absolute inset-0 flex items-center justify-center text-xs font-medium text-black dark:text-white"
+              >
+                {{ currentJob?.progress != null ? currentJob.progress + '%' : '0%' }}
               </div>
             </div>
           </td>
-          <td class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2 cursor-pointer" @click="toggleDetails">
-            <i class="fa-solid mx-3 fa-ellipsis-vertical"></i> <!-- Currently doesn't do anything, will be for more actions -->
+          <td
+            class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2 text-center align-middle"
+          >
+            <div class="flex items-center justify-center">
+              <button
+                class="w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded flex items-center justify-center"
+              >
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -49,5 +102,4 @@ import { ref } from 'vue'
   </div>
 </template>
 
-<style scoped>
-</style>
+<style scoped></style>
