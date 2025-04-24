@@ -23,6 +23,7 @@ const toggleFilters = () => {
           <select
             class="bg-light-primary-dark dark:bg-dark-primary-light text-dark-primary dark:text-light-primary appearance-none h-full rounded-l block w-full py-2 px-4 pr-8 leading-tight focus:outline-none focus:bg-light-primary-light dark:focus:bg-dark-primary-light border-r-2"
           >
+            <option>All</option>
             <option>Prusa MK3</option>
             <option>Prusa MK4</option>
             <option>Ender 3</option>
@@ -64,7 +65,7 @@ const toggleFilters = () => {
           <!-- Search Input -->
           <input
             placeholder="File Name"
-            class="bg-light-primary-dark dark:bg-dark-primary-light text-dark-primary dark:text-light-primary appearance-none rounded-l sm:rounded-l-none sm:rounded-r-none block px-9 py-2 w-full h-full text-sm placeholder-gray-400 focus:bg-light-primary-light focus:placeholder-dark-primary dark:text-light-primary focus:text-gray-700 focus:outline-none"
+            class="bg-light-primary-dark dark:bg-dark-primary-light text-dark-primary dark:text-light-primary appearance-none rounded-l sm:rounded-l-none sm:rounded-r-none block px-9 py-2 w-full h-full text-sm placeholder-gray-400 focus:bg-light-primary-light focus:placeholder-dark-primary-light dark:text-light-primary focus:text-gray-700 focus:outline-none"
           />
 
           <!-- Calendar Icon -->
