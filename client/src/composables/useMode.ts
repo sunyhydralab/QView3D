@@ -1,4 +1,4 @@
-import { ref, onMounted, computed } from 'vue'
+import { ref } from 'vue'
 
 /*
 Developer note:
@@ -9,23 +9,23 @@ You might be wondering, Why not use true or false instead of 'light' or 'dark'?
 */
 
 // state for the mode
-let mode: 'light' | 'dark' = 'dark'
+const mode = ref<'light' | 'dark'>('dark')
 
 // get mode
 export function isDark(): boolean {
-  return mode === 'dark'
+  return mode.value === 'dark'
 }
 
 // set the mode and update mode on local storage
 export function setMode(newMode: 'light' | 'dark'): void {
-  mode = newMode
+  mode.value = newMode
   document.documentElement.classList.toggle('dark', newMode === 'dark')
   localStorage.setItem('mode', newMode)
 }
 
 // toggle the mode between light and dark
 export function toggleMode(): void {
-  if (mode === 'dark') {
+  if (mode.value === 'dark') {
     setMode('light')
   } else {
     setMode('dark')
