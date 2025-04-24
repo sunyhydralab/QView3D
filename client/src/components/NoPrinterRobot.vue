@@ -7,7 +7,7 @@ import { fabricatorList } from "@/models/fabricator";
     <img src="@/assets/sad-robot.svg" alt="Sad Robot" class="robot" />
     <div class="text-black dark:text-white">
       No printers available. Either register a printer
-      <RouterLink class="text-accent-secondary dark:text-accent-secondary-light routerLink" to="/registration">here,</RouterLink>
+      <RouterLink class="text-accent-secondary dark:text-accent-secondary-light routerLink" to="/register">here,</RouterLink>
       or restart the server.
     </div>
   </div>
