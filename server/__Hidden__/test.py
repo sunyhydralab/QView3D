@@ -65,7 +65,7 @@ def runTests(fabricator: Fabricator, isVerbose=False):
     expectedTime = 9 * 60 + 15
     expectedMinutes, expectedSeconds = divmod(expectedTime, 60)
     time = datetime.now()
-    file = "server/xyz-cali-cube-mini_MK4.gcode"
+    file = "server/gcode-examples/cali-cubes/mini/xyz-cali-cube-mini_MK4.gcode"
     with open(file, "r") as f:
         fabricator.queue.addToFront(Job(f.read(), "xyz cali cube", fabricator.dbID, "ready", file, False, 1, fabricator.name))
         fabricator.begin()
