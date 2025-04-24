@@ -28,7 +28,7 @@ onMounted(async () => {
   }
 
   // get the list of registered fabricators from the server
-  retrieveRegisteredFabricators()
+  await retrieveRegisteredFabricators()
   console.log('Loaded fabricatorList from server');
 });
 
