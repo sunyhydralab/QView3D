@@ -1,7 +1,34 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import FilterForm from '@/components/FilterForm.vue'
 import { getAllJobs } from '@/models/job'
+
+const jobsPerPage = 20
+const currentPage = ref(1)
+
+// Grabs the jobs that are between the set start and end.
+const paginatedJobs = computed(() => {
+  const start = (currentPage.value - 1) * jobsPerPage
+  const end = start + jobsPerPage
+  return allJobs.value.slice(start, end)
+})
+
+const totalPages = computed(() => Math.ceil(allJobs.value.length / jobsPerPage))
+
+// Calculates current range of entries
+const currentRange = computed(() => {
+  const start = (currentPage.value - 1) * jobsPerPage + 1
+  const end = Math.min(currentPage.value * jobsPerPage, allJobs.value.length)
+  return `${end === 0 ? 0 : start} of ${allJobs.value.length}`
+})
+
+const goToNextPage = () => {
+  if (currentPage.value < totalPages.value) currentPage.value++
+}
+
+const goToPrevPage = () => {
+  if (currentPage.value > 1) currentPage.value--
+}
 
 // Reactive array to hold all jobs
 const allJobs = ref<Job[]>([])
@@ -9,7 +36,6 @@ const allJobs = ref<Job[]>([])
 // Load all jobs when component is mounted
 onMounted(async () => {
   allJobs.value = await getAllJobs()
-  console.log('Loaded jobs:', allJobs.value.length)  // Debugging
 })
 </script>
 
@@ -24,15 +50,16 @@ onMounted(async () => {
               <thead>
                 <tr>
                   <th
-                    class="w-48 px-5 py-3 border-b border-dark-primary-light dark:border-light-primary text-left text-xs font-semibold text-dark-primary dark:text-light-primary bg-light-primary-dark dark:bg-dark-primary-light uppercase"
-                  >
-                    Job Name
-                  </th>
-                  <th
                     class="w-12 px-5 py-3 border-b border-dark-primary-light dark:border-light-primary text-left text-xs font-semibold text-dark-primary dark:text-light-primary bg-light-primary-dark dark:bg-dark-primary-light uppercase"
                   >
                     Ticket
                   </th>
+                  <th
+                    class="w-48 px-5 py-3 border-b border-dark-primary-light dark:border-light-primary text-left text-xs font-semibold text-dark-primary dark:text-light-primary bg-light-primary-dark dark:bg-dark-primary-light uppercase"
+                  >
+                    Job Name
+                  </th>
+
                   <th
                     class="w-30 px-5 py-3 border-b border-dark-primary-light dark:border-light-primary text-left text-xs font-semibold text-dark-primary dark:text-light-primary bg-light-primary-dark dark:bg-dark-primary-light uppercase"
                   >
@@ -61,9 +88,15 @@ onMounted(async () => {
                 </tr>
               </thead>
               <tbody>
-                <!-- Developer Note: for the condition below, the length of all jobs (even if empty) is 2 for some reason. This is why it checks allJobs.length > 2. -->
-                <!-- Needs testing. -->
-                <tr v-if="allJobs.length > 2" v-for="job in allJobs" :key="job.id">
+                <!-- Paginated jobs display -->
+                <tr v-if="paginatedJobs.length > 2" v-for="job in paginatedJobs" :key="job.id">
+                  <td
+                    class="w-12 px-5 py-5 border-b border-light-primary-dark dark:border-dark-primary-light bg-light-primary-light dark:bg-dark-primary-light text-sm"
+                  >
+                    <p class="text-dark-primary dark:text-light-primary whitespace-no-wrap">
+                      {{ job.td_id }}
+                    </p>
+                  </td>
                   <td
                     class="w-48 px-5 py-5 border-b border-light-primary-dark dark:border-dark-primary-light bg-light-primary-light dark:bg-dark-primary-light text-sm"
                   >
@@ -73,13 +106,7 @@ onMounted(async () => {
                       {{ job.name }}
                     </p>
                   </td>
-                  <td
-                    class="w-12 px-5 py-5 border-b border-light-primary-dark dark:border-dark-primary-light bg-light-primary-light dark:bg-dark-primary-light text-sm"
-                  >
-                    <p class="text-dark-primary dark:text-light-primary whitespace-no-wrap">
-                      {{ job.td_id }}
-                    </p>
-                  </td>
+
                   <td
                     class="w-30 px-5 py-5 border-b border-light-primary-dark dark:border-dark-primary-light bg-light-primary-light dark:bg-dark-primary-light text-sm"
                   >
@@ -98,7 +125,7 @@ onMounted(async () => {
                     class="w-30 px-5 py-5 border-b border-light-primary-dark dark:border-dark-primary-light bg-light-primary-light dark:bg-dark-primary-light text-sm"
                   >
                     <p class="text-dark-primary dark:text-light-primary whitespace-no-wrap">
-                      {{ job.date }} {{ job.time_started }}
+                      {{ job.date }}
                     </p>
                   </td>
                   <td
@@ -147,22 +174,26 @@ onMounted(async () => {
                 </tr>
               </tbody>
             </table>
+
+            <!-- Pagniation -->
             <div
               class="px-5 py-5 bg-light-primary-light dark:bg-dark-primary-light border-t flex flex-col xs:flex-row items-center xs:justify-between"
             >
               <span class="text-xs xs:text-sm text-dark-primary dark:text-light-primary">
-                1 of 1
+                {{ currentRange }}
               </span>
-
-              <!-- TODO: Pagniation -->
               <div class="inline-flex mt-2 xs:mt-0">
                 <button
-                  class="text-sm bg-light-primary-dark dark:bg-dark-primary hover:bg-light-primary dark:hover:bg-dark-primary text-dark-primary dark:text-light-primary font-semibold py-2 px-4 rounded-l border-r"
+                  :disabled="currentPage === 1"
+                  class="text-sm bg-light-primary-dark dark:bg-dark-primary hover:bg-light-primary dark:hover:bg-dark-primary text-dark-primary dark:text-light-primary font-semibold py-2 px-4 rounded-l border-r disabled:opacity-50 disabled:cursor-not-allowed"
+                  @click="goToPrevPage"
                 >
                   Prev
                 </button>
                 <button
-                  class="text-sm bg-light-primary-dark dark:bg-dark-primary hover:bg-light-primary dark:hover:bg-dark-primary-light text-dark-primary dark:text-light-primary font-semibold py-2 px-4 rounded-r"
+                  :disabled="currentPage === totalPages"
+                  class="text-sm bg-light-primary-dark dark:bg-dark-primary hover:bg-light-primary dark:hover:bg-dark-primary-light text-dark-primary dark:text-light-primary font-semibold py-2 px-4 rounded-r disabled:opacity-50 disabled:cursor-not-allowed"
+                  @click="goToNextPage"
                 >
                   Next
                 </button>
@@ -188,6 +219,6 @@ onMounted(async () => {
   opacity: 1;
 }
 .w-48 {
-  width: 30rem; /* Set a fixed width for the column */
+  width: 20rem; /* Set a fixed width for the column */
 }
 </style>
