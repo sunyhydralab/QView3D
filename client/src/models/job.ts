@@ -1,3 +1,5 @@
+import { api } from '@/models/api'
+
 export interface Job {
     id: number
     name: string
@@ -43,3 +45,7 @@ export interface Job {
     printer_name?: string
     queue_selected?: boolean
   }
+
+export async function getAllJobs() {
+  return api('getjobs')
+}
