@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
+import SettingsPanel from '@/components/SettingsPanel.vue'
 </script>
 
 <template>
@@ -8,4 +9,5 @@ import Navbar from '@/components/Navbar.vue'
     <Navbar />
   </nav>
   <RouterView class="pt-20 px-10 min-h-screen h-full"/>
+  <SettingsPanel />
 </template>
