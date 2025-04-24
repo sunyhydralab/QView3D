@@ -34,7 +34,7 @@ onMounted(async () => {
 
 // update the list of connected Fabricators but filter out the registered ones
 async function refreshFabricatorList() {
-  let updatedList = await getConnectedFabricators();
+  const updatedList = await getConnectedFabricators();
   // filter out fabricators that have already been registered
   connectedFabricatorList.value = updatedList.filter((fabricator: Fabricator) => {
     // checks if the fabricator is registered and already has a name by it's serialPort id 
