@@ -1,4 +1,4 @@
-TODO: Whenever the database is wiped, so should the localStorage for connectedFabricatorList
+<!--TODO: Whenever the database is wiped, so should the localStorage for connectedFabricatorList-->
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
