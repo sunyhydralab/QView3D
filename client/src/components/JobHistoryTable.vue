@@ -59,7 +59,6 @@ onMounted(async () => {
                   >
                     Job Name
                   </th>
-
                   <th
                     class="w-30 px-5 py-3 border-b border-dark-primary-light dark:border-light-primary text-left text-xs font-semibold text-dark-primary dark:text-light-primary bg-light-primary-dark dark:bg-dark-primary-light uppercase"
                   >
