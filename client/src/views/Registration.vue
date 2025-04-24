@@ -14,7 +14,7 @@ const selectedFabricator = ref<Fabricator | null>(null);
 // the user submitted name for the fabricator
 const customName = ref<string | null>(null);
 
-// fetch list of connected ports from backend and automatically load them into the form dropdown 
+// fetch the list of connected ports from backend and automatically load them into the form dropdown
 onMounted(async () => {
   // get the filtered list of connected fabricators from local storage
   const previousConnectedFabricatorList = localStorage.getItem('connectedFabricatorList');
