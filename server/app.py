@@ -289,7 +289,7 @@ with app.app_context():
 
 def run_socketio(app):
     try:
-        app.socketio.run(app, allow_unsafe_werkzeug=True)
+        app.socketio.run(app, allow_unsafe_werkzeug=True, port=8000)
     except Exception as e:
         app.handle_errors_and_logging(e)
 
