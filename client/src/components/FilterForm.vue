@@ -68,11 +68,7 @@ const toggleFilters = () => {
           <!-- Search Input -->
           <input
             placeholder="File Name"
-<<<<<<< HEAD
             class="bg-light-primary-dark dark:bg-dark-primary-light text-dark-primary dark:text-light-primary appearance-none rounded-l sm:rounded-l-none sm:rounded-r-none block px-9 py-2 w-full h-full text-sm placeholder-gray-400 focus:bg-light-primary-light focus:placeholder-dark-primary-light dark:text-light-primary focus:text-gray-700 focus:outline-none"
-=======
-            class="bg-light-primary-dark dark:bg-dark-primary-light text-dark-primary dark:text-light-primary appearance-none rounded-l sm:rounded-l-none sm:rounded-r-none block px-9 py-2 w-full h-full text-sm placeholder-gray-400 focus:bg-light-primary-light focus:placeholder-dark-primary dark:text-light-primary focus:text-gray-700 focus:outline-none"
->>>>>>> origin/frontdev-rewrite-jobhistory
           />
 
           <!-- Calendar Icon -->
