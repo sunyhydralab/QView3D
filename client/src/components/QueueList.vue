@@ -2,9 +2,10 @@
 import { computed } from 'vue'
 import { type Fabricator } from '@/models/fabricator'
 
+
 const props = defineProps<{ fabricator: Fabricator }>()
 const currentFabricator = props.fabricator
-const currentJob = currentFabricator.queue?.[0]?.job_client
+const currentJob = currentFabricator.queue?.[0]
 </script>
 
 <template>

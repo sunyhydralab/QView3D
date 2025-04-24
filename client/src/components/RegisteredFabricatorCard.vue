@@ -10,16 +10,24 @@ const props = defineProps<FabricatorProps>();
 
 <template>
     <div
-        class="my-10 mx-10 block max-w-sm bg-white rounded-lg shadow-sm dark:bg-light-primary-light">
-        <!-- Purple header section with name -->
-        <div class="p-4 bg-accent-primary rounded-t-lg">
-            <p class="text-2xl font-bold tracking-tight text-white">{{ name }}</p>
-        </div>
-
-        <!-- Content section -->
-        <div class="p-4">
-            <p class="font-normal text-gray-700 dark:text-black">Model: {{ model }}</p>
-            <p class="font-normal text-gray-700 dark:text-black">Date Registered: {{ date }}</p>
-        </div>
+      class="my-10 mx-auto max-w-sm rounded-2xl shadow-md transition-transform duration-300 hover:scale-[1.02] dark:bg-light-primary-light bg-white">
+      
+      <!-- Header -->
+      <div class="rounded-t-2xl bg-accent-primary px-6 py-4">
+        <h2 class="text-xl sm:text-2xl font-semibold text-white tracking-wide">
+          {{ name }}
+        </h2>
+      </div>
+  
+      <!-- Content -->
+      <div class="px-6 py-4 space-y-2 dark:bg-dark-primary-light">
+        <p class="text-base text-gray-600 dark:text-white font-bold">
+          <span class="font-medium text-gray-800 dark:text-black dark:text-white">Model:</span> {{ model }}
+        </p>
+        <p class="text-base text-black text-black dark:text-white font-bold">
+          <span class="font-medium text-black dark:text-white">Date Registered:</span> {{ date }}
+        </p>
+      </div>
     </div>
-</template>
+  </template>
+  
