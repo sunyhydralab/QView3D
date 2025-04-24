@@ -1,5 +1,5 @@
 // in .env: VITE_API_ROOT="api url"
-const API_ROOT = import.meta.env.VITE_API_ROOT || "http://localhost:8000";
+import {API_URL} from "@/composables/useIPSettings";
 
 
 export async function api(endPoint: string, body?: unknown, method?: string, headers?: HeadersInit) {
@@ -17,7 +17,7 @@ export async function api(endPoint: string, body?: unknown, method?: string, hea
     
     try {
         // sends the request to the server and sets the response
-        const response = await fetch(`${API_ROOT}/${endPoint}`, requestOptions);
+        const response = await fetch(`${API_URL.value}/${endPoint}`, requestOptions);
         // set the response in json form
         const dataInJson = await response.json();
         // check if the response is ok
