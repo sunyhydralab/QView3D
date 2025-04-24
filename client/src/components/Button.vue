@@ -42,12 +42,11 @@ function handleClick(event: any) {
 </script>
 
 <template>
-    <button
-      v-bind:class="buttonClasses"
-      v-bind:disabled="isDisabled"
-      @click="handleClick"
-    >
-      <slot />
-    </button>
-  </template>
-  
+  <button
+    v-bind:class="buttonClasses"
+    v-bind:disabled="isDisabled"
+    @click="handleClick"
+  >
+    <slot />
+  </button>
+</template>
