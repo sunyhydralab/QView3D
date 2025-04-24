@@ -18,7 +18,7 @@ export default {
         'accent-primary-dark': '#4d3f73',
         'accent-primary': '#7461A8',
         'accent-primary-light': '#9688bd',
-        'accent-secondary': '#488687',
+        'accent-secondary-dark': '#488687',
         'accent-secondary': '#60ACAD',
         'accent-secondary-light': '#9dc6c7',
       }
