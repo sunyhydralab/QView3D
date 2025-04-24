@@ -90,7 +90,7 @@ async function handleSubmit() {
         Fabricator</label>
       <div class="flex items-center">
         <select id="fabricatorSelect" v-model="selectedFabricator"
-          class="block w-full px-4 py-2 bg-light-primary-light border-light-primary-dark rounded-md shadow-sm focus:outline-none focus:ring-2 focus:border-accent-primary-light focus:ring-accent-primary-light"
+          class="input-style block w-full px-4 py-2 bg-light-primary-light border-light-primary-dark rounded-md shadow-sm focus:outline-none focus:ring-2 focus:border-accent-primary-light focus:ring-accent-primary-light"
           required>
           <option v-if="connectedFabricatorList.length > 0" disabled value="">Select a fabricator</option>
           <option v-else disabled value="">All connected fabricators have been registered</option>
@@ -126,7 +126,7 @@ async function handleSubmit() {
         <label for="name" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-100">Fabricator
           Name</label>
         <input id="name" type="text"
-          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:border-accent-primary-light focus:ring-accent-primary-light"
+          class="input-style w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:border-accent-primary-light focus:ring-accent-primary-light"
           v-model="customName" placeholder="Name your fabricator" />
       </div>
 
@@ -142,7 +142,7 @@ async function handleSubmit() {
       <div class="space-y-1">
         <label for="model" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-100">Model</label>
         <input id="model" type="text"
-          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed" disabled
+          class="input-style w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed" disabled
           :placeholder="selectedFabricator?.description" />
       </div>
 
