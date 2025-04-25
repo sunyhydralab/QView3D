@@ -3,6 +3,13 @@ import { ref, onMounted, computed } from 'vue'
 import FilterForm from '@/components/FilterForm.vue'
 import { getAllJobs } from '@/models/job'
 
+// Reactive array to hold all jobs
+const allJobs = ref<Job[]>([])
+
+// Load all jobs when component is mounted
+onMounted(async () => {
+  allJobs.value = await getAllJobs()
+})
 const jobsPerPage = 20
 const currentPage = ref(1)
 
@@ -17,9 +24,8 @@ const totalPages = computed(() => Math.ceil(allJobs.value.length / jobsPerPage))
 
 // Calculates current range of entries
 const currentRange = computed(() => {
-  const start = (currentPage.value - 1) * jobsPerPage + 1
-  const end = Math.min(currentPage.value * jobsPerPage, allJobs.value.length)
-  return `${end === 0 ? 0 : start} of ${allJobs.value.length}`
+  const end = Math.ceil(allJobs.value.length / jobsPerPage)
+  return `${currentPage.value} of ${end}`
 })
 
 const goToNextPage = () => {
@@ -29,14 +35,6 @@ const goToNextPage = () => {
 const goToPrevPage = () => {
   if (currentPage.value > 1) currentPage.value--
 }
-
-// Reactive array to hold all jobs
-const allJobs = ref<Job[]>([])
-
-// Load all jobs when component is mounted
-onMounted(async () => {
-  allJobs.value = await getAllJobs()
-})
 </script>
 
 <template>
@@ -184,7 +182,7 @@ onMounted(async () => {
               <div class="inline-flex mt-2 xs:mt-0">
                 <button
                   :disabled="currentPage === 1"
-                  class="text-sm bg-light-primary-dark dark:bg-dark-primary hover:bg-light-primary dark:hover:bg-dark-primary text-dark-primary dark:text-light-primary font-semibold py-2 px-4 rounded-l border-r disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="text-sm bg-light-primary-dark dark:bg-dark-primary hover:bg-light-primary dark:hover:bg-dark-primary-light text-dark-primary dark:text-light-primary font-semibold py-2 px-4 rounded-l border-r disabled:opacity-50 disabled:cursor-not-allowed"
                   @click="goToPrevPage"
                 >
                   Prev
