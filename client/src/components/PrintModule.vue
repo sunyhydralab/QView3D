@@ -14,6 +14,7 @@ const showDetails = ref(false)
 function toggleDetails() {
   showDetails.value = !showDetails.value
 }
+
 </script>
 
 <template>
@@ -160,10 +161,10 @@ function toggleDetails() {
               <div class="relative w-full rounded-full h-4 overflow-hidden dark:bg-dark-primary">
                 <div
                   class="h-full bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full transition-all duration-500 ease-in-out"
-                  style="width: 60%"></div>
+                  :style="{ width: currentJob?.progress != null ? currentJob.progress + '%' : '0%'}"></div>
                 <div
                   class="absolute inset-0 flex items-center justify-center text-xs font-medium text-black dark:text-white">
-                  60%
+                  {{ currentJob?.progress != null ? currentJob.progress + '%' : '0%' }}
                 </div>
               </div>
             </td>
@@ -222,13 +223,6 @@ function toggleDetails() {
               </div>
             </div>
 
-            <div class="mb-4">
-              <h4 class="font-medium mb-2">Console</h4>
-              <div class="bg-light-primary-ultralight dark:bg-dark-primary rounded p-2 h-24 overflow-y-auto">
-                <p class="text-black dark:text-white">Console (Placeholder)</p>
-              </div>
-            </div>
-
             <div>
               <h4 class="font-medium mb-2">Preview</h4>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary rounded p-2">
@@ -271,7 +265,7 @@ function toggleDetails() {
           <!-- Gcode Viewer Section -->
           <div class="flex mt-1 justify-center bg-black">
             <div class="bg-black w-4/5 p-2">
-              <GCodePreview />
+              <GCodePreview :file="currentFabricator?.queue?.[0]?.file ?? null"/>
             </div>
           </div>
         </div>
