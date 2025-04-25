@@ -268,12 +268,9 @@ function toggleDetails() {
             </tbody>
           </table>
 
-          <!-- Console & Viewer Section -->
-          <div class="flex mt-4">
-            <div class="bg-light-primary-light dark:bg-dark-primary-light w-1/3 dark:text-light-primary p-2">
-              <p class="text-black dark:text-white">Console (Placeholder)</p>
-            </div>
-            <div class="bg-light-primary-light dark:bg-dark-primary-light w-2/3 dark:text-light-primary p-2">
+          <!-- Gcode Viewer Section -->
+          <div class="flex mt-1 justify-center bg-black">
+            <div class="bg-black w-4/5 p-2">
               <GCodePreview />
             </div>
           </div>
