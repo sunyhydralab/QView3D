@@ -19,6 +19,7 @@ export interface Fabricator {
   bed_temp?: number
   colorChangeBuffer?: number
   colorbuff?: number,
+  isSelected: boolean 
 }
 
 // list of all registered Fabricators
@@ -41,5 +42,6 @@ export async function retrieveRegisteredFabricators() {
 export async function registerFabricator(fabricator: Fabricator) {
   // set fabricator to printer because the api expects they key, 'printer'
   const printer = fabricator
+  fabricator.isSelected = false
   return await api('register', { printer })
 }

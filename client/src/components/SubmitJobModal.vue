@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { fabricatorList, retrieveRegisteredFabricators } from '@/models/fabricator'
+import { fabricatorList, retrieveRegisteredFabricators, type Fabricator } from '@/models/fabricator'
 
 // Load fabricators when modal is mounted
 onMounted(() => {
@@ -12,9 +12,6 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const selectedFile = ref<File | null>(null)
 const fileName = ref("No file selected.")
 
-// Fabricator Selection Handling
-const selectedFabricators = ref<number[]>([])
-
 const handleFileUpload = () => fileInput.value?.click()
 const handleFileChange = (e: Event) => {
   const files = (e.target as HTMLInputElement).files
@@ -24,24 +21,28 @@ const handleFileChange = (e: Event) => {
   }
 }
 
-const toggleFabricator = (id: number) => {
-  const index = selectedFabricators.value.indexOf(id)
-  if (index === -1) selectedFabricators.value.push(id)
-  else selectedFabricators.value.splice(index, 1)
+// Toggles the isSelected state of a selected Fabricator
+const toggleFabricator = (selectedFabricator: Fabricator) => {
+  selectedFabricator.isSelected = !selectedFabricator.isSelected
 }
 
-const toggleAll = () => {
-  if (selectedFabricators.value.length === fabricatorList.value.length) {
-    selectedFabricators.value = []
-  } else {
-    selectedFabricators.value = fabricatorList.value
-      .map(f => f.id)
-      .filter((id): id is number => id !== undefined)
+// Toggle all fabricators as selected or deselected based on current selection state.
+const toggleSelectAll = () => {
+  const shouldSelect = !allSelected.value;
+
+  for (const fabricator of fabricatorList.value) {
+    fabricator.isSelected = shouldSelect;
   }
 }
 
+// Checks if any fabricator is selected, returns true if at least one is.
+const anySelected = computed(() =>
+  fabricatorList.value.some((fabricator) => fabricator.isSelected)
+)
+
+// Checks if all fabricators are selected, returns true if they all are.
 const allSelected = computed(() =>
-  selectedFabricators.value.length === fabricatorList.value.length
+  fabricatorList.value.every((fabricator) => fabricator.isSelected)
 )
 </script>
 
@@ -69,7 +70,7 @@ const allSelected = computed(() =>
         <div class="space-y-2">
           <h4 class="text-md font-medium text-center text-gray-700 dark:text-gray-300">Select Fabricator</h4>
           <div class="flex justify-center">
-            <button @click="toggleAll"
+            <button @click="toggleSelectAll"
               class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark">
               {{ allSelected ? 'Deselect All' : 'Select All' }}
             </button>
@@ -78,14 +79,12 @@ const allSelected = computed(() =>
           <!-- Grid of fabricator buttons -->
           <div class="grid grid-cols-2 md:grid-cols-3 gap-2 p-2">
             <button v-for="fabricator in fabricatorList" :key="fabricator.id" type="button"
-              class="px-3 py-2 rounded-md text-center text-sm font-medium transition-all duration-200 relative" :class="[
-                fabricator.id !== undefined && selectedFabricators.includes(fabricator.id)
-                  ? 'bg-accent-secondary text-white hover:bg-accent-secondary-dark font-bold shadow-lg transform scale-105'
-                  : 'bg-accent-secondary text-white hover:bg-accent-secondary-dark opacity-50'
-              ]" @click="fabricator.id !== undefined && toggleFabricator(fabricator.id)">
+              class="px-3 py-2 rounded-md text-center text-sm font-medium transition-all duration-200 relative" :class="[fabricator.isSelected
+                ? 'bg-accent-secondary text-white hover:bg-accent-secondary-dark font-bold shadow-lg transform scale-105'
+                : 'bg-accent-secondary text-white hover:bg-accent-secondary-dark opacity-50'
+              ]" @click="toggleFabricator(fabricator)">
               <div class="flex items-center justify-center space-x-1">
-                <span v-if="fabricator.id !== undefined && selectedFabricators.includes(fabricator.id)"
-                  class="absolute -left-1 -top-1 bg-white rounded-full p-1 shadow-md">
+                <span v-if="fabricator.isSelected" class="absolute -left-1 -top-1 bg-white rounded-full p-1 shadow-md">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-500" viewBox="0 0 20 20"
                     fill="currentColor">
                     <path fill-rule="evenodd"
@@ -108,6 +107,9 @@ const allSelected = computed(() =>
               <div class="flex-1 px-3 py-2 bg-gray-100 dark:bg-light-primary-light rounded-md flex items-center">
                 <span class="text-gray-500 dark:text-gray-400 truncate">{{ fileName }}</span>
               </div>
+              <button type="button" class="bg-accent-primary hover:bg-accent-primary-dark p-2 px-3 rounded-md" @click="">
+                <i class="fa-regular fa-image text-white"></i>
+              </button>
               <input ref="fileInput" type="file" accept=".gcode" class="hidden" @change="handleFileChange" />
             </div>
           </div>
@@ -115,13 +117,15 @@ const allSelected = computed(() =>
           <!-- Quantity Input -->
           <div>
             <label for="quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantity</label>
-            <input id="quantity" type="number" min="1" value="1" class="w-full px-3 py-2 border rounded-md text-gray-700 focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
+            <input id="quantity" type="number" min="1" value="1"
+              class="w-full px-3 py-2 border rounded-md text-gray-700 focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
           </div>
 
           <!-- Ticket ID -->
           <div>
             <label for="ticketId" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Ticket ID</label>
-            <input id="ticketId" type="number" min="0" value="0" class="w-full px-3 py-2 border rounded-md text-gray-700 focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
+            <input id="ticketId" type="number" min="0" value="0"
+              class="w-full px-3 py-2 border rounded-md text-gray-700 focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
           </div>
 
           <!-- Job Name -->
@@ -133,8 +137,9 @@ const allSelected = computed(() =>
           </div>
 
           <!-- No Fabricator Message -->
-          <p v-if="selectedFabricators.length < 1" class="text-xs text-center text-gray-500 dark:text-gray-400">
-            No fabricator selected, will <span class="text-accent-primary-light">auto queue</span>
+          <p v-if="!anySelected" class="text-xs text-center text-gray-500 dark:text-gray-400">
+            <span class="text-red-400">No fabricator selected</span>, your job will be <span
+              class="text-accent-primary-light">auto queued</span> to the net available fabricator
           </p>
 
           <!-- Footer -->
