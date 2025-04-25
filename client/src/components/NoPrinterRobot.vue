@@ -3,7 +3,7 @@ import { fabricatorList } from "@/models/fabricator";
 </script>
 
 <template>
-  <div v-if="fabricatorList.length === 0" class="flex flex-col items-center justify-center text-cent fade show slide-down">
+  <div v-if="fabricatorList.length === 0" class="mt-10 flex flex-col items-center justify-center text-cent fade show slide-down">
     <img src="@/assets/sad-robot.svg" alt="Sad Robot" class="robot" />
     <div class="text-black dark:text-white">
       No printers available. Either register a printer
