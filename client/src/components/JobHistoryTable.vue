@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import FilterForm from '@/components/FilterForm.vue'
-import { getAllJobs } from '@/models/job'
+import FilterForm from './FilterForm.vue'
+import { getAllJobs, type Job } from '@/models/job'
 
 // Reactive array to hold all jobs
 const allJobs = ref<Job[]>([])

@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { type Fabricator } from '@/models/fabricator'
-
 
 const props = defineProps<{ fabricator: Fabricator }>()
 const currentFabricator = props.fabricator
