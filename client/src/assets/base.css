@@ -3,31 +3,34 @@
 @tailwind utilities;
 
 @layer components {
-    .btn-primary {
-      @apply rounded-md w-32 py-2 text-white font-semibold bg-accent-primary hover:bg-purple-400 transition-all duration-300;
-    }
-  
-    .btn-danger {
-      @apply rounded-md w-32 py-2 text-white font-semibold bg-red-400 hover:bg-red-300 transition-all duration-300;
-    }
-  
-    .btn-secondary {
-      @apply rounded-md w-32 py-2 text-white font-semibold bg-accent-secondary hover:bg-accent-secondary-light transition-all duration-300;
-    }
-  
-    .table-header {
-      @apply border border-light-primary dark:border-dark-primary dark:text-light-primary p-2;
-    }
-  
-    .table-cell {
-      @apply border border-light-primary dark:border-dark-primary dark:text-light-primary p-2;
-    }
-  
-    .detail-header {
-      @apply border border-light-primary dark:border-dark-primary dark:text-light-primary p-1;
-    }
-  
-    .detail-cell {
-      @apply border border-light-primary dark:border-dark-primary dark:text-light-primary p-1;
-    }
+  .btn-primary {
+    @apply rounded-md w-32 py-2 text-white font-semibold bg-accent-primary hover:bg-purple-400  transition-all duration-300;
   }
+
+  .btn-danger {
+    @apply rounded-md w-32 py-2 text-white font-semibold bg-red-400 hover:bg-red-300 transition-all duration-300;
+  }
+
+  .btn-secondary {
+    @apply rounded-md w-32 py-2 text-white font-semibold bg-accent-secondary hover:bg-accent-secondary-light transition-all duration-300;
+  }
+
+  .table-header {
+    @apply border border-light-primary dark:border-dark-primary dark:text-light-primary p-2;
+  }
+
+  .table-cell {
+    @apply border border-light-primary dark:border-dark-primary dark:text-light-primary p-2;
+  }
+
+  .detail-header {
+    @apply border border-light-primary dark:border-dark-primary dark:text-light-primary p-1;
+  }
+
+  .detail-cell {
+    @apply border border-light-primary dark:border-dark-primary dark:text-light-primary p-1;
+  }
+  .input-style {
+    @apply border border-light-primary dark:border-dark-primary dark:text-light-primary rounded-md bg-white dark:bg-dark-primary-light;
+  }
+}

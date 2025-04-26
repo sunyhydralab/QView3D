@@ -1,15 +1,13 @@
 <script setup lang="ts">
-import GCodePreview from "@/components/GCodePreview.vue"
+import GCodePreview from './GCodePreview.vue'
 import { ref } from 'vue'
-import { type Fabricator } from '@/models/fabricator'
-import SubmitJobModal from "@/components/SubmitJobModal.vue";
+import { type Fabricator } from '../models/fabricator'
+import DashboardButtons from './DashboardButtons.vue'
 
-const props = defineProps<{ fabricator: Fabricator }>();
-const currentFabricator = props.fabricator;
+const props = defineProps<{ fabricator: Fabricator }>()
+const currentFabricator = props.fabricator
+const currentJob = currentFabricator.queue?.[0]
 
-const isPrinting = ref(false)
-const isPaused = ref(false)
-const isOnline = ref(false)
 const showDetails = ref(false)
 const isSubmitModalOpen = ref(false)
 
@@ -51,50 +49,18 @@ function toggleSubmitModal() {
             <div class="relative w-full rounded-full h-4 overflow-hidden dark:bg-dark-primary">
               <div
                 class="h-full bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full transition-all duration-500 ease-in-out"
-                style="width: 60%"></div>
+                style="width: 60%"
+              ></div>
               <div
-                class="absolute inset-0 flex items-center justify-center text-xs font-medium text-black dark:text-white">
+                class="absolute inset-0 flex items-center justify-center text-xs font-medium text-black dark:text-white"
+              >
                 60%
               </div>
             </div>
           </div>
 
           <!-- Controls -->
-          <div class="flex flex-wrap gap-2 justify-center">
-            <!-- Turn Offline -->
-            <button class="btn-secondary" v-if="!isOnline" @click="isOnline = true">
-              Turn Online
-            </button>
-            <button class="btn-danger" v-else @click="isOnline = false; isPrinting = false">
-              Turn Offline
-            </button>
-
-            <!-- Submit Job -->
-            <button class="btn-primary" :onclick="toggleSubmitModal">
-              Submit Job
-            </button>
-
-            <!-- Printing -->
-            <button v-if="!isPrinting && isOnline" @click="isPrinting = true" class="btn-primary">
-              Start Print
-            </button>
-            <button v-else-if="isOnline" @click="isPrinting = false" class="btn-danger">
-              Stop
-            </button>
-
-            <!-- Pause / Unpause Toggle -->
-            <button v-if="!isPaused && isPrinting" @click="isPaused = true" class="btn-secondary">
-              Pause
-            </button>
-            <button v-else-if="isPrinting" @click="isPaused = false" class="btn-primary">
-              Unpause
-            </button>
-
-            <!-- Rerun -->
-            <button class="btn-secondary" v-if="!isPrinting && isOnline" @click="isPrinting = true">
-              Rerun Job
-            </button>
-          </div>
+          <DashboardButtons />
         </div>
       </div>
 
@@ -102,80 +68,93 @@ function toggleSubmitModal() {
       <table class="hidden md:table min-w-full border-collapse">
         <thead>
           <tr class="bg-light-primary-light dark:bg-dark-primary-light">
-            <th class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">ID</th>
-            <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Printer
+            <th
+              class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            >
+              ID
             </th>
-            <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Job Name
+            <th
+              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            >
+              Printer
             </th>
-            <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">File Name
+            <th
+              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            >
+              Job Name
             </th>
-            <th class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Controls
+            <th
+              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            >
+              File Name
             </th>
-            <th class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Progress
+            <th
+              class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            >
+              Controls
             </th>
-            <th class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">Details
+            <th
+              class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            >
+              Progress
+            </th>
+            <th
+              class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            >
+              Details
             </th>
           </tr>
         </thead>
         <tbody>
           <tr class="text-center">
-            <td class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">{{ currentFabricator.id }}</td>
-            <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">{{ currentFabricator.description }}</td>
-            <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">{{ currentFabricator.queue?.[0] ?? '-' }}</td>
-            <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">{{ currentFabricator.queue?.[0]?.file_name_original ?? '-' }}</td>
-            <td class="w-36 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">
+            <td
+              class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            >
+              {{ currentFabricator.id }}
+            </td>
+            <td
+              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            >
+              {{ currentFabricator.description }}
+            </td>
+            <td
+              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            >
+              {{ currentJob ?? 'N/A' }}
+            </td>
+            <td
+              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            >
+              {{ currentJob?.file_name_original ?? 'N/A' }}
+            </td>
+            <td
+              class="w-36 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            >
               <!-- Controls -->
-              <div class="flex flex-wrap gap-2">
-                <!-- Turn Offline -->
-                <button class="btn-secondary" v-if="!isOnline" @click="isOnline = true">
-                  Turn Online
-                </button>
-                <button class="btn-danger" v-else @click="isOnline = false; isPrinting = false">
-                  Turn Offline
-                </button>
-
-                <!-- Submit Job -->
-                <button class="btn-primary" :onclick="toggleSubmitModal">
-                  Submit Job
-                </button>
-
-                <!-- Printing -->
-                <button v-if="!isPrinting && isOnline" @click="isPrinting = true" class="btn-primary">
-                  Start Print
-                </button>
-                <button v-else-if="isOnline" @click="isPrinting = false" class="btn-danger">
-                  Stop
-                </button>
-
-                <!-- Pause / Unpause Toggle -->
-                <button v-if="!isPaused && isPrinting" @click="isPaused = true" class="btn-secondary">
-                  Pause
-                </button>
-                <button v-else-if="isPrinting" @click="isPaused = false" class="btn-primary">
-                  Unpause
-                </button>
-
-                <!-- Rerun -->
-                <button class="btn-secondary" v-if="!isPrinting && isOnline" @click="isPrinting = true">
-                  Rerun Job
-                </button>
-              </div>
+              <DashboardButtons />
             </td>
             <!-- Progress Bar -->
-            <td class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2">
+            <td
+              class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            >
               <div class="relative w-full rounded-full h-4 overflow-hidden dark:bg-dark-primary">
                 <div
                   class="h-full bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full transition-all duration-500 ease-in-out"
-                  :style="{ width: (currentFabricator.queue?.[0]?.progress || 0) + '%' }"></div>
+                  :style="{
+                    width: currentJob?.progress != null ? currentJob.progress + '%' : '0%',
+                  }"
+                ></div>
                 <div
-                  class="absolute inset-0 flex items-center justify-center text-xs font-medium text-black dark:text-white">
-                  {{ currentFabricator.queue?.[0]?.progress ? `${currentFabricator.queue?.[0]?.progress.toFixed(2)}%` : '0.00%' }}
+                  class="absolute inset-0 flex items-center justify-center text-xs font-medium text-black dark:text-white"
+                >
+                  {{ currentJob?.progress != null ? currentJob.progress + '%' : '0%' }}
                 </div>
               </div>
             </td>
             <td
               class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2 cursor-pointer"
-              @click="toggleDetails">
+              @click="toggleDetails"
+            >
               <div class="flex justify-center items-center">
                 <i class="fas" :class="showDetails ? 'fa-caret-up' : 'fa-caret-down'"></i>
               </div>
@@ -196,11 +175,11 @@ function toggleSubmitModal() {
             <div class="grid grid-cols-2 gap-3 mb-4">
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Layer</div>
-                <div>{{ currentFabricator.queue?.[0]?.current_layer_height ?? 'N/A' }}</div>
+                <div>{{ currentJob?.current_layer_height ?? 'N/A' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Filament</div>
-                <div>{{ currentFabricator.queue?.[0]?.filament ?? 'Idle' }}</div>
+                <div>{{ currentJob?.filament ?? 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Nozzle</div>
@@ -212,33 +191,26 @@ function toggleSubmitModal() {
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Elapsed</div>
-                <div>{{ currentFabricator.queue?.[0]?.job_client?.elapsed_time ?? 'Idle' }}</div>
+                <div>{{ currentJob?.job_client?.elapsed_time ?? 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Remaining</div>
-                <div>{{ currentFabricator.queue?.[0]?.job_client?.remaining_time ?? 'Idle' }}</div>
+                <div>{{ currentJob?.job_client?.remaining_time ?? 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Total</div>
-                <div>{{ currentFabricator.queue?.[0]?.job_client?.total_time ?? 'Idle' }}</div>
+                <div>{{ currentJob?.job_client?.total_time ?? 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">ETA</div>
-                <div>{{ currentFabricator.queue?.[0]?.job_client?.eta ?? 'Idle' }}</div>
-              </div>
-            </div>
-
-            <div class="mb-4">
-              <h4 class="font-medium mb-2">Console</h4>
-              <div class="bg-light-primary-ultralight dark:bg-dark-primary rounded p-2 h-24 overflow-y-auto">
-                <p class="text-black dark:text-white">Console (Placeholder)</p>
+                <div>{{ currentJob?.job_client?.eta ?? 'Idle' }}</div>
               </div>
             </div>
 
             <div>
               <h4 class="font-medium mb-2">Preview</h4>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary rounded p-2">
-                <GCodePreview />
+                <GCodePreview :file="currentJob?.file ?? null" />
               </div>
             </div>
           </div>
@@ -247,40 +219,103 @@ function toggleSubmitModal() {
         <!-- Desktop Details View -->
         <div class="hidden md:block">
           <!-- Print Details Table -->
-          <table class="min-w-full border border-light-primary dark:border-dark-primary dark:text-light-primary mt-4">
+          <table
+            class="min-w-full border border-light-primary dark:border-dark-primary dark:text-light-primary mt-4"
+          >
             <thead>
               <tr class="bg-light-primary-light dark:bg-dark-primary-light">
-                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Layer </th>
-                <th class="w-20 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Filament</th>
-                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Nozzle</th>
-                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Bed</th>
-                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Elapsed </th>
-                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Remaining</th>
-                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">Total</th>
-                <th class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">ETA</th>
+                <th
+                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                >
+                  Layer
+                </th>
+                <th
+                  class="w-20 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                >
+                  Filament
+                </th>
+                <th
+                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                >
+                  Nozzle
+                </th>
+                <th
+                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                >
+                  Bed
+                </th>
+                <th
+                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                >
+                  Elapsed
+                </th>
+                <th
+                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                >
+                  Remaining
+                </th>
+                <th
+                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                >
+                  Total
+                </th>
+                <th
+                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                >
+                  ETA
+                </th>
               </tr>
             </thead>
             <tbody>
               <tr class="text-center align-middle">
-                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">{{ currentFabricator.queue?.[0]?.current_layer_height ?? 'N/A' }}</td>
-                <td class="w-20 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">{{ currentFabricator.queue?.[0]?.filament ?? 'Idle' }}</td>
-                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">{{ currentFabricator.extruder_temp ?? 'Idle' }}</td>
-                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">{{ currentFabricator.bed_temp ?? 'Idle' }}</td>
-                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">{{ currentFabricator.queue?.[0]?.job_client?.elapsed_time ?? 'Idle' }}</td>
-                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">{{ currentFabricator.queue?.[0]?.job_client?.remaining_time ?? 'Idle' }}</td>
-                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">{{ currentFabricator.queue?.[0]?.job_client?.total_time ?? 'Idle' }}</td>
-                <td class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1">{{ currentFabricator.queue?.[0]?.job_client?.eta ?? 'Idle' }}</td>
+                <td
+                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                >
+                  {{ currentJob?.current_layer_height ?? 'N/A' }}
+                </td>
+                <td
+                  class="w-20 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                >
+                  {{ currentJob?.filament ?? 'Idle' }}
+                </td>
+                <td
+                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                >
+                  {{ currentFabricator.extruder_temp ?? 'Idle' }}
+                </td>
+                <td
+                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                >
+                  {{ currentFabricator.bed_temp ?? 'Idle' }}
+                </td>
+                <td
+                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                >
+                  {{ currentJob?.job_client?.elapsed_time ?? 'Idle' }}
+                </td>
+                <td
+                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                >
+                  {{ currentJob?.job_client?.remaining_time ?? 'Idle' }}
+                </td>
+                <td
+                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                >
+                  {{ currentJob?.job_client?.total_time ?? 'Idle' }}
+                </td>
+                <td
+                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                >
+                  {{ currentJob?.job_client?.eta ?? 'Idle' }}
+                </td>
               </tr>
             </tbody>
           </table>
 
-          <!-- Console & Viewer Section -->
-          <div class="flex mt-4">
-            <div class="bg-light-primary-light dark:bg-dark-primary-light w-1/3 dark:text-light-primary p-2">
-              <p class="text-black dark:text-white">Console (Placeholder)</p>
-            </div>
-            <div class="bg-light-primary-light dark:bg-dark-primary-light w-2/3 dark:text-light-primary p-2">
-              <GCodePreview />
+          <!-- Gcode Viewer Section -->
+          <div class="flex mt-1 justify-center bg-black">
+            <div class="bg-black w-4/5 p-2">
+              <GCodePreview :file="currentJob?.file ?? null" />
             </div>
           </div>
         </div>

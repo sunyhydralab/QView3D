@@ -44,7 +44,7 @@ onMounted(() => {
             <div class="flex h-16 items-center justify-between">
                 <div class="flex items-center space-x-6">
                     <!-- Logo -->
-                    <div className="flex-shrink-0 flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
                         <router-link to="/">
                             <img class="h-12 w-auto" src="@/assets/images/QView3Dlogo.png" alt="Logo" />
                         </router-link>

@@ -18,6 +18,11 @@ const router = createRouter({
       name: 'queue',
       component: () => import('../views/Queues.vue'),
     },
+    {
+      path: '/history',
+      name: 'history',
+      component: () => import('../views/JobHistory.vue'),
+    },
   ],
 })
 
