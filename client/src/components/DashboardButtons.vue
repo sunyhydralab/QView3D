@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import SubmitJobModal from './SubmitJobModal.vue'
 
+const isSubmitModalOpen = ref(false)
 const isOnline = ref(false)
 const isPrinting = ref(false)
 const isPaused = ref(false)
@@ -42,6 +44,10 @@ function rerunJob() {
   isPrinting.value = true
   isPaused.value = false
 }
+
+function toggleSubmitModal() {
+  isSubmitModalOpen.value = !isSubmitModalOpen.value
+}
 </script>
 
 <template>
@@ -52,7 +58,7 @@ function rerunJob() {
     <button class="btn-danger" v-else @click="turnOffline">Turn Offline</button>
 
     <!-- Submit Job -->
-    <button class="btn-primary" @click="submitJob">Submit Job</button>
+    <button class="btn-primary" @click="submitJob" :onclick="toggleSubmitModal">Submit Job</button>
 
     <!-- Printing -->
     <button v-if="!isPrinting && isOnline" @click="startPrint" class="btn-primary">
@@ -69,6 +75,7 @@ function rerunJob() {
       Rerun Job
     </button>
   </div>
+  <SubmitJobModal v-if="isSubmitModalOpen" @close="toggleSubmitModal" />
 </template>
 
 <style scoped></style>
