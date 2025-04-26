@@ -11,6 +11,7 @@ onMounted(() => {
 const fileInput = ref<HTMLInputElement | null>(null)
 const selectedFile = ref<File | null>(null)
 const fileName = ref("No file selected.")
+const jobName = ref("")
 
 const handleFileUpload = () => fileInput.value?.click()
 const handleFileChange = (e: Event) => {
@@ -18,6 +19,7 @@ const handleFileChange = (e: Event) => {
   if (files && files.length > 0) {
     selectedFile.value = files[0]
     fileName.value = files[0].name
+    jobName.value = fileName.value
   }
 }
 
@@ -132,7 +134,7 @@ const allSelected = computed(() =>
           <div>
             <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name<span
                 class="text-red-500 ml-1">*</span></label>
-            <input id="name" type="text" required placeholder="Enter job name" v-model="fileName"
+            <input id="name" type="text" required placeholder="Enter job name" v-model="jobName"
               class="bg-light-primary-light dark:bg-dark-primary w-full px-3 py-2 rounded-md text-gray-700 dark:text-light-primary focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
           </div>
 
