@@ -9,15 +9,11 @@ const currentFabricator = props.fabricator
 const currentJob = currentFabricator.queue?.[0]
 
 const showDetails = ref(false)
-const isSubmitModalOpen = ref(false)
 
 function toggleDetails() {
   showDetails.value = !showDetails.value
 }
 
-function toggleSubmitModal() {
-  isSubmitModalOpen.value = !isSubmitModalOpen.value
-}
 </script>
 
 <template>
@@ -322,7 +318,6 @@ function toggleSubmitModal() {
       </div>
     </transition>
   </div>
-  <SubmitJobModal v-if="isSubmitModalOpen" @close="toggleSubmitModal" />
 </template>
 
 <style>

@@ -104,7 +104,7 @@ const allSelected = computed(() =>
             <div class="flex space-x-2">
               <button @click="handleFileUpload" type="button"
                 class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark">Browse</button>
-              <div class="flex-1 px-3 py-2 bg-gray-100 dark:bg-light-primary-light rounded-md flex items-center">
+              <div class="flex-1 px-3 py-2 bg-gray-100 dark:bg-dark-primary rounded-md flex items-center">
                 <span class="text-gray-500 dark:text-gray-400 truncate">{{ fileName }}</span>
               </div>
               <button type="button" class="bg-accent-primary hover:bg-accent-primary-dark p-2 px-3 rounded-md" @click="">
@@ -118,14 +118,14 @@ const allSelected = computed(() =>
           <div>
             <label for="quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantity</label>
             <input id="quantity" type="number" min="1" value="1"
-              class="w-full px-3 py-2 border rounded-md text-gray-700 focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
+              class="bg-light-primary-light dark:bg-dark-primary w-full px-3 py-2 rounded-md text-gray-700 dark:text-light-primary focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
           </div>
 
           <!-- Ticket ID -->
           <div>
             <label for="ticketId" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Ticket ID</label>
             <input id="ticketId" type="number" min="0" value="0"
-              class="w-full px-3 py-2 border rounded-md text-gray-700 focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
+              class="bg-light-primary-light dark:bg-dark-primary w-full px-3 py-2 rounded-md text-gray-700 dark:text-light-primary focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
           </div>
 
           <!-- Job Name -->
@@ -133,7 +133,7 @@ const allSelected = computed(() =>
             <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name<span
                 class="text-red-500 ml-1">*</span></label>
             <input id="name" type="text" required placeholder="Enter job name" v-model="fileName"
-              class="w-full px-3 py-2 border rounded-md text-gray-700 focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
+              class="bg-light-primary-light dark:bg-dark-primary w-full px-3 py-2 rounded-md text-gray-700 dark:text-light-primary focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
           </div>
 
           <!-- No Fabricator Message -->
