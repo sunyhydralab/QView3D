@@ -13,6 +13,6 @@ onMounted(async () => {
 <template>
   <div class="pt-12">
     <QueueList v-for="fabricator in fabricatorList" :key="fabricator.id" :fabricator="fabricator"/>
-    <NoPrinterRobot />
+    <NoPrinterRobot v-if="fabricatorList.length === 0" />
   </div>
 </template>

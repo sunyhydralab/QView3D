@@ -3,7 +3,7 @@ import { type Fabricator } from '@/models/fabricator'
 
 const props = defineProps<{ fabricator: Fabricator }>()
 const currentFabricator = props.fabricator
-const currentJob = currentFabricator.queue?.[0]
+const allJobs = currentFabricator.queue
 </script>
 
 <template>
@@ -46,7 +46,7 @@ const currentJob = currentFabricator.queue?.[0]
         </tr>
       </thead>
       <tbody>
-        <tr class="text-center">
+        <tr v-for="job in allJobs" class="text-center">
           <td
             class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
           >
@@ -60,12 +60,12 @@ const currentJob = currentFabricator.queue?.[0]
           <td
             class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
           >
-            {{ currentJob?.name ?? '-' }}
+            {{ job?.name ?? '-' }}
           </td>
           <td
             class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
           >
-            {{ currentJob?.file_name_original ?? '-' }}
+            {{ job?.file_name_original ?? '-' }}
           </td>
           <td
             class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
@@ -74,13 +74,13 @@ const currentJob = currentFabricator.queue?.[0]
               <!-- Progress fill bar -->
               <div
                 class="h-full bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full transition-all duration-500 ease-in-out"
-                :style="{ width: currentJob?.progress != null ? currentJob.progress + '%' : '0%' }"
+                :style="{ width: job?.progress != null ? job.progress + '%' : '0%' }"
               ></div>
               <!-- Overlayed percentage -->
               <div
                 class="absolute inset-0 flex items-center justify-center text-xs font-medium text-black dark:text-white"
               >
-                {{ currentJob?.progress != null ? currentJob.progress + '%' : '0%' }}
+                {{ job?.progress != null ? job.progress + '%' : '0%' }}
               </div>
             </div>
           </td>
