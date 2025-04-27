@@ -1,12 +1,21 @@
 <script setup lang="ts">
 import { type Fabricator } from '../models/fabricator'
 import { removeJob } from '../models/job';
+import { defineEmits } from 'vue'
 
 const props = defineProps<{ fabricator: Fabricator }>()
 const currentFabricator = props.fabricator
 const allJobs = currentFabricator.queue
+
+const emit = defineEmits(['jobDeleted'])
+
 const deleteJob = async (jobId : number) => {
   await removeJob([jobId])
+  emit('jobDeleted') // Tell the parent component to refresh
+}
+
+function onDeleteClick(jobId: number) {
+  deleteJob(jobId)
 }
 </script>
 
@@ -94,7 +103,7 @@ const deleteJob = async (jobId : number) => {
             <div class="flex items-center justify-center">
               <button
                 class="w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded flex items-center justify-center"
-                @click="() => deleteJob(job.id)"
+                @click="onDeleteClick(job.id)"
               >
                 <i class="fa-solid fa-trash"></i>
               </button>
