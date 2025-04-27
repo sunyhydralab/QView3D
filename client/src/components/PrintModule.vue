@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import GCodePreview from './GCodePreview.vue'
 import { ref } from 'vue'
-import { type Fabricator } from '../models/fabricator'
 import DashboardButtons from './DashboardButtons.vue'
+import { type Fabricator } from '@/models/fabricator'
+import SubmitJobModal from "@/components/SubmitJobModal.vue";
 
 const props = defineProps<{ fabricator: Fabricator }>()
 const currentFabricator = props.fabricator
@@ -13,6 +14,7 @@ const showDetails = ref(false)
 function toggleDetails() {
   showDetails.value = !showDetails.value
 }
+
 </script>
 
 <template>
