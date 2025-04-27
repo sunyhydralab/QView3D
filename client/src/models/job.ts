@@ -142,6 +142,10 @@ export async function getAllJobs() {
   }
 }
 
+export async function addJobToQueue(job : FormData) {
+  return api('addjobtoqueue', job)
+}
+
 export async function autoQueue(job: FormData) {
   try {
     const result = await api('autoqueue', job)

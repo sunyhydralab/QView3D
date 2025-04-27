@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { fabricatorList, retrieveRegisteredFabricators, type Fabricator } from '@/models/fabricator'
-import { autoQueue } from '@/models/job'
+import { autoQueue, addJobToQueue } from '@/models/job'
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -19,35 +19,60 @@ const quantity = ref(1)
 const ticketId = ref(0)
 const jobName = ref("")
 
-// Handle file upload
+// Save the selected file and updating the file and job names.
 const handleFileUpload = (event: Event) => {
   const input = event.target as HTMLInputElement
   selectedFile.value = input.files?.[0] as File
   fileName.value = selectedFile.value.name
-  jobName.value = selectedFile.value.name
+  if (jobName.value === "")
+    jobName.value = selectedFile.value.name
 }
 
+// Submits the selected file by auto-queuing it or assigning it to selected fabricators' queues, then resets the form
 const submitJob = async () => {
   const job = new FormData()
   if (selectedFile.value) {
-    try {
+      try {
       setJob(job)
-      await autoQueue(job)
-      console.log('Job submitted:', job)
-      emit('close') // Close the modal after successful submission
+      if (!anySelected.value) {
+        // If no fabricator is selected, auto queue the job
+        await autoQueue(job)
+      }
+      else {
+        // for every fabricator that is registered, if that fabricator is selected, then add the job to the fabricator's queue
+        for (const fabricator of fabricatorList.value) {
+          if (fabricator.isSelected) {
+            job.delete('printerid')
+            job.append('printerid', (fabricator.id?.toString() ?? ''))
+            await addJobToQueue(job)
+          }
+        }
+      }
     } catch (error) {
       console.error('Error submitting job:', error)
-      // Toast notifications are now handled in the autoQueue function
-    }
+      }
+    resetForm()
+    console.log('Job submitted:', job)
   }
 }
 
-const setJob = (job : FormData) => {
+// Reset the form
+const resetForm = () => {
+  selectedFile.value = null
+  fileName.value = "No file selected."
+  quantity.value = 1
+  ticketId.value = 0
+  jobName.value = ""
+}
+
+// Set the job data to be sent to the server.
+const setJob = (job: FormData) => {
   job.append('file', selectedFile.value as File)
   job.append('name', jobName.value as string)
   job.append('td_id', ticketId.value.toString())
   job.append('quantity', quantity.value.toString())
-  job.append('favorite' , 'false')
+  job.append('favorite', 'false')
+  job.append('priority', '0')
   job.append('filament', 'PLA')
   console.log('Set job data:', job)
 }
@@ -171,15 +196,16 @@ const allSelected = computed(() =>
           </div>
 
           <!-- No Fabricator Message -->
-          <p v-if="!anySelected" class="text-xs text-center text-gray-500 dark:text-gray-400">
-            <span class="text-red-400">No fabricator selected</span>, your job will be <span
-              class="text-accent-primary-light">auto queued</span> to the net available fabricator
+          <p v-if="!anySelected" class="text-[11px] text-center text-gray-500 dark:text-gray-400">
+            <span class="text-red-400">No fabricator selected</span>, job will be <span
+              class="text-accent-primary-light">auto queued</span> to fabricator with least jobs
           </p>
 
           <!-- Footer -->
           <div class="flex justify-end">
-            <button type="button" class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark"
-              @click="submitJob">Submit</button>
+            <button type="button"
+              class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark disabled:bg-accent-primary-light disabled:cursor-not-allowed"
+              :disabled="!selectedFile" @click="submitJob">Submit</button>
           </div>
         </div>
       </div>
