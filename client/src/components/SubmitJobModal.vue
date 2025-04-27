@@ -20,7 +20,8 @@ const handleFileUpload = (event: Event) => {
   const input = event.target as HTMLInputElement
   selectedFile.value = input.files?.[0] as File
   fileName.value = selectedFile.value.name
-  jobName.value = selectedFile.value.name
+  if(jobName.value === "")
+    jobName.value = selectedFile.value.name
 }
 
 // If the file is selected, set the job data and auto queue it.
@@ -29,8 +30,18 @@ const submitJob = () => {
   if (selectedFile.value) {
     setJob(job)
     autoQueue(job)
+    resetForm()
     console.log('Job submitted:', job)
   }
+}
+
+// Reset the form
+const resetForm = () => {
+  selectedFile.value = null
+  fileName.value = "No file selected."
+  quantity.value = 1
+  ticketId.value = 0
+  jobName.value = ""
 }
 
 // Set the job data to be sent to the server.
