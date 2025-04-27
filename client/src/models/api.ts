@@ -1,7 +1,6 @@
 // in .env: VITE_API_ROOT="api url"
 import {API_URL} from "@/composables/useIPSettings";
 
-
 export async function api(endPoint: string, body?: unknown, method?: string, headers?: HeadersInit) {
     // Check if body is FormData
     const isFormData = body instanceof FormData;
@@ -22,7 +21,7 @@ export async function api(endPoint: string, body?: unknown, method?: string, hea
         const dataInJson = await response.json();
         // check if the response is ok
         if (!response.ok) {
-            throw new Error(`Error: ${dataInJson.message}`); // try .error as well
+            console.error(`Error: ${dataInJson.message}`); // try .error as well
         }
         return dataInJson;
     } catch (error) {

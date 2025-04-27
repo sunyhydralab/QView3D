@@ -23,6 +23,11 @@ const router = createRouter({
       name: 'history',
       component: () => import('../views/JobHistory.vue'),
     },
+    {
+      path: '/emulator',
+      name: 'emulator',
+      component: () => import('../views/EmulatorView.vue')
+    }
   ],
 })
 

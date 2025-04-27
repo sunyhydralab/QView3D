@@ -45,8 +45,8 @@ class Job(db.Model):
     max_layer_height = 0.0
     current_layer_height = 0.0
     filament = ''
-    released = 0
-    filePause = 0
+    released = False
+    filePause = False
     progress = 0.0
     sent_lines = 0
     time_started = 0

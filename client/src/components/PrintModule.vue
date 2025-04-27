@@ -57,7 +57,7 @@ function toggleDetails() {
           </div>
 
           <!-- Controls -->
-          <DashboardButtons />
+          <DashboardButtons :current-fabricator="currentFabricator"/>
         </div>
       </div>
 
@@ -112,7 +112,7 @@ function toggleDetails() {
             <td
               class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
-              {{ currentFabricator.description }}
+              {{ currentFabricator.name }}
             </td>
             <td
               class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
@@ -128,7 +128,7 @@ function toggleDetails() {
               class="w-36 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
               <!-- Controls -->
-              <DashboardButtons />
+              <DashboardButtons :current-fabricator="currentFabricator"/>
             </td>
             <!-- Progress Bar -->
             <td
@@ -180,11 +180,11 @@ function toggleDetails() {
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Nozzle</div>
-                <div>{{ currentFabricator.extruder_temp ?? 'Idle' }}</div>
+                <div>{{ currentFabricator?.extruder_temp ? currentFabricator.extruder_temp + '&deg;C' : 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Bed</div>
-                <div>{{ currentFabricator.bed_temp ?? 'Idle' }}</div>
+                <div>{{ currentFabricator?.bed_temp ? currentFabricator.bed_temp + '&deg;C' : 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Elapsed</div>
@@ -207,7 +207,10 @@ function toggleDetails() {
             <div>
               <h4 class="font-medium mb-2">Preview</h4>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary rounded p-2">
-                <GCodePreview :file="currentJob?.file ?? null" />
+              <GCodePreview
+                :file="currentJob?.file ?? null"
+                :job-id="currentJob?.id"
+              />
               </div>
             </div>
           </div>
@@ -312,7 +315,10 @@ function toggleDetails() {
           <!-- Gcode Viewer Section -->
           <div class="flex mt-1 justify-center bg-black">
             <div class="bg-black w-4/5 p-2">
-              <GCodePreview :file="currentJob?.file ?? null" />
+              <GCodePreview
+                :file="currentJob?.file ?? null"
+                :job-id="currentJob?.id"
+              />
             </div>
           </div>
         </div>

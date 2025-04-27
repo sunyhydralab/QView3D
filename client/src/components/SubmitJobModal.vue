@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { fabricatorList, retrieveRegisteredFabricators, type Fabricator } from '@/models/fabricator'
-import { autoQueue } from '@/models/job'
+import { autoQueue, addJobToQueue } from '@/models/job'
+
+const emit = defineEmits<{
+  (e: 'close'): void
+}>()
 
 // Load fabricators when modal is mounted
 onMounted(() => {
@@ -15,29 +19,62 @@ const quantity = ref(1)
 const ticketId = ref(0)
 const jobName = ref("")
 
-// 
+// Save the selected file and updating the file and job names.
 const handleFileUpload = (event: Event) => {
   const input = event.target as HTMLInputElement
   selectedFile.value = input.files?.[0] as File
   fileName.value = selectedFile.value.name
-  jobName.value = selectedFile.value.name
+  if (jobName.value === "")
+    jobName.value = selectedFile.value.name
 }
 
-const submitJob = () => {
+// Submits the selected file by auto-queuing it or assigning it to selected fabricators' queues, then resets the form
+const submitJob = async () => {
   const job = new FormData()
   if (selectedFile.value) {
-    setJob(job)
-    autoQueue(job)
+    try {
+      setJob(job)
+      if (!anySelected.value) {
+        // If no fabricator is selected, auto queue the job
+        await autoQueue(job)
+      }
+      else {
+        // for every fabricator that is registered, if that fabricator is selected, then add the job to the fabricator's queue
+        for (const fabricator of fabricatorList.value) {
+          if (fabricator.isSelected) {
+            job.set('printerid', (fabricator.id?.toString() ?? ''))
+            // add as many jobs as the quantity
+            for (let i = 0; i < quantity.value; i++) {
+              await addJobToQueue(job)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting job:', error)
+    }
+    resetForm()
     console.log('Job submitted:', job)
   }
 }
 
-const setJob = (job : FormData) => {
+// Reset the form
+const resetForm = () => {
+  selectedFile.value = null
+  fileName.value = "No file selected."
+  quantity.value = 1
+  ticketId.value = 0
+  jobName.value = ""
+}
+
+// Set the job data to be sent to the server.
+const setJob = (job: FormData) => {
   job.append('file', selectedFile.value as File)
   job.append('name', jobName.value as string)
   job.append('td_id', ticketId.value.toString())
   job.append('quantity', quantity.value.toString())
-  job.append('favorite' , 'false')
+  job.append('favorite', 'false')
+  job.append('priority', '0')
   job.append('filament', 'PLA')
   console.log('Set job data:', job)
 }
@@ -70,12 +107,12 @@ const allSelected = computed(() =>
 <template>
   <!-- Modal Overlay -->
   <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
-    @click.self="$emit('close')">
+    @click.self="emit('close')">
     <div class="bg-light-primary dark:bg-dark-primary-light rounded-lg shadow-lg max-w-md w-full mx-4 animate-fade-in">
       <!-- Header -->
       <div class="p-4 flex justify-between items-center">
         <h3 class="text-lg font-medium text-black dark:text-white">Submit Job</h3>
-        <button @click="$emit('close')"
+        <button @click="emit('close')"
           class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd"
@@ -113,26 +150,34 @@ const allSelected = computed(() =>
                       clip-rule="evenodd" />
                   </svg>
                 </span>
-                {{ fabricator.name }}
+                <span class="truncate">{{ fabricator.name }}</span>
               </div>
             </button>
           </div>
 
           <!-- File Upload -->
           <div class="space-y-1">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Upload your .gcode file<span
-                class="text-red-500 ml-1">*</span></label>
-            <div class="flex space-x-2">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Upload your .gcode file
+              <span class="text-red-500 ml-1">*</span>
+            </label>
+
+            <div class="flex items-center space-x-2">
+              <!-- Browse Button -->
               <label
-                class="cursor-pointer bg-accent-primary text-white px-4 py-2 rounded-md hover:bg-accent-primary-dark">
+                class="cursor-pointer bg-accent-primary text-white px-4 py-2 rounded-md hover:bg-accent-primary-dark flex-shrink-0">
                 Browse
                 <input type="file" accept=".gcode" class="hidden" @change="handleFileUpload" />
               </label>
-              <div class="flex-1 px-3 py-2 bg-gray-100 dark:bg-dark-primary rounded-md flex items-center">
+
+              <!-- File name preview -->
+              <div class="flex-1 min-w-0 px-3 py-2 bg-gray-100 dark:bg-dark-primary rounded-md flex items-center">
                 <span class="text-gray-500 dark:text-gray-400 truncate">{{ fileName }}</span>
               </div>
-              <button type="button" class="bg-accent-primary hover:bg-accent-primary-dark p-2 px-3 rounded-md"
-                @click="">
+
+              <!-- Image Button -->
+              <button type="button"
+                class="bg-accent-primary hover:bg-accent-primary-dark py-2 px-3 rounded-md flex-shrink-0">
                 <i class="fa-regular fa-image text-white"></i>
               </button>
             </div>
@@ -161,15 +206,16 @@ const allSelected = computed(() =>
           </div>
 
           <!-- No Fabricator Message -->
-          <p v-if="!anySelected" class="text-xs text-center text-gray-500 dark:text-gray-400">
-            <span class="text-red-400">No fabricator selected</span>, your job will be <span
-              class="text-accent-primary-light">auto queued</span> to the net available fabricator
+          <p v-if="!anySelected" class="text-[11px] text-center text-gray-500 dark:text-gray-400">
+            <span class="text-red-400">No fabricator selected</span>, job will be <span
+              class="text-accent-primary-light">auto queued</span> to fabricator with least jobs
           </p>
 
           <!-- Footer -->
           <div class="flex justify-end">
-            <button type="button" class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark"
-              @click="submitJob">Submit</button>
+            <button type="button"
+              class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark disabled:bg-accent-primary-light disabled:cursor-not-allowed"
+              :disabled="!selectedFile" @click="submitJob">Submit</button>
           </div>
         </div>
       </div>
