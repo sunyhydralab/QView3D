@@ -2,6 +2,8 @@ from flask import jsonify, Response
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from sqlalchemy import inspect
+
+from Classes.Fabricators.Printers.Printer import Printer
 from Classes.Ports import Ports
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.Jobs import Job
@@ -333,6 +335,7 @@ class FabricatorList:
             return jsonify({"error": "Fabricator not found"}), 404
 
 class FabricatorThread(Thread):
+    terminated = False
     def __init__(self, fabricator: Fabricator, passed_app=app, *args, **kwargs):
         """
         create a new FabricatorThread for the given fabricator
@@ -362,14 +365,23 @@ class FabricatorThread(Thread):
     def run(self):
         with self.app.app_context():
             self.fabricator.responseCount = 0
-            while True:
-                time.sleep(2)
+            while not self.terminated:
+                time.sleep(.5)
                 queueSize = len(self.fabricator.queue)
                 if self.fabricator.getStatus() == "printing" and queueSize > 0:
                     assert isinstance(self.fabricator.queue[0], Job), f"self.fabricator.queue[0]={self.fabricator.queue[0]}, type(self.fabricator.queue[0])={type(self.fabricator.queue[0])}, self.fabricator.queue={self.fabricator.queue}, type(self.fabricator.queue)={type(self.fabricator.queue)}"
                     if self.fabricator.queue[0].released == 1:
                         if not self.fabricator.begin():
                             self.app.handle_errors_and_logging(Exception(f"Fabricator {self.fabricator.getName()} failed to begin") if not self.fabricator.error else self.fabricator.error, level=50)
+                elif self.fabricator.device.status == "homing":
+                    while self.fabricator.device.status == "homing":
+                        time.sleep(.5)
+                elif isinstance(self.fabricator.device, Printer) and self.fabricator.getStatus() == "ready":
+                    print(f"Checking for temp line on {self.fabricator.getName()}...")
+                    self.fabricator.device.handleTempLine(self.fabricator.device.serialConnection.read())
+                else:
+                    print(f"status is {self.fabricator.getStatus()} and queue size is {queueSize}")
+                    time.sleep(.5)
 
     def stop(self):
-        self.fabricator.terminated = 1
+        self.terminated = True

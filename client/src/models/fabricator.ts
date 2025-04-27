@@ -13,7 +13,7 @@ export interface Fabricator {
   date?: Date
   id?: number
   error?: string
-  canPause?: number
+  canPause?: boolean
   queue?: Job[] //  Store job array to store queue for each printer.
   isQueueExpanded?: boolean
   isInfoExpanded?: boolean
@@ -21,7 +21,7 @@ export interface Fabricator {
   bed_temp?: number
   colorChangeBuffer?: number
   colorbuff?: number,
-  isSelected: boolean 
+  isSelected: boolean
 }
 
 // list of all registered Fabricators

@@ -29,10 +29,10 @@ export interface Job {
     extruded?: number
     filament?: string
   
-    file_pause: number
+    file_pause: boolean
     priority?: string
     favorite?: boolean
-    released?: number
+    released?: boolean
     job_server?: [number, Date | string, Date | string, Date | string] // this saves all the data from the backend.Only changed if there is a pause involved.
   
     job_client?: {

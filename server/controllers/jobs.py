@@ -422,7 +422,7 @@ def delete_job():
 def setStatus():
     try:
         data = request.get_json() # get json data
-        printer_id = data['printerid']
+        printer_id = data['id']
         newStatus = data['status']
         fabricator: Fabricator | None = findPrinterObject(printer_id)
         if fabricator is not None:
