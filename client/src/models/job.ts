@@ -50,9 +50,9 @@ export async function getAllJobs() {
   return api('getjobs')
 }
 
-// export async function addJobToQueue(job : FormData) {
-//   return api('addjobtoqueue', job)
-// }
+export async function addJobToQueue(job : FormData) {
+  return api('addjobtoqueue', job)
+}
 
 export async function autoQueue(job : FormData) {
   return api('autoqueue' , job)
