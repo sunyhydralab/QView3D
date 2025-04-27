@@ -17,11 +17,6 @@ function turnOffline() {
   isPaused.value = false
 }
 
-function submitJob() {
-  // Add logic to submit the job here
-  console.log('Job submitted')
-}
-
 function startPrint() {
   isPrinting.value = true
   isPaused.value = false
@@ -58,7 +53,7 @@ function toggleSubmitModal() {
     <button class="btn-danger" v-else @click="turnOffline">Turn Offline</button>
 
     <!-- Submit Job -->
-    <button class="btn-primary" @click="submitJob" :onclick="toggleSubmitModal">Submit Job</button>
+    <button class="btn-primary" @click="toggleSubmitModal">Submit Job</button>
 
     <!-- Printing -->
     <button v-if="!isPrinting && isOnline" @click="startPrint" class="btn-primary">
