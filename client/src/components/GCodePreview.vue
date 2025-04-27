@@ -5,39 +5,54 @@ import { onSocketEvent } from '@/services/socket'
 import { addToast } from '@/components/Toast.vue'
 
 const gcodeString = ref('')
-const props = defineProps<{ 
+const props = defineProps<{
   file: File | null;
   jobId?: number;
 }>()
 
 const gcodeCanvas = ref<HTMLCanvasElement | null>(null)
+const originalConsoleWarn = console.warn
+const originalConsoleInfo = console.info
+const originalConsoleDebug = console.debug
 let preview: ReturnType<typeof GCodePreview.init> | null = null
 let socketCleanup: (() => void) | null = null
 
 onMounted(() => {
   nextTick(() => {
-    if (gcodeCanvas.value) {
-      preview = GCodePreview.init({
-        canvas: gcodeCanvas.value,
-        extrusionColor: 'turquoise',
-        backgroundColor: 'black',
-        buildVolume: { x: 250, y: 210, z: 220 },
-        travelColor: 'purple',
-        lineWidth: 0.5,
-        lineHeight: 0.5,
-        extrusionWidth: 0.25,
-        renderExtrusion: true,
-        renderTravel: false,
-        renderTubes: true,
-      })
-      
+    withoutConsoleWarnings(() => {
+      if (gcodeCanvas.value) {
+        // Initialize the GCode preview
+        preview = GCodePreview.init({
+          canvas: gcodeCanvas.value,
+          extrusionColor: 'turquoise',
+          backgroundColor: 'black',
+          buildVolume: { x: 250, y: 210, z: 220 },
+          travelColor: 'purple',
+          lineWidth: 0.5,
+          lineHeight: 0.5,
+          extrusionWidth: 0.25,
+          renderExtrusion: true,
+          renderTravel: false,
+          renderTubes: true
+        })
+      }
       // Setup socket listeners for gcode updates if we have a job ID
       if (props.jobId) {
         setupGcodeSocketListeners(props.jobId)
       }
-    }
+    })
   })
 })
+
+function withoutConsoleWarnings(fn: () => void) {
+  console.warn = () => {}
+  console.info = () => {}
+  console.debug = () => {}
+  fn()
+  console.warn = originalConsoleWarn
+  console.info = originalConsoleInfo
+  console.debug = originalConsoleDebug
+}
 
 // Setup socket listeners for real-time gcode updates
 function setupGcodeSocketListeners(jobId: number) {
