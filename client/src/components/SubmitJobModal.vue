@@ -32,23 +32,25 @@ const handleFileUpload = (event: Event) => {
 const submitJob = async () => {
   const job = new FormData()
   if (selectedFile.value) {
-  try {
-    setJob(job)
-    if (!anySelected.value) {
-      // If no fabricator is selected, auto queue the job
-      await autoQueue(job)
-    }
-    else {
-      // for every fabricator that is registered, if that fabricator is selected, then add the job to the fabricator's queue
-      for (const fabricator of fabricatorList.value) {
-        if (fabricator.isSelected) {
-          job.delete('printerid')
-          job.append('printerid', (fabricator.id?.toString() ?? ''))
-          await addJobToQueue(job)
+      try {
+      setJob(job)
+      if (!anySelected.value) {
+        // If no fabricator is selected, auto queue the job
+        await autoQueue(job)
+      }
+      else {
+        // for every fabricator that is registered, if that fabricator is selected, then add the job to the fabricator's queue
+        for (const fabricator of fabricatorList.value) {
+          if (fabricator.isSelected) {
+            job.delete('printerid')
+            job.append('printerid', (fabricator.id?.toString() ?? ''))
+            await addJobToQueue(job)
+          }
         }
       }
-    }
-    }
+    } catch (error) {
+      console.error('Error submitting job:', error)
+      }
     resetForm()
     console.log('Job submitted:', job)
   }
