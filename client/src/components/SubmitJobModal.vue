@@ -42,9 +42,11 @@ const submitJob = async () => {
         // for every fabricator that is registered, if that fabricator is selected, then add the job to the fabricator's queue
         for (const fabricator of fabricatorList.value) {
           if (fabricator.isSelected) {
-            job.delete('printerid')
-            job.append('printerid', (fabricator.id?.toString() ?? ''))
-            await addJobToQueue(job)
+            job.set('printerid', (fabricator.id?.toString() ?? ''))
+            // add as many jobs as the quantity
+            for (let i = 0; i < quantity.value; i++) {
+              await addJobToQueue(job)
+            }
           }
         }
       }
