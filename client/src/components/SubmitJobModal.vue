@@ -15,7 +15,7 @@ const quantity = ref(1)
 const ticketId = ref(0)
 const jobName = ref("")
 
-// 
+// Save the selected file and updating the file and job names.
 const handleFileUpload = (event: Event) => {
   const input = event.target as HTMLInputElement
   selectedFile.value = input.files?.[0] as File
@@ -23,6 +23,7 @@ const handleFileUpload = (event: Event) => {
   jobName.value = selectedFile.value.name
 }
 
+// If the file is selected, set the job data and auto queue it.
 const submitJob = () => {
   const job = new FormData()
   if (selectedFile.value) {
@@ -32,6 +33,7 @@ const submitJob = () => {
   }
 }
 
+// Set the job data to be sent to the server.
 const setJob = (job : FormData) => {
   job.append('file', selectedFile.value as File)
   job.append('name', jobName.value as string)
@@ -163,7 +165,7 @@ const allSelected = computed(() =>
           <!-- No Fabricator Message -->
           <p v-if="!anySelected" class="text-xs text-center text-gray-500 dark:text-gray-400">
             <span class="text-red-400">No fabricator selected</span>, your job will be <span
-              class="text-accent-primary-light">auto queued</span> to the net available fabricator
+              class="text-accent-primary-light">auto queued to</span> 
           </p>
 
           <!-- Footer -->
