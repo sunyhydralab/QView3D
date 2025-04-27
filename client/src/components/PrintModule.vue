@@ -115,7 +115,7 @@ function toggleDetails() {
             <td
               class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
-              {{ currentJob ?? 'N/A' }}
+              {{ currentJob?.name ?? 'N/A' }}
             </td>
             <td
               class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
