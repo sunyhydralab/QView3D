@@ -5,6 +5,9 @@ import { removeJob } from '../models/job';
 const props = defineProps<{ fabricator: Fabricator }>()
 const currentFabricator = props.fabricator
 const allJobs = currentFabricator.queue
+const deleteJob = async (jobId : number) => {
+  await removeJob([jobId])
+}
 </script>
 
 <template>
@@ -47,7 +50,7 @@ const allJobs = currentFabricator.queue
         </tr>
       </thead>
       <tbody>
-        <tr v-for="job in allJobs" class="text-center">
+        <tr v-for="job in allJobs" class="text-center" :key="job.id">
           <td
             class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
           >
