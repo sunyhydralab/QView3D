@@ -38,12 +38,22 @@ def start_client():
         VITE_CLIENT_IP = FLASK_SERVER_IP
     
     # Start the client in the background
-    return subprocess.Popen(
-        # Command for the client
-        ["npx", "vite", "--port", str(VITE_CLIENT_PORT), "--host", VITE_CLIENT_IP, "--cors", "true", "--logLevel", VITE_LOG_LEVEL],
-        # The working directory for the command
-        cwd=CLIENT_LOCAL_PATH
-    )
+    # Use the full path to npx on Windows
+    npx_cmd = "npx.cmd" if platform.system() == "Windows" else "npx"
+    
+    try:
+        return subprocess.Popen(
+            # Command for the client
+            [npx_cmd, "vite", "--port", str(VITE_CLIENT_PORT), "--host", VITE_CLIENT_IP, "--cors", "true", "--logLevel", VITE_LOG_LEVEL],
+            # The working directory for the command
+            cwd=CLIENT_LOCAL_PATH,
+            # Use shell=True on Windows to find commands in PATH
+            shell=(platform.system() == "Windows")
+        )
+    except FileNotFoundError:
+        print("ERROR: 'npx' command not found. Make sure Node.js is installed and in your PATH.")
+        print("You can download Node.js from https://nodejs.org/")
+        exit(1)
 
 def start_server(fresh_database):
     # Delete the database file if the developer wants a fresh database for the server
@@ -58,13 +68,29 @@ def start_server(fresh_database):
                 print(ose)
 
     # Start the server in the background
+    # Get the current environment and modify it
+    current_env = os.environ.copy()
+    
+    # Set the correct path to the virtual environment based on OS
+    venv_path = os.path.join(SERVER_LOCAL_PATH, ".python-venv", "Scripts" if platform.system() == "Windows" else "bin")
+    venv_path = os.path.abspath(venv_path)
+    
+    # Update the PATH to include the virtual environment
+    if "PATH" in current_env:
+        current_env["PATH"] = venv_path + os.pathsep + current_env["PATH"]
+    else:
+        current_env["PATH"] = venv_path
+    
+    # Set Flask environment variables
+    current_env["FLASK_APP"] = "app.py"
+    
     return subprocess.Popen(
         # Command for the server
         ['flask', 'run'],
         # The working directory for the command
         cwd=SERVER_LOCAL_PATH,
-        # Enable the Python virtual environment
-        env={"PATH": os.path.join(".", ".python-venv", "bin")}
+        # Enable the Python virtual environment with the modified environment
+        env=current_env
     )
 
 def install_software(current_os: str):
@@ -82,19 +108,44 @@ def install_software(current_os: str):
     else:
         raise Exception("What OS are you using?")
 
-    # Install server dependencies
-    subprocess.run(
-        ["pip", "install", "-r", os.path.join("server", "dependencies.txt")],
-        # Enable the Python virtual environment
-        env={"PATH": os.path.join(".", "server", ".python-venv", "bin")}
-    )
+    # Get the correct path to the virtual environment based on OS
+    if current_os == "WINDOWS":
+        venv_bin_path = os.path.abspath(os.path.join("server", ".python-venv", "Scripts"))
+    else:
+        venv_bin_path = os.path.join(".", "server", ".python-venv", "bin")
+    
+    # Copy the current environment
+    current_env = os.environ.copy()
+    # Update the PATH to include the virtual environment
+    if "PATH" in current_env:
+        current_env["PATH"] = venv_bin_path + os.pathsep + current_env["PATH"]
+    else:
+        current_env["PATH"] = venv_bin_path
 
-    # Install client dependencies
+    # Install server dependencies
+    if current_os == "WINDOWS":
+        pip_cmd = ["pip"]
+    else:
+        pip_cmd = ["pip"]
+        
     subprocess.run(
-        ["npm", "i"],
-        # Set the working directory for the process to the client folder
-        cwd=CLIENT_LOCAL_PATH
-    )
+        pip_cmd + ["install", "-r", os.path.join("server", "dependencies.txt")],
+        # Enable the Python virtual environment with the modified environment
+        env=current_env
+    )    # Install client dependencies
+    npm_cmd = "npm.cmd" if platform.system() == "Windows" else "npm"
+    try:
+        subprocess.run(
+            [npm_cmd, "i"],
+            # Set the working directory for the process to the client folder
+            cwd=CLIENT_LOCAL_PATH,
+            # Use shell=True on Windows to find commands in PATH
+            shell=(platform.system() == "Windows")
+        )
+    except FileNotFoundError:
+        print("ERROR: 'npm' command not found. Make sure Node.js is installed and in your PATH.")
+        print("You can download Node.js from https://nodejs.org/")
+        exit(1)
 
     print("Install complete")
 
