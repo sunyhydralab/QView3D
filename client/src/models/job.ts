@@ -157,3 +157,16 @@ export async function autoQueue(job: FormData) {
     throw error
   }
 }
+
+export async function removeJob(jobarr: number[]) {
+  try {
+    const response = await api('cancelfromqueue', { jobarr })
+    if (response) {
+      return response
+    } else {
+      console.error('Response is undefined or null')
+    }
+  } catch (error) {
+    console.error(error)
+  }
+}
