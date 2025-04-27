@@ -35,8 +35,10 @@ const submitJob = async () => {
     try {
       setJob(job)
       if (!anySelected.value) {
-        // If no fabricator is selected, auto queue the job
-        await autoQueue(job)
+        for (let i = 0; i < quantity.value; i++) {
+          // If no fabricator is selected, auto queue the job
+          await autoQueue(job)
+        }
       }
       else {
         // for every fabricator that is registered, if that fabricator is selected, then add the job to the fabricator's queue
