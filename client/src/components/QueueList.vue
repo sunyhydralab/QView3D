@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { type Fabricator } from '@/models/fabricator'
+import { type Fabricator } from '../models/fabricator'
+import { removeJob } from '../models/job';
 
 const props = defineProps<{ fabricator: Fabricator }>()
 const currentFabricator = props.fabricator
 const allJobs = currentFabricator.queue
+const deleteJob = async (jobId : number) => {
+  await removeJob([jobId])
+}
 </script>
 
 <template>
@@ -46,7 +50,7 @@ const allJobs = currentFabricator.queue
         </tr>
       </thead>
       <tbody>
-        <tr v-for="job in allJobs" class="text-center">
+        <tr v-for="job in allJobs" class="text-center" :key="job.id">
           <td
             class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
           >
@@ -90,6 +94,7 @@ const allJobs = currentFabricator.queue
             <div class="flex items-center justify-center">
               <button
                 class="w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded flex items-center justify-center"
+                @click="() => deleteJob(job.id)"
               >
                 <i class="fa-solid fa-trash"></i>
               </button>
@@ -100,5 +105,3 @@ const allJobs = currentFabricator.queue
     </table>
   </div>
 </template>
-
-<style scoped></style>
