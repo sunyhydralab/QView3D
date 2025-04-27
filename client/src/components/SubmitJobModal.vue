@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { fabricatorList, retrieveRegisteredFabricators, type Fabricator } from '@/models/fabricator'
-import { autoQueue } from '@/models/job'
+import { autoQueue, addJobToQueue } from '@/models/job'
 
 // Load fabricators when modal is mounted
 onMounted(() => {
@@ -20,16 +20,29 @@ const handleFileUpload = (event: Event) => {
   const input = event.target as HTMLInputElement
   selectedFile.value = input.files?.[0] as File
   fileName.value = selectedFile.value.name
-  if(jobName.value === "")
+  if (jobName.value === "")
     jobName.value = selectedFile.value.name
 }
 
-// If the file is selected, set the job data and auto queue it.
+// 
 const submitJob = () => {
   const job = new FormData()
   if (selectedFile.value) {
     setJob(job)
-    autoQueue(job)
+    if (!anySelected.value) {
+      // If no fabricator is selected, auto queue the job
+      autoQueue(job)
+    }
+    else {
+      // for every fabricator that is registered, if that fabricator is selected, then add the job to the fabricator's queue
+      for (const fabricator of fabricatorList.value) {
+        if (fabricator.isSelected) {
+          job.delete('printerid')
+          job.append('printerid', (fabricator.id?.toString() ?? ''))
+          addJobToQueue(job)
+        }
+      }
+    }
     resetForm()
     console.log('Job submitted:', job)
   }
@@ -45,12 +58,13 @@ const resetForm = () => {
 }
 
 // Set the job data to be sent to the server.
-const setJob = (job : FormData) => {
+const setJob = (job: FormData) => {
   job.append('file', selectedFile.value as File)
   job.append('name', jobName.value as string)
   job.append('td_id', ticketId.value.toString())
   job.append('quantity', quantity.value.toString())
-  job.append('favorite' , 'false')
+  job.append('favorite', 'false')
+  job.append('priority', '0')
   job.append('filament', 'PLA')
   console.log('Set job data:', job)
 }
@@ -181,8 +195,9 @@ const allSelected = computed(() =>
 
           <!-- Footer -->
           <div class="flex justify-end">
-            <button type="button" class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark disabled:bg-accent-primary-light disabled:cursor-not-allowed" :disabled="!selectedFile"
-              @click="submitJob">Submit</button>
+            <button type="button"
+              class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark disabled:bg-accent-primary-light disabled:cursor-not-allowed"
+              :disabled="!selectedFile" @click="submitJob">Submit</button>
           </div>
         </div>
       </div>
