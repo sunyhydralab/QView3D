@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { fabricatorList, retrieveRegisteredFabricators, type Fabricator } from '@/models/fabricator'
+import { autoQueue } from '@/models/job'
 
 // Load fabricators when modal is mounted
 onMounted(() => {
@@ -10,16 +11,36 @@ onMounted(() => {
 // File Upload Handling
 const selectedFile = ref<File | null>(null)
 const fileName = ref("No file selected.")
+const quantity = ref(1)
+const ticketId = ref(0)
 const jobName = ref("")
 
 // 
 const handleFileUpload = (event: Event) => {
   const input = event.target as HTMLInputElement
-  const selectedFile = input.files?.[0] as File
-  fileName.value = selectedFile.name
-  jobName.value = selectedFile.name
+  selectedFile.value = input.files?.[0] as File
+  fileName.value = selectedFile.value.name
+  jobName.value = selectedFile.value.name
 }
 
+const submitJob = () => {
+  const job = new FormData()
+  if (selectedFile.value) {
+    setJob(job)
+    autoQueue(job)
+    console.log('Job submitted:', job)
+  }
+}
+
+const setJob = (job : FormData) => {
+  job.append('file', selectedFile.value as File)
+  job.append('name', jobName.value as string)
+  job.append('td_id', ticketId.value.toString())
+  job.append('quantity', quantity.value.toString())
+  job.append('favorite' , 'false')
+  job.append('filament', 'PLA')
+  console.log('Set job data:', job)
+}
 
 // Toggles the isSelected state of a selected Fabricator
 const toggleFabricator = (selectedFabricator: Fabricator) => {
@@ -120,14 +141,14 @@ const allSelected = computed(() =>
           <!-- Quantity Input -->
           <div>
             <label for="quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantity</label>
-            <input id="quantity" type="number" min="1" value="1"
+            <input id="quantity" type="number" min="1" v-model="quantity"
               class="bg-light-primary-light dark:bg-dark-primary w-full px-3 py-2 rounded-md text-gray-700 dark:text-light-primary focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
           </div>
 
           <!-- Ticket ID -->
           <div>
             <label for="ticketId" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Ticket ID</label>
-            <input id="ticketId" type="number" min="0" value="0"
+            <input id="ticketId" type="number" min="0" v-model="ticketId"
               class="bg-light-primary-light dark:bg-dark-primary w-full px-3 py-2 rounded-md text-gray-700 dark:text-light-primary focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
           </div>
 
@@ -147,8 +168,8 @@ const allSelected = computed(() =>
 
           <!-- Footer -->
           <div class="flex justify-end">
-            <button type="button"
-              class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark">Submit</button>
+            <button type="button" class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark"
+              @click="submitJob">Submit</button>
           </div>
         </div>
       </div>
