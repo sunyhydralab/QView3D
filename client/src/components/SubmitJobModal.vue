@@ -32,7 +32,7 @@ const handleFileUpload = (event: Event) => {
 const submitJob = async () => {
   const job = new FormData()
   if (selectedFile.value) {
-      try {
+    try {
       setJob(job)
       if (!anySelected.value) {
         // If no fabricator is selected, auto queue the job
@@ -50,7 +50,7 @@ const submitJob = async () => {
       }
     } catch (error) {
       console.error('Error submitting job:', error)
-      }
+    }
     resetForm()
     console.log('Job submitted:', job)
   }
@@ -148,26 +148,34 @@ const allSelected = computed(() =>
                       clip-rule="evenodd" />
                   </svg>
                 </span>
-                {{ fabricator.name }}
+                <span class="truncate">{{ fabricator.name }}</span>
               </div>
             </button>
           </div>
 
           <!-- File Upload -->
           <div class="space-y-1">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Upload your .gcode file<span
-                class="text-red-500 ml-1">*</span></label>
-            <div class="flex space-x-2">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Upload your .gcode file
+              <span class="text-red-500 ml-1">*</span>
+            </label>
+
+            <div class="flex items-center space-x-2">
+              <!-- Browse Button -->
               <label
-                class="cursor-pointer bg-accent-primary text-white px-4 py-2 rounded-md hover:bg-accent-primary-dark">
+                class="cursor-pointer bg-accent-primary text-white px-4 py-2 rounded-md hover:bg-accent-primary-dark flex-shrink-0">
                 Browse
                 <input type="file" accept=".gcode" class="hidden" @change="handleFileUpload" />
               </label>
-              <div class="flex-1 px-3 py-2 bg-gray-100 dark:bg-dark-primary rounded-md flex items-center">
+
+              <!-- File name preview -->
+              <div class="flex-1 min-w-0 px-3 py-2 bg-gray-100 dark:bg-dark-primary rounded-md flex items-center">
                 <span class="text-gray-500 dark:text-gray-400 truncate">{{ fileName }}</span>
               </div>
-              <button type="button" class="bg-accent-primary hover:bg-accent-primary-dark p-2 px-3 rounded-md"
-                @click="">
+
+              <!-- Image Button -->
+              <button type="button"
+                class="bg-accent-primary hover:bg-accent-primary-dark py-2 px-3 rounded-md flex-shrink-0">
                 <i class="fa-regular fa-image text-white"></i>
               </button>
             </div>
