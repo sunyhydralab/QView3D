@@ -24,6 +24,12 @@ export interface Fabricator {
   isSelected: boolean
 }
 
+export enum FabricatorStatus {
+  TurnOnline = "ready",
+  TurnOffline = "offline",
+  StopPrint = "complete"
+}
+
 // list of all registered Fabricators
 export const fabricatorList = ref<Fabricator[]>([])
 
@@ -81,7 +87,7 @@ export function setupFabricatorSocketListeners() {
 }
 
 export async function getConnectedFabricators() {
-  return api('getports');
+  return await api('getports');
 }
 
 export async function retrieveRegisteredFabricators() {
@@ -103,4 +109,8 @@ export async function registerFabricator(fabricator: Fabricator) {
     addToast(`Failed to register fabricator: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error')
     throw error
   }
+}
+
+export async function updateFabricatorStatus(fabricatorID: number, newFabricatorStatus: FabricatorStatus) {
+  return await api('setstatus', { printerid: fabricatorID, status: newFabricatorStatus })
 }
