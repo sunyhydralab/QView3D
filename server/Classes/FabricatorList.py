@@ -380,7 +380,6 @@ class FabricatorThread(Thread):
                     print(f"Checking for temp line on {self.fabricator.getName()}...")
                     self.fabricator.device.handleTempLine(self.fabricator.device.serialConnection.read())
                 else:
-                    print(f"status is {self.fabricator.getStatus()} and queue size is {queueSize}")
                     time.sleep(.5)
 
     def stop(self):
