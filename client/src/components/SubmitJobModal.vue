@@ -105,7 +105,7 @@ const allSelected = computed(() =>
               <label
                 class="cursor-pointer bg-accent-primary text-white px-4 py-2 rounded-md hover:bg-accent-primary-dark">
                 Browse
-                <input type="file" accept=".gcode" class="hidden" @change="handleFileChange" />
+                <input type="file" accept=".gcode" class="hidden" @change="handleFileUpload" />
               </label>
               <div class="flex-1 px-3 py-2 bg-gray-100 dark:bg-dark-primary rounded-md flex items-center">
                 <span class="text-gray-500 dark:text-gray-400 truncate">{{ fileName }}</span>
