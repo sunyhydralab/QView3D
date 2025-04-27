@@ -1,20 +1,58 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import SubmitJobModal from './SubmitJobModal.vue'
+import { FabricatorStatus, updateFabricatorStatus, type Fabricator } from '../models/fabricator'
 
 const isSubmitModalOpen = ref(false)
 const isOnline = ref(false)
 const isPrinting = ref(false)
 const isPaused = ref(false)
 
+// By default, all operations will be sent to the fabricator with ID 1
+const DEFAULT_FABRICATOR_ID: number = 1
+
+const { currentFabricator } = defineProps<{
+  currentFabricator: Fabricator
+}>()
+
+// Debounce used to prevent the user from updating the printer status when another update is currently being done
+const updatingFabricatorStatus: Ref<boolean> = ref(false)
+
+// A debounce used to prevent the user from clicking the Turn Online button multiple times
+const turningOnline: Ref<boolean> = ref(false)
 function turnOnline() {
-  isOnline.value = true
+  if (turningOnline.value === false && updatingFabricatorStatus.value === false) {
+    turningOnline.value = true
+    updatingFabricatorStatus.value = true
+    
+    // Turn the fabricator online
+    updateFabricatorStatus(currentFabricator.id ?? DEFAULT_FABRICATOR_ID, FabricatorStatus.TurnOnline)
+      .then(response => {
+        // When the Fabricator has been turned online, update the following booleans:
+        turningOnline.value = false
+        isOnline.value = true
+        updatingFabricatorStatus.value = false
+      })
+  }
+
 }
 
+// Debounce used to prevent the user from clicking the Turn Offline button multiple times
+const turningOffline: Ref<boolean> = ref(false)
 function turnOffline() {
-  isOnline.value = false
-  isPrinting.value = false
-  isPaused.value = false
+  if (turningOffline.value === false && updatingFabricatorStatus.value === false) {
+    turningOffline.value = true
+    updatingFabricatorStatus.value = true
+
+    updateFabricatorStatus(currentFabricator.id ?? DEFAULT_FABRICATOR_ID, FabricatorStatus.TurnOffline)
+      .then(response => {
+        turningOffline.value = false
+        updatingFabricatorStatus.value = false
+        isOnline.value = false
+        isPrinting.value = false
+        isPaused.value = false
+      })
+  }
 }
 
 function startPrint() {
@@ -22,9 +60,21 @@ function startPrint() {
   isPaused.value = false
 }
 
+// Debounce used to prevent the user from clicking the Stop button multiple times
+const stoppingPrint: Ref<boolean> = ref(false)
 function stopPrint() {
-  isPrinting.value = false
-  isPaused.value = false
+  if (stoppingPrint.value === false && updatingFabricatorStatus.value === false) {
+    stoppingPrint.value = true
+    updatingFabricatorStatus.value = true
+
+    updateFabricatorStatus(currentFabricator.id ?? DEFAULT_FABRICATOR_ID, FabricatorStatus.TurnOffline)
+      .then(response => {
+        stoppingPrint.value = false
+        updatingFabricatorStatus.value = false
+        isPrinting.value = false
+        isPaused.value = false
+      })
+  }
 }
 
 function pausePrint() {

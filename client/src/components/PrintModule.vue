@@ -57,7 +57,7 @@ function toggleDetails() {
           </div>
 
           <!-- Controls -->
-          <DashboardButtons />
+          <DashboardButtons :current-fabricator="currentFabricator"/>
         </div>
       </div>
 
@@ -128,7 +128,7 @@ function toggleDetails() {
               class="w-36 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
               <!-- Controls -->
-              <DashboardButtons />
+              <DashboardButtons :current-fabricator="currentFabricator"/>
             </td>
             <!-- Progress Bar -->
             <td
