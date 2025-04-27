@@ -207,7 +207,10 @@ function toggleDetails() {
             <div>
               <h4 class="font-medium mb-2">Preview</h4>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary rounded p-2">
-                <GCodePreview :file="currentJob?.file ?? null" />
+              <GCodePreview 
+                :file="currentJob?.file ?? null" 
+                :job-id="currentJob?.id" 
+              />
               </div>
             </div>
           </div>
@@ -312,7 +315,10 @@ function toggleDetails() {
           <!-- Gcode Viewer Section -->
           <div class="flex mt-1 justify-center bg-black">
             <div class="bg-black w-4/5 p-2">
-              <GCodePreview :file="currentJob?.file ?? null" />
+              <GCodePreview 
+                :file="currentJob?.file ?? null" 
+                :job-id="currentJob?.id" 
+              />
             </div>
           </div>
         </div>

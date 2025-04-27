@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.7.2",
+    "client": "file:",
     "flatpickr": "^4.6.13",
     "gcode-preview": "2.18.0",
     "socket.io-client": "^4.8.1",

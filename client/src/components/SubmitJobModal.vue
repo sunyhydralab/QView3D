@@ -3,6 +3,10 @@ import { ref, computed, onMounted } from 'vue'
 import { fabricatorList, retrieveRegisteredFabricators, type Fabricator } from '@/models/fabricator'
 import { autoQueue, addJobToQueue } from '@/models/job'
 
+const emit = defineEmits<{
+  (e: 'close'): void
+}>()
+
 // Load fabricators when modal is mounted
 onMounted(() => {
   retrieveRegisteredFabricators()
@@ -24,14 +28,15 @@ const handleFileUpload = (event: Event) => {
     jobName.value = selectedFile.value.name
 }
 
-// 
-const submitJob = () => {
+// Submits the selected file by auto-queuing it or assigning it to selected fabricators' queues, then resets the form
+const submitJob = async () => {
   const job = new FormData()
   if (selectedFile.value) {
+  try {
     setJob(job)
     if (!anySelected.value) {
       // If no fabricator is selected, auto queue the job
-      autoQueue(job)
+      await autoQueue(job)
     }
     else {
       // for every fabricator that is registered, if that fabricator is selected, then add the job to the fabricator's queue
@@ -39,9 +44,10 @@ const submitJob = () => {
         if (fabricator.isSelected) {
           job.delete('printerid')
           job.append('printerid', (fabricator.id?.toString() ?? ''))
-          addJobToQueue(job)
+          await addJobToQueue(job)
         }
       }
+    }
     }
     resetForm()
     console.log('Job submitted:', job)
@@ -97,12 +103,12 @@ const allSelected = computed(() =>
 <template>
   <!-- Modal Overlay -->
   <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
-    @click.self="$emit('close')">
+    @click.self="emit('close')">
     <div class="bg-light-primary dark:bg-dark-primary-light rounded-lg shadow-lg max-w-md w-full mx-4 animate-fade-in">
       <!-- Header -->
       <div class="p-4 flex justify-between items-center">
         <h3 class="text-lg font-medium text-black dark:text-white">Submit Job</h3>
-        <button @click="$emit('close')"
+        <button @click="emit('close')"
           class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd"
