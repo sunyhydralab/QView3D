@@ -163,14 +163,14 @@ const allSelected = computed(() =>
           </div>
 
           <!-- No Fabricator Message -->
-          <p v-if="!anySelected" class="text-xs text-center text-gray-500 dark:text-gray-400">
-            <span class="text-red-400">No fabricator selected</span>, your job will be <span
-              class="text-accent-primary-light">auto queued to</span> 
+          <p v-if="!anySelected" class="text-[11px] text-center text-gray-500 dark:text-gray-400">
+            <span class="text-red-400">No fabricator selected</span>, job will be <span
+              class="text-accent-primary-light">auto queued</span> to fabricator with least jobs
           </p>
 
           <!-- Footer -->
           <div class="flex justify-end">
-            <button type="button" class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark"
+            <button type="button" class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark disabled:bg-accent-primary-light disabled:cursor-not-allowed" :disabled="!selectedFile"
               @click="submitJob">Submit</button>
           </div>
         </div>
