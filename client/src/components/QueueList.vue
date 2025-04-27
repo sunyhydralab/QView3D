@@ -57,17 +57,17 @@ const deleteJob = async (jobId : number) => {
             {{ currentFabricator.id }}
           </td>
           <td
-            class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
           >
             {{ currentFabricator.description }}
           </td>
           <td
-            class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
           >
             {{ job?.name ?? '-' }}
           </td>
           <td
-            class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
           >
             {{ job?.file_name_original ?? '-' }}
           </td>
@@ -105,3 +105,9 @@ const deleteJob = async (jobId : number) => {
     </table>
   </div>
 </template>
+
+<style scoped>
+.w-48 {
+  width: 20rem; /* Set a fixed width for the column */
+}
+</style>

@@ -110,17 +110,17 @@ function toggleDetails() {
               {{ currentFabricator.id }}
             </td>
             <td
-              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
               {{ currentFabricator.name }}
             </td>
             <td
-              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
               {{ currentJob?.name ?? 'N/A' }}
             </td>
             <td
-              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
               {{ currentJob?.file_name_original ?? 'N/A' }}
             </td>
@@ -327,7 +327,7 @@ function toggleDetails() {
   </div>
 </template>
 
-<style>
+<style scoped>
 .dropdown-enter-active,
 .dropdown-leave-active {
   transition: all 0.3s ease;
@@ -343,5 +343,8 @@ function toggleDetails() {
 .dropdown-leave-from {
   opacity: 1;
   transform: translateY(0);
+}
+.w-48 {
+  width: 20rem; /* Set a fixed width for the column */
 }
 </style>
