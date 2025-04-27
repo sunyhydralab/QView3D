@@ -2,6 +2,7 @@
 import { RouterView } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 import SettingsPanel from '@/components/SettingsPanel.vue'
+import Toast from '@/components/Toast.vue'
 </script>
 
 <template>
@@ -10,4 +11,5 @@ import SettingsPanel from '@/components/SettingsPanel.vue'
   </nav>
   <RouterView class="pt-20 px-10 min-h-screen h-full"/>
   <SettingsPanel />
+  <Toast />
 </template>

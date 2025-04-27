@@ -3,6 +3,10 @@ import { ref, computed, onMounted } from 'vue'
 import { fabricatorList, retrieveRegisteredFabricators, type Fabricator } from '@/models/fabricator'
 import { autoQueue } from '@/models/job'
 
+const emit = defineEmits<{
+  (e: 'close'): void
+}>()
+
 // Load fabricators when modal is mounted
 onMounted(() => {
   retrieveRegisteredFabricators()
@@ -15,7 +19,7 @@ const quantity = ref(1)
 const ticketId = ref(0)
 const jobName = ref("")
 
-// 
+// Handle file upload
 const handleFileUpload = (event: Event) => {
   const input = event.target as HTMLInputElement
   selectedFile.value = input.files?.[0] as File
@@ -23,12 +27,18 @@ const handleFileUpload = (event: Event) => {
   jobName.value = selectedFile.value.name
 }
 
-const submitJob = () => {
+const submitJob = async () => {
   const job = new FormData()
   if (selectedFile.value) {
-    setJob(job)
-    autoQueue(job)
-    console.log('Job submitted:', job)
+    try {
+      setJob(job)
+      await autoQueue(job)
+      console.log('Job submitted:', job)
+      emit('close') // Close the modal after successful submission
+    } catch (error) {
+      console.error('Error submitting job:', error)
+      // Toast notifications are now handled in the autoQueue function
+    }
   }
 }
 
@@ -70,12 +80,12 @@ const allSelected = computed(() =>
 <template>
   <!-- Modal Overlay -->
   <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
-    @click.self="$emit('close')">
+    @click.self="emit('close')">
     <div class="bg-light-primary dark:bg-dark-primary-light rounded-lg shadow-lg max-w-md w-full mx-4 animate-fade-in">
       <!-- Header -->
       <div class="p-4 flex justify-between items-center">
         <h3 class="text-lg font-medium text-black dark:text-white">Submit Job</h3>
-        <button @click="$emit('close')"
+        <button @click="emit('close')"
           class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd"

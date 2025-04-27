@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "socket.io": "^4.8.1",
+    "testserver": "file:",
     "ws": "^8.18.0"
   }
 }

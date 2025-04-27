@@ -1,4 +1,7 @@
+import { ref } from 'vue'
 import { api } from '@/models/api'
+import { onSocketEvent } from '@/services/socket'
+import { addToast } from '@/components/Toast.vue'
 
 export interface Job {
     id: number
@@ -44,16 +47,109 @@ export interface Job {
     colorbuff?: number 
     printer_name?: string
     queue_selected?: boolean
-  }
-
-export async function getAllJobs() {
-  return api('getjobs')
 }
 
-// export async function addJobToQueue(job : FormData) {
-//   return api('addjobtoqueue', job)
-// }
+// Store for jobs history
+export const jobHistory = ref<Job[]>([])
 
-export async function autoQueue(job : FormData) {
-  return api('autoqueue' , job)
+// Setup socket listeners for real-time job updates
+export function setupJobSocketListeners() {
+  // Listen for job status/progress updates
+  const removeJobUpdateListener = onSocketEvent<Partial<Job>>('job_update', (data) => {
+    if (!data.id) return
+
+    // Find if the job exists in our history
+    const index = jobHistory.value.findIndex(job => job.id === data.id)
+    
+    if (index !== -1) {
+      // Update existing job with new data
+      const previousStatus = jobHistory.value[index].status
+      jobHistory.value[index] = { ...jobHistory.value[index], ...data }
+      
+      // Notify on important status changes
+      if (data.status && data.status !== previousStatus) {
+        const jobName = jobHistory.value[index].name
+        let toastType: 'success' | 'error' | 'info' | 'warning' = 'info'
+        
+        if (data.status === 'Done') toastType = 'success'
+        else if (data.status === 'Error') toastType = 'error'
+        else if (data.status === 'Paused') toastType = 'warning'
+        
+        addToast(`Job '${jobName}' status changed to ${data.status}`, toastType)
+      }
+    } else if (data.id && data.name) {
+      // It's a new job we don't have yet, add it to our history
+      jobHistory.value.push(data as Job)
+    }
+  })
+  
+  // Listen for job completed events
+  const removeJobCompletedListener = onSocketEvent<{job: Job}>('job_completed', (data) => {
+    const index = jobHistory.value.findIndex(job => job.id === data.job.id)
+    
+    if (index !== -1) {
+      // Update the job in our history
+      jobHistory.value[index] = { ...jobHistory.value[index], ...data.job, status: 'Done' }
+    } else {
+      // Add the completed job to our history
+      jobHistory.value.push({ ...data.job, status: 'Done' })
+    }
+    
+    addToast(`Job '${data.job.name}' completed successfully!`, 'success')
+  })
+  
+  // Listen for job error events
+  const removeJobErrorListener = onSocketEvent<{job: Job, error: string}>('job_error', (data) => {
+    const index = jobHistory.value.findIndex(job => job.id === data.job.id)
+    
+    if (index !== -1) {
+      // Update the job in our history
+      jobHistory.value[index] = { 
+        ...jobHistory.value[index], 
+        ...data.job, 
+        status: 'Error',
+        error: data.error
+      }
+    } else {
+      // Add the errored job to our history
+      jobHistory.value.push({ 
+        ...data.job, 
+        status: 'Error',
+        error: data.error 
+      })
+    }
+    
+    addToast(`Error in job '${data.job.name}': ${data.error}`, 'error')
+  })
+  
+  // Return cleanup function
+  return () => {
+    removeJobUpdateListener()
+    removeJobCompletedListener()
+    removeJobErrorListener()
+  }
+}
+
+export async function getAllJobs() {
+  try {
+    jobHistory.value = await api('getjobs')
+    // Setup socket listeners after initial data load
+    setupJobSocketListeners()
+    return jobHistory.value
+  } catch (error) {
+    addToast(`Failed to fetch jobs: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error')
+    throw error
+  }
+}
+
+export async function autoQueue(job: FormData) {
+  try {
+    const result = await api('autoqueue', job)
+    const jobName = job.get('name') as string
+    addToast(`Job '${jobName}' successfully added to queue`, 'success')
+    return result
+  } catch (error) {
+    addToast(`Failed to queue job: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error')
+    throw error
+  }
 }
