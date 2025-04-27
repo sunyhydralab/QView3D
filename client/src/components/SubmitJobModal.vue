@@ -8,20 +8,18 @@ onMounted(() => {
 })
 
 // File Upload Handling
-const fileInput = ref<HTMLInputElement | null>(null)
 const selectedFile = ref<File | null>(null)
 const fileName = ref("No file selected.")
 const jobName = ref("")
 
-const handleFileUpload = () => fileInput.value?.click()
-const handleFileChange = (e: Event) => {
-  const files = (e.target as HTMLInputElement).files
-  if (files && files.length > 0) {
-    selectedFile.value = files[0]
-    fileName.value = files[0].name
-    jobName.value = fileName.value
-  }
+// 
+const handleFileUpload = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const selectedFile = input.files?.[0] as File
+  fileName.value = selectedFile.name
+  jobName.value = selectedFile.name
 }
+
 
 // Toggles the isSelected state of a selected Fabricator
 const toggleFabricator = (selectedFabricator: Fabricator) => {
@@ -104,15 +102,18 @@ const allSelected = computed(() =>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Upload your .gcode file<span
                 class="text-red-500 ml-1">*</span></label>
             <div class="flex space-x-2">
-              <button @click="handleFileUpload" type="button"
-                class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark">Browse</button>
+              <label
+                class="cursor-pointer bg-accent-primary text-white px-4 py-2 rounded-md hover:bg-accent-primary-dark">
+                Browse
+                <input type="file" accept=".gcode" class="hidden" @change="handleFileChange" />
+              </label>
               <div class="flex-1 px-3 py-2 bg-gray-100 dark:bg-dark-primary rounded-md flex items-center">
                 <span class="text-gray-500 dark:text-gray-400 truncate">{{ fileName }}</span>
               </div>
-              <button type="button" class="bg-accent-primary hover:bg-accent-primary-dark p-2 px-3 rounded-md" @click="">
+              <button type="button" class="bg-accent-primary hover:bg-accent-primary-dark p-2 px-3 rounded-md"
+                @click="">
                 <i class="fa-regular fa-image text-white"></i>
               </button>
-              <input ref="fileInput" type="file" accept=".gcode" class="hidden" @change="handleFileChange" />
             </div>
           </div>
 
