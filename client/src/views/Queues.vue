@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onMounted, watch } from 'vue'
-import { fabricatorList, retrieveRegisteredFabricators } from '@/models/fabricator'
-import QueueList from '@/components/QueueList.vue'
-import NoPrinterRobot from '@/components/NoPrinterRobot.vue'
+import { fabricatorList, retrieveRegisteredFabricators } from '../models/fabricator'
+import QueueList from '../components/QueueList.vue'
+import NoPrinterRobot from '../components/NoPrinterRobot.vue'
 
 async function fetchFabricators() {
   fabricatorList.value = await retrieveRegisteredFabricators()

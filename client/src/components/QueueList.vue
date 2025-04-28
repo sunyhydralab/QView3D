@@ -81,7 +81,7 @@ function onDeleteClick(jobId: number) {
             {{ job?.file_name_original ?? '-' }}
           </td>
           <td
-            class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
           >
             <div class="relative w-full rounded-full h-4 overflow-hidden dark:bg-dark-primary">
               <!-- Progress fill bar -->
@@ -117,6 +117,6 @@ function onDeleteClick(jobId: number) {
 
 <style scoped>
 .w-48 {
-  width: 20rem; /* Set a fixed width for the column */
+  max-width: 15rem;
 }
 </style>
