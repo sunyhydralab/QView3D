@@ -150,6 +150,7 @@ try:
         input() # Stop the loop from running indefinitely
 except KeyboardInterrupt: # Loop will close when a KeyboardInterrupt exception is thrown
     # Terminate the background processes
-    flask_process.terminate()
-    vite_process.terminate()
+    if (flask_process != None and vite_process != None):
+        flask_process.terminate()
+        vite_process.terminate()
     print("Flask and Vite terminated")
