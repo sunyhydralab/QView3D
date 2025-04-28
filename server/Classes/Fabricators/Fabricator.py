@@ -195,8 +195,11 @@ class Fabricator(db.Model):
             from Classes.Fabricators.Printers.MakerBot.Replicator2 import Replicator2
             if serialPort.pid == Replicator2.PRODUCTID:
                 return Replicator2(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
+            else:
+                return None
         else:
             #TODO: assume generic printer, do stuff
+            print("generic printer")
             return None
 
     @classmethod
