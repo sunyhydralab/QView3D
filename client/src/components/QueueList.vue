@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { type Fabricator } from '../models/fabricator'
-import { removeJob } from '../models/job';
-import { defineEmits } from 'vue'
+import { removeJob } from '../models/job'
 
 const props = defineProps<{ fabricator: Fabricator }>()
 const currentFabricator = props.fabricator
 const allJobs = currentFabricator.queue
 
-const emit = defineEmits(['jobDeleted'])
-
-const deleteJob = async (jobId : number) => {
+const deleteJob = async (jobId: number) => {
   await removeJob([jobId])
-  emit('jobDeleted') // Tell the parent component to refresh
+  allJobs.splice(
+    allJobs.findIndex((job) => job.id === jobId),
+    1,
+  )
 }
 
 function onDeleteClick(jobId: number) {
