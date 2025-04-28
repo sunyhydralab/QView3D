@@ -66,7 +66,7 @@ class Printer(db.Model):
             self.id = id
         self.responseCount = 0
         
-        if hwid.beginsWith("EMU"):
+        if hwid and hwid.startswith("EMU"):
             self.emulated = True
 
     # general classes
@@ -295,7 +295,7 @@ class Printer(db.Model):
             db.session.commit()
             
             current_app.socketio.emit(
-                "port_repair", {"printer_id": printerid, "device": printerport}
+                "port_repair", {"fabricator_id": printerid, "device": printerport}
             )
             return {"success": True, "message": "Printer port successfully updated."}
         except SQLAlchemyError as e:
@@ -707,7 +707,7 @@ class Printer(db.Model):
         self.error = error
         self.setStatus("error")
         current_app.socketio.emit(
-            "error_update", {"printerid": self.id, "error": str(self.error)}
+            "error_update", {"fabricator_id": self.id, "error": str(self.error)}
         )
             
     def beginPrint(self, job): 
@@ -844,7 +844,7 @@ class Printer(db.Model):
         self.setStatus("error")
         if current_app:
             current_app.socketio.emit(
-                "error_update", {"printerid": self.id, "error": str(self.error)}
+                "error_update", {"fabricator_id": self.id, "error": str(self.error)}
             )
 
     def sendStatusToJob(self, job, job_id, status):
@@ -891,14 +891,14 @@ class Printer(db.Model):
         try:
             self.canPause = canPause
             if current_app:
-                current_app.socketio.emit('can_pause', {'printerid': self.id, 'canPause': canPause})
+                current_app.socketio.emit('can_pause', {'fabricator_id': self.id, 'canPause': canPause})
         except Exception as e:
             print('Error setting canPause:', e)
 
     def setColorChangeBuffer(self, buff): 
         self.colorbuff = buff
         if current_app:
-            current_app.socketio.emit('color_buff', {'printerid': self.id, 'colorChangeBuffer': buff})
+            current_app.socketio.emit('color_buff', {'fabricator_id': self.id, 'colorChangeBuffer': buff})
 
 
 class CustomFormatter(logging.Formatter):
@@ -925,6 +925,3 @@ class CustomFormatter(logging.Formatter):
         record.levelname = self.lvlHash.get(record.levelname, record.levelname)
         message = super().format(record)
         return f"{color}{message}{self.RESET_CODE}"
-
-
-            

@@ -107,7 +107,7 @@ class Printer(Device, metaclass=ABCMeta):
                 prev_line = ""
                 # Replace file with the path to the file. "r" means read mode. 
                 # now instead of reading from 'g', we are reading line by line
-                current_app.socketio.emit("console_update", {"message": "Starting Job", "level": "info", "printerid": self.dbID})
+                current_app.socketio.emit("console_update", {"message": "Starting Job", "level": "info", "fabricator_id": self.dbID})
                 for line in lines:
                     if self.status == "cancelled":
                         self.sendGcode(self.cancelCMD, isVerbose, logger)
@@ -144,7 +144,7 @@ class Printer(Device, metaclass=ABCMeta):
                         job.setTime(job.calculateEta(), 1)
                         job.setTime(datetime.now(), 2)
                         if current_app:
-                            current_app.socketio.emit("console_update", {"message": "Fabricating...", "level": "info", "printerid": self.dbID})
+                            current_app.socketio.emit("console_update", {"message": "Fabricating...", "level": "info", "fabricator_id": self.dbID})
 
                     assert self.sendGcode(line, logger=logger), f"Failed to send {line}"
 
@@ -191,7 +191,7 @@ class Printer(Device, metaclass=ABCMeta):
                                 self.verdict = "cancelled"
                                 logger.info("Job cancelled")
                                 logger.nukeLogs()
-                                current_app.socketio.emit("console_update", {"message": "Job cancelled", "level": "info", "printerid": self.dbID})
+                                current_app.socketio.emit("console_update", {"message": "Job cancelled", "level": "info", "fabricator_id": self.dbID})
                                 return True
                             elif self.status == "printing":
                                 self.resume()
@@ -226,25 +226,25 @@ class Printer(Device, metaclass=ABCMeta):
                         self.verdict = "complete"
                         logger.info("Job complete")
                         logger.nukeLogs()
-                        current_app.socketio.emit("console_update", {"message": "Job complete", "level": "info", "printerid": self.dbID})
+                        current_app.socketio.emit("console_update", {"message": "Job complete", "level": "info", "fabricator_id": self.dbID})
                         return True
 
                     if self.status == "error":
                         self.verdict = "error"
                         logger.error("Job error")
                         logger.nukeLogs(error=True)
-                        current_app.socketio.emit("console_update", {"message": "Job error", "level": "error", "printerid": self.dbID})
+                        current_app.socketio.emit("console_update", {"message": "Job error", "level": "error", "fabricator_id": self.dbID})
                         return True
             self.verdict = "complete"
             self.status = "complete"
             logger.info("Job complete")
             logger.nukeLogs()
-            current_app.socketio.emit("console_update", {"message": "Job complete", "level": "info", "printerid": self.dbID})
+            current_app.socketio.emit("console_update", {"message": "Job complete", "level": "info", "fabricator_id": self.dbID})
             return True
         except Exception as e:
             self.verdict = "error"
             current_app.socketio.emit("error_update",{"fabricator_id": self.dbID, "job_id": job.id, "error": str(e)})
-            current_app.socketio.emit("console_update", {"message": "Job error", "level": "error", "printerid": self.dbID})
+            current_app.socketio.emit("console_update", {"message": "Job error", "level": "error", "fabricator_id": self.dbID})
             current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
             logger.nukeLogs(error=True)
             return e
@@ -266,7 +266,7 @@ class Printer(Device, metaclass=ABCMeta):
             gcode = gcode.encode("utf-8")
         assert isinstance(gcode, bytes), f"Expected bytes, got {type(gcode)}"
         callables = self.callablesHashtable.get(self.extractIndex(gcode, logger), [checkOK])
-        current_app.socketio.emit("gcode_line", {"line": (gcode.decode() if isinstance(gcode, bytes) else gcode).strip(), "printerid": self.dbID})
+        current_app.socketio.emit("gcode_line", {"line": (gcode.decode() if isinstance(gcode, bytes) else gcode).strip(), "fabricator_id": self.dbID})
         self.serialConnection.write(gcode)
         line = ''
         for func in callables:
@@ -283,7 +283,7 @@ class Printer(Device, metaclass=ABCMeta):
                     if func(line, self):
                         break
                     if should_log: logger.debug(f"{gcode.decode().strip()}: {decLine}")
-                    # current_app.socketio.emit("console_update",{"message": decLine, "level": "debug", "printerid": self.dbID})
+                    # current_app.socketio.emit("console_update",{"message": decLine, "level": "debug", "fabricator_id": self.dbID})
                 except SerialTimeoutException as e:
                     if "no data" in e:
                         if should_log: logger.debug(f"No report temp line sent.")
@@ -295,16 +295,16 @@ class Printer(Device, metaclass=ABCMeta):
                 except UnicodeDecodeError:
                     if should_log: logger.debug(f"{gcode.decode().strip()}: {line.strip()}")
                     else: print(f"{gcode.decode().strip()}: {line.strip()}")
-                    # current_app.socketio.emit("console_update",{"message": gcode.decode().strip(), "level": "debug", "printerid": self.dbID})
+                    # current_app.socketio.emit("console_update",{"message": gcode.decode().strip(), "level": "debug", "fabricator_id": self.dbID})
                 except Exception as e:
                     if current_app: return current_app.handle_errors_and_logging(e, logger)
                     else: print(traceback.format_exc())
                     return False
         if not callables:
-            # current_app.socketio.emit("console_update", {"message": f"{gcode.decode().strip()}: ok", "level": "info", "printerid": self.dbID})
+            # current_app.socketio.emit("console_update", {"message": f"{gcode.decode().strip()}: ok", "level": "info", "fabricator_id": self.dbID})
             if should_log: logger.info(f"{gcode.decode().strip()}: ok")
         else:
-            # current_app.socketio.emit("console_update", {"message": f"{gcode.decode().strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}", "level": "info", "printerid": self.dbID})
+            # current_app.socketio.emit("console_update", {"message": f"{gcode.decode().strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}", "level": "info", "fabricator_id": self.dbID})
             if should_log: logger.info(
                 f"{gcode.decode().strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}")
         return True
@@ -357,7 +357,7 @@ class Printer(Device, metaclass=ABCMeta):
             if temp_b:
                 self.bedTemperature = float(temp_b.group(1))
             if current_app:
-                current_app.socketio.emit('temp_update', {'printerid': self.dbID, 'extruder_temp': self.nozzleTemperature,
+                current_app.socketio.emit('temp_update', {'fabricator_id': self.dbID, 'extruder_temp': self.nozzleTemperature,
                                                           'bed_temp': self.bedTemperature})
         except ValueError:
             pass
@@ -409,12 +409,12 @@ class Printer(Device, metaclass=ABCMeta):
                     self.nozzleTargetTemp = float(temp)
                     current_app.socketio.emit("console_update",
                                           {"message": f"Waiting for hotend temperature to stabilize at {temp}\u00B0C...", "level": "info",
-                                           "printerid": self.dbID})
+                                           "fabricator_id": self.dbID})
                 else:
                     if logger is not None: logger.info("Waiting for hotend temperature to stabilize...")
                     current_app.socketio.emit("console_update",
                                           {"message": "Waiting for hotend temperature to stabilize...", "level": "info",
-                                           "printerid": self.dbID})
+                                           "fabricator_id": self.dbID})
             case "M190":
                 try:
                     temp = decGcode.split("S")[1].split("\n")[0]
@@ -425,15 +425,15 @@ class Printer(Device, metaclass=ABCMeta):
                     self.bedTargetTemp = float(temp)
                     current_app.socketio.emit("console_update",
                                           {"message": f"Waiting for bed temperature to stabilize at {temp}\u00B0C...", "level": "info",
-                                           "printerid": self.dbID})
+                                           "fabricator_id": self.dbID})
                 else:
                     if logger is not None: logger.info("Waiting for bed temperature to stabilize...")
                     current_app.socketio.emit("console_update",
                                           {"message": "Waiting for bed temperature to stabilize...", "level": "info",
-                                           "printerid": self.dbID})
+                                           "fabricator_id": self.dbID})
             case "G28":
                 if logger is not None: logger.info("Homing...")
-                current_app.socketio.emit("console_update", {"message": "Homing...", "level": "info", "printerid": self.dbID})
+                current_app.socketio.emit("console_update", {"message": "Homing...", "level": "info", "fabricator_id": self.dbID})
         return hashIndex
 
     def pause(self, logger: JobLogger = None):

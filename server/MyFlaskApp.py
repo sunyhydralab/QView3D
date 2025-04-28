@@ -11,6 +11,7 @@ from routes import defineRoutes
 from models.config import Config
 from Classes.FabricatorList import FabricatorList
 from Classes.Loggers.ABCLogger import ABCLogger
+from werkzeug.serving import WSGIRequestHandler
 from models.db import db
 
 class MyFlaskApp(Flask):
@@ -18,6 +19,18 @@ class MyFlaskApp(Flask):
         print(f"{tabs(tab_change=1)}call to super...", end="")
         super().__init__(__name__, static_folder=os.path.abspath(os.path.join(root_path, "client", "dist")))
         print(" Done")
+        print(f"{tabs()}setting up werkzeug logging...", end=" ")
+        # Get the werkzeug logger
+        logger = logging.getLogger('werkzeug')
+        # Change the output stream to stdout
+        for handler in logger.handlers:
+            if isinstance(handler, logging.StreamHandler):
+                handler.setStream(sys.stdout)
+        # Ensure Werkzeug's request handler also logs to stdout
+        WSGIRequestHandler.log = lambda self, type, message, *args: print(
+            f"{self.address_string().replace("%", "%%")} - - [{self.log_date_time_string()}] {message % args}",
+            file=sys.stdout)
+        print("Done")
         print(f"{tabs()}loading config...")
         print(f"{tabs(tab_change=1)}loading dotenv...", end="")
         load_dotenv()
@@ -154,9 +167,22 @@ class MyFlaskApp(Flask):
         return False
 
     def get_emu_ports(self):
+        """
+        Get emulator port information.
+        Returns a tuple of (port, name, hwid) for the emulator.
+        """
         fake_device = next(iter(self.emulator_connections.values()), None)
-        if fake_device:
+        if fake_device and hasattr(fake_device, 'fake_port') and hasattr(fake_device, 'fake_name') and hasattr(fake_device, 'fake_hwid'):
             return [fake_device.fake_port, fake_device.fake_name, fake_device.fake_hwid]
+        
+        # Check if we should load from the database
+        if fake_device is None:
+            # Try to get from database
+            from models.printers import Printer
+            emu_printer = Printer.query.filter(Printer.device.like('EMU%')).first()
+            if emu_printer:
+                return [emu_printer.device, emu_printer.name, emu_printer.hwid]
+                
         return [None, None, None]
 
     def run_go_command(self, command):

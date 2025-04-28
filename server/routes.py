@@ -17,6 +17,11 @@ def defineRoutes(app: Flask):
     print(f"{tabs()}registering blueprints...", end="")
 
     # # Register the display_bp Blueprint
+    # app.register_blueprint(ports_bp, url_prefix='/api/ports')
+    # app.register_blueprint(jobs_bp, url_prefix='/api/jobs')
+    # app.register_blueprint(status_bp, url_prefix='/api/status')
+    # app.register_blueprint(issue_bp, url_prefix='/api/issues')
+    # app.register_blueprint(emulator_bp, url_prefix='/api/emulator')
     app.register_blueprint(ports_bp)
     app.register_blueprint(jobs_bp)
     app.register_blueprint(status_bp)
