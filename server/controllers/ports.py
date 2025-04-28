@@ -171,3 +171,18 @@ def moveFabricatorList():
     except Exception as e:
         app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
+
+@ports_bp.route("/getfabricatorbyid", methods=["POST"])
+def getFabricatorById():
+    """Get a fabricator by its ID."""
+    try:
+        data = request.get_json()
+        fabricator_id = data['fabricator_id']
+        fabricator = app.fabricator_list.getFabricatorByID(fabricator_id)
+        if fabricator:
+            return jsonify({"success": True, "fabricator": fabricator.__to_JSON__()})
+        else:
+            return jsonify({"error": "Fabricator not found"}), 404
+    except Exception as e:
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
