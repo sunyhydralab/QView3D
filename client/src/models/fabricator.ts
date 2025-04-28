@@ -112,5 +112,5 @@ export async function registerFabricator(fabricator: Fabricator) {
 }
 
 export async function updateFabricatorStatus(fabricatorID: number, newFabricatorStatus: FabricatorStatus) {
-  return await api('setstatus', { printerid: fabricatorID, status: newFabricatorStatus })
+  return await api('setstatus', { id: fabricatorID, status: newFabricatorStatus })
 }
