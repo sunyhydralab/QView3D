@@ -167,9 +167,22 @@ class MyFlaskApp(Flask):
         return False
 
     def get_emu_ports(self):
+        """
+        Get emulator port information.
+        Returns a tuple of (port, name, hwid) for the emulator.
+        """
         fake_device = next(iter(self.emulator_connections.values()), None)
-        if fake_device:
+        if fake_device and hasattr(fake_device, 'fake_port') and hasattr(fake_device, 'fake_name') and hasattr(fake_device, 'fake_hwid'):
             return [fake_device.fake_port, fake_device.fake_name, fake_device.fake_hwid]
+        
+        # Check if we should load from the database
+        if fake_device is None:
+            # Try to get from database
+            from models.printers import Printer
+            emu_printer = Printer.query.filter(Printer.device.like('EMU%')).first()
+            if emu_printer:
+                return [emu_printer.device, emu_printer.name, emu_printer.hwid]
+                
         return [None, None, None]
 
     def run_go_command(self, command):
