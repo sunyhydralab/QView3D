@@ -65,9 +65,14 @@ class SocketConnection(FabricatorConnection):
         # WebSocket connection management
         self._websocket_connection = websocket_connection
 
+        # Add emulator port attributes needed by get_emu_ports
+        self.fake_port = f"EMU{str(fabricator_id).zfill(3)}"
+        self.fake_name = "Emulator Printer"
+        self.fake_hwid = f"USB VID:PID=1D50:614D LOCATION=EMU-{fabricator_id}"
+
         # Setup connection listeners
         self._setup_listeners()
-        self.emuListPortInfo = EmuListPortInfo(device=port, description="Emulator", hwid="")
+        self.emuListPortInfo = EmuListPortInfo(device=self.fake_port, description="Emulator", hwid=self.fake_hwid)
         self.port = self.emuListPortInfo.device
         self.baudrate = baudrate
         self.timeout = timeout
@@ -227,10 +232,24 @@ class EmuListPortInfo(ListPortInfo):
     def __init__(self, device: str, description: str = None, hwid: str = None):
         super().__init__(device)
         self._device = device
-        self._description = description
-        self._hwid = hwid
-        self.vid = int(hwid.split("PID=")[1].split(":")[0], 16) if hwid else None
-        self.pid = int(hwid.split(":")[2].split(" ")[0], 16) if hwid else None
+        self._description = description or "Emulator Printer"
+        self._hwid = hwid or "USB VID:PID=1D50:614D LOCATION=EMU-001"
+        
+        # Safely extract VID/PID with better error handling
+        try:
+            if hwid and "VID:PID=" in hwid:
+                vid_pid = hwid.split("VID:PID=")[1].split(" ")[0]
+                vid, pid = vid_pid.split(":")
+                self.vid = int(vid, 16)
+                self.pid = int(pid, 16)
+            else:
+                # Default values for emulator
+                self.vid = 0x1D50  # Default VID for emulator
+                self.pid = 0x614D  # Default PID for emulator
+        except Exception as e:
+            print(f"Error parsing VID/PID from hwid: {e}")
+            self.vid = 0x1D50  # Default VID for emulator
+            self.pid = 0x614D  # Default PID for emulator
 
     def __repr__(self):
         return f"EmuListPortInfo(device={self.device}, description={self.description}, hwid={self.hwid})"
