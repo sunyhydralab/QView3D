@@ -262,217 +262,218 @@ const resetEmulator = async () => {
 </script>
 
 <template>
-  <!-- Fixed z-index and animation to match other pages -->
-  <div class="container mx-auto mt-5 p-4 animate-fadeDown transition-all duration-300 ease-in">
-    <h1 class="text-3xl font-bold mb-6 text-center dark:text-light-primary">
-      Printer Emulator
-    </h1>
-    
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Configuration Panel -->
-      <div class="bg-light-primary-light dark:bg-dark-primary-light rounded-lg shadow-lg p-6 transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1">
-        <h2 class="text-xl font-semibold mb-4 dark:text-light-primary">Printer Configuration</h2>
-        
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-2 dark:text-light-primary">Printer Model</label>
-          <select 
-            v-model="selectedPrinterType"
-            class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
-            :disabled="isConnected"
-          >
-            <option v-for="model in printerModels" :key="model.value" :value="model.value">
-              {{ model.label }}
-            </option>
-          </select>
-        </div>
-        
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-2 dark:text-light-primary">Printer Name</label>
-          <input 
-            v-model="printerConfig.name"
-            type="text"
-            class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
-            :disabled="isConnected"
-          />
-        </div>
-        
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-2 dark:text-light-primary">Description</label>
-          <input 
-            v-model="printerConfig.description"
-            type="text"
-            class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
-            :disabled="isConnected"
-          />
-        </div>
-        
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-2 dark:text-light-primary">Hardware ID</label>
-          <input 
-            v-model="printerConfig.hwid"
-            type="text"
-            class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
-            :disabled="isConnected"
-          />
-        </div>
-        
-        <div class="flex space-x-2">
-          <button 
-            @click="connectEmulator"
-            class="bg-accent-primary text-white px-4 py-2 rounded-md hover:bg-accent-primary-dark flex-1"
-            :disabled="isConnected || loading"
-          >
-            <span v-if="loading && !isConnected">Connecting...</span>
-            <span v-else>Connect</span>
-          </button>
-          
-          <button 
-            @click="disconnectEmulator"
-            class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 flex-1"
-            :disabled="!isConnected || loading"
-          >
-            <span v-if="loading && isConnected">Disconnecting...</span>
-            <span v-else>Disconnect</span>
-          </button>
-        </div>
-      </div>
+  <transition name="slide-down" appear>
+    <div class="container mx-auto pt-12 px-4">
+      <h1 class="text-3xl font-bold mb-6 text-center text-gray-800 dark:text-light-primary">
+        Printer Emulator
+      </h1>
       
-      <!-- Status Panel -->
-      <div class="bg-light-primary-light dark:bg-dark-primary-light rounded-lg shadow-lg p-6 transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1">
-        <h2 class="text-xl font-semibold mb-4 dark:text-light-primary">Emulator Status</h2>
-        
-        <div class="mb-4">
-          <div class="flex items-center mb-2">
-            <div class="font-medium dark:text-light-primary">Status:</div>
-            <div class="ml-2 px-3 py-1 rounded-full text-sm" :class="{
-              'bg-green-100 text-green-800': emulatorStatus === 'Online' || emulatorStatus === 'Connected',
-              'bg-red-100 text-red-800': emulatorStatus === 'Offline' || emulatorStatus === 'Error',
-              'bg-yellow-100 text-yellow-800': emulatorStatus === 'Busy' || emulatorStatus === 'Connecting',
-              'bg-blue-100 text-blue-800': emulatorStatus === 'Reset'
-            }">
-              {{ emulatorStatus }}
-            </div>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Configuration Panel -->
+        <div class="bg-light-primary-light dark:bg-dark-primary-light rounded-lg shadow-lg p-6 transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1">
+          <h2 class="text-xl font-semibold mb-4 dark:text-light-primary">Printer Configuration</h2>
+          
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-2 dark:text-light-primary">Printer Model</label>
+            <select 
+              v-model="selectedPrinterType"
+              class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
+              :disabled="isConnected"
+            >
+              <option v-for="model in printerModels" :key="model.value" :value="model.value">
+                {{ model.label }}
+              </option>
+            </select>
           </div>
           
-          <div class="flex items-center mb-2">
-            <div class="font-medium dark:text-light-primary">Connection:</div>
-            <div class="ml-2 px-3 py-1 rounded-full text-sm" :class="{
-              'bg-green-100 text-green-800': isConnected,
-              'bg-red-100 text-red-800': !isConnected
-            }">
-              {{ isConnected ? 'Connected' : 'Disconnected' }}
-            </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-2 dark:text-light-primary">Printer Name</label>
+            <input 
+              v-model="printerConfig.name"
+              type="text"
+              class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
+              :disabled="isConnected"
+            />
           </div>
           
-          <div class="flex items-center mb-2">
-            <div class="font-medium dark:text-light-primary">Registration:</div>
-            <div class="ml-2 px-3 py-1 rounded-full text-sm" :class="{
-              'bg-green-100 text-green-800': isRegistered,
-              'bg-red-100 text-red-800': !isRegistered
-            }">
-              {{ isRegistered ? 'Registered' : 'Not Registered' }}
-            </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-2 dark:text-light-primary">Description</label>
+            <input 
+              v-model="printerConfig.description"
+              type="text"
+              class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
+              :disabled="isConnected"
+            />
+          </div>
+          
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-2 dark:text-light-primary">Hardware ID</label>
+            <input 
+              v-model="printerConfig.hwid"
+              type="text"
+              class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
+              :disabled="isConnected"
+            />
+          </div>
+          
+          <div class="flex space-x-2">
+            <button 
+              @click="connectEmulator"
+              class="bg-accent-primary text-white px-4 py-2 rounded-md hover:bg-accent-primary-dark flex-1"
+              :disabled="isConnected || loading"
+            >
+              <span v-if="loading && !isConnected">Connecting...</span>
+              <span v-else>Connect</span>
+            </button>
+            
+            <button 
+              @click="disconnectEmulator"
+              class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 flex-1"
+              :disabled="!isConnected || loading"
+            >
+              <span v-if="loading && isConnected">Disconnecting...</span>
+              <span v-else>Disconnect</span>
+            </button>
           </div>
         </div>
         
-        <div class="mb-4">
-          <h3 class="font-medium mb-2 dark:text-light-primary">Temperature</h3>
+        <!-- Status Panel -->
+        <div class="bg-light-primary-light dark:bg-dark-primary-light rounded-lg shadow-lg p-6 transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1">
+          <h2 class="text-xl font-semibold mb-4 dark:text-light-primary">Emulator Status</h2>
           
-          <div class="grid grid-cols-2 gap-4 mb-4">
-            <div class="bg-light-primary dark:bg-dark-primary p-3 rounded-lg">
-              <div class="text-sm text-gray-500 dark:text-gray-400">Extruder</div>
-              <div class="text-xl font-bold dark:text-light-primary">{{ temperatureData.extruder }}°C</div>
-              <div class="text-xs text-gray-400 dark:text-gray-500">Target: {{ temperatureData.targetExtruder }}°C</div>
+          <div class="mb-4">
+            <div class="flex items-center mb-2">
+              <div class="font-medium dark:text-light-primary">Status:</div>
+              <div class="ml-2 px-3 py-1 rounded-full text-sm" :class="{
+                'bg-green-100 text-green-800': emulatorStatus === 'Online' || emulatorStatus === 'Connected',
+                'bg-red-100 text-red-800': emulatorStatus === 'Offline' || emulatorStatus === 'Error',
+                'bg-yellow-100 text-yellow-800': emulatorStatus === 'Busy' || emulatorStatus === 'Connecting',
+                'bg-blue-100 text-blue-800': emulatorStatus === 'Reset'
+              }">
+                {{ emulatorStatus }}
+              </div>
             </div>
             
-            <div class="bg-light-primary dark:bg-dark-primary p-3 rounded-lg">
-              <div class="text-sm text-gray-500 dark:text-gray-400">Bed</div>
-              <div class="text-xl font-bold dark:text-light-primary">{{ temperatureData.bed }}°C</div>
-              <div class="text-xs text-gray-400 dark:text-gray-500">Target: {{ temperatureData.targetBed }}°C</div>
-            </div>
-          </div>
-        </div>
-        
-        <div v-if="statusMessage" class="mb-4 p-3 bg-light-primary dark:bg-dark-primary rounded-lg">
-          <div class="text-sm font-medium dark:text-light-primary">Message:</div>
-          <div class="text-gray-600 dark:text-gray-300">{{ statusMessage }}</div>
-        </div>
-        
-        <div class="flex">
-          <button 
-            @click="registerPrinter"
-            class="bg-accent-primary text-white px-4 py-2 rounded-md hover:bg-accent-primary-dark flex-1"
-            :disabled="!isConnected || isRegistered || loading"
-          >
-            Register Printer
-          </button>
-        </div>
-      </div>
-      
-      <!-- Control Panel -->
-      <div class="bg-light-primary-light dark:bg-dark-primary-light rounded-lg shadow-lg p-6 transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1">
-        <h2 class="text-xl font-semibold mb-4 dark:text-light-primary">Printer Controls</h2>
-        
-        <div class="mb-4">
-          <h3 class="font-medium mb-2 dark:text-light-primary">Temperature Control</h3>
-          
-          <div class="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label class="block text-sm font-medium mb-1 dark:text-light-primary">Extruder (°C)</label>
-              <input 
-                v-model="extruderTemp" 
-                type="number" 
-                min="0" 
-                max="300"
-                class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
-                :disabled="!isConnected"
-              />
+            <div class="flex items-center mb-2">
+              <div class="font-medium dark:text-light-primary">Connection:</div>
+              <div class="ml-2 px-3 py-1 rounded-full text-sm" :class="{
+                'bg-green-100 text-green-800': isConnected,
+                'bg-red-100 text-red-800': !isConnected
+              }">
+                {{ isConnected ? 'Connected' : 'Disconnected' }}
+              </div>
             </div>
             
-            <div>
-              <label class="block text-sm font-medium mb-1 dark:text-light-primary">Bed (°C)</label>
-              <input 
-                v-model="bedTemp" 
-                type="number" 
-                min="0" 
-                max="120"
-                class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
-                :disabled="!isConnected"
-              />
+            <div class="flex items-center mb-2">
+              <div class="font-medium dark:text-light-primary">Registration:</div>
+              <div class="ml-2 px-3 py-1 rounded-full text-sm" :class="{
+                'bg-green-100 text-green-800': isRegistered,
+                'bg-red-100 text-red-800': !isRegistered
+              }">
+                {{ isRegistered ? 'Registered' : 'Not Registered' }}
+              </div>
             </div>
           </div>
           
-          <button 
-            @click="setTemperature"
-            class="w-full bg-accent-primary text-white px-4 py-2 rounded-md hover:bg-accent-primary-dark mb-4"
-            :disabled="!isConnected"
-          >
-            Set Temperature
-          </button>
+          <div class="mb-4">
+            <h3 class="font-medium mb-2 dark:text-light-primary">Temperature</h3>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div class="bg-light-primary dark:bg-dark-primary p-3 rounded-lg">
+                <div class="text-sm text-gray-500 dark:text-gray-400">Extruder</div>
+                <div class="text-xl font-bold dark:text-light-primary">{{ temperatureData.extruder }}°C</div>
+                <div class="text-xs text-gray-400 dark:text-gray-500">Target: {{ temperatureData.targetExtruder }}°C</div>
+              </div>
+              
+              <div class="bg-light-primary dark:bg-dark-primary p-3 rounded-lg">
+                <div class="text-sm text-gray-500 dark:text-gray-400">Bed</div>
+                <div class="text-xl font-bold dark:text-light-primary">{{ temperatureData.bed }}°C</div>
+                <div class="text-xs text-gray-400 dark:text-gray-500">Target: {{ temperatureData.targetBed }}°C</div>
+              </div>
+            </div>
+          </div>
+          
+          <div v-if="statusMessage" class="mb-4 p-3 bg-light-primary dark:bg-dark-primary rounded-lg">
+            <div class="text-sm font-medium dark:text-light-primary">Message:</div>
+            <div class="text-gray-600 dark:text-gray-300">{{ statusMessage }}</div>
+          </div>
+          
+          <div class="flex">
+            <button 
+              @click="registerPrinter"
+              class="bg-accent-primary text-white px-4 py-2 rounded-md hover:bg-accent-primary-dark flex-1"
+              :disabled="!isConnected || isRegistered || loading"
+            >
+              Register Printer
+            </button>
+          </div>
         </div>
         
-        <div class="mb-4">
-          <h3 class="font-medium mb-2 dark:text-light-primary">Test Commands</h3>
+        <!-- Control Panel -->
+        <div class="bg-light-primary-light dark:bg-dark-primary-light rounded-lg shadow-lg p-6 transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1">
+          <h2 class="text-xl font-semibold mb-4 dark:text-light-primary">Printer Controls</h2>
           
-          <button 
-            @click="runGCodeTest"
-            class="w-full bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 mb-2"
-            :disabled="!isRegistered"
-          >
-            Run G-code Test
-          </button>
+          <div class="mb-4">
+            <h3 class="font-medium mb-2 dark:text-light-primary">Temperature Control</h3>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label class="block text-sm font-medium mb-1 dark:text-light-primary">Extruder (°C)</label>
+                <input 
+                  v-model="extruderTemp" 
+                  type="number" 
+                  min="0" 
+                  max="300"
+                  class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
+                  :disabled="!isConnected"
+                />
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium mb-1 dark:text-light-primary">Bed (°C)</label>
+                <input 
+                  v-model="bedTemp" 
+                  type="number" 
+                  min="0" 
+                  max="120"
+                  class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
+                  :disabled="!isConnected"
+                />
+              </div>
+            </div>
+            
+            <button 
+              @click="setTemperature"
+              class="w-full bg-accent-primary text-white px-4 py-2 rounded-md hover:bg-accent-primary-dark mb-4"
+              :disabled="!isConnected"
+            >
+              Set Temperature
+            </button>
+          </div>
           
-          <button 
-            @click="resetEmulator"
-            class="w-full bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600"
-            :disabled="!isConnected"
-          >
-            Reset Emulator
-          </button>
+          <div class="mb-4">
+            <h3 class="font-medium mb-2 dark:text-light-primary">Test Commands</h3>
+            
+            <button 
+              @click="runGCodeTest"
+              class="w-full bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 mb-2"
+              :disabled="!isRegistered"
+            >
+              Run G-code Test
+            </button>
+            
+            <button 
+              @click="resetEmulator"
+              class="w-full bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600"
+              :disabled="!isConnected"
+            >
+              Reset Emulator
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+  </transition>
 </template>
 
 <style scoped>
@@ -481,19 +482,16 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Fixed animation to match other pages */
-.animate-fadeDown {
-  animation: fadeDown 0.5s ease-out forwards;
+/* Animation styles to match other pages */
+.slide-down-enter-active {
+  transition: all 0.5s ease;
 }
-
-@keyframes fadeDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.slide-down-enter-from {
+  transform: translateY(-20px);
+  opacity: 0;
+}
+.slide-down-enter-to {
+  transform: translateY(0);
+  opacity: 1;
 }
 </style>
