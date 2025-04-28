@@ -29,7 +29,7 @@ const saveSettings = () => {
     <!-- Trigger Button -->
     <div class="fixed bottom-4 right-4 z-50">
       <Button @click="togglePanel">
-        <i class="fas fa-gear"></i>
+        <i class="fas fa-gear py-2"></i>
       </Button>
     </div>
 
