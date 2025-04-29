@@ -1,4 +1,4 @@
-import { ref, watchEffect, onMounted, onUnmounted } from 'vue'
+import { type Ref, ref, watchEffect, onMounted, onUnmounted } from 'vue'
 import { type Job } from '@/models/job'
 import { api } from '@/models/api'
 import { onSocketEvent } from '@/services/socket'
@@ -31,7 +31,7 @@ export enum FabricatorStatus {
 }
 
 // list of all registered Fabricators
-export const fabricatorList = ref<Fabricator[]>([])
+export const fabricatorList: Ref<Fabricator[]> = ref([])
 
 // update any time the fabricatorList changes
 watchEffect(() => {
