@@ -1,27 +1,24 @@
 <script setup lang="ts">
 import { type Fabricator } from '../models/fabricator'
 import { removeJob } from '../models/job'
-import { ref } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 
 const props = defineProps<{ fabricator: Fabricator }>()
 const currentFabricator = props.fabricator
-const allJobs = currentFabricator.queue
-const showDetails = ref(false)
-
-const deleteJob = async (jobId: number) => {
-  await removeJob([jobId])
-  allJobs.splice(
-    allJobs.findIndex((job) => job.id === jobId),
-    1,
-  )
-}
+const allJobs = computed(() => currentFabricator.queue)
+const showDetails = ref(true)
 
 function toggleDetails() {
   showDetails.value = !showDetails.value
 }
 
-function onDeleteClick(jobId: number) {
-  deleteJob(jobId)
+async function onDeleteClick(jobId: number) {
+  await removeJob([jobId])
+  currentFabricator.queue!.splice(
+    currentFabricator.queue!.findIndex((job) => job.id === jobId),
+    1,
+  )
+
 }
 </script>
 
