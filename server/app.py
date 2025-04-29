@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import threading
 from os import PathLike
 from threading import Thread
@@ -18,21 +17,11 @@ from datetime import datetime
 from models.config import Config
 
 
-
-
-
 async def websocket_server():
-    print("Websocket Server")
-    logger = logging.getLogger("websockets.server")
-    file_output = os.path.abspath(os.path.join(os.path.dirname(__file__), "../logs/websocket.log"))
-    file_handler = logging.FileHandler(file_output)
-    file_handler.setLevel(logging.DEBUG)
-    logger.addHandler(file_handler)
-    logger.info("Websocket Server begins...")
     async def handle_client(websocket):
         client_id = str(uuid.uuid4())
 
-        logger.debug(f"Emulator websocket connected: {client_id}")
+        print(f"Emulator websocket connected: {client_id}")
 
         emulator_connections[client_id] = websocket
 
@@ -55,29 +44,23 @@ async def websocket_server():
                     if fake_hwid:
                         emulator_connections[client_id].fake_hwid = fake_hwid
                 if fake_hwid is not None and fake_name is not None and fake_port is not None:
-                    msg = f"Emulator connected: {fake_name} ({fake_hwid}) on port {fake_port}"
-                    print(msg)
-                    logger.debug(msg)
                     break
             while True:
                 message = await websocket.recv()
-                msg = f"Received message from {client_id}: {message}"
-                print(msg)
-                logger.debug(msg)
+                print(f"Received message: {message}")
                 assert isinstance(message, str), f"Received non-string message: {message}, Type: ({type(message)})"
                 event_emitter.emit("message_received", client_id, message)
         except websockets.exceptions.ConnectionClosed:
             # Handle disconnection gracefully
-            logger.info(f"Emulator '{client_id}' has been disconnected.")
+            print(f"Emulator '{client_id}' has been disconnected.")
         except Exception:
             # Handle any other exception (unexpected disconnection, etc.)
-            logger.error(f"Error with client {client_id}: {traceback.format_exc()}")
+            print(f"Error with client {client_id}: {traceback.format_exc()}")
         finally:
              if client_id in emulator_connections:
                 del emulator_connections[client_id]
 
     try:
-        logger.info("serving emu port on localhost:8001")
         server: Server = await websockets.serve(handle_client, "localhost", 8001)
         await server.wait_closed()
     except Exception:

@@ -1,24 +1,27 @@
 <script setup lang="ts">
 import { type Fabricator } from '../models/fabricator'
 import { removeJob } from '../models/job'
-import { ref, computed, nextTick } from 'vue'
+import { ref } from 'vue'
 
 const props = defineProps<{ fabricator: Fabricator }>()
 const currentFabricator = props.fabricator
-const allJobs = computed(() => currentFabricator.queue)
-const showDetails = ref(true)
+const allJobs = currentFabricator.queue
+const showDetails = ref(false)
+
+const deleteJob = async (jobId: number) => {
+  await removeJob([jobId])
+  allJobs.splice(
+    allJobs.findIndex((job) => job.id === jobId),
+    1,
+  )
+}
 
 function toggleDetails() {
   showDetails.value = !showDetails.value
 }
 
-async function onDeleteClick(jobId: number) {
-  await removeJob([jobId])
-  currentFabricator.queue!.splice(
-    currentFabricator.queue!.findIndex((job) => job.id === jobId),
-    1,
-  )
-
+function onDeleteClick(jobId: number) {
+  deleteJob(jobId)
 }
 </script>
 
@@ -65,7 +68,16 @@ async function onDeleteClick(jobId: number) {
       </thead>
       <transition name="expand">
         <tbody v-if="showDetails">
-          <tr v-for="job in allJobs" class="text-center" :key="job.id">
+          <tr
+            v-for="job in allJobs"
+            class="text-center"
+            :key="job.id"
+            :class="[
+              index % 2 === 0
+                ? 'bg-light-primary-light dark:bg-dark-primary-light'
+                : 'bg-gray-100 dark:bg-dark-primary-dark',
+            ]"
+          >
             <td
               class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
@@ -122,15 +134,18 @@ async function onDeleteClick(jobId: number) {
 </template>
 
 <style scoped>
-.expand-enter-active, .expand-leave-active {
+.expand-enter-active,
+.expand-leave-active {
   transition: all 0.3s ease;
   overflow: hidden;
 }
-.expand-enter-from, .expand-leave-to {
+.expand-enter-from,
+.expand-leave-to {
   max-height: 0;
   opacity: 0;
 }
-.expand-enter-to, .expand-leave-from {
+.expand-enter-to,
+.expand-leave-from {
   max-height: 1000px;
   opacity: 1;
 }

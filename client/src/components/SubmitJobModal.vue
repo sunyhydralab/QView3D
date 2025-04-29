@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { fabricatorList, retrieveRegisteredFabricators, type Fabricator } from '@/models/fabricator'
 import { autoQueue, addJobToQueue } from '@/models/job'
 
@@ -57,10 +57,6 @@ const submitJob = async () => {
     }
     resetForm()
     console.log('Job submitted:', job)
-    //rerender the fabricator list
-    await nextTick()
-    await retrieveRegisteredFabricators()
-    emit('close')
   }
 }
 

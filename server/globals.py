@@ -3,8 +3,6 @@ from werkzeug.local import LocalProxy
 from Classes.EventEmitter import EventEmitter
 import gzip
 import shutil
-import asyncio
-import threading
 
 # Global variables
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -12,16 +10,6 @@ uploads_folder = os.path.abspath(os.path.join(root_path, 'uploads'))
 
 emulator_connections = {}
 event_emitter = EventEmitter()
-
-background_loop = None
-
-def start_background_loop():
-    global background_loop
-    background_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(background_loop)
-    background_loop.run_forever()
-
-threading.Thread(target=start_background_loop, daemon=True).start()
 
 def _find_custom_app():
     from flask import current_app as flask_current_app
