@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import FilterForm from './FilterForm.vue'
-import { getAllJobs, type Job } from '@/models/job'
+import { jobHistory, getAllJobs, type Job } from '@/models/job'
 
 // Reactive array to hold all jobs
 const allJobs = ref<Job[]>([])
@@ -10,6 +10,7 @@ const allJobs = ref<Job[]>([])
 onMounted(async () => {
   allJobs.value = await getAllJobs()
   allJobs.value = allJobs.value[0]
+  console.log(jobHistory.value)
 })
 const jobsPerPage = 20
 const currentPage = ref(1)
@@ -18,6 +19,7 @@ const currentPage = ref(1)
 const paginatedJobs = computed(() => {
   const start = (currentPage.value - 1) * jobsPerPage
   const end = start + jobsPerPage
+  console.log(allJobs.value.slice(start, end))
   return allJobs.value.slice(start, end)
 })
 
@@ -87,7 +89,7 @@ const goToPrevPage = () => {
               </thead>
               <tbody>
                 <!-- Paginated jobs display -->
-                <tr v-if="paginatedJobs.length > 2" v-for="job in allJobs" :key="job.id">
+                <tr v-if="paginatedJobs.length > 2" v-for="job in paginatedJobs" :key="job.id">
                   <td
                     class="w-12 px-5 py-5 border-b border-light-primary-dark dark:border-dark-primary-light bg-light-primary-light dark:bg-dark-primary-light text-sm"
                   >
@@ -116,7 +118,7 @@ const goToPrevPage = () => {
                     class="w-30 px-5 py-5 border-b border-light-primary-dark dark:border-dark-primary-light bg-light-primary-light dark:bg-dark-primary-light text-sm"
                   >
                     <p class="text-dark-primary dark:text-light-primary whitespace-no-wrap">
-                      {{ job.printer }}
+                      {{ job.printer_name }}
                     </p>
                   </td>
                   <td
@@ -130,44 +132,15 @@ const goToPrevPage = () => {
                     class="w-30 px-5 py-5 border-b border-light-primary-dark dark:border-dark-primary-light bg-light-primary-light dark:bg-dark-primary-light text-sm"
                   >
                     <p class="text-dark-primary dark:text-light-primary whitespace-no-wrap">
-                      {{ job.job_client?.elapsed_time ?? '-' }}
+                      {{ job.job_client?.elapsed_time ?? '00:00' }}
                     </p>
                   </td>
                   <td
                     class="w-12 px-3 py-3 border-b border-light-primary-dark dark:border-dark-primary-light bg-light-primary-light dark:bg-dark-primary-light text-sm align-center"
                   >
-                    <div class="flex flex-col items-start space-y-1">
-                      <!-- Statuses subject to change -->
-                      <span
-                        v-if="job.status === 'Done'"
-                        class="relative inline-block w-20 text-center px-3 py-1 font-semibold leading-tight"
-                      >
-                        <span
-                          aria-hidden
-                          class="absolute inset-0 bg-accent-primary-light rounded-full"
-                        ></span>
-                        <span class="text-white dark:text-dark-primary-dark relative">Done</span>
-                      </span>
-                      <span
-                        v-else-if="job.status === 'Printing'"
-                        class="relative inline-block w-20 text-center px-3 py-1 font-semibold leading-tight"
-                      >
-                        <span
-                          aria-hidden
-                          class="absolute inset-0 bg-accent-secondary-light rounded-full"
-                        ></span>
-                        <span class="text-white dark:text-dark-primary-dark relative"
-                          >Printing</span
-                        >
-                      </span>
-                      <span
-                        v-else-if="job.status === 'Error'"
-                        class="relative inline-block w-20 text-center px-3 py-1 font-semibold leading-tight"
-                      >
-                        <span aria-hidden class="absolute inset-0 bg-red-300 rounded-full"></span>
-                        <span class="text-white dark:text-dark-primary-dark relative">Error</span>
-                      </span>
-                    </div>
+                    <p class="text-dark-primary dark:text-light-primary whitespace-no-wrap">
+                      {{ job.status ?? '-' }}
+                    </p>
                   </td>
                 </tr>
               </tbody>

@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, watchEffect } from 'vue'
 import { api } from '@/models/api'
 import { onSocketEvent } from '@/services/socket'
 import { addToast } from '@/components/Toast.vue'
@@ -51,6 +51,11 @@ export interface Job {
 
 // Store for jobs history
 export const jobHistory = ref<Job[]>([])
+
+// update any time the jobHistory changes
+watchEffect(() => {
+  console.log('job history updated:', jobHistory.value)
+})
 
 // Setup socket listeners for real-time job updates
 export function setupJobSocketListeners() {
