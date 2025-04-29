@@ -219,7 +219,7 @@ async function handleFabricatorDeleted(id: number) {
         </h2>
 
         <!-- Scrollable container for fabricator cards -->
-        <div class="flex-grow overflow-y-auto rounded-xl bg-gray-50 dark:bg-dark-primary p-4 custom-scrollbar">
+        <div class="flex-grow overflow-y-auto rounded-xl bg-light-primary-light dark:bg-dark-primary-light p-4 custom-scrollbar">
           <div v-if="fabricatorList.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <transition-group name="card-fade">
               <FabricatorCard v-for="(fabricator, index) in fabricatorList" :key="fabricator.id"
