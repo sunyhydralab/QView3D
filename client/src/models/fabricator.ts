@@ -100,9 +100,8 @@ export async function retrieveRegisteredFabricators() {
 export async function registerFabricator(fabricator: Fabricator) {
   try {
     // set fabricator to printer because the api expects they key, 'printer'
-    const printer = fabricator
     fabricator.isSelected = false
-    const result = await api('register', { printer })
+    const result = await api('register', { printer: fabricator })
     addToast(`Fabricator ${fabricator.name || fabricator.description} registered successfully`, 'success')
     return result
   } catch (error) {
