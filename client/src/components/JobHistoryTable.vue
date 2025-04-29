@@ -9,6 +9,7 @@ const allJobs = ref<Job[]>([])
 // Load all jobs when component is mounted
 onMounted(async () => {
   allJobs.value = await getAllJobs()
+  allJobs.value = allJobs.value[0]
 })
 const jobsPerPage = 20
 const currentPage = ref(1)
@@ -86,7 +87,7 @@ const goToPrevPage = () => {
               </thead>
               <tbody>
                 <!-- Paginated jobs display -->
-                <tr v-if="paginatedJobs.length > 2" v-for="job in paginatedJobs" :key="job.id">
+                <tr v-if="paginatedJobs.length > 2" v-for="job in allJobs" :key="job.id">
                   <td
                     class="w-12 px-5 py-5 border-b border-light-primary-dark dark:border-dark-primary-light bg-light-primary-light dark:bg-dark-primary-light text-sm"
                   >
