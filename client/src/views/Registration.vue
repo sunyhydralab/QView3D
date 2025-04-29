@@ -10,6 +10,7 @@ import {
   retrieveRegisteredFabricators,
 } from '@/models/fabricator'
 import FabricatorCard from '@/components/RegisteredFabricatorCard.vue'
+import { addToast } from '../components/Toast.vue'
 
 // all connected fabricators
 const connectedFabricatorList = ref<Fabricator[]>([])
@@ -18,7 +19,7 @@ const connectedFabricatorList = ref<Fabricator[]>([])
 const selectedFabricator = ref<Fabricator | null>(null)
 
 // the user submitted name for the fabricator
-const customName = ref<string | null>(null)
+const customName = ref<string>("")
 
 // fetch the list of connected ports from backend and automatically load them into the form dropdown
 onMounted(async () => {
@@ -60,11 +61,10 @@ function searchFabricatorById(id: string) {
 
 async function handleSubmit() {
   // register the selected fabricator with the custom name
-  if (selectedFabricator.value && customName.value) {
+  if (selectedFabricator.value != null && customName.value !== "") {
     selectedFabricator.value.name = customName.value
-    console.log('Selected Fabricator:', selectedFabricator.value)
+    
     await registerFabricator(selectedFabricator.value)
-  }
 
   // update fabricatorList when a new fabricator is registered
   fabricatorList.value = await retrieveRegisteredFabricators()
@@ -84,6 +84,9 @@ async function handleSubmit() {
   selectedFabricator.value = null
   customName.value = null
   console.log('Form reset')
+  } else {
+    addToast("Please add a custom name to this fabbricator", "info")
+  }
 }
 </script>
 
