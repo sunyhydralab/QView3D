@@ -4,9 +4,7 @@ import { fabricatorList, retrieveRegisteredFabricators } from '@/models/fabricat
 import PrintModule from '@/components/PrintModule.vue'
 import NoPrinterRobot from '@/components/NoPrinterRobot.vue'
 
-onMounted(async () => {
-  retrieveRegisteredFabricators()
-});
+onMounted(async () => {await retrieveRegisteredFabricators()});
 </script>
 
 <template>
