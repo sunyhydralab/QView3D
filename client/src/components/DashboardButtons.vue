@@ -1,15 +1,14 @@
 <script setup lang="ts">
 import { ref, type Ref } from 'vue'
 import SubmitJobModal from './SubmitJobModal.vue'
-import { FabricatorStatus, updateFabricatorStatus, type Fabricator } from '../models/fabricator'
+import { FabricatorStatus, updateFabricatorStatus, startPrintAPI, type Fabricator } from '../models/fabricator'
+import { type Job } from '../models/job'
+import { addToast } from './Toast.vue'
 
 const isSubmitModalOpen = ref(false)
 const isOnline = ref(false)
 const isPrinting = ref(false)
 const isPaused = ref(false)
-
-// By default, all operations will be sent to the fabricator with ID 1
-const DEFAULT_FABRICATOR_ID: number = 1
 
 const { currentFabricator } = defineProps<{
   currentFabricator: Fabricator
@@ -26,13 +25,15 @@ function turnOnline() {
     updatingFabricatorStatus.value = true
     
     // Turn the fabricator online
-    updateFabricatorStatus(currentFabricator.id ?? DEFAULT_FABRICATOR_ID, FabricatorStatus.TurnOnline)
-      .then(response => {
-        // When the Fabricator has been turned online, update the following booleans:
-        turningOnline.value = false
-        isOnline.value = true
-        updatingFabricatorStatus.value = false
-      })
+    if (currentFabricator.id != undefined) {
+      updateFabricatorStatus(currentFabricator.id, FabricatorStatus.TurnOnline)
+        .then(response => {
+          // When the Fabricator has been turned online, update the following booleans:
+          turningOnline.value = false
+          isOnline.value = true
+          updatingFabricatorStatus.value = false
+        })
+    }
   }
 
 }
@@ -44,20 +45,53 @@ function turnOffline() {
     turningOffline.value = true
     updatingFabricatorStatus.value = true
 
-    updateFabricatorStatus(currentFabricator.id ?? DEFAULT_FABRICATOR_ID, FabricatorStatus.TurnOffline)
-      .then(response => {
-        turningOffline.value = false
-        updatingFabricatorStatus.value = false
-        isOnline.value = false
-        isPrinting.value = false
-        isPaused.value = false
-      })
+    if (currentFabricator.id != undefined) {
+      updateFabricatorStatus(currentFabricator.id, FabricatorStatus.TurnOffline)
+        .then(response => {
+          turningOffline.value = false
+          updatingFabricatorStatus.value = false
+          isOnline.value = false
+          isPrinting.value = false
+          isPaused.value = false
+        })
+    }
   }
 }
 
+// Debounce used to prevent the user from clicking the Start Print button
+const startingPrint: Ref<boolean> = ref(false)
 function startPrint() {
-  isPrinting.value = true
-  isPaused.value = false
+  if (startingPrint.value === false && updatingFabricatorStatus.value === false) {
+    startingPrint.value = true
+    const jobQueue: Job[] | undefined = currentFabricator.queue
+
+    if (jobQueue != undefined) {
+      if (jobQueue.length > 0) {
+        const latestJob: Job = jobQueue[0]
+        if (currentFabricator.id != undefined) {
+          addToast("Preparing print", "info")
+          startPrintAPI(latestJob.id, currentFabricator.id)
+          .then(response => {
+            addToast("Starting print", "success")
+            
+            startingPrint.value = false
+            isPrinting.value = true
+            isPaused.value = false
+          })
+        } else {
+          startingPrint.value = false
+          addToast("This fabricator has no ID", "error")
+        }
+      } else {
+        startingPrint.value = false
+        addToast("This fabricator has no queue", "error")
+      }
+    } else {
+      startingPrint.value = false
+      addToast("The fabricator is currently doing something, please wait", "info")
+    }
+
+  }
 }
 
 // Debounce used to prevent the user from clicking the Stop button multiple times
@@ -67,13 +101,15 @@ function stopPrint() {
     stoppingPrint.value = true
     updatingFabricatorStatus.value = true
 
-    updateFabricatorStatus(currentFabricator.id ?? DEFAULT_FABRICATOR_ID, FabricatorStatus.TurnOffline)
-      .then(response => {
-        stoppingPrint.value = false
-        updatingFabricatorStatus.value = false
-        isPrinting.value = false
-        isPaused.value = false
-      })
+    if (currentFabricator.id != undefined) {
+      updateFabricatorStatus(currentFabricator.id, FabricatorStatus.TurnOffline)
+        .then(response => {
+          stoppingPrint.value = false
+          updatingFabricatorStatus.value = false
+          isPrinting.value = false
+          isPaused.value = false
+        })
+    }
   }
 }
 

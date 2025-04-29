@@ -52,6 +52,7 @@ const submitJob = async () => {
           }
         }
       }
+      await retrieveRegisteredFabricators()
     } catch (error) {
       console.error('Error submitting job:', error)
     }
