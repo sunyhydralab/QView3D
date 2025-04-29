@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, type Ref } from 'vue'
 import SubmitJobModal from './SubmitJobModal.vue'
-import { FabricatorStatus, updateFabricatorStatus, type Fabricator } from '../models/fabricator'
+import { FabricatorStatus, updateFabricatorStatus, startPrintAPI, type Fabricator } from '../models/fabricator'
+import { type Job } from '../models/job'
+import { addToast } from './Toast.vue'
 
 const isSubmitModalOpen = ref(false)
 const isOnline = ref(false)
@@ -55,9 +57,29 @@ function turnOffline() {
   }
 }
 
+// Debounce used to prevent the user from clicking the Start Print button
+const startingPrint: Ref<boolean> = ref(false)
 function startPrint() {
-  isPrinting.value = true
-  isPaused.value = false
+  console.log(startingPrint.value)
+  console.log(updatingFabricatorStatus.value)
+  if (startingPrint.value === false && updatingFabricatorStatus.value === false) {
+    startingPrint.value = true
+
+    const jobQueue: Job[] = currentFabricator.queue
+    if (jobQueue.length > 0) {
+      const latestJob: Job = jobQueue[0]
+      startPrintAPI(latestJob.id, currentFabricator.id)
+        .then(response => {
+          startingPrint.value = false
+          isPrinting.value = true
+          isPaused.value = false
+        })
+    } else {
+      startingPrint.value = false
+      addToast("You must add a job to the queue before you can print", "info")
+    }
+
+  }
 }
 
 // Debounce used to prevent the user from clicking the Stop button multiple times
