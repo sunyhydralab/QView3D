@@ -14,19 +14,18 @@ const showDetails = ref(false)
 function toggleDetails() {
   showDetails.value = !showDetails.value
 }
-
 </script>
 
 <template>
   <div class="container mx-auto mt-3 px-2 md:px-0">
     <!-- Main Printer Status Table -->
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto w-full">
       <!-- Mobile Card View (visible only on small screens) -->
       <div class="block md:hidden">
         <div class="bg-light-primary-light dark:bg-dark-primary-light rounded-lg shadow mb-4 p-4">
           <div class="flex justify-between mb-2">
             <div>
-              <span class="font-bold">ID: 1</span>
+              <span class="font-bold">ID: {{ currentFabricator.id }}</span>
             </div>
             <div>
               <button @click="toggleDetails" class="p-1">
@@ -36,9 +35,18 @@ function toggleDetails() {
           </div>
 
           <div class="flex flex-col mb-2">
-            <div class="py-1"><span class="font-semibold">Printer:</span> mk4</div>
-            <div class="py-1"><span class="font-semibold">Job:</span> example</div>
-            <div class="py-1"><span class="font-semibold">File:</span> example.gcode</div>
+            <div class="py-1">
+              <span class="font-semibold">Printer:</span> 
+              <span class="overflow-hidden text-ellipsis">{{ currentFabricator.name }}</span>
+            </div>
+            <div class="py-1">
+              <span class="font-semibold">Job:</span> 
+              <span class="overflow-hidden text-ellipsis">{{ currentJob?.name ?? 'N/A' }}</span>
+            </div>
+            <div class="py-1">
+              <span class="font-semibold">File:</span> 
+              <span class="overflow-hidden text-ellipsis">{{ currentJob?.file_name_original ?? 'N/A' }}</span>
+            </div>
           </div>
 
           <!-- Progress Bar -->
@@ -46,12 +54,14 @@ function toggleDetails() {
             <div class="relative w-full rounded-full h-4 overflow-hidden dark:bg-dark-primary">
               <div
                 class="h-full bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full transition-all duration-500 ease-in-out"
-                style="width: 60%"
+                :style="{
+                  width: currentJob?.progress != null ? currentJob.progress + '%' : '0%',
+                }"
               ></div>
               <div
                 class="absolute inset-0 flex items-center justify-center text-xs font-medium text-black dark:text-white"
               >
-                60%
+                {{ currentJob?.progress != null ? currentJob.progress + '%' : '0%' }}
               </div>
             </div>
           </div>
@@ -62,77 +72,83 @@ function toggleDetails() {
       </div>
 
       <!-- Desktop Table (visible only on medium screens and up) -->
-      <table class="hidden md:table min-w-full border-collapse">
+      <table class="hidden md:table w-full table-fixed border-collapse text-sm">
         <thead>
           <tr class="bg-light-primary-light dark:bg-dark-primary-light">
             <th
-              class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="w-[5%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
             >
               ID
             </th>
             <th
-              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="w-[10%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
             >
-              Printer
+              Fabricator Name
             </th>
             <th
-              class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="w-[15%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
             >
               Job Name
             </th>
             <th
-              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="w-[15%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
             >
               File Name
             </th>
             <th
-              class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="w-[40%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
             >
               Controls
             </th>
             <th
-              class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="w-[12%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
             >
               Progress
             </th>
             <th
-              class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="w-[3%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
             >
-              Details
+              <span class="sr-only">Details</span>
             </th>
           </tr>
         </thead>
         <tbody>
           <tr class="text-center">
             <td
-              class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
             >
               {{ currentFabricator.id }}
             </td>
             <td
-              class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
             >
-              {{ currentFabricator.name }}
+              <div class="overflow-hidden text-ellipsis whitespace-nowrap">
+                {{ currentFabricator.name }}
+              </div>
             </td>
             <td
-              class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
             >
-              {{ currentJob?.name ?? 'N/A' }}
+              <div class="overflow-hidden text-ellipsis whitespace-nowrap">
+                {{ currentJob?.name ?? 'N/A' }}
+              </div>
             </td>
             <td
-              class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
             >
-              {{ currentJob?.file_name_original ?? 'N/A' }}
+              <div class="overflow-hidden text-ellipsis whitespace-nowrap">
+                {{ currentJob?.file_name_original ?? 'N/A' }}
+              </div>
             </td>
             <td
-              class="w-60 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
               <!-- Controls -->
               <DashboardButtons :current-fabricator="currentFabricator"/>
             </td>
             <!-- Progress Bar -->
             <td
-              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
             >
               <div class="relative w-full rounded-full h-4 overflow-hidden dark:bg-dark-primary">
                 <div
@@ -149,7 +165,7 @@ function toggleDetails() {
               </div>
             </td>
             <td
-              class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2 cursor-pointer"
+              class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1 cursor-pointer"
               @click="toggleDetails"
             >
               <div class="flex justify-center items-center">
@@ -172,45 +188,45 @@ function toggleDetails() {
             <div class="grid grid-cols-2 gap-3 mb-4">
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Layer</div>
-                <div>{{ currentJob?.current_layer_height ?? 'N/A' }}</div>
+                <div class="overflow-hidden text-ellipsis">{{ currentJob?.current_layer_height ?? 'N/A' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Filament</div>
-                <div>{{ currentJob?.filament ?? 'Idle' }}</div>
+                <div class="overflow-hidden text-ellipsis">{{ currentJob?.filament ?? 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Nozzle</div>
-                <div>{{ currentFabricator?.extruder_temp ? currentFabricator.extruder_temp + '&deg;C' : 'Idle' }}</div>
+                <div class="overflow-hidden text-ellipsis">{{ currentFabricator?.extruder_temp ? currentFabricator.extruder_temp + '°C' : 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Bed</div>
-                <div>{{ currentFabricator?.bed_temp ? currentFabricator.bed_temp + '&deg;C' : 'Idle' }}</div>
+                <div class="overflow-hidden text-ellipsis">{{ currentFabricator?.bed_temp ? currentFabricator.bed_temp + '°C' : 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Elapsed</div>
-                <div>{{ currentJob?.job_client?.elapsed_time ?? 'Idle' }}</div>
+                <div class="overflow-hidden text-ellipsis">{{ currentJob?.job_client?.elapsed_time ?? 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Remaining</div>
-                <div>{{ currentJob?.job_client?.remaining_time ?? 'Idle' }}</div>
+                <div class="overflow-hidden text-ellipsis">{{ currentJob?.job_client?.remaining_time ?? 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">Total</div>
-                <div>{{ currentJob?.job_client?.total_time ?? 'Idle' }}</div>
+                <div class="overflow-hidden text-ellipsis">{{ currentJob?.job_client?.total_time ?? 'Idle' }}</div>
               </div>
               <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                 <div class="text-xs font-medium">ETA</div>
-                <div>{{ currentJob?.job_client?.eta ?? 'Idle' }}</div>
+                <div class="overflow-hidden text-ellipsis">{{ currentJob?.job_client?.eta ?? 'Idle' }}</div>
               </div>
             </div>
 
             <div>
               <h4 class="font-medium mb-2">Preview</h4>
-              <div class="bg-light-primary-ultralight dark:bg-dark-primary rounded p-2">
-              <GCodePreview
-                :file="currentJob?.file ?? null"
-                :job-id="currentJob?.id"
-              />
+              <div class="bg-black rounded p-2">
+                <GCodePreview
+                  :file="currentJob?.file ?? null"
+                  :job-id="currentJob?.id"
+                />
               </div>
             </div>
           </div>
@@ -220,47 +236,47 @@ function toggleDetails() {
         <div class="hidden md:block">
           <!-- Print Details Table -->
           <table
-            class="min-w-full border border-light-primary dark:border-dark-primary dark:text-light-primary mt-4"
+            class="w-full table-fixed border border-light-primary dark:border-dark-primary dark:text-light-primary mt-4 text-sm"
           >
             <thead>
               <tr class="bg-light-primary-light dark:bg-dark-primary-light">
                 <th
-                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   Layer
                 </th>
                 <th
-                  class="w-20 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   Filament
                 </th>
                 <th
-                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   Nozzle
                 </th>
                 <th
-                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   Bed
                 </th>
                 <th
-                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   Elapsed
                 </th>
                 <th
-                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   Remaining
                 </th>
                 <th
-                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   Total
                 </th>
                 <th
-                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   ETA
                 </th>
@@ -269,44 +285,60 @@ function toggleDetails() {
             <tbody>
               <tr class="text-center align-middle">
                 <td
-                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
-                  {{ currentJob?.current_layer_height ?? 'N/A' }}
+                  <div class="overflow-hidden text-ellipsis whitespace-nowrap">
+                    {{ currentJob?.current_layer_height ?? 'N/A' }}
+                  </div>
                 </td>
                 <td
-                  class="w-20 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
-                  {{ currentJob?.filament ?? 'Idle' }}
+                  <div class="overflow-hidden text-ellipsis whitespace-nowrap">
+                    {{ currentJob?.filament ?? 'Idle' }}
+                  </div>
                 </td>
                 <td
-                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
-                  {{ currentFabricator.extruder_temp ?? 'Idle' }}
+                  <div class="overflow-hidden text-ellipsis whitespace-nowrap">
+                    {{ currentFabricator.extruder_temp ? currentFabricator.extruder_temp + '°C' : 'Idle' }}
+                  </div>
                 </td>
                 <td
-                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
-                  {{ currentFabricator.bed_temp ?? 'Idle' }}
+                  <div class="overflow-hidden text-ellipsis whitespace-nowrap">
+                    {{ currentFabricator.bed_temp ? currentFabricator.bed_temp + '°C' : 'Idle' }}
+                  </div>
                 </td>
                 <td
-                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
-                  {{ currentJob?.job_client?.elapsed_time ?? 'Idle' }}
+                  <div class="overflow-hidden text-ellipsis whitespace-nowrap">
+                    {{ currentJob?.job_client?.elapsed_time ?? 'Idle' }}
+                  </div>
                 </td>
                 <td
-                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
-                  {{ currentJob?.job_client?.remaining_time ?? 'Idle' }}
+                  <div class="overflow-hidden text-ellipsis whitespace-nowrap">
+                    {{ currentJob?.job_client?.remaining_time ?? 'Idle' }}
+                  </div>
                 </td>
                 <td
-                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
-                  {{ currentJob?.job_client?.total_time ?? 'Idle' }}
+                  <div class="overflow-hidden text-ellipsis whitespace-nowrap">
+                    {{ currentJob?.job_client?.total_time ?? 'Idle' }}
+                  </div>
                 </td>
                 <td
-                  class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
-                  {{ currentJob?.job_client?.eta ?? 'Idle' }}
+                  <div class="overflow-hidden text-ellipsis whitespace-nowrap">
+                    {{ currentJob?.job_client?.eta ?? 'Idle' }}
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -314,7 +346,7 @@ function toggleDetails() {
 
           <!-- Gcode Viewer Section -->
           <div class="flex mt-1 justify-center bg-black">
-            <div class="bg-black w-4/5 p-2">
+            <div class="bg-black w-full md:w-4/5 p-2">
               <GCodePreview
                 :file="currentJob?.file ?? null"
                 :job-id="currentJob?.id"
@@ -344,7 +376,23 @@ function toggleDetails() {
   opacity: 1;
   transform: translateY(0);
 }
-.w-48 {
-  max-width: 15rem; /* Set a fixed width for the column */
+
+/* Fixed table styles */
+table {
+  table-layout: fixed;
+  width: 100%;
+  max-width: 100%;
+}
+
+td > div, th > div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Ensure table doesn't expand beyond container */
+.overflow-x-auto {
+  max-width: 100%;
+  scrollbar-width: thin;
 }
 </style>
