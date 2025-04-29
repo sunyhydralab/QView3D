@@ -52,6 +52,9 @@ async function refreshFabricatorList() {
   })
 }
 
+// Refresh the fabricator list automatically 
+setInterval(refreshFabricatorList, 5000)
+
 // helper function to search by fabricatorList.value serialPort id
 function searchFabricatorById(id: string) {
   return fabricatorList.value.find((fabricator: Fabricator) => {
@@ -66,24 +69,24 @@ async function handleSubmit() {
     
     await registerFabricator(selectedFabricator.value)
 
-  // update fabricatorList when a new fabricator is registered
-  fabricatorList.value = await retrieveRegisteredFabricators()
-  console.log('Registered Fabricators:', fabricatorList.value)
+    // update fabricatorList when a new fabricator is registered
+    fabricatorList.value = await retrieveRegisteredFabricators()
+    console.log('Registered Fabricators:', fabricatorList.value)
 
-  // filter out fabricators that have already been registered
-  connectedFabricatorList.value = connectedFabricatorList.value.filter((fabricator: Fabricator) => {
-    return !fabricator.name
-  })
-  console.log('Connected Fabricators:', connectedFabricatorList.value)
+    // filter out fabricators that have already been registered
+    connectedFabricatorList.value = connectedFabricatorList.value.filter((fabricator: Fabricator) => {
+      return !fabricator.name
+    })
+    console.log('Connected Fabricators:', connectedFabricatorList.value)
 
-  // save the updated list to localStorage
-  localStorage.setItem('connectedFabricatorList', JSON.stringify(connectedFabricatorList.value))
-  console.log('Saved connectedFabricatorList to localStorage')
+    // save the updated list to localStorage
+    localStorage.setItem('connectedFabricatorList', JSON.stringify(connectedFabricatorList.value))
+    console.log('Saved connectedFabricatorList to localStorage')
 
-  // reset the form
-  selectedFabricator.value = null
-  customName.value = null
-  console.log('Form reset')
+    // reset the form
+    selectedFabricator.value = null
+    customName.value = null
+    console.log('Form reset')
   } else {
     addToast("Please add a custom name to this fabbricator", "info")
   }
