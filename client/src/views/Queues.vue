@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, server } from 'vue';
+import { onMounted } from 'vue';
 import { fabricatorList, retrieveRegisteredFabricators } from '@/models/fabricator'
 import QueueList from '@/components/QueueList.vue'
 import NoPrinterRobot from '@/components/NoPrinterRobot.vue'
