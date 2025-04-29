@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import GCodePreview from './GCodePreview.vue'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import DashboardButtons from './DashboardButtons.vue'
 import { type Fabricator } from '@/models/fabricator'
 import SubmitJobModal from "@/components/SubmitJobModal.vue";
 
 const props = defineProps<{ fabricator: Fabricator }>()
 const currentFabricator = props.fabricator
-const currentJob = currentFabricator.queue?.[0]
+const currentJob = computed(() => currentFabricator.queue?.[0])
 
 const showDetails = ref(false)
 
