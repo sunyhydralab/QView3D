@@ -131,6 +131,10 @@ export async function deleteFabricator(fabricatorId: number) {
   }
 }
 
+export async function updateFabricatorStatus(fabricatorID: number, newFabricatorStatus: FabricatorStatus) {
+  return await api('setstatus', { id: fabricatorID, status: newFabricatorStatus })
+}
+
 export async function startPrintAPI(jobID: number, printerID: number) {
   return await api("startprint", { printerid: printerID, jobid: jobID })
 }
