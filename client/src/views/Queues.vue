@@ -8,7 +8,15 @@ async function fetchFabricators() {
   fabricatorList.value = await retrieveRegisteredFabricators()
 }
 
-onMounted(fetchFabricators)
+onMounted(async () => {
+  if (!sessionStorage.getItem('reloaded')) {
+    sessionStorage.setItem('reloaded', 'true')
+    window.location.reload()
+  } else {
+    sessionStorage.removeItem('reloaded')
+    fetchFabricators()
+  }
+})
 </script>
 
 <template>
