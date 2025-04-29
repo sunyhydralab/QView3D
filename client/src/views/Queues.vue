@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { fabricatorList } from '../models/fabricator'
-import QueueList from '../components/QueueList.vue'
-import NoPrinterRobot from '../components/NoPrinterRobot.vue'
+import { onMounted } from 'vue';
+import { fabricatorList, retrieveRegisteredFabricators } from '@/models/fabricator'
+import QueueList from '@/components/QueueList.vue'
+import NoPrinterRobot from '@/components/NoPrinterRobot.vue'
+
+onMounted(async () => {
+  retrieveRegisteredFabricators()
+})
 </script>
 
 <template>
