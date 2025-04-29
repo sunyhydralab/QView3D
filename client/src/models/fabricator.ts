@@ -1,4 +1,4 @@
-import { ref, watchEffect, onMounted, onUnmounted } from 'vue'
+import { ref, watchEffect } from 'vue'
 import { type Job } from '@/models/job'
 import { api } from '@/models/api'
 import { onSocketEvent } from '@/services/socket'
