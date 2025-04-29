@@ -66,7 +66,7 @@ class Printer(db.Model):
             self.id = id
         self.responseCount = 0
         
-        if hwid and hwid.startswith("EMU"):
+        if hwid.beginsWith("EMU"):
             self.emulated = True
 
     # general classes
@@ -925,3 +925,6 @@ class CustomFormatter(logging.Formatter):
         record.levelname = self.lvlHash.get(record.levelname, record.levelname)
         message = super().format(record)
         return f"{color}{message}{self.RESET_CODE}"
+
+
+            
