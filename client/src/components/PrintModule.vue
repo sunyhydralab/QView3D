@@ -76,7 +76,7 @@ function toggleDetails() {
               Printer
             </th>
             <th
-              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
               Job Name
             </th>
@@ -110,29 +110,29 @@ function toggleDetails() {
               {{ currentFabricator.id }}
             </td>
             <td
-              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
               {{ currentFabricator.name }}
             </td>
             <td
-              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
               {{ currentJob?.name ?? 'N/A' }}
             </td>
             <td
-              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
               {{ currentJob?.file_name_original ?? 'N/A' }}
             </td>
             <td
-              class="w-36 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="w-60 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
               <!-- Controls -->
               <DashboardButtons :current-fabricator="currentFabricator"/>
             </td>
             <!-- Progress Bar -->
             <td
-              class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              class="w-40 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
               <div class="relative w-full rounded-full h-4 overflow-hidden dark:bg-dark-primary">
                 <div
@@ -327,7 +327,7 @@ function toggleDetails() {
   </div>
 </template>
 
-<style>
+<style scoped>
 .dropdown-enter-active,
 .dropdown-leave-active {
   transition: all 0.3s ease;
@@ -343,5 +343,8 @@ function toggleDetails() {
 .dropdown-leave-from {
   opacity: 1;
   transform: translateY(0);
+}
+.w-48 {
+  max-width: 15rem; /* Set a fixed width for the column */
 }
 </style>
