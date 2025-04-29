@@ -21,13 +21,13 @@ const updatingFabricatorStatus: Ref<boolean> = ref(false)
 // A debounce used to prevent the user from clicking the Turn Online button multiple times
 const turningOnline: Ref<boolean> = ref(false)
 function turnOnline() {
-  if (turningOnline.value === false && updatingFabricatorStatus.value === false) {
+  if (!turningOnline.value && !updatingFabricatorStatus.value) {
     turningOnline.value = true
     updatingFabricatorStatus.value = true
     
     // Turn the fabricator online
     updateFabricatorStatus(currentFabricator.id ?? DEFAULT_FABRICATOR_ID, FabricatorStatus.TurnOnline)
-      .then(response => {
+      .then(() => {
         // When the Fabricator has been turned online, update the following booleans:
         turningOnline.value = false
         isOnline.value = true
@@ -40,12 +40,12 @@ function turnOnline() {
 // Debounce used to prevent the user from clicking the Turn Offline button multiple times
 const turningOffline: Ref<boolean> = ref(false)
 function turnOffline() {
-  if (turningOffline.value === false && updatingFabricatorStatus.value === false) {
+  if (!turningOffline.value && !updatingFabricatorStatus.value) {
     turningOffline.value = true
     updatingFabricatorStatus.value = true
 
     updateFabricatorStatus(currentFabricator.id ?? DEFAULT_FABRICATOR_ID, FabricatorStatus.TurnOffline)
-      .then(response => {
+      .then(() => {
         turningOffline.value = false
         updatingFabricatorStatus.value = false
         isOnline.value = false
@@ -63,12 +63,12 @@ function startPrint() {
 // Debounce used to prevent the user from clicking the Stop button multiple times
 const stoppingPrint: Ref<boolean> = ref(false)
 function stopPrint() {
-  if (stoppingPrint.value === false && updatingFabricatorStatus.value === false) {
+  if (!stoppingPrint.value && !updatingFabricatorStatus.value) {
     stoppingPrint.value = true
     updatingFabricatorStatus.value = true
 
     updateFabricatorStatus(currentFabricator.id ?? DEFAULT_FABRICATOR_ID, FabricatorStatus.TurnOffline)
-      .then(response => {
+      .then(() => {
         stoppingPrint.value = false
         updatingFabricatorStatus.value = false
         isPrinting.value = false
