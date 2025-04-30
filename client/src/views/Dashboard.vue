@@ -242,7 +242,7 @@ function getProgress(job: Job | undefined): string {
                 <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                   <div class="text-xs font-medium">Filament</div>
                   <div class="overflow-hidden text-ellipsis">
-                    {{ getCurrentJob(currentFabricator)?.filament ?? 'Idle' }}
+                    {{ getCurrentJob(currentFabricator)?.filament ?? 'Idle/Unsupported' }}
                   </div>
                 </div>
                 <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
@@ -251,38 +251,38 @@ function getProgress(job: Job | undefined): string {
                     {{
                       currentFabricator?.extruder_temp
                         ? currentFabricator.extruder_temp + '°C'
-                        : 'Idle'
+                        : 'Idle/Unsupported'
                     }}
                   </div>
                 </div>
                 <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                   <div class="text-xs font-medium">Bed</div>
                   <div class="overflow-hidden text-ellipsis">
-                    {{ currentFabricator?.bed_temp ? currentFabricator.bed_temp + '°C' : 'Idle' }}
+                    {{ currentFabricator?.bed_temp ? currentFabricator.bed_temp + '°C' : 'Idle/Unsupported' }}
                   </div>
                 </div>
                 <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                   <div class="text-xs font-medium">Elapsed</div>
                   <div class="overflow-hidden text-ellipsis">
-                    {{ getCurrentJob(currentFabricator)?.job_client?.elapsed_time ?? 'Idle' }}
+                    {{ getCurrentJob(currentFabricator)?.job_client?.elapsed_time ?? 'Idle/Unsupported' }}
                   </div>
                 </div>
                 <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                   <div class="text-xs font-medium">Remaining</div>
                   <div class="overflow-hidden text-ellipsis">
-                    {{ getCurrentJob(currentFabricator)?.job_client?.remaining_time ?? 'Idle' }}
+                    {{ getCurrentJob(currentFabricator)?.job_client?.remaining_time ?? 'Idle/Unsupported' }}
                   </div>
                 </div>
                 <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                   <div class="text-xs font-medium">Total</div>
                   <div class="overflow-hidden text-ellipsis">
-                    {{ getCurrentJob(currentFabricator)?.job_client?.total_time ?? 'Idle' }}
+                    {{ getCurrentJob(currentFabricator)?.job_client?.total_time ?? 'Idle/Unsupported' }}
                   </div>
                 </div>
                 <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
                   <div class="text-xs font-medium">ETA</div>
                   <div class="overflow-hidden text-ellipsis">
-                    {{ getCurrentJob(currentFabricator)?.job_client?.eta ?? 'Idle' }}
+                    {{ getCurrentJob(currentFabricator)?.job_client?.eta ?? 'Idle/Unsupported' }}
                   </div>
                 </div>
               </div>
@@ -362,7 +362,7 @@ function getProgress(job: Job | undefined): string {
                     class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                   >
                     <div class="overflow-hidden text-ellipsis whitespace-nowrap">
-                      {{ getCurrentJob(currentFabricator)?.filament ?? 'Idle' }}
+                      {{ getCurrentJob(currentFabricator)?.filament ?? 'Idle/Unsupported' }}
                     </div>
                   </td>
                   <td
@@ -372,7 +372,7 @@ function getProgress(job: Job | undefined): string {
                       {{
                         currentFabricator.extruder_temp
                           ? currentFabricator.extruder_temp + '°C'
-                          : 'Idle'
+                          : 'Idle/Unsupported'
                       }}
                     </div>
                   </td>
@@ -380,35 +380,35 @@ function getProgress(job: Job | undefined): string {
                     class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                   >
                     <div class="overflow-hidden text-ellipsis whitespace-nowrap">
-                      {{ currentFabricator.bed_temp ? currentFabricator.bed_temp + '°C' : 'Idle' }}
+                      {{ currentFabricator.bed_temp ? currentFabricator.bed_temp + '°C' : 'Idle/Unsupported' }}
                     </div>
                   </td>
                   <td
                     class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                   >
                     <div class="overflow-hidden text-ellipsis whitespace-nowrap">
-                      {{ getCurrentJob(currentFabricator)?.job_client?.elapsed_time ?? 'Idle' }}
+                      {{ getCurrentJob(currentFabricator)?.job_client?.elapsed_time ?? 'Idle/Unsupported' }}
                     </div>
                   </td>
                   <td
                     class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                   >
                     <div class="overflow-hidden text-ellipsis whitespace-nowrap">
-                      {{ getCurrentJob(currentFabricator)?.job_client?.remaining_time ?? 'Idle' }}
+                      {{ getCurrentJob(currentFabricator)?.job_client?.remaining_time ?? 'Idle/Unsupported' }}
                     </div>
                   </td>
                   <td
                     class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                   >
                     <div class="overflow-hidden text-ellipsis whitespace-nowrap">
-                      {{ getCurrentJob(currentFabricator)?.job_client?.total_time ?? 'Idle' }}
+                      {{ getCurrentJob(currentFabricator)?.job_client?.total_time ?? 'Idle/Unsupported' }}
                     </div>
                   </td>
                   <td
                     class="w-1/8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                   >
                     <div class="overflow-hidden text-ellipsis whitespace-nowrap">
-                      {{ getCurrentJob(currentFabricator)?.job_client?.eta ?? 'Idle' }}
+                      {{ getCurrentJob(currentFabricator)?.job_client?.eta ?? 'Idle/Unsupported' }}
                     </div>
                   </td>
                 </tr>
