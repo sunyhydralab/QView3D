@@ -1,18 +1,33 @@
 <script setup lang="ts">
 import { ref, type Ref } from 'vue'
 import SubmitJobModal from './SubmitJobModal.vue'
-import { FabricatorStatus, updateFabricatorStatus, startPrintAPI, type Fabricator } from '../models/fabricator'
+import { FabricatorStatus, updateFabricatorStatus, startPrintAPI, type Fabricator, releaseJob } from '../models/fabricator'
 import { type Job } from '../models/job'
 import { addToast } from './Toast.vue'
-
-const isSubmitModalOpen = ref(false)
-const isOnline = ref(false)
-const isPrinting = ref(false)
-const isPaused = ref(false)
 
 const { currentFabricator } = defineProps<{
   currentFabricator: Fabricator
 }>()
+
+const isSubmitModalOpen = ref(false)
+const isOnline = ref(currentFabricator.status === FabricatorStatus.TurnOnline ? true : false)
+
+const isPrinting: Ref<boolean> = ref(false)
+const isPaused = ref(false)
+  
+if (currentFabricator.queue != undefined) {
+  if (currentFabricator.queue[0] != undefined){
+    if (currentFabricator.queue[0].status != undefined) {
+      if (currentFabricator.queue[0].status === FabricatorStatus.Printing) {
+        isPrinting.value = true
+        isOnline.value = true
+      } else if (currentFabricator.queue[0].status === FabricatorStatus.PausePrint) {
+        isPaused.value = true
+        isOnline.value = true
+      }
+    }
+  }
+}
 
 // Debounce used to prevent the user from updating the printer status when another update is currently being done
 const updatingFabricatorStatus: Ref<boolean> = ref(false)
@@ -113,18 +128,80 @@ function stopPrint() {
   }
 }
 
+// Debounce used to prevent a user from pressing the Pause button while the printer is pausing 
+const isPausingPrinter: Ref<boolean> = ref(false)
 function pausePrint() {
-  isPaused.value = true
+  if (isPausingPrinter.value === false && updatingFabricatorStatus.value === false) {
+    isPausingPrinter.value = true
+    updatingFabricatorStatus.value = true
+    addToast("Attempting to pause printer", "info")
+
+    if (currentFabricator.id != undefined) {
+      updateFabricatorStatus(currentFabricator.id, FabricatorStatus.PausePrint)
+        .then(response => {
+          addToast("Paused printer", "success")
+          isPausingPrinter.value = false
+          updatingFabricatorStatus.value = false
+          isPaused.value = true
+        })
+    }
+  }
+
 }
 
+// Debounce used to prevent a user form pressing the Unpause button while the printer is unpausing
+const isUnPausingPrinter: Ref<boolean> = ref(false)
 function unpausePrint() {
-  isPaused.value = false
+  if (isUnPausingPrinter.value === false && updatingFabricatorStatus.value === false) {
+    isUnPausingPrinter.value = true
+    updatingFabricatorStatus.value = true
+    addToast("Attempting to unpause printer", "info")
+    
+    if (currentFabricator.id != undefined) {
+      updateFabricatorStatus(currentFabricator.id, FabricatorStatus.Printing)
+        .then(response => {
+          addToast("Unpaused printer", 'success')
+          
+          isUnPausingPrinter.value = false
+          updatingFabricatorStatus.value = false
+          isPaused.value = false
+        })
+    }
+  }
 }
 
-function rerunJob() {
-  isPrinting.value = true
-  isPaused.value = false
-}
+// Debounce used to prevent the user from pressing the rerun job multiple times
+// const isReruningJob: Ref<boolean> = ref(false)
+// function rerunJob() {
+//   if (isReruningJob.value === false && updatingFabricatorStatus.value === false) {
+//     isReruningJob.value = true
+    
+//     addToast("Attempting to rerun job", "info")
+//     if (currentFabricator.id != undefined) {
+//       if (currentFabricator.queue != undefined) {
+//         if (currentFabricator.queue[0] != undefined) {
+//           releaseJob(currentFabricator.queue[0], 2, currentFabricator.id)
+//             .then(response => {
+//               isReruningJob.value = true
+      
+//               isPrinting.value = true
+//               isPaused.value = false
+      
+//               addToast("Reruning previous job", "success")
+//             })
+          
+//         } else {
+//           isReruningJob.value = false
+//         }
+//       } else {
+//         isReruningJob.value = false
+//       }
+//     } else {
+//       isReruningJob.value = false
+//     }
+    
+//   }
+// }
 
 function toggleSubmitModal() {
   isSubmitModalOpen.value = !isSubmitModalOpen.value
@@ -151,10 +228,10 @@ function toggleSubmitModal() {
     <button v-if="!isPaused && isPrinting" @click="pausePrint" class="btn-secondary">Pause</button>
     <button v-else-if="isPrinting" @click="unpausePrint" class="btn-primary">Unpause</button>
 
-    <!-- Rerun -->
+    <!-- Rerun
     <button class="btn-secondary" v-if="!isPrinting && isOnline" @click="rerunJob">
       Rerun Job
-    </button>
+    </button> -->
   </div>
   <SubmitJobModal v-if="isSubmitModalOpen" @close="toggleSubmitModal" />
 </template>

@@ -28,6 +28,8 @@ export enum FabricatorStatus {
   TurnOnline = 'ready',
   TurnOffline = 'offline',
   StopPrint = 'complete',
+  PausePrint = 'paused',
+  Printing = 'printing'
 }
 
 // list of all registered Fabricators
@@ -137,4 +139,8 @@ export async function updateFabricatorStatus(fabricatorID: number, newFabricator
 
 export async function startPrintAPI(jobID: number, printerID: number) {
   return await api("startprint", { printerid: printerID, jobid: jobID })
+}
+
+export async function releaseJob(job: Job, keyY: 2, printerID: number) {
+  return await api("releasejob", { jobpk: job, key: keyY, printerid: printerID})
 }
