@@ -30,7 +30,7 @@ function getCurrentJob(fab: Fabricator): Job | undefined {
 
 function getProgress(job: Job | undefined): string {
   if (job != undefined) {
-    const currentProgress: number | undefined = job.progress
+    const currentProgress: number | undefined = Math.ceil(job.progress)
 
     if (currentProgress != undefined) {
       return currentProgress + "%"
