@@ -3,6 +3,7 @@ import { type Job } from '@/models/job'
 import { api } from '@/models/api'
 import { onSocketEvent } from '@/services/socket'
 import { addToast } from '@/components/Toast.vue'
+import { setupSockets } from '@/composables/useWebSockets'
 
 export interface Fabricator {
   device: Record<string, any>
@@ -97,6 +98,7 @@ export async function getConnectedFabricators() {
 
 export async function retrieveRegisteredFabricators() {
   fabricatorList.value = await api('getprinterinfo')
+  setupSockets(fabricatorList.value)
   // Setup socket listeners after we have the initial data
   setupFabricatorSocketListeners()
   return fabricatorList.value
