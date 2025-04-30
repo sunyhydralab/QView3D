@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { fabricatorList, retrieveRegisteredFabricators, type Fabricator } from '@/models/fabricator'
 import { autoQueue, addJobToQueue } from '@/models/job'
 import GCodePreviewModal from './GCodePreviewModal.vue'
-
+import GcodeRender from './GcodePreviewModalRendered.vue'
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
@@ -21,7 +21,7 @@ const ticketId = ref(0)
 const jobName = ref("")
 
 const isPreviewOpen = ref(false)
-
+const isRenderPreviewOpen = ref(false)
 // Save the selected file and updating the file and job names.
 const handleFileUpload = (event: Event) => {
   const input = event.target as HTMLInputElement
@@ -187,6 +187,12 @@ const allSelected = computed(() =>
                 :disabled="!selectedFile" @click="isPreviewOpen = true">
                 <i class="fa-regular fa-image text-white"></i>
               </button>
+              <!-- Image Button -->
+              <button type="button"
+                class="bg-accent-primary hover:bg-accent-primary-dark py-2 px-3 rounded-md flex-shrink-0"
+                :disabled="!selectedFile" @click="isRenderPreviewOpen = true">
+                <i class="fa-solid fa-cube text-white"></i>
+              </button>
             </div>
           </div>
 
@@ -229,6 +235,7 @@ const allSelected = computed(() =>
     </div>
   </div>
   <GCodePreviewModal v-if="isPreviewOpen" :file="selectedFile" @close="isPreviewOpen = false" />
+  <GcodeRender v-if="isRenderPreviewOpen" :file="selectedFile" @close="isRenderPreviewOpen = false" />
 </template>
 
 <style scoped>
