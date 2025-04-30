@@ -10,7 +10,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="pt-12">
+  <div class="mt-8 pt-12">
     <QueueList v-for="fabricator in fabricatorList" :key="fabricator.id" :fabricator="fabricator" />
     <NoPrinterRobot v-if="fabricatorList.length === 0" />
   </div>

@@ -11,7 +11,6 @@ const navigationItems = ref([
     { name: 'Registration', route: '/register' },
     { name: 'Queues', route: '/queue' },
     { name: 'Job History', route: '/history' },
-    { name: 'Logger', route: '/errors' },
     { name: 'Emulator', route: '/emulator' },
 ]);
 

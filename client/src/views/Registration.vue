@@ -210,7 +210,7 @@ async function handleFabricatorDeleted(id: number) {
 
     <!-- Fabricator Cards List -->
     <transition name="fade-in" appear>
-      <div class="md:w-2/3 p-4 flex flex-col h-full">
+      <div class="md:w-2/3 mt-8 p-4 flex flex-col h-full">
         <h2 class="text-2xl font-bold mb-4 text-dark-primary dark:text-light-primary">
           Registered Fabricators
           <span v-if="fabricatorList.length > 0" class="text-accent-primary ml-2">
