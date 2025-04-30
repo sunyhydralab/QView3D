@@ -3,12 +3,18 @@ import { onMounted, onBeforeUnmount, watch, ref, nextTick } from 'vue'
 import * as GCodePreview from 'gcode-preview'
 import { onSocketEvent } from '@/services/socket'
 import { addToast } from '@/components/Toast.vue'
+import { isDark } from '@/composables/useMode'
 
 const gcodeString = ref('')
+const isLivePreview = ref(true)
+const darkMode = isDark()
+
 const props = defineProps<{
   file: File | null;
   jobId?: number;
 }>()
+
+const emit = defineEmits(['toggle-live-preview'])
 
 const gcodeCanvas = ref<HTMLCanvasElement | null>(null)
 const originalConsoleWarn = console.warn
@@ -54,6 +60,21 @@ function withoutConsoleWarnings(fn: () => void) {
   console.debug = originalConsoleDebug
 }
 
+// Toggle live preview mode
+function toggleLivePreview() {
+  isLivePreview.value = !isLivePreview.value
+  emit('toggle-live-preview', isLivePreview.value)
+  
+  if (!isLivePreview.value && socketCleanup) {
+    // If turning off live preview, clean up socket listeners
+    socketCleanup()
+    socketCleanup = null
+  } else if (isLivePreview.value && props.jobId) {
+    // If turning on live preview, set up socket listeners
+    setupGcodeSocketListeners(props.jobId)
+  }
+}
+
 // Setup socket listeners for real-time gcode updates
 function setupGcodeSocketListeners(jobId: number) {
   // Remove any existing listeners
@@ -61,18 +82,21 @@ function setupGcodeSocketListeners(jobId: number) {
     socketCleanup()
   }
   
+  // Only set up listeners if we're in live preview mode
+  if (!isLivePreview.value) return
+  
   // Listen for gcode line updates
   const removeGcodeUpdateListener = onSocketEvent<{jobId: number; gcodeLineNumber: number; gcodeData?: string}>('gcode_progress_update', (data) => {
     // Only process updates for our job
     if (data.jobId !== jobId) return
     
     if (data.gcodeData && preview) {
-      // If we received new gcode data, update the preview
-      preview.processGCodeLine(data.gcodeData, data.gcodeLineNumber)
+      // If we received new gcode data, accumulate it and update the preview occasionally
+      gcodeString.value += data.gcodeData + '\n'
       
       // Update occasionally to avoid too many renders
       if (data.gcodeLineNumber % 20 === 0) {
-        preview.update()
+        preview.processGCode(gcodeString.value)
       }
     }
   })
@@ -84,7 +108,7 @@ function setupGcodeSocketListeners(jobId: number) {
     
     if (data.gcodeComplete && preview) {
       // When gcode is complete, do a final update
-      preview.update()
+      preview.processGCode(gcodeString.value)
       addToast('3D preview completed', 'success')
     }
   })
@@ -136,6 +160,16 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="gcode-container">
+    <div class="controls">
+      <button 
+        @click.stop="toggleLivePreview"
+        class="control-btn"
+        :title="isLivePreview ? 'Disable Live Updates' : 'Enable Live Updates'"
+      >
+        <i class="fas" :class="isLivePreview ? 'fa-wifi' : 'fa-wifi-slash'"></i>
+        <span class="control-text">{{ isLivePreview ? 'Live' : 'Static' }}</span>
+      </button>
+    </div>
     <canvas ref="gcodeCanvas"></canvas>
   </div>
 </template>
@@ -145,11 +179,43 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   position: relative;
+  min-height: 250px;
 }
 
 canvas {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+.controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+  transition: opacity 0.2s ease;
+}
+
+.control-btn {
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.control-btn:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.control-text {
+  font-size: 0.75rem;
 }
 </style>
