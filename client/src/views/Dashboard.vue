@@ -90,14 +90,13 @@ function getProgress(job: Job | undefined): string {
         <div class="overflow-x-auto w-full">
           <!-- Mobile Card View (visible only on small screens) -->
           <div class="block md:hidden">
-            <div class="bg-light-primary-light dark:bg-dark-primary-light rounded-lg shadow mb-4 p-4">
-              <div class="flex justify-between mb-2">
+            <div class="bg-light-primary-light dark:bg-dark-primary-light rounded-lg shadow mb-4 p-4">              <div class="flex justify-between mb-2">
                 <div>
                   <span class="font-bold text-gray-900 dark:text-white">ID: {{ currentFabricator.id }}</span>
                 </div>
                 <div>
                   <button @click="toggleDetails(currentFabricator)" class="p-1">
-                    <i class="fas text-gray-600 dark:text-gray-300" :class="getDetails(currentFabricator) ? 'fa-caret-up' : 'fa-caret-down'"></i>
+                    <i class="fas text-gray-600 dark:text-gray-300 w-8 flex justify-center" :class="getDetails(currentFabricator) ? 'fa-caret-up' : 'fa-caret-down'"></i>
                   </button>
                 </div>
               </div>
@@ -164,22 +163,21 @@ function getProgress(job: Job | undefined): string {
                   File Name
                 </th>
                 <th
-                  class="w-[40%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-[30%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   Controls
                 </th>
                 <th
-                  class="w-[12%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-[20%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   Progress
-                </th>
-                <th
-                  class="w-[1.5%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                </th>                <th
+                  class="w-[5%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   <span class="sr-only">Details</span>
                 </th>
                 <th
-                  class="w-[1.5%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-[5%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   <span class="sr-only">Viewer</span>
                 </th>
@@ -236,23 +234,26 @@ function getProgress(job: Job | undefined): string {
                       {{ getProgress(getCurrentJob(currentFabricator)) }}
                     </div>
                   </div>
-                </td>
-                <!-- Info Toggle Button -->
+                </td>                <!-- Info Toggle Button -->
                 <td
-                  class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1 cursor-pointer"
+                  class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1 cursor-pointer relative z-20"
                   @click="toggleDetails(currentFabricator)"
                 >
-                  <div class="flex justify-center items-center">
-                    <i class="fas text-gray-600 dark:text-gray-300" :class="getDetails(currentFabricator) ? 'fa-caret-up' : 'fa-caret-down'" title="Toggle Details"></i>
+                  <div class="flex justify-center items-center h-full">
+                    <button class="w-8 h-6 flex items-center justify-center rounded hover:bg-light-primary-dark dark:hover:bg-dark-primary-dark">
+                      <i class="fas text-gray-600 dark:text-gray-300" :class="getDetails(currentFabricator) ? 'fa-caret-up' : 'fa-caret-down'" title="Toggle Details"></i>
+                    </button>
                   </div>
                 </td>
                 <!-- Viewer Toggle Button -->
                 <td
-                  class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1 cursor-pointer"
+                  class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1 cursor-pointer relative z-20"
                   @click="toggleGCodeViewer(currentFabricator)"
                 >
-                  <div class="flex justify-center items-center">
-                    <i class="fas text-gray-600 dark:text-gray-300" :class="isGCodeViewerVisible(currentFabricator) ? 'fa-eye-slash' : 'fa-eye'" title="Toggle GCode Viewer"></i>
+                  <div class="flex justify-center items-center h-full">
+                    <button class="w-8 h-6 flex items-center justify-center rounded hover:bg-light-primary-dark dark:hover:bg-dark-primary-dark">
+                      <i class="fas text-gray-600 dark:text-gray-300" :class="isGCodeViewerVisible(currentFabricator) ? 'fa-eye-slash' : 'fa-eye'" title="Toggle GCode Viewer"></i>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -390,11 +391,19 @@ function getProgress(job: Job | undefined): string {
           </transition>
         </div>
 
-        <!-- Mobile Details View -->
-        <div class="block md:hidden mt-2">
-          <transition name="dropdown">
-            <div v-if="getDetails(currentFabricator)" class="bg-light-primary-light dark:bg-dark-primary-light rounded-lg p-4">
-              <h3 class="font-bold mb-3 text-gray-900 dark:text-white">Print Details</h3>
+      <!-- Mobile Details View -->
+      <div class="block md:hidden mt-2">
+        <transition name="dropdown">
+          <div v-if="getDetails(currentFabricator)" class="bg-light-primary-light dark:bg-dark-primary-light rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-bold text-gray-900 dark:text-white">Print Details</h3>
+              <button 
+                @click="toggleGCodeViewer(currentFabricator)" 
+                class="flex items-center justify-center w-8 h-8 rounded-full bg-light-primary dark:bg-dark-primary hover:bg-light-primary-dark dark:hover:bg-dark-primary-dark"
+              >
+                <i class="fas text-gray-700 dark:text-gray-300" :class="isGCodeViewerVisible(currentFabricator) ? 'fa-eye-slash' : 'fa-eye'"></i>
+              </button>
+            </div>
 
               <div class="grid grid-cols-2 gap-3 mb-4">
                 <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
@@ -431,14 +440,10 @@ function getProgress(job: Job | undefined): string {
                 </div>
               </div>
 
-              <!-- Viewer Toggle Button -->
-              <button 
-                @click="toggleGCodeViewer(currentFabricator)" 
-                class="flex items-center gap-2 mb-3 py-1 px-3 bg-light-primary dark:bg-dark-primary rounded hover:bg-light-primary-dark dark:hover:bg-dark-primary-dark transition-colors"
-              >
-                <i class="fas text-gray-700 dark:text-gray-300" :class="isGCodeViewerVisible(currentFabricator) ? 'fa-eye-slash' : 'fa-eye'"></i>
-                <span class="text-sm text-gray-700 dark:text-gray-300">{{ isGCodeViewerVisible(currentFabricator) ? 'Hide Preview' : 'Show Preview' }}</span>
-              </button>
+              <!-- Toggle text - only show on mobile -->
+              <div v-if="isGCodeViewerVisible(currentFabricator)" class="flex justify-center items-center text-xs text-gray-700 dark:text-gray-300 mb-2">
+                Tap the eye icon to toggle the GCode viewer
+              </div>
 
               <transition name="dropdown">
                 <div v-if="isGCodeViewerVisible(currentFabricator)">
@@ -461,9 +466,25 @@ function getProgress(job: Job | undefined): string {
 </template>
 
 <style scoped>
+/* Button spacing fixes */
+:deep(.btn-primary), :deep(.btn-secondary), :deep(.btn-danger) {
+  @apply px-1.5 py-1 text-sm;
+  margin: 0 1px;
+}
+
+:deep(.flex.flex-wrap) {
+  @apply -mx-1;
+}
+
 .dropdown-enter-active,
 .dropdown-leave-active {
   transition: all 0.3s ease;
+}
+
+/* Make sure the toggle buttons are always visible and clickable */
+button.w-6, button.w-8 {
+  position: relative;
+  z-index: 50;
 }
 
 .dropdown-enter-from,

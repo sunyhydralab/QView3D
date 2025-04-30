@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { fabricatorList, retrieveRegisteredFabricators, type Fabricator } from '@/models/fabricator'
 import { autoQueue, addJobToQueue } from '@/models/job'
+import { addToast } from '@/components/Toast.vue'
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -39,6 +40,7 @@ const submitJob = async () => {
           // If no fabricator is selected, auto queue the job
           await autoQueue(job)
         }
+        addToast(`Job "${jobName.value}" auto-queued successfully`, 'success')
       }
       else {
         // for every fabricator that is registered, if that fabricator is selected, then add the job to the fabricator's queue
@@ -51,10 +53,14 @@ const submitJob = async () => {
             }
           }
         }
+        addToast(`Job "${jobName.value}" added to selected fabricator queues`, 'success')
       }
       await retrieveRegisteredFabricators()
+      // Close the modal after successful submission
+      emit('close')
     } catch (error) {
       console.error('Error submitting job:', error)
+      addToast(`Error submitting job: ${error}`, 'error')
     }
     resetForm()
     console.log('Job submitted:', job)
