@@ -222,7 +222,7 @@ function toggleSubmitModal() {
     <button v-if="!isPrinting && isOnline" @click="startPrint" class="btn-primary">
       Start Print
     </button>
-    <button v-else-if="isOnline" @click="stopPrint" class="btn-danger">Stop</button>
+    <button v-else-if="isOnline" @click="stopPrint" class="btn-danger">Stop/Complete</button>
 
     <!-- Pause / Unpause Toggle -->
     <button v-if="!isPaused && isPrinting" @click="pausePrint" class="btn-secondary">Pause</button>
