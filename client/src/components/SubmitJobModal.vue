@@ -2,6 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { fabricatorList, retrieveRegisteredFabricators, type Fabricator } from '@/models/fabricator'
 import { autoQueue, addJobToQueue } from '@/models/job'
+import { addToast } from '@/components/Toast.vue'
+
 import GCodePreviewModal from './GCodePreviewModal.vue'
 import GcodeRender from './GcodePreviewModalRendered.vue'
 const emit = defineEmits<{
@@ -20,8 +22,6 @@ const quantity = ref(1)
 const ticketId = ref(0)
 const jobName = ref("")
 
-const isPreviewOpen = ref(false)
-const isRenderPreviewOpen = ref(false)
 // Save the selected file and updating the file and job names.
 const handleFileUpload = (event: Event) => {
   const input = event.target as HTMLInputElement
@@ -42,6 +42,7 @@ const submitJob = async () => {
           // If no fabricator is selected, auto queue the job
           await autoQueue(job)
         }
+        addToast(`Job "${jobName.value}" auto-queued successfully`, 'success')
       }
       else {
         // for every fabricator that is registered, if that fabricator is selected, then add the job to the fabricator's queue
@@ -54,10 +55,14 @@ const submitJob = async () => {
             }
           }
         }
+        addToast(`Job "${jobName.value}" added to selected fabricator queues`, 'success')
       }
       await retrieveRegisteredFabricators()
+      // Close the modal after successful submission
+      emit('close')
     } catch (error) {
       console.error('Error submitting job:', error)
+      addToast(`Error submitting job: ${error}`, 'error')
     }
     resetForm()
     console.log('Job submitted:', job)

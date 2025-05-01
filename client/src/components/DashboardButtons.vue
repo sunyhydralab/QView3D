@@ -210,7 +210,7 @@ function toggleSubmitModal() {
 
 <template>
   <!-- Controls -->
-  <div class="flex flex-wrap gap-2 justify-center">
+  <div class="flex flex-wrap gap-1.5 justify-center">
     <!-- Turn Offline -->
     <button class="btn-secondary" v-if="!isOnline" @click="turnOnline">Turn Online</button>
     <button class="btn-danger" v-else @click="turnOffline">Turn Offline</button>
