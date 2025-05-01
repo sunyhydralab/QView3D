@@ -9,9 +9,15 @@ import { isDark } from '@/composables/useMode'
 
 // Dark mode tracking
 const darkMode = computed(() => isDark());
+const theadID = ref<number>(1000000)
 
 onMounted(async () => {
   await retrieveRegisteredFabricators()
+  for (let i = 0; i < fabricatorList.value.length; i++) {
+    if ((fabricatorList.value[i]?.id ?? 1000000) < theadID.value) {
+      theadID.value = fabricatorList.value[i].id!
+    }
+  }
 });
 
 // State tracking for UI
@@ -33,7 +39,7 @@ function toggleDetails(currentFab: Fabricator): void {
 // Get details visibility state
 function getDetails(currentFab: Fabricator): boolean {
   if (currentFab.id != undefined)
-    return !!detailsBools.value[currentFab.id]
+    return detailsBools.value[currentFab.id]
   else
     return false
 }
@@ -52,7 +58,7 @@ function toggleGCodeViewer(currentFab: Fabricator): void {
 // Get GCode viewer visibility state
 function isGCodeViewerVisible(currentFab: Fabricator): boolean {
   if (currentFab.id != undefined)
-    return !!gcodeViewerVisible.value[currentFab.id]
+    return gcodeViewerVisible.value[currentFab.id]
   else
     return false
 }
@@ -68,14 +74,8 @@ function getCurrentJob(fab: Fabricator): Job | undefined {
 }
 
 function getProgress(job: Job | undefined): string {
-  if (job != undefined) {
-    const currentProgress: number | undefined = Math.ceil(job.progress)
-
-    if (currentProgress != undefined) {
-      return Math.ceil(currentProgress) + '%'
-    } else {
-      return '0%'
-    }
+  if (job?.progress != undefined) {
+    return (Math.round(job.progress*100)/100).toFixed(2) + '%'
   } else {
     return '0%'
   }
@@ -140,7 +140,7 @@ function getProgress(job: Job | undefined): string {
 
           <!-- Desktop Table (visible only on medium screens and up) -->
           <table class="hidden md:table w-full table-fixed border-collapse text-sm">
-            <thead>
+            <thead v-if="currentFabricator.id == theadID">
               <tr class="bg-light-primary-light dark:bg-dark-primary-light">
                 <th
                   class="w-[5%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
@@ -186,40 +186,40 @@ function getProgress(job: Job | undefined): string {
             <tbody>
               <tr class="text-center">
                 <td
-                  class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-[5%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   {{ currentFabricator.id }}
                 </td>
                 <td
-                  class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-[10%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   <div class="overflow-hidden text-ellipsis whitespace-nowrap">
                     {{ currentFabricator.name }}
                   </div>
                 </td>
                 <td
-                  class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-[15%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   <div class="overflow-hidden text-ellipsis whitespace-nowrap">
                     {{ getCurrentJob(currentFabricator)?.name ?? 'N/A' }}
                   </div>
                 </td>
                 <td
-                  class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-[15%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   <div class="overflow-hidden text-ellipsis whitespace-nowrap">
                     {{ getCurrentJob(currentFabricator)?.file_name_original ?? 'N/A' }}
                   </div>
                 </td>
                 <td
-                  class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+                  class="w-[30%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
                 >
                   <!-- Controls -->
                   <DashboardButtons :current-fabricator="currentFabricator"/>
                 </td>
                 <!-- Progress Bar -->
                 <td
-                  class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
+                  class="w-[20%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
                 >
                   <div class="relative w-full rounded-full h-4 overflow-hidden dark:bg-dark-primary">
                     <div
@@ -236,7 +236,7 @@ function getProgress(job: Job | undefined): string {
                   </div>
                 </td>                <!-- Info Toggle Button -->
                 <td
-                  class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1 cursor-pointer relative z-20"
+                  class="w-[5%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1 cursor-pointer relative z-20"
                   @click="toggleDetails(currentFabricator)"
                 >
                   <div class="flex justify-center items-center h-full">
@@ -247,7 +247,7 @@ function getProgress(job: Job | undefined): string {
                 </td>
                 <!-- Viewer Toggle Button -->
                 <td
-                  class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-1 cursor-pointer relative z-20"
+                  class="w-[5%] border border-light-primary dark:border-dark-primary dark:text-light-primary p-1 cursor-pointer relative z-20"
                   @click="toggleGCodeViewer(currentFabricator)"
                 >
                   <div class="flex justify-center items-center h-full">
