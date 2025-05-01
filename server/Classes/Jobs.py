@@ -196,7 +196,17 @@ class Job(db.Model):
             return jsonify({"error": format_exc()}), 500
 
     @classmethod
-    def jobHistoryInsert(cls, name, fabricator_id, status, file, file_name_original, favorite=False, td_id=0):
+    def jobHistoryInsert(cls, name: str, fabricator_id: int, status: str, file, file_name_original: str, favorite: bool = False, td_id: int = 0):
+        """
+        Inserts a new job into the database. It first checks if the file is already compressed. If it is, it uses the existing compressed data.
+        :param str name: The name of the job.
+        :param int fabricator_id: The ID of the fabricator.
+        :param str status: The status of the job.
+        :param file: The file associated with the job. It can be a bytes object or a file-like object.
+        :param str file_name_original: The original name of the file.
+        :param bool favorite: Whether the job is marked as favorite. Default is False.
+        :param int td_id: The Team Dynamics ID associated with the job. Default is 0.
+        """
         try:
             if isinstance(file, bytes):
                 file_data = file
@@ -236,7 +246,7 @@ class Job(db.Model):
             return jsonify({"error": format_exc()}), 500
 
     @classmethod
-    def update_job_status(cls, job_id, new_status):
+    def update_job_status(cls, job_id: int, new_status: str):
         try:
             # Retrieve the job from the database based on its primary key
             job = cls.query.get(job_id)
@@ -260,7 +270,7 @@ class Job(db.Model):
             return jsonify({"error": format_exc()}), 500
 
     @classmethod
-    def delete_job(cls, job_id):
+    def delete_job(cls, job_id: int):
         try:
             job = cls.query.get(job_id)
             if job:
@@ -281,7 +291,7 @@ class Job(db.Model):
             return jsonify({"error": format_exc()}), 500
 
     @classmethod
-    def findJob(cls, job_id):
+    def findJob(cls, job_id: int):
         try:
             job = cls.query.filter_by(id=job_id).first()
             return job
@@ -293,21 +303,21 @@ class Job(db.Model):
             return jsonify({"error": format_exc()}), 500
 
     @classmethod
-    def removeFileFromPath(cls, file_path):
+    def removeFileFromPath(cls, file_path: str):
         # file_path = self.generatePath()  # Get the file path
         if os.path.exists(file_path):  # Check if the file exists
             os.remove(file_path)  # Remove the file
 
     @classmethod
-    def setDBstatus(cls, jobid, status):
+    def setDBstatus(cls, jobid: int, status: str):
         cls.update_job_status(jobid, status)
 
     @classmethod
-    def getPathForDelete(cls, file_name):
+    def getPathForDelete(cls, file_name: str):
         return os.path.join('../uploads', file_name)
 
     @classmethod
-    def nullifyPrinterId(cls, printer_id):
+    def nullifyPrinterId(cls, printer_id: int):
         try:
             jobs = cls.query.filter_by(fabricator_id=printer_id).all()
             for job in jobs:
@@ -357,7 +367,7 @@ class Job(db.Model):
             return jsonify({"error": format_exc()}), 500
 
     @classmethod
-    def setIssue(cls, job_id, issue_id):
+    def setIssue(cls, job_id: int, issue_id: int):
         job = cls.query.get(job_id)
 
         if job is None:
@@ -379,7 +389,7 @@ class Job(db.Model):
             return jsonify({"error": format_exc()}), 500
 
     @classmethod
-    def unsetIssue(cls, job_id):
+    def unsetIssue(cls, job_id: int):
         job = cls.query.get(job_id)
 
         if job is None:
@@ -401,7 +411,7 @@ class Job(db.Model):
             return jsonify({"error": format_exc()}), 500
 
     @classmethod
-    def setComment(cls, job_id, comments):
+    def setComment(cls, job_id: int, comments: str):
         job = cls.query.get(job_id)
 
         if job is None:
@@ -483,39 +493,39 @@ class Job(db.Model):
     def getFile(self):
         return self.file
 
-    def getStatus(self):
+    def getStatus(self) -> str:
         return self.status
 
-    def getFileNamePk(self):
+    def getFileNamePk(self) -> str:
         return self.file_name_pk
 
-    def getFileNameOriginal(self):
+    def getFileNameOriginal(self) -> str:
         return self.file_name_original
 
-    def getFileFavorite(self):
+    def getFileFavorite(self) -> bool:
         return self.favorite
 
-    def setFileFavorite(self, favorite):
+    def setFileFavorite(self, favorite: bool) -> dict:
         self.favorite = favorite
         db.session.commit()
         return {"success": True, "message": "Favorite status updated successfully."}
 
-    def getJobId(self):
+    def getJobId(self) -> int:
         return self.id
 
     def getFilePause(self):
         return self.filePause
 
-    def setFilePause(self, pause):
+    def setFilePause(self, pause: bool):
         self.filePause = pause
         if current_app:
             current_app.socketio.emit('file_pause_update', {
                 'job_id': self.id, 'file_pause': self.filePause})
 
-    def getExtruded(self):
+    def getExtruded(self) -> int:
         return self.extruded
 
-    def setExtruded(self, extruded):
+    def setExtruded(self, extruded: bool):
         self.extruded = extruded
         if current_app:
             current_app.socketio.emit('extruded_update', {
@@ -523,13 +533,13 @@ class Job(db.Model):
 
         # setters
 
-    def setStatus(self, status):
+    def setStatus(self, status: str):
         self.status = status
         # self.setDBstatus(self.id, status)
 
     # added a setProgress method to update the progress of a job
     # which sends it to the frontend using socketio
-    def setProgress(self, progress):
+    def setProgress(self, progress: float):
         if self.status == 'printing':
             self.progress = progress
             # Emit a 'progress_update' event with the new progress
@@ -538,17 +548,18 @@ class Job(db.Model):
                     'progress_update', {'job_id': self.id, 'progress': self.progress})
 
     # added a getProgress method to get the progress of a job
-    def getProgress(self):
+    def getProgress(self) -> float:
         return self.progress
 
-    def setSentLines(self, sent_lines):
+    def setSentLines(self, sent_lines: int):
         self.sent_lines = sent_lines
         # current_app.socketio.emit('gcode_viewer', {'job_id': self.id, 'gcode_num': self.sent_lines})
 
-    def getSentLines(self):
+    def getSentLines(self) -> int:
         return self.sent_lines
 
-    def getTimeFromFile(self, comment_lines):
+    @staticmethod
+    def getTimeFromFile(comment_lines: list[str]) -> int:
         # job_line can look two ways:
         # 1. ;TIME:seconds
         # 2. ; estimated printing time (normal mode) = minutes seconds
@@ -608,14 +619,14 @@ class Job(db.Model):
         eta = self.getJobTime()[1] + duration
         return eta
 
-    def calculateTotalTime(self):
+    def calculateTotalTime(self) -> float:
         total_time = self.getJobTime()[0]
 
         # Add one second to total_time
         total_time += 1
         return total_time
 
-    def calculateColorChangeTotal(self):
+    def calculateColorChangeTotal(self) -> float:
         print("before Total Time: ", self.getJobTime()[0])
 
         now = datetime.now()
@@ -625,13 +636,13 @@ class Job(db.Model):
         total_time = self.getJobTime()[0] + duration_in_seconds
         return total_time
 
-    def getJobTime(self):
+    def getJobTime(self) -> list:
         return self.job_time
 
     def getReleased(self):
         return self.released
 
-    def getTdId(self):
+    def getTdId(self) -> int:
         return self.td_id
 
     def setMaxLayerHeight(self, max_layer_height):
