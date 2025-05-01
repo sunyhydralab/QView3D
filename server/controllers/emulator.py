@@ -16,7 +16,6 @@ def startEmulator():
         data = request.get_json()
         model = data.get('model', 'Prusa MK4')
         config = data.get('config', {})
-        print(f"Received data: {data}")  # Log received data
 
 
         # Determine which printer model to instantiate
@@ -29,12 +28,9 @@ def startEmulator():
         emu_path = os.path.abspath(os.path.join(root_path, "printeremu"))
         cmd = "./cmd/test_printer.go"
         emu_cmd = "-conn"
-        print(f"Emulator path: {emu_path}")  # Log emulator path
 
         # Run the Go emulator as a background process
-        print("try block")
         try:
-            print("Starting emulator process")
             process = subprocess.Popen(
                 ["go", "run", cmd, str(model_id), emu_cmd],
                 cwd=emu_path,
