@@ -147,6 +147,6 @@ export async function startPrintAPI(jobID: number, printerID: number) {
   return await api("startprint", { printerid: printerID, jobid: jobID })
 }
 
-export async function releaseJob(job: Job, keyY: 2, printerID: number) {
-  return await api("releasejob", { jobpk: job, key: keyY, printerid: printerID})
+export async function releaseJob(job: Job, printerID: number, keyY?: number) {
+  return await api("releasejob", { jobpk: job.id, key: keyY, printerid: printerID})
 }
