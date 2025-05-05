@@ -377,7 +377,6 @@ class FabricatorThread(Thread):
                     while self.fabricator.device.status == "homing":
                         time.sleep(.5)
                 elif isinstance(self.fabricator.device, Printer) and self.fabricator.getStatus() == "ready":
-                    print(f"Checking for temp line on {self.fabricator.getName()}...")
                     self.fabricator.device.handleTempLine(self.fabricator.device.serialConnection.read())
                 else:
                     time.sleep(.5)
