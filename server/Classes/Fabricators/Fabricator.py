@@ -27,6 +27,7 @@ class Fabricator(db.Model):
         nullable=False,
     )
     devicePort = db.Column(db.String(50), nullable=False)
+    active_job_logger = None
 
     def __init__(self, port: ListPortInfo | SysFS | None, name: str = "", consoleLogger: TextIO | None = None, fileLogger: str | None = None):
         """
@@ -235,6 +236,7 @@ class Fabricator(db.Model):
             #     self.device.startupSequence()
             assert self.setStatus("printing"), "Failed to set status to printing"
             self.error = self.device.parseGcode(self.queue[0], isVerbose=isVerbose) # this is the actual command to read the file and fabricate.
+            job_logger = self.queue[0].getLogger()
             self.handleVerdict()
             if isVerbose and self.device.logger is not None: self.device.logger.debug(f"Verdict handled, status: {self.status}")
             return True
@@ -406,6 +408,15 @@ class Fabricator(db.Model):
 
     def getQueue(self):
         return self.queue
+
+    def getActiveJobLogger(self):
+        """
+        gets the active job logger
+        :rtype: JobLogger | None
+        """
+        if self.active_job_logger is None:
+            return None
+        return self.active_job_logger
 
     def checkValidJob(self):
         """checks if the job is valid for the fabricator"""
