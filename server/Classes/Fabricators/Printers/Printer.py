@@ -59,6 +59,7 @@ class Printer(Device, metaclass=ABCMeta):
                 if jobName:
                     jobName = "-".join(jobName.split(".")[0].split("_"))
                 logger = JobLogger(self.name, jobName, job.date.strftime('%m-%d-%Y_%H-%M-%S'), self.serialPort.device, consoleLogger=sys.stdout if isVerbose else None, fileLogger=None)
+                job.job_logger = logger
 
                 logger.info(f"Starting {job.name} on {self.name} at {job.date.strftime('%m-%d-%Y %H:%M:%S')}")
                 # Read the file and store the lines in a list
