@@ -169,7 +169,7 @@ function unpausePrint() {
 // function rerunJob() {
 //   if (isReruningJob.value === false && updatingFabricatorStatus.value === false) {
 //     isReruningJob.value = true
-
+//
 //     addToast("Attempting to rerun job", "info")
 //     if (currentFabricator.id != undefined) {
 //       if (currentFabricator.queue != undefined) {
@@ -177,13 +177,13 @@ function unpausePrint() {
 //           releaseJob(currentFabricator.queue[0], 2, currentFabricator.id)
 //             .then(response => {
 //               isReruningJob.value = true
-
+//
 //               isPrinting.value = true
 //               isPaused.value = false
-
+//
 //               addToast("Reruning previous job", "success")
 //             })
-
+//
 //         } else {
 //           isReruningJob.value = false
 //         }
@@ -193,7 +193,7 @@ function unpausePrint() {
 //     } else {
 //       isReruningJob.value = false
 //     }
-
+//
 //   }
 // }
 
