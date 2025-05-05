@@ -97,7 +97,9 @@ export async function getConnectedFabricators() {
 }
 
 export async function retrieveRegisteredFabricators() {
-  fabricatorList.value = await api('getprinterinfo')
+  const printerInfo = await api('getprinterinfo')
+  // Check if the api returned a valid response, if not, return an empty array, to avoid issue where the settings panel never loads.
+  fabricatorList.value = printerInfo ? printerInfo : []
   setupSockets(fabricatorList.value)
   // Setup socket listeners after we have the initial data
   setupFabricatorSocketListeners()

@@ -27,6 +27,5 @@ export async function api(endPoint: string, body?: unknown, method?: string, hea
     } catch (error) {
         // sends an error if the request fails
         console.error("API request error:", error);
-        throw error;
     }
 }
