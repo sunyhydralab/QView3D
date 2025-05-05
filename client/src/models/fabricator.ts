@@ -29,6 +29,8 @@ export enum FabricatorStatus {
   TurnOnline = 'ready',
   TurnOffline = 'offline',
   StopPrint = 'complete',
+  Error = 'error',
+  CancelledPrint = 'cancelled',
   PausePrint = 'paused',
   Printing = 'printing'
 }
