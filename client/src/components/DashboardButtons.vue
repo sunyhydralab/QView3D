@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, type Ref } from 'vue'
+import { ref, type Ref, computed } from 'vue'
 import SubmitJobModal from './SubmitJobModal.vue'
 import { FabricatorStatus, updateFabricatorStatus, startPrintAPI, type Fabricator, releaseJob } from '../models/fabricator'
 import { type Job } from '../models/job'
@@ -14,6 +14,14 @@ const isOnline = ref(currentFabricator.status === FabricatorStatus.TurnOnline)
 
 const isPrinting = ref(false)
 const isPaused = ref(false)
+const isCompleted = computed(() => {
+  if (currentFabricator.status === FabricatorStatus.StopPrint) {
+    return true
+  } else if (currentFabricator.status === FabricatorStatus.Error) {
+    return true
+  } else if (currentFabricator.status === FabricatorStatus.CancelledPrint)
+  return true
+})
 
 if (currentFabricator.queue != undefined) {
   if (currentFabricator.queue[0] != undefined){
@@ -26,6 +34,34 @@ if (currentFabricator.queue != undefined) {
         isOnline.value = true
       }
     }
+  }
+}
+
+// debouncer for the release job button
+const releaseJobDebouncer: Ref<boolean> = ref(false)
+async function release(key?: number) {
+  if (!releaseJobDebouncer.value) {
+    releaseJobDebouncer.value = true
+    if (currentFabricator.queue == undefined) {addToast("The Queue is undefined.", "error")}
+    if (currentFabricator.queue![0] == undefined) {addToast("The Queue is empty.", "error")}
+    if (currentFabricator.id == undefined) {addToast("The fabricator ID is undefined.", "error")}
+    else{
+      console.debug("release job api call")
+      await releaseJob(currentFabricator.queue![0], currentFabricator.id!, key ?? 3)
+        .then(response => {
+          console.debug(response)
+          if (key != 2) {
+            currentFabricator.queue!.shift()
+          }
+          addToast('Released job', 'success')
+        })
+        .catch(error => {
+          console.error(error)
+          addToast('Error releasing job', 'error')
+
+        })
+    }
+    releaseJobDebouncer.value = false
   }
 }
 
@@ -111,7 +147,7 @@ function stopPrint() {
     updatingFabricatorStatus.value = true
 
     if (currentFabricator.id != undefined) {
-      updateFabricatorStatus(currentFabricator.id, FabricatorStatus.TurnOffline)
+      updateFabricatorStatus(currentFabricator.id, FabricatorStatus.CancelledPrint)
         .then(() => {
           stoppingPrint.value = false
           updatingFabricatorStatus.value = false
@@ -205,27 +241,24 @@ function toggleSubmitModal() {
 <template>
   <!-- Controls -->
   <div class="flex flex-wrap gap-1.5 justify-center">
+    <!-- Buttons for when the job is complete -->
+    <button v-if="isCompleted" @click="release(1)" class="btn-secondary">Complete</button>
+    <button v-if="isCompleted" @click="release(2)" class="btn-primary">Rerun Job</button>
+    <button v-if="isCompleted" @click="release(3)" class="btn-danger">Job Error</button>
     <!-- Turn Offline -->
     <button class="btn-secondary" v-if="!isOnline" @click="turnOnline">Turn Online</button>
     <button class="btn-danger" v-else @click="turnOffline">Turn Offline</button>
 
     <!-- Submit Job -->
-    <button class="btn-primary" @click="toggleSubmitModal">Submit Job</button>
+    <button v-if="!isCompleted" class="btn-primary" @click="toggleSubmitModal">Submit Job</button>
 
     <!-- Printing -->
-    <button v-if="!isPrinting && isOnline" @click="startPrint" class="btn-primary">
-      Start Print
-    </button>
-    <button v-else-if="isOnline" @click="stopPrint" class="btn-danger">Stop/Complete</button>
+    <button v-if="!isCompleted && !isPrinting && isOnline && ((currentFabricator.queue?.length ?? -1) > 0)" @click="startPrint" class="btn-primary">Start Print</button>
+    <button v-else-if="!isCompleted && isPrinting && isOnline" @click="stopPrint" class="btn-danger">Stop/Complete</button>
 
     <!-- Pause / Unpause Toggle -->
-    <button v-if="!isPaused && isPrinting" @click="pausePrint" class="btn-secondary">Pause</button>
-    <button v-else-if="isPrinting" @click="unpausePrint" class="btn-primary">Unpause</button>
-
-    <!-- Rerun
-    <button class="btn-secondary" v-if="!isPrinting && isOnline" @click="rerunJob">
-      Rerun Job
-    </button> -->
+    <button v-if="!isCompleted && !isPaused && isPrinting" @click="pausePrint" class="btn-secondary">Pause</button>
+    <button v-else-if="!isCompleted && isPrinting" @click="unpausePrint" class="btn-primary">Unpause</button>
   </div>
   <SubmitJobModal v-if="isSubmitModalOpen" @close="toggleSubmitModal" />
 </template>
