@@ -12,9 +12,9 @@ const { currentFabricator } = defineProps<{
 const isSubmitModalOpen = ref(false)
 const isOnline = ref(currentFabricator.status === FabricatorStatus.TurnOnline)
 
-const isPrinting: Ref<boolean> = ref(false)
+const isPrinting = ref(false)
 const isPaused = ref(false)
-  
+
 if (currentFabricator.queue != undefined) {
   if (currentFabricator.queue[0] != undefined){
     if (currentFabricator.queue[0].status != undefined) {
@@ -38,7 +38,7 @@ function turnOnline() {
   if (!turningOnline.value && !updatingFabricatorStatus.value) {
     turningOnline.value = true
     updatingFabricatorStatus.value = true
-    
+
     // Turn the fabricator online
     if (currentFabricator.id != undefined) {
       updateFabricatorStatus(currentFabricator.id, FabricatorStatus.TurnOnline)
@@ -80,34 +80,28 @@ function startPrint() {
     startingPrint.value = true
     const jobQueue: Job[] | undefined = currentFabricator.queue
 
-    if (jobQueue != undefined) {
-      if (jobQueue.length > 0) {
-        const latestJob: Job = jobQueue[0]
-        if (currentFabricator.id != undefined) {
-          addToast("Preparing print", "info")
-          startPrintAPI(latestJob.id, currentFabricator.id)
-          .then(() => {
-            addToast("Starting print", "success")
-            
-            startingPrint.value = false
-            isPrinting.value = true
-            isPaused.value = false
-          })
-        } else {
-          startingPrint.value = false
-          addToast("This fabricator has no ID", "error")
-        }
-      } else {
-        startingPrint.value = false
-        addToast("This fabricator has no queue", "error")
-      }
-    } else {
+    if (jobQueue == undefined) {
       startingPrint.value = false
       addToast("The fabricator is currently doing something, please wait", "info")
     }
-
+    if (jobQueue!.length == 0) {
+      startingPrint.value = false
+      addToast("This fabricator has no queue", "error")
+    }
+    const latestJob: Job = jobQueue![0]
+    if (currentFabricator.id == undefined) {
+      startingPrint.value = false
+      addToast("This fabricator has no ID", "error")
+    }
+    addToast('Preparing print', 'info')
+    startPrintAPI(latestJob.id, currentFabricator.id!)
+      .then(() => {
+        addToast('Starting print', 'success')
+        startingPrint.value = false
+        isPrinting.value = true
+        isPaused.value = false
+      })
   }
-}
 
 // Debounce used to prevent the user from clicking the Stop button multiple times
 const stoppingPrint: Ref<boolean> = ref(false)
@@ -128,7 +122,7 @@ function stopPrint() {
   }
 }
 
-// Debounce used to prevent a user from pressing the Pause button while the printer is pausing 
+// Debounce used to prevent a user from pressing the Pause button while the printer is pausing
 const isPausingPrinter: Ref<boolean> = ref(false)
 function pausePrint() {
   if (!isPausingPrinter.value && !updatingFabricatorStatus.value) {
@@ -156,12 +150,12 @@ function unpausePrint() {
     isUnPausingPrinter.value = true
     updatingFabricatorStatus.value = true
     addToast("Attempting to unpause printer", "info")
-    
+
     if (currentFabricator.id != undefined) {
       updateFabricatorStatus(currentFabricator.id, FabricatorStatus.Printing)
         .then(() => {
           addToast("Unpaused printer", 'success')
-          
+
           isUnPausingPrinter.value = false
           updatingFabricatorStatus.value = false
           isPaused.value = false
@@ -175,7 +169,7 @@ function unpausePrint() {
 // function rerunJob() {
 //   if (isReruningJob.value === false && updatingFabricatorStatus.value === false) {
 //     isReruningJob.value = true
-    
+
 //     addToast("Attempting to rerun job", "info")
 //     if (currentFabricator.id != undefined) {
 //       if (currentFabricator.queue != undefined) {
@@ -183,13 +177,13 @@ function unpausePrint() {
 //           releaseJob(currentFabricator.queue[0], 2, currentFabricator.id)
 //             .then(response => {
 //               isReruningJob.value = true
-      
+
 //               isPrinting.value = true
 //               isPaused.value = false
-      
+
 //               addToast("Reruning previous job", "success")
 //             })
-          
+
 //         } else {
 //           isReruningJob.value = false
 //         }
@@ -199,7 +193,7 @@ function unpausePrint() {
 //     } else {
 //       isReruningJob.value = false
 //     }
-    
+
 //   }
 // }
 
