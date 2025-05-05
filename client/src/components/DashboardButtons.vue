@@ -102,7 +102,7 @@ function startPrint() {
         isPaused.value = false
       })
   }
-
+}
 // Debounce used to prevent the user from clicking the Stop button multiple times
 const stoppingPrint: Ref<boolean> = ref(false)
 function stopPrint() {
