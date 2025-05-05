@@ -242,8 +242,9 @@ class Fabricator(db.Model):
             return True
         except Exception as e:
             self.error = e
+            current_app.handle_errors_and_logging(e, self.device.logger, level=50)
             current_app.socketio.emit("error_update", {"fabricator_id": self.dbID, "job_id": self.queue[0].id ,"error": str(e)})
-            return current_app.handle_errors_and_logging(e, self.device.logger, level=50)
+            return False
 
     def pause(self) -> bool:
         """
