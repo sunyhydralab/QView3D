@@ -349,8 +349,16 @@ class Fabricator(db.Model):
         assert self.queue[0] is not None, "Job is None"
         if self.device.verdict == "complete":
             self.setStatus("complete")
+            if current_app:
+                current_app.socketio.emit(
+                    "fabricator_status_update", {"id": self.dbID, "status": "complete"}
+                )
         elif self.device.verdict == "error":
             self.setStatus("error")
+            if current_app:
+                current_app.socketio.emit(
+                    "fabricator_status_update", {"id": self.dbID, "status": "error"}
+                )
             # create issue
             from models.issues import Issue
             Issue.create_issue(f"CODE ISSUE: Print Failed: {self.name} - {self.queue[0].file_name_original}", self.error, self.queue[0].id)
@@ -369,10 +377,17 @@ class Fabricator(db.Model):
             if isinstance(self.device, hasEndingSequence): self.device.endSequence()
             else: self.device.home()
             self.setStatus("cancelled")
+            if current_app:
+                current_app.socketio.emit(
+                    "fabricator_status_update", {"id": self.dbID, "status": "cancelled"}
+                )
             self.queue.removeJob()
-            self.queue[0] = None
         elif self.device.verdict== "misprint":
             self.setStatus("misprint")
+            if current_app:
+                current_app.socketio.emit(
+                    "fabricator_status_update", {"id": self.dbID, "status": "misprint"}
+                )
 
     def getName(self) -> str:
         """
