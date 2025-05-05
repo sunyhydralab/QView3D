@@ -122,7 +122,7 @@ function getProgress(job: Job | undefined): string {
                   <div
                     class="h-full bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full transition-all duration-500 ease-in-out"
                     :style="{
-                      width: getCurrentJob(currentFabricator)?.progress != null ? getCurrentJob(currentFabricator)?.progress + '%' : '0%',
+                      width: getCurrentJob(currentFabricator)?.progress != null ? getCurrentJob(currentFabricator)?.progress + '%' : '0%'
                     }"
                   ></div>
                   <div
