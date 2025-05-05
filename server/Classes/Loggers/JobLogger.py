@@ -10,6 +10,7 @@ from Classes.Loggers.ABCLogger import ABCLogger, CustomColorFormatter, CustomFil
 class JobLogger(ABCLogger):
     fileLogger: str | PathLike = None
     fileLoggers = {"CRITICAL": ABCLogger.CRITICAL, "ERROR": ABCLogger.ERROR, "WARNING": ABCLogger.WARNING, "INFO": ABCLogger.INFO, "DEBUG": ABCLogger.DEBUG}
+    name = "JobLogger"
 
     def __init__(self, deviceName, jobName, startTime, port=None, consoleLogger: TextIO | None = None, fileLogger=None, loggingLevel=logging.INFO, showFile=True, showLevel=True, showDate=True):
         """
@@ -29,8 +30,10 @@ class JobLogger(ABCLogger):
             title.append(port)
         if deviceName:
             title.append(deviceName)
-        super().__init__(f"_".join(["JobLogger"] + title))
+        name = f"_".join(["JobLogger"] + title)
+        super().__init__(name)
         super().setLevel(ABCLogger.DEBUG)
+        self.name = name
         info = []
         if showDate:
             info.append("%(asctime)s")
