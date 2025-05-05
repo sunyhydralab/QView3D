@@ -53,6 +53,7 @@ class Job(db.Model):
     extruded = 0
     # total, eta, timestart, pause time
     job_time = [0, datetime.min, datetime.min, datetime.min]
+    job_logger = None
 
     def __init__(self, file, name, fabricator_id, status, file_name_original, favorite, td_id, fabricator_name):
         self.path = None
@@ -486,6 +487,9 @@ class Job(db.Model):
     # getters
     def getName(self):
         return self.name
+
+    def getLogger(self):
+        return self.job_logger
 
     def getFilePath(self):
         return self.path
