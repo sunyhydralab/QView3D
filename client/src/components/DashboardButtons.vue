@@ -10,7 +10,7 @@ const { currentFabricator } = defineProps<{
 }>()
 
 const isSubmitModalOpen = ref(false)
-const isOnline = ref(currentFabricator.status === FabricatorStatus.TurnOnline ? true : false)
+const isOnline = ref(currentFabricator.status === FabricatorStatus.TurnOnline)
 
 const isPrinting: Ref<boolean> = ref(false)
 const isPaused = ref(false)
@@ -35,14 +35,14 @@ const updatingFabricatorStatus: Ref<boolean> = ref(false)
 // A debounce used to prevent the user from clicking the Turn Online button multiple times
 const turningOnline: Ref<boolean> = ref(false)
 function turnOnline() {
-  if (turningOnline.value === false && updatingFabricatorStatus.value === false) {
+  if (!turningOnline.value && !updatingFabricatorStatus.value) {
     turningOnline.value = true
     updatingFabricatorStatus.value = true
     
     // Turn the fabricator online
     if (currentFabricator.id != undefined) {
       updateFabricatorStatus(currentFabricator.id, FabricatorStatus.TurnOnline)
-        .then(response => {
+        .then(() => {
           // When the Fabricator has been turned online, update the following booleans:
           turningOnline.value = false
           isOnline.value = true
@@ -56,13 +56,13 @@ function turnOnline() {
 // Debounce used to prevent the user from clicking the Turn Offline button multiple times
 const turningOffline: Ref<boolean> = ref(false)
 function turnOffline() {
-  if (turningOffline.value === false && updatingFabricatorStatus.value === false) {
+  if (!turningOffline.value && !updatingFabricatorStatus.value) {
     turningOffline.value = true
     updatingFabricatorStatus.value = true
 
     if (currentFabricator.id != undefined) {
       updateFabricatorStatus(currentFabricator.id, FabricatorStatus.TurnOffline)
-        .then(response => {
+        .then(() => {
           turningOffline.value = false
           updatingFabricatorStatus.value = false
           isOnline.value = false
@@ -76,7 +76,7 @@ function turnOffline() {
 // Debounce used to prevent the user from clicking the Start Print button
 const startingPrint: Ref<boolean> = ref(false)
 function startPrint() {
-  if (startingPrint.value === false && updatingFabricatorStatus.value === false) {
+  if (!startingPrint.value && !updatingFabricatorStatus.value) {
     startingPrint.value = true
     const jobQueue: Job[] | undefined = currentFabricator.queue
 
@@ -86,7 +86,7 @@ function startPrint() {
         if (currentFabricator.id != undefined) {
           addToast("Preparing print", "info")
           startPrintAPI(latestJob.id, currentFabricator.id)
-          .then(response => {
+          .then(() => {
             addToast("Starting print", "success")
             
             startingPrint.value = false
@@ -112,13 +112,13 @@ function startPrint() {
 // Debounce used to prevent the user from clicking the Stop button multiple times
 const stoppingPrint: Ref<boolean> = ref(false)
 function stopPrint() {
-  if (stoppingPrint.value === false && updatingFabricatorStatus.value === false) {
+  if (!stoppingPrint.value && !updatingFabricatorStatus.value) {
     stoppingPrint.value = true
     updatingFabricatorStatus.value = true
 
     if (currentFabricator.id != undefined) {
       updateFabricatorStatus(currentFabricator.id, FabricatorStatus.TurnOffline)
-        .then(response => {
+        .then(() => {
           stoppingPrint.value = false
           updatingFabricatorStatus.value = false
           isPrinting.value = false
@@ -131,14 +131,14 @@ function stopPrint() {
 // Debounce used to prevent a user from pressing the Pause button while the printer is pausing 
 const isPausingPrinter: Ref<boolean> = ref(false)
 function pausePrint() {
-  if (isPausingPrinter.value === false && updatingFabricatorStatus.value === false) {
+  if (!isPausingPrinter.value && !updatingFabricatorStatus.value) {
     isPausingPrinter.value = true
     updatingFabricatorStatus.value = true
     addToast("Attempting to pause printer", "info")
 
     if (currentFabricator.id != undefined) {
       updateFabricatorStatus(currentFabricator.id, FabricatorStatus.PausePrint)
-        .then(response => {
+        .then(() => {
           addToast("Paused printer", "success")
           isPausingPrinter.value = false
           updatingFabricatorStatus.value = false
@@ -152,14 +152,14 @@ function pausePrint() {
 // Debounce used to prevent a user form pressing the Unpause button while the printer is unpausing
 const isUnPausingPrinter: Ref<boolean> = ref(false)
 function unpausePrint() {
-  if (isUnPausingPrinter.value === false && updatingFabricatorStatus.value === false) {
+  if (!isUnPausingPrinter.value && !updatingFabricatorStatus.value) {
     isUnPausingPrinter.value = true
     updatingFabricatorStatus.value = true
     addToast("Attempting to unpause printer", "info")
     
     if (currentFabricator.id != undefined) {
       updateFabricatorStatus(currentFabricator.id, FabricatorStatus.Printing)
-        .then(response => {
+        .then(() => {
           addToast("Unpaused printer", 'success')
           
           isUnPausingPrinter.value = false
