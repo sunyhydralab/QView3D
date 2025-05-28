@@ -20,7 +20,6 @@ The `server/` folder is organized as follows:
   - `Queue.py`: Provides additional queueing logic or abstractions for job/task management.
   - `Ports.py`: Contains logic for managing hardware ports, including opening, closing, and listing available ports.
   - `serialCommunication.py`: (If present) This file may contain logic for low-level serial communication with devices.  
-    **Note:** Check the codebase to see if this file is currently imported or used by other modules. If it is not imported anywhere, it may be deprecated or unused.
   - `Fabricators/`: Contains logic and classes for managing fabricators (printers).
     - `Fabricator.py`: Defines the `Fabricator` class, which encapsulates the properties, state, and operations of a 3D printer or similar device.  
       This file typically includes methods for printer initialization, status updates, job assignment, and communication with the hardware.

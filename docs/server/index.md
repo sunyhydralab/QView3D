@@ -4,12 +4,12 @@ Documentation for the backend (Python, Flask, SQLAlchemy).
 
 ## Overview
 
-This section explains how the frontend communicates with the server via REST API endpoints, and then details the underlying classes and methods that implement the backend logic.
+This section explains how the frontend communicates with the server via REST API endpoints and WebSocket (Socket.IO) events, and then details the underlying classes and methods that implement the backend logic.
 
 ## Documentation Flow
 
 1. **[API Reference](api.md):**  
-   How the frontend interacts with the backend using HTTP endpoints.
+   How the frontend interacts with the backend using HTTP endpoints and real-time WebSocket (Socket.IO) events.
 
 2. **[Project Structure](structure.md):**  
    Organization of backend files and modules.
