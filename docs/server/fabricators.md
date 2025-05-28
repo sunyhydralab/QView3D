@@ -1,0 +1,3 @@
+# Printer (Fabricator) Management
+
+...existing code from previous fabricators.md...
