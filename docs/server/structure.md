@@ -7,9 +7,6 @@ This document describes the organization of the QView3D server-side codebase.
 - `server/`  
   Main backend application code. Contains all logic, API endpoints, and supporting modules for the backend.
 
-- `docs/`  
-  Documentation files.
-
 ## Server Directory Structure
 
 The `server/` folder is organized as follows:
