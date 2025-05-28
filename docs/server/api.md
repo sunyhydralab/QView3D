@@ -92,9 +92,11 @@ HTTP endpoints are defined in `server/controllers/` using Flask route decorators
 ## WebSocket (Socket.IO) Events
 
 WebSocket events are used for real-time updates between the server and frontend.  
-These are typically emitted from backend logic (e.g., in `Classes/Jobs.py`) using `current_app.socketio.emit(...)`.
+These are typically emitted from backend logic using `current_app.socketio.emit(...)` or `socketio.emit(...)`.
 
-### Emitted Events (from `Classes/Jobs.py`)
+### Emitted Events
+
+#### From `Classes/Jobs.py`
 
 - `job_status_update`  
   Payload: `{ "job_id": <int>, "status": <str> }`
@@ -123,9 +125,6 @@ These are typically emitted from backend logic (e.g., in `Classes/Jobs.py`) usin
 - `set_time`  
   Payload: `{ "job_id": <int>, "new_time": <varies>, "index": <int> }`
 
-// ...Add any additional events from other backend files as needed...
-
----
 
 **Note:**  
 - The frontend listens for these events using the Socket.IO client.
