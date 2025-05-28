@@ -89,6 +89,29 @@ HTTP endpoints are defined in `server/controllers/` using Flask route decorators
 
 ---
 
+### Fabricators Controller (`server/controllers/fabricators.py`)
+
+- `GET /getfabricators`  
+  Returns a list of all fabricators (printers).
+
+- `POST /createfabricator`  
+  Creates a new fabricator/printer.  
+  **Payload:** `{ ...fabricator fields... }`
+
+- `POST /updatefabricator`  
+  Updates an existing fabricator/printer.  
+  **Payload:** `{ "fabricator_id": <int>, ...fields... }`
+
+- `POST /deletefabricator`  
+  Deletes a fabricator/printer by ID.  
+  **Payload:** `{ "fabricator_id": <int> }`
+
+- `GET /getfabricatorstatus`  
+  Returns the status of a specific fabricator/printer.  
+  **Query:** `?fabricator_id=<int>`
+
+---
+
 ## WebSocket (Socket.IO) Events
 
 WebSocket events are used for real-time updates between the server and frontend.  
