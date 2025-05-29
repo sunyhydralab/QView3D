@@ -23,11 +23,13 @@ HTTP endpoints are defined in `server/controllers/` using Flask route decorators
 
 - `POST /deleteissue`  
   Deletes an issue by ID.  
-  **Payload:** `{ "issueid": <int> }`
+  **Payload:** `{ "issueid": <int> }`  
+  **Returns:** JSON response from `Issue.delete_issue(issueid)`
 
 - `POST /editissue`  
   Edits an existing issue.  
-  **Payload:** `{ "issueid": <int>, "issuenew": <str> }`
+  **Payload:** `{ "issueid": <int>, "issuenew": <str> }`  
+  **Returns:** JSON response from `Issue.edit_issue(issueid, issuenew)`
 
 ---
 
@@ -36,47 +38,175 @@ HTTP endpoints are defined in `server/controllers/` using Flask route decorators
 - `GET /getjobs`  
   Returns a paginated list of jobs.
 
-- `POST /createjob`  
-  Creates a new job.  
-  **Payload:** `{ ...job fields... }`
+- `POST /addjobtoqueue`  
+  Adds a job to a printer's in-memory queue.  
+  **Payload:** `multipart/form-data` with job file and metadata.
+
+- `POST /autoqueue`  
+  Automatically assigns a job to the printer with the smallest queue.  
+  **Payload:** `multipart/form-data` with job file and metadata.
+
+- `POST /rerunjob`  
+  Reruns a job on a specified printer.  
+  **Payload:** `{ "printerpk": <int>, "jobpk": <int> }`
+
+- `POST /jobdbinsert`  
+  Inserts a job directly into the database.  
+  **Payload:** `{ "jobdata": <dict> }`
+
+- `POST /canceljob`  
+  Cancels a queued or printing job.  
+  **Payload:** `{ "jobpk": <int> }`
+
+- `POST /cancelfromqueue`  
+  Cancels multiple jobs from the queue.  
+  **Payload:** `{ "jobarr": [<int>, ...] }`
+
+- `POST /releasejob`  
+  Releases a job from the queue and updates printer status.  
+  **Payload:** `{ "jobpk": <int>, "key": <int>, "printerid": <int> }`
+
+- `POST /bumpjob`  
+  Changes the position of a job in the queue.  
+  **Payload:** `{ "printerid": <int>, "jobid": <int>, "choice": <int> }`
+
+- `POST /movejob`  
+  Reorders jobs in a printer's queue.  
+  **Payload:** `{ "printerid": <int>, "arr": [<int>, ...] }`
 
 - `POST /updatejobstatus`  
-  Updates the status of a job.  
-  **Payload:** `{ "job_id": <int>, "status": <str> }`
+  Updates the status of a job and removes it from the queue.  
+  **Payload:** `{ "jobid": <int>, "status": <str> }`
+
+- `POST /assigntoerror`  
+  Assigns a job to error status and removes it from the queue.  
+  **Payload:** `{ "jobid": <int>, "status": <str> }`
 
 - `POST /deletejob`  
-  Deletes a job by ID.  
-  **Payload:** `{ "job_id": <int> }`
+  Deletes a job by ID and removes it from the queue.  
+  **Payload:** `{ "jobid": <int> }`
 
-- `POST /setfavorite`  
+- `POST /setstatus`  
+  Sets the status of a printer.  
+  **Payload:** `{ "id": <int>, "status": <str> }`
+
+- `GET /getfile`  
+  Retrieves the G-code file for a job.  
+  **Query:** `?jobid=<int>`
+
+- `POST /nullifyjobs`  
+  Nullifies all jobs for a printer.  
+  **Payload:** `{ "printerid": <int> }`
+
+- `GET /clearspace`  
+  Clears space by removing old jobs/files.
+
+- `GET /getfavoritejobs`  
+  Returns a list of favorite jobs.
+
+- `POST /favoritejob`  
   Sets a job as favorite.  
-  **Payload:** `{ "job_id": <int>, "favorite": <bool> }`
+  **Payload:** `{ "jobid": <int>, "favorite": <bool> }`
 
-- `POST /setcomment`  
+- `POST /assignissue`  
+  Assigns an issue to a job.  
+  **Payload:** `{ "jobid": <int>, "issueid": <int> }`
+
+- `POST /removeissue`  
+  Removes an issue from a job.  
+  **Payload:** `{ "jobid": <int> }`
+
+- `POST /startprint`  
+  Starts a print job (sets job and printer status).  
+  **Payload:** `{ "printerid": <int>, "jobid": <int> }`
+
+- `POST /savecomment`  
   Adds or updates a comment for a job.  
-  **Payload:** `{ "job_id": <int>, "comments": <str> }`
+  **Payload:** `{ "jobid": <int>, "comments": <str> }`
 
-- `GET /downloadcsv`  
-  Downloads jobs as a CSV file.
+- `GET`/`POST /downloadcsv`  
+  Downloads jobs as a CSV file.  
+  **Payload:** `{ "allJobs": <int>, "jobIds": [<int>, ...] }`
+
+- `GET`/`POST /removeCSV`  
+  Removes the temporary CSV file.
+
+- `POST`/`GET /repairports`  
+  Repairs printer port assignments.
+
+- `POST`/`GET /refetchtimedata`  
+  Refetches time data for a job.
 
 ---
 
 ### Ports Controller (`server/controllers/ports.py`)
 
 - `GET /getports`  
-  Returns a list of available ports.
+  Returns a list of all connected ports.
 
-- `POST /openport`  
-  Opens a specified port.  
+- `GET /getfabricators`  
+  Returns a list of all registered fabricators.
+
+- `POST /register`  
+  Registers a new fabricator with the system.  
+  **Payload:** `{ "printer": { "device": { "serialPort": <str> }, "name": <str> } }`
+
+- `POST /deletefabricator`  
+  Deletes a fabricator from the system.  
+  **Payload:** `{ "fabricator_id": <int> }`
+
+- `POST /editname`  
+  Edits the name of a registered fabricator.  
+  **Payload:** `{ "fabricator_id": <int>, "name": <str> }`
+
+- `POST /diagnose`  
+  Diagnoses a fabricator based on its port.  
+  **Payload:** `{ "device": <str> }`
+
+- `POST /repair`  
+  Repairs a fabricator based on its port.  
+  **Payload:** `{ "device": <str> }`
+
+- `POST /movehead`  
+  Moves the head of a fabricator (deprecated if not needed).  
   **Payload:** `{ "port": <str> }`
 
-- `POST /closeport`  
-  Closes a specified port.  
-  **Payload:** `{ "port": <str> }`
+- `POST /movefabricatorlist`  
+  Changes the order of fabricators.  
+  **Payload:** `{ "fabricator_ids": [<int>, ...] }`
+
+- `POST /getfabricatorbyid`  
+  Gets a fabricator by its ID.  
+  **Payload:** `{ "fabricator_id": <int> }`
 
 ---
 
 ### Status Service Controller (`server/controllers/statusService.py`)
+
+- `GET /getprinters`  
+  Returns a list of all printers (fabricators).
+
+- `GET /getprinterinfo`  
+  Returns detailed information for all printers (including thread info).
+
+- `POST /hardreset`  
+  Performs a hard reset on a printer thread.  
+  **Payload:** `{ "printerid": <int> }`
+
+- `POST /queuerestore`  
+  Restores the queue for a printer with a given status.  
+  **Payload:** `{ "printerid": <int>, "status": <str> }`
+
+- `POST /removethread`  
+  Removes a printer thread.  
+  **Payload:** `{ "printerid": <int> }`
+
+- `POST /editNameInThread`  
+  Edits the name of a fabricator in its thread.  
+  **Payload:** `{ "fabricator_id": <int>, "newname": <str> }`
+
+- `GET /serverVersion`  
+  Returns the server version.
 
 - `GET /status`  
   Returns the current status of the server/service.
@@ -109,6 +239,25 @@ HTTP endpoints are defined in `server/controllers/` using Flask route decorators
 - `GET /getfabricatorstatus`  
   Returns the status of a specific fabricator/printer.  
   **Query:** `?fabricator_id=<int>`
+
+---
+
+### Emulator Controller (`server/controllers/emulator.py`)
+
+- `POST /startemulator`  
+  Starts the printer emulator process and initiates a WebSocket connection.  
+  **Payload:** `{ "model": <str>, "config": <dict> }`  
+  **Returns:** `{ "message": "Emulator started successfully" }` or error message.
+
+- `POST /registeremulator`  
+  Registers the emulator with the backend and sends a registration event via WebSocket.  
+  **Payload:** `{ ... }`  
+  **Returns:** `{ "message": "Emulator registered successfully" }` or error message.
+
+- `POST /disconnectemulator`  
+  Disconnects the emulator and sends a disconnect event via WebSocket.  
+  **Payload:** `{ ... }`  
+  **Returns:** `{ "message": "Emulator disconnected successfully" }` or error message.
 
 ---
 
@@ -149,6 +298,4 @@ These are typically emitted from backend logic using `current_app.socketio.emit(
   Payload: `{ "job_id": <int>, "new_time": <varies>, "index": <int> }`
 
 
-**Note:**  
-- The frontend listens for these events using the Socket.IO client.
-- For more details, see the relevant backend class files (e.g., `Classes/Jobs.py`) and frontend event handlers.
+
