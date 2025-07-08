@@ -295,6 +295,28 @@ class GenericSerialFabricator {
         });
     }
 
+    /**
+     * Sends a G-Code instruction to a fabricator
+     * No timeout error is thrown, nor is a response expected
+     * @param {GCodeInstruction} gcodeInstruction The G-Code instruction to send to the fabricator
+     * @returns {undefined}
+     */
+    addGCodeInstructionToQueue(gcodeInstruction) {
+        /** @todo if this ends up being safe, then don't create an extractor and modify `if (this.#responseBuf.includes(this.GCODE_PROCESSED_RESPONSE)) {...` */
+        console.warn(`The command ${gcodeInstruction.instruction.trim()} was sent without expecting a response. This is potentially unsafe`);
+
+        // If nothing is in the instruction queue, then we'll send a dummy instruction to start the communication loop
+        if (this.#instructQ.length === 0) {
+            // Ensure the fabricator has booted up first
+            if (this.#hasBooted === false)
+                setTimeout(() => { this.sendDummyInstruction() }, this.BOOT_TIME);
+            else
+                this.sendDummyInstruction();
+        }
+
+        this.#instructQ.push(gcodeInstruction);
+    }
+
     // Commands to communicate with fabricators
 	// ..._CMD is the command, 
     // ..._CMD_EXTRACTOR is used to get the output of the command
@@ -332,12 +354,31 @@ class PrusaMK3 extends GenericSerialFabricator {
     INFO_CMD_EXTRACTOR = /FIRMWARE_NAME:(?<firmwareVersion>[^\s]+).+MACHINE_TYPE:(?<machineType>[^\s]+).+/;
 }
 
-class TestFab extends GenericSerialFabricator {
-    RESPONSE_TIMEOUT = 10000000;
+/** @todo Add a helper function that determines which specific class to use */
+const fab1 = new PrusaMK3('/dev/ttyACM1');
+const fab2 = new GenericSerialFabricator('/dev/ttyACM0');
+
+// Test sending G-Code
+import * as fs from 'node:fs';
+
+let gcode_file_split = fs.readFileSync('./xyz-cali-cube-micro_MK3.gcode', { encoding: "utf8" }).split('\n');
+
+// Remove empty lines and lines that start with ';'
+let filtered_gcode_file = gcode_file_split.filter(line => line.trim() !== '' && !line.trim().startsWith(';'));
+
+for await (let gcode_line of filtered_gcode_file) {
+    gcode_line = gcode_line.split(';')[0];
+
+    fab1.addGCodeInstructionToQueue({ instruction: gcode_line + '\n' });
 }
 
-const testFabricator = new TestFab('/dev/pts/2');
+gcode_file_split = fs.readFileSync('./xyz-cali-cube-mini_MK4.gcode', { encoding: "utf8" }).split('\n');
 
-console.log(await testFabricator.getFirmwareInfo());
+// Remove empty lines and lines that start with ';'
+filtered_gcode_file = gcode_file_split.filter(line => line.trim() !== '' && !line.trim().startsWith(';'));
 
-console.log(await testFabricator.sendGCode({ instruction: 'M69\n'}));
+for await (let gcode_line of filtered_gcode_file) {
+    gcode_line = gcode_line.split(';')[0];
+
+    fab2.addGCodeInstructionToQueue({ instruction: gcode_line + '\n' });
+} 
