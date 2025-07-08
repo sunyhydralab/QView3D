@@ -215,9 +215,12 @@ class GenericSerialFabricator {
      * @returns {Promise<any>}
      */
     sendGCode(gcodeInstruction) {
-        // Internal function used to not write code twice
-        /** @param {(value: any) => void} resolver */
-        const _sendGCode = (resolver) => {
+        /**
+         * Internal function used to not write code twice
+         * @param {(value: any) => void} resolve 
+         * @param {([reason]: any) => void} reject 
+         */
+        const _sendGCode = (resolve, reject) => {
             let extractor = gcodeInstruction.extractor;
 
             if (extractor === undefined) {
@@ -230,7 +233,7 @@ class GenericSerialFabricator {
             
             if (extractor.callback === undefined) {
                 // Set the extractor method to the resolver
-                extractor.callback = resolver;
+                extractor.callback = resolve;
                 
                 // If nothing is in the instruction queue, then we have to send an instruction to the fabricator to cause a response
                 // Else, add the G-Code instruction to the queue
@@ -252,12 +255,14 @@ class GenericSerialFabricator {
                     new Error(`The instruction ${gcodeInstruction.instruction.trim()} with extractor ${gcodeInstruction.extractor?.regex} timed out for fabricator on port ${this.#openPort.path}`)
                 );
             }, this.RESPONSE_TIMEOUT);
+        }
 
+        return new Promise((resolve, reject) => {
             // If it hasn't booted up yet, then wait the boot time
             if (this.#hasBooted === false)
-                setTimeout(_sendGCode, this.BOOT_TIME, resolve);
+                setTimeout(_sendGCode, this.BOOT_TIME, resolve, reject);
             else
-                _sendGCode(resolve);
+                _sendGCode(resolve, reject);
         });
     }
 
