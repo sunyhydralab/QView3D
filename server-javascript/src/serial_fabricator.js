@@ -32,6 +32,13 @@ import { SerialPort } from 'serialport';
  * @class
  */
 class GenericSerialFabricator {
+    /**
+     * The dummy instruction to send to the fabricator when there's nothing in the instruction queue
+     * @readonly
+     * @type {string}
+     */
+    DUMMY_INSTRUCTION = 'M118 Hello, human.\n';
+
     /** 
      * Baud rate of the connection to the serial port
      * @readonly 
