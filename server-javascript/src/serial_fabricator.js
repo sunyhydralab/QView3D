@@ -39,6 +39,12 @@ class GenericSerialFabricator {
      */
     DUMMY_INSTRUCTION = 'M118 Hello, human.\n';
 
+    /**
+     * Changes the amount of time to wait before allowing another dummy response to be sent in ms
+     * @type {number}
+     */
+    DUMMY_RESPONSE_DEBOUNCE_TIME = 300;
+
     /** 
      * Baud rate of the connection to the serial port
      * @readonly 
@@ -111,6 +117,12 @@ class GenericSerialFabricator {
      * @type {SerialPort}
      */
     #openPort;
+
+    /**
+     * Debounce used to prevent dummy instructions from being sent multiple times at once
+     * @type {boolean}
+     */
+    #dummyInstructionBeingSent = false;
 
     /**
      * This value is cached to prevent the RegExp constructor from being called so many times
@@ -202,10 +214,12 @@ class GenericSerialFabricator {
                     if (nextInstr !== undefined) { /** @todo ts-server thinks this value can be undefined, but we know it can't be because there are elements in the array. Try fix? */
                         this.#openPort.write(nextInstr.instruction, this.CHARACTER_ENCODING);
                         
-                        if (nextInstr.extractor !== undefined)
+                        if (nextInstr.extractor !== undefined) {
                             this.#extractQ.push(nextInstr.extractor);
-                        else
-                            throw new Error(`All instructions must have an extractor so that they resolve their operation. Instruction ${nextInstr.instruction} given to fabricator at port ${this.#openPort.path} has no extractor`);
+                        } else {
+                            if (DEBUG_ENABLED)
+                                console.info(`G-Code instruction ${nextInstr.instruction.trim()} for fabricator at port ${this.#openPort.path} has no extractor so no result will be returned`);
+                        }
                     }
                 }
             }
@@ -213,6 +227,19 @@ class GenericSerialFabricator {
             // Because the last line could be incomplete, add that line to the buffer. All other lines are discarded as noise
             this.#responseBuf = lines[lines.length - 1];
         })
+    }
+
+    /**
+     * Sends a dummy instruction to the fabricator. Uses this.DUMMY_INSTRUCTION
+     * @returns {undefined}
+     */
+    sendDummyInstruction() {
+        if (this.#dummyInstructionBeingSent === false) {
+            this.#dummyInstructionBeingSent = true;
+            this.#openPort.write(this.DUMMY_INSTRUCTION, this.CHARACTER_ENCODING);
+            
+            setTimeout(() => { this.#dummyInstructionBeingSent = false; }, this.DUMMY_RESPONSE_DEBOUNCE_TIME);          
+        }
     }
 
     /**
@@ -244,7 +271,7 @@ class GenericSerialFabricator {
                 
                 // If nothing is in the instruction queue, then we'll send a dummy instruction to start the communication loop
                 if (this.#instructQ.length === 0)
-                    this.#openPort.write(this.DUMMY_INSTRUCTION);
+                    this.sendDummyInstruction();
             
                 this.#instructQ.push(gcodeInstruction);
             } else {
