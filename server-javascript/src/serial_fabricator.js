@@ -214,7 +214,7 @@ class GenericSerialFabricator {
      * @param {GCodeInstruction} gcodeInstruction The G-Code instruction to send to the fabricator
      * @returns {Promise<any>}
      */
-    sendGCode(gcodeInstruction) {
+    sendGCodeInstruction(gcodeInstruction) {
         /**
          * Internal function used to not write code twice
          * @param {(value: any) => void} resolve 
@@ -235,18 +235,14 @@ class GenericSerialFabricator {
                 // Set the extractor method to the resolver
                 extractor.callback = resolve;
                 
-                // If nothing is in the instruction queue, then we have to send an instruction to the fabricator to cause a response
-                // Else, add the G-Code instruction to the queue
-                if (this.#instructQ.length === 0) {
-                    this.#openPort.write(gcodeInstruction.instruction);
-                    this.#extractQ.push(extractor);
-                } else {
-                    this.#instructQ.push(gcodeInstruction);
-                }
+                // If nothing is in the instruction queue, then we'll send a dummy instruction to start the communication loop
+                if (this.#instructQ.length === 0)
+                    this.#openPort.write(this.DUMMY_INSTRUCTION);
+            
+                this.#instructQ.push(gcodeInstruction);
             } else {
                 throw new Error(`The sendGCode function in the GenericSerialFabricator class does not support custom callback functions in extractors. The instruction ${gcodeInstruction} has a custom callback function`);
             }
-        }
 
         return new Promise((resolve, reject) => {
             // The command times out after the timeout amount
