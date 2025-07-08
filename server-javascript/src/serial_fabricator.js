@@ -293,7 +293,7 @@ class GenericSerialFabricator {
             extractor: extractor
         }
         
-        return await this.sendGCode(instruction);
+        return await this.sendGCodeInstruction(instruction);
     }
 }
 
