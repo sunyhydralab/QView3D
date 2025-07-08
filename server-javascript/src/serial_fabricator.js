@@ -303,9 +303,6 @@ export class GenericSerialFabricator {
      * @returns {undefined}
      */
     addGCodeInstructionToQueue(gcodeInstruction) {
-        /** @todo if this ends up being safe, then don't create an extractor and modify `if (this.#responseBuf.includes(this.GCODE_PROCESSED_RESPONSE)) {...` */
-        console.warn(`The command ${gcodeInstruction.instruction.trim()} was sent without expecting a response. This is potentially unsafe`);
-
         // If nothing is in the instruction queue, then we'll send a dummy instruction to start the communication loop
         if (this.#instructQ.length === 0) {
             // Ensure the fabricator has booted up first
