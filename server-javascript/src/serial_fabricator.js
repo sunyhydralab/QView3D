@@ -8,7 +8,7 @@ import { DEBUG_ENABLED } from './test.js'; /** @todo REPLACE */
  * The anotomy of response extractor type
  * @typedef {Object} ResponseExtractor
  * @property {RegExp} regex A regular expression used to extract specific values from a fabricator's response
- * @property {function(any): void} [callback] A function called when the extractor gets a result
+ * @property {function(Object.<string, string> | undefined): void} [callback] A function called when the extractor gets a result
  */
 
 /**
@@ -41,7 +41,8 @@ export class GenericSerialFabricator {
     DUMMY_INSTRUCTION = 'M118 Hello, human.\n';
 
     /**
-     * Changes the amount of time to wait before allowing another dummy response to be sent in ms
+     * Changes the amount of time to wait before allowing another dummy response to be sent the fabricator in ms
+     * @readonly
      * @type {number}
      */
     DUMMY_RESPONSE_DEBOUNCE_TIME = 300;
@@ -89,25 +90,25 @@ export class GenericSerialFabricator {
     GCODE_PROCESSED_RESPONSE = 'ok\n';
 
     /** 
-     * String buffer used internally to process results from G-Code command instructions
+     * String buffer used internally to process results from G-Code instructions
      * @type {string}
      */
     #responseBuf = '';
 
     /** 
-     * A queue containing all of the G-Code instructions to be sent to a fabricator
+     * A queue containing all of the G-Code instructions to send to a fabricator
      * @type {GCodeInstruction[]}
      */
     #instructQ = [];
 
     /** 
-     * A queue containing all of the regexes that will be used to extract information from the fabricator's reponse
+     * A queue containing all of the regexes that will be used to extract information from a fabricator's reponse
      * @type {ResponseExtractor[]}
      */
     #extractQ = [];
 
     /** 
-     * Used to determine if the fabricator can be booted from
+     * Used to determine if the fabricator is ready to receive G-Code instructions
      * @type {boolean}
      */
     #hasBooted = false;
@@ -150,7 +151,7 @@ export class GenericSerialFabricator {
             if (typeof chunk === 'string')
                 this.#responseBuf += chunk;
             else
-                throw new Error(`Stream ${this} is in object mode which is currently not supported by the default data processor in the GenericSerialFabricator class.`);
+                throw new Error(`Stream at port ${this.#openPort.path} is in object mode which is currently not supported by the default data processor in the GenericSerialFabricator class.`);
 
             
             /** @todo Probably don't split by LINE_SPLITTER but instead split by GCODE_PROCESSED_RESPONSE. **NOTE** Check with @see gcodeProcessedResponseRegex before making edits */
@@ -182,7 +183,7 @@ export class GenericSerialFabricator {
                                 }
 
                                 if (extractor.callback !== undefined) {
-                                    // The result is stored as an object in the capture group
+                                    // The result is stored as an object in the capture group. 
                                     extractor.callback(extractorResult.groups);
 
                                     if (DEBUG_ENABLED) {
