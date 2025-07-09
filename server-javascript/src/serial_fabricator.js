@@ -8,7 +8,7 @@ import { DEBUG_ENABLED } from './test.js'; /** @todo REPLACE */
  * The anotomy of response extractor type
  * @typedef {Object} ResponseExtractor
  * @property {RegExp} regex A regular expression used to extract specific values from a fabricator's response
- * @property {(extractorResult: any) => void} [callback] A function called when the extractor gets a result
+ * @property {function(any): void} [callback] A function called when the extractor gets a result
  */
 
 /**
@@ -161,7 +161,10 @@ export class GenericSerialFabricator {
                 for (let i = 0; i < lines.length; i++) {
                     const line = lines[i];
                     
-                    /** @type {ResponseExtractor[]} Extractors that aren't used yet */
+                    /** 
+                     * Extractors that aren't used yet
+                     * @type {ResponseExtractor[]} 
+                     */
                     let unusedExtractors = [];
 
                     while (this.#extractQ.length !== 0) {
@@ -252,8 +255,8 @@ export class GenericSerialFabricator {
     sendGCodeInstruction(gcodeInstruction) {
         /**
          * Internal function used to not write code twice
-         * @param {(value: any) => void} resolve 
-         * @param {([reason]: any) => void} reject 
+         * @param {function(any): void} resolve 
+         * @param {function(any=): void} reject
          */
         const _sendGCode = (resolve, reject) => {
             let extractor = gcodeInstruction.extractor;
@@ -318,10 +321,16 @@ export class GenericSerialFabricator {
     // Commands to communicate with fabricators
 	// ..._CMD is the command, 
     // ..._CMD_EXTRACTOR is used to get the output of the command
-    /** @readonly @type {string} */
+    /** 
+     * @readonly 
+     * @type {string}
+     */
     INFO_CMD = 'M115\n';
 
-    /** @readonly @type {RegExp} */
+    /** 
+     * @readonly 
+     * @type {RegExp} 
+     */
     INFO_CMD_EXTRACTOR = /FIRMWARE_NAME:(?<firmwareVersion>[^\s]+).+MACHINE_TYPE:(?<machineType>[^\s]+).+UUID:(?<UUID>[^\s]+)/;
 
     /**
