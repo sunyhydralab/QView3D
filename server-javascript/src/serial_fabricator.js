@@ -44,11 +44,11 @@ export class GenericSerialFabricator {
     DUMMY_INSTRUCTION = 'M118 Hello, human.\n';
 
     /**
-     * Changes the amount of time to wait before allowing another dummy response to be sent the fabricator in ms
+     * The dummy instruction's extractor regex
      * @readonly
-     * @type {number}
+     * @type {RegExp}
      */
-    DUMMY_RESPONSE_DEBOUNCE_TIME = 300;
+    DUMMY_INSTRUCTION_EXTRACTOR_REGEX = /(?<dumbo>Hello, human.)/;
 
     /** 
      * Baud rate of the connection to the serial port
@@ -226,14 +226,39 @@ export class GenericSerialFabricator {
      * @returns {undefined}
      */
     sendDummyInstruction() {
+        const _sendDummyInstruction = () => {
+            /** @type {ResponseExtractor} */
+            const extractor = {
+                regex: this.DUMMY_INSTRUCTION_EXTRACTOR_REGEX,
+                callback: (response) => {
+                    this.#dummyInstructionBeingSent = false;
+
+                    if (DF.SHOW_EVERYTHING || DF.SHOW_DUMMY_EXTRACTOR_RESPONSE)
+                        console.info(`The dummy instruction at port ${this.#openPort.path} returned the result ${Object.values(response)}`);
+                }
+            }
+
+            // The extractor is used to determine if the fabricator has sent back the expected response
+            this.#extractQ.push(extractor);
+
+            this.#openPort.write(this.DUMMY_INSTRUCTION, this.CHARACTER_ENCODING);
+
+            setTimeout(() => { 
+                throw new Error(`The dummy instruction ${this.DUMMY_INSTRUCTION.trim()} with extractor ${this.DUMMY_INSTRUCTION_EXTRACTOR_REGEX} timed out for fabricator on port ${this.#openPort.path}`); 
+            }, this.RESPONSE_TIMEOUT);
+        }
+
+        // Ensure a dummy instruction isn't currently being sent to the fabricator
         if (this.#dummyInstructionBeingSent === false) {
             this.#dummyInstructionBeingSent = true;
-            this.#openPort.write(this.DUMMY_INSTRUCTION, this.CHARACTER_ENCODING);
-            
-            setTimeout(() => { this.#dummyInstructionBeingSent = false; }, this.DUMMY_RESPONSE_DEBOUNCE_TIME);          
+
+            if (this.#hasBooted === true)
+                _sendDummyInstruction();
+            else
+                setTimeout(_sendDummyInstruction, this.BOOT_TIME);
         } else {
             if (DF.SHOW_EVERYTHING || DF.EXTRA_DUMMY_INSTRUCTION)
-                console.info(`A dummy instruction is already being sent to the fabricator at port ${this.#openPort.path}. You tried sending another. Was this intentional?`);
+                console.info(`A dummy instruction was already sent to fabricator at port ${this.#openPort.path}. Was this intentional?`);
         }
     }
 
