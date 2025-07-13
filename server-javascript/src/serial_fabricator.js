@@ -130,14 +130,6 @@ export class GenericSerialFabricator {
     #dummyInstructionBeingSent = false;
 
     /**
-     * This value is cached to prevent the RegExp constructor from being called so many times
-     * @todo This is gross. Cleanup
-     * @readonly
-     * @type {RegExp}
-     */
-    #gcodeProcessedResponseRegex = new RegExp(`(${this.GCODE_PROCESSED_RESPONSE.split(this.LINE_SPLITTER)[0]})`);
-
-    /**
      * @param {string} port The name of the port e.g., `/dev/ttyACM0` on Linux systems or `COM1` on Windows
      */
     constructor(port) {
