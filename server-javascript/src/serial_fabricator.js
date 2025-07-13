@@ -11,7 +11,7 @@ import { DEBUG_FLAGS as DF } from './flags.js';
  * The anotomy of response extractor type
  * @typedef {Object} ResponseExtractor
  * @property {RegExp} regex A regular expression used to extract specific values from a fabricator's response
- * @property {function(Object.<string, string> | undefined): void} [callback] A function called when the extractor gets a result
+ * @property {function(Object.<string, string>): void} [callback] A function called when the extractor gets a result
  */
 
 /**
