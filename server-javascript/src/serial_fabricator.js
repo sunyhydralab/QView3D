@@ -258,25 +258,21 @@ export class GenericSerialFabricator {
          * @param {function(any=): void} reject
          */
         const _sendGCode = (resolve, reject) => {
-            let extractor = gcodeInstruction.extractor;
+            const extractor = gcodeInstruction.extractor;
 
-            if (extractor === undefined) {
-                gcodeInstruction.extractor = { regex: this.#gcodeProcessedResponseRegex }
-
-                extractor = gcodeInstruction.extractor /** @todo Is this really necessary? (It fixes a type error) */
-                if (DF.SHOW_EVERYTHING || DF.AUTOMATIC_EXTRACTOR_GIVEN)
-                    console.info(`Instruction ${gcodeInstruction.instruction.trim()} was automatically given an extractor`);
-            }
+            if (extractor === undefined)
+                throw new Error(`The sendGCodeInstruction function in the GenericSerialFabricator class expects an extractor to be with all G-Code instructions. The G-Code instruction ${gcodeInstruction.instruction} does not have an extractor. Did you mean to use addGCodeInstructionToQueue instead?`);
             
             if (extractor.callback === undefined) {
                 // Set the extractor method to the resolver
                 extractor.callback = resolve;
                 
-                // If nothing is in the instruction queue, then we'll send a dummy instruction to start the communication loop
+                this.#instructQ.push(gcodeInstruction);
+
+                // If nothing is in the instruction queue, then we'll send a dummy instruction to start the processing loop
                 if (this.#instructQ.length === 0)
                     this.sendDummyInstruction();
-            
-                this.#instructQ.push(gcodeInstruction);
+
             } else {
                 throw new Error(`The sendGCodeInstruction function in the GenericSerialFabricator class does not support custom callback functions in extractors. The instruction ${gcodeInstruction} has a custom callback function`);
             }
