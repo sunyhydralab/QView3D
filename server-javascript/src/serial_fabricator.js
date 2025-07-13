@@ -179,26 +179,19 @@ export class GenericSerialFabricator {
 
                             // If we get a result, then this extractor has found what it wanted
                             if (extractorResult !== null) {
-                                if (extractorResult.groups === undefined) {
-                                    if (DF.SHOW_EVERYTHING || DF.NO_NAMED_CAPTURE_GROUPS)
-                                        console.warn(`The extractor ${extractor.regex} did not provide named capture groups in its implementation. But it still found a match. This might end up being unsupported behavior.`);
-                                }
+                                if (extractorResult.groups === undefined)
+                                    throw new Error(`The extractor ${extractor.regex} did not provide named capture groups in its implementation. This behavior is not supported in the GenericSerialFabricator class`);
 
-                                if (extractor.callback !== undefined) {
-                                    // The result is stored as an object in the capture group. 
-                                    extractor.callback(extractorResult.groups);
-
-                                    if (DF.SHOW_EVERYTHING || DF.SHOW_EXTRACTOR_RESULT) {
-                                        if (extractorResult.groups === undefined)
-                                            console.warn(`The extractor ${extractor.regex} returned undefined from ${line}. This might end up being unsupported behavior.`);
-                                        else
-                                            console.info(`The extractor ${extractor.regex} returned ${Object.values(extractorResult.groups)}} from ${line}`);
-                                    }
-
-                                    break; /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
-                                } else {
+                                if (extractor.callback === undefined)
                                     throw new Error(`The extractor ${extractor.regex} has no callback function. It extracted the results ${extractorResult.groups}`);
-                                }
+
+                                // The result is stored as an object in the capture group
+                                extractor.callback(extractorResult.groups);
+
+                                if (DF.SHOW_EVERYTHING || DF.SHOW_EXTRACTOR_RESULT)
+                                        console.info(`The extractor ${extractor.regex} returned ${Object.values(extractorResult.groups)}} from ${line}`);
+
+                                break; /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
                             } else {
                                 // Else, the extractor has not got what it wanted and should be re-added to the queue
                                 unusedExtractors.push(extractor);
