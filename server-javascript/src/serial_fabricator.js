@@ -183,7 +183,7 @@ export class GenericSerialFabricator {
                                     throw new Error(`The extractor ${extractor.regex} did not provide named capture groups in its implementation. This behavior is not supported in the GenericSerialFabricator class`);
 
                                 if (extractor.callback === undefined)
-                                    throw new Error(`The extractor ${extractor.regex} has no callback function. It extracted the results ${extractorResult.groups}`);
+                                    throw new Error(`The extractor ${extractor.regex} has no callback function which isn't supported. It extracted the results ${extractorResult.groups}`);
 
                                 // The result is stored as an object in the capture group
                                 extractor.callback(extractorResult.groups);
