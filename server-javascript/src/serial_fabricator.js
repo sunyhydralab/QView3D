@@ -2,7 +2,7 @@
 
 // Used to communicate with serial devices
 import { SerialPort } from 'serialport';
-import { DEBUG_ENABLED } from './test.js'; /** @todo REPLACE */
+import { DEBUG_FLAGS as DF } from './flags.js';
 
 /**
  * The anotomy of response extractor type
@@ -177,18 +177,17 @@ export class GenericSerialFabricator {
                             // If we get a result, then this extractor has found what it wanted
                             if (extractorResult !== null) {
                                 if (extractorResult.groups === undefined) {
-                                    /** @todo Make this log have a warning mode where it will do console.warn instead of console.info */
-                                    if (DEBUG_ENABLED)
-                                        console.info(`The extractor ${extractor.regex} did not provide named capture groups in its implementation. But it still found a match`);
+                                    if (DF.SHOW_EVERYTHING || DF.NO_NAMED_CAPTURE_GROUPS)
+                                        console.warn(`The extractor ${extractor.regex} did not provide named capture groups in its implementation. But it still found a match. This might end up being unsupported behavior.`);
                                 }
 
                                 if (extractor.callback !== undefined) {
                                     // The result is stored as an object in the capture group. 
                                     extractor.callback(extractorResult.groups);
 
-                                    if (DEBUG_ENABLED) {
-                                        if (extractorResult.groups === undefined) 
-                                            console.info(`The extractor ${extractor.regex} returned undefined from ${line}`);
+                                    if (DF.SHOW_EVERYTHING || DF.SHOW_EXTRACTOR_RESULT) {
+                                        if (extractorResult.groups === undefined)
+                                            console.warn(`The extractor ${extractor.regex} returned undefined from ${line}. This might end up being unsupported behavior.`);
                                         else
                                             console.info(`The extractor ${extractor.regex} returned ${Object.values(extractorResult.groups)}} from ${line}`);
                                     }
@@ -201,7 +200,7 @@ export class GenericSerialFabricator {
                                 // Else, the extractor has not got what it wanted and should be re-added to the queue
                                 unusedExtractors.push(extractor);
 
-                                if (DEBUG_ENABLED) /** @todo Add a DEBUG_ENABLED global object with multiple flags that will enable/disable the logging of different events */
+                                if (DF.SHOW_EVERYTHING || DF.EXTRACTOR_FAILED_MATCH)
                                     console.info(`The extractor ${extractor.regex} failed to match ${line}`);
                             }
                         }
@@ -222,7 +221,7 @@ export class GenericSerialFabricator {
                         if (nextInstr.extractor !== undefined) {
                             this.#extractQ.push(nextInstr.extractor);
                         } else {
-                            if (DEBUG_ENABLED)
+                            if (DF.SHOW_EVERYTHING || DF.NO_EXTRACTOR_PRESENT)
                                 console.info(`G-Code instruction ${nextInstr.instruction.trim()} for fabricator at port ${this.#openPort.path} has no extractor so no result will be returned`);
                         }
                     }
@@ -244,6 +243,9 @@ export class GenericSerialFabricator {
             this.#openPort.write(this.DUMMY_INSTRUCTION, this.CHARACTER_ENCODING);
             
             setTimeout(() => { this.#dummyInstructionBeingSent = false; }, this.DUMMY_RESPONSE_DEBOUNCE_TIME);          
+        } else {
+            if (DF.SHOW_EVERYTHING || DF.EXTRA_DUMMY_INSTRUCTION)
+                console.info(`A dummy instruction is already being sent to the fabricator at port ${this.#openPort.path}. You tried sending another. Was this intentional?`);
         }
     }
 
@@ -266,7 +268,7 @@ export class GenericSerialFabricator {
                 gcodeInstruction.extractor = { regex: this.#gcodeProcessedResponseRegex }
 
                 extractor = gcodeInstruction.extractor /** @todo Is this really necessary? (It fixes a type error) */
-                if (DEBUG_ENABLED)
+                if (DF.SHOW_EVERYTHING || DF.AUTOMATIC_EXTRACTOR_GIVEN)
                     console.info(`Instruction ${gcodeInstruction.instruction.trim()} was automatically given an extractor`);
             }
             
