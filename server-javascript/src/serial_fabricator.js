@@ -5,6 +5,9 @@ import { SerialPort } from 'serialport';
 import { DEBUG_FLAGS as DF } from './flags.js';
 
 /**
+ * @todo Turn below into simple classes so we can have runtime checks
+ */
+/**
  * The anotomy of response extractor type
  * @typedef {Object} ResponseExtractor
  * @property {RegExp} regex A regular expression used to extract specific values from a fabricator's response
