@@ -19,7 +19,5 @@ export const DEBUG_FLAGS = {
     EXTRACTOR_FAILED_MATCH: false, // Annoying
     AUTOMATIC_EXTRACTOR_GIVEN: true,
     SHOW_EXTRACTOR_RESULT: true,
-    NO_NAMED_CAPTURE_GROUPS: true,
-
-
+    NO_NAMED_CAPTURE_GROUPS: true
 };
