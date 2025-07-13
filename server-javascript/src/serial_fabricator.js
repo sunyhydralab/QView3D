@@ -243,7 +243,10 @@ export class GenericSerialFabricator {
 
             this.#openPort.write(this.DUMMY_INSTRUCTION, this.CHARACTER_ENCODING);
 
-            setTimeout(() => { 
+            /**
+             * @todo Maybe consider not making this error? (Dummy instructions can be used to determine if the fabricator is behaving normally)
+             */
+            setTimeout(() => {
                 throw new Error(`The dummy instruction ${this.DUMMY_INSTRUCTION.trim()} with extractor ${this.DUMMY_INSTRUCTION_EXTRACTOR_REGEX} timed out for fabricator on port ${this.#openPort.path}`); 
             }, this.RESPONSE_TIMEOUT);
         }
