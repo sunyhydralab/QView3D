@@ -306,21 +306,15 @@ export class GenericSerialFabricator {
     }
 
     /**
-     * Sends a G-Code instruction to a fabricator
+     * Adds a G-Code instruction to a fabricator's instruction queue. **The processing loop is not automatically started**
      * No timeout error is thrown, nor is a response expected
      * @param {GCodeInstruction} gcodeInstruction The G-Code instruction to send to the fabricator
      * @returns {undefined}
      */
     addGCodeInstructionToQueue(gcodeInstruction) {
-        // If nothing is in the instruction queue, then we'll send a dummy instruction to start the communication loop
-        if (this.#instructQ.length === 0) {
-            // Ensure the fabricator has booted up first
-            if (this.#hasBooted === false)
-                setTimeout(() => { this.sendDummyInstruction() }, this.BOOT_TIME);
-            else
-                this.sendDummyInstruction();
-        }
-
+        /**
+         * @todo Use GCodeInstruction class to do a runtime type check
+         */
         this.#instructQ.push(gcodeInstruction);
     }
 
