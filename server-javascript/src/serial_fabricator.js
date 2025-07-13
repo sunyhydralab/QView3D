@@ -282,7 +282,7 @@ export class GenericSerialFabricator {
             
                 this.#instructQ.push(gcodeInstruction);
             } else {
-                throw new Error(`The sendGCode function in the GenericSerialFabricator class does not support custom callback functions in extractors. The instruction ${gcodeInstruction} has a custom callback function`);
+                throw new Error(`The sendGCodeInstruction function in the GenericSerialFabricator class does not support custom callback functions in extractors. The instruction ${gcodeInstruction} has a custom callback function`);
             }
 
             // The command times out after the timeout amount
