@@ -322,7 +322,7 @@ export class GenericSerialFabricator {
     }
 
     // Commands to communicate with fabricators
-	// ..._CMD is the command, 
+    // ..._CMD is the command, 
     // ..._CMD_EXTRACTOR is used to get the output of the command
     /** 
      * @readonly 
