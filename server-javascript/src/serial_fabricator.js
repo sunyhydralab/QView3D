@@ -296,7 +296,7 @@ export class GenericSerialFabricator {
 
     /**
      * Adds a G-Code instruction to a fabricator's instruction queue. **The processing loop is not automatically started**
-     * No timeout error is thrown, nor is a response expected
+     * No timeout error is thrown, nor is a response returned
      * @param {GCodeInstruction} gcodeInstruction The G-Code instruction to send to the fabricator
      * @returns {undefined}
      */
