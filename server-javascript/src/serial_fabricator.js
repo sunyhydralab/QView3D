@@ -58,7 +58,7 @@ export class GenericSerialFabricator {
     BAUD_RATE = 115200;
 
     /**
-     * The amount of time to wait in ms before sending G-Code commands to the fabricator
+     * The amount of time to wait in ms before sending G-Code instructions to the fabricator
      * @readonly 
      * @type {number} 
      */
@@ -143,7 +143,7 @@ export class GenericSerialFabricator {
     constructor(port) {
         this.#openPort = new SerialPort({ path: port, baudRate: this.BAUD_RATE });
 
-        // Wait a specific amount of time before allowing G-Code commands to be sent over serial
+        // Wait a specific amount of time before allowing G-Code instructions to be sent over serial
         setTimeout(() => this.#hasBooted = true, this.BOOT_TIME);
 
         // When data is received, this callback function will run
@@ -288,7 +288,7 @@ export class GenericSerialFabricator {
                 throw new Error(`The sendGCodeInstruction function in the GenericSerialFabricator class does not support custom callback functions in extractors. The instruction ${gcodeInstruction} has a custom callback function`);
             }
 
-            // The command times out after the timeout amount
+            // The instruction times out after the timeout amount
             setTimeout(() => {
                 reject(
                     new Error(`The instruction ${gcodeInstruction.instruction.trim()} with extractor ${gcodeInstruction.extractor?.regex} timed out for fabricator on port ${this.#openPort.path}`)
@@ -318,6 +318,7 @@ export class GenericSerialFabricator {
         this.#instructQ.push(gcodeInstruction);
     }
 
+    /** @todo command -> instruction for consistency */
     // Commands to communicate with fabricators
     // ..._CMD is the command, 
     // ..._CMD_EXTRACTOR is used to get the output of the command
