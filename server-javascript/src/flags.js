@@ -1,11 +1,3 @@
-/**
- * An object that contains all of the debug flags that can be set at runtime. true means enabled and false means disabled
- * @typedef {Object} DEBUG_FLAGS
- * @property {boolean} SHOW_EVERYTHING
- * @property {boolean} NO_EXTRACTOR_PRESENT
- * @property {boolean} EXTRA_DUMMY_INSTRUCTION
- */
-
 /** 
  * An object that contains all of the debug flags that can be set at runtime
  * 
