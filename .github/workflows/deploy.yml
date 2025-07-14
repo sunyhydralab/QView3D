@@ -1,0 +1,31 @@
+name: deploy.yml
+on:
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: set up SSH
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to server
+        run: |
+#         this step assumes that you have already set up Dokku on your server.
+          echo "Deploying to Dokku server..."
+#         add environment variables for frontend and backend
+          echo ${{ secrets.FRONTEND_ENV }} | xargs ssh -o StrictHostKeyChecking=no dokku@${{ secrets.DOKKU_HOST }} config:set --no-restart qview3d-frontend > /dev/null
+          echo ${{ secrets.BACKEND_ENV }} | xargs ssh -o StrictHostKeyChecking=no dokku@${{ secrets.DOKKU_HOST }} config:set --no-restart qview3d-backend > /dev/null
+#         add remote repositories for frontend and backend
+          git remote add qview3d-frontend dokku@${{ secrets.DOKKU_HOST }}:qview3d-frontend
+          git remote add qview3d-backend dokku@${{ secrets.DOKKU_HOST }}:qview3d-backend
+#         push the code to the remote repositories
+          git push qview3d-frontend main --force
+          git push qview3d-backend main --force
+        env:
+          GIT_SSH_COMMAND: 'ssh -o StrictHostKeyChecking=no'
+          SSH_AUTH_SOCK: $SSH_AUTH_SOCK
