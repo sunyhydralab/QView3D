@@ -4,7 +4,7 @@
  */
 export var DEBUG_ENABLED = true; 
 
-import { GenericSerialFabricator } from './serial_fabricator.js';
+import { GenericSerialFabricator } from './models/serial_fabricator.js';
 
 // TEMP
 class PrusaMK3 extends GenericSerialFabricator {
