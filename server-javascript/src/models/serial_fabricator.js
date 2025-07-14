@@ -2,27 +2,27 @@
 
 // Used to communicate with serial devices
 import { SerialPort } from 'serialport';
-import { DEBUG_FLAGS as DF } from './flags.js';
+import { DEBUG_FLAGS as DF } from '../flags.js';
 
 /**
  * @todo Turn below into simple classes so we can have runtime checks
  */
 /**
- * The anotomy of response extractor type
+ * The anatomy of response extractor type
  * @typedef {Object} ResponseExtractor
  * @property {RegExp} regex A regular expression used to extract specific values from a fabricator's response
  * @property {function(Object.<string, string>): void} [callback] A function called when the extractor gets a result
  */
 
 /**
- * The anotomy of G-Code instruction type
+ * The anatomy of G-Code instruction type
  * @typedef {Object} GCodeInstruction
  * @property {string} instruction The G-Code instruction to send to the fabricator
  * @property {ResponseExtractor} [extractor] The extractor used to get the response from the fabricator
  */
 
 /**
- * The anotomy of FirmwareInfo type
+ * The anatomy of FirmwareInfo type
  * @typedef {Object} FirmwareInfo
  * @property {string} [firmwareVersion]
  * @property {string} [machineType]
