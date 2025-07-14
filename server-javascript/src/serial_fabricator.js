@@ -227,10 +227,14 @@ export class GenericSerialFabricator {
      */
     sendDummyInstruction() {
         const _sendDummyInstruction = () => {
+            // Used to indicate to the timeout function that the current operation completed successfully
+            let operationCompleted = false;
+
             /** @type {ResponseExtractor} */
             const extractor = {
                 regex: this.DUMMY_INSTRUCTION_EXTRACTOR_REGEX,
                 callback: (response) => {
+                    operationCompleted = true;
                     this.#dummyInstructionBeingSent = false;
 
                     if (DF.SHOW_EVERYTHING || DF.SHOW_DUMMY_EXTRACTOR_RESPONSE)
@@ -247,7 +251,8 @@ export class GenericSerialFabricator {
              * @todo Maybe consider not making this error? (Dummy instructions can be used to determine if the fabricator is behaving normally)
              */
             setTimeout(() => {
-                throw new Error(`The dummy instruction ${this.DUMMY_INSTRUCTION.trim()} with extractor ${this.DUMMY_INSTRUCTION_EXTRACTOR_REGEX} timed out for fabricator on port ${this.#openPort.path}`); 
+                if (operationCompleted === false)
+                    throw new Error(`The dummy instruction ${this.DUMMY_INSTRUCTION.trim()} with extractor ${this.DUMMY_INSTRUCTION_EXTRACTOR_REGEX} timed out for fabricator on port ${this.#openPort.path}`); 
             }, this.RESPONSE_TIMEOUT);
         }
 
