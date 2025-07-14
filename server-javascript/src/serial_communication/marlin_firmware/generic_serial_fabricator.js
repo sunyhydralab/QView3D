@@ -5,7 +5,7 @@ import { SerialPort } from 'serialport';
 import { DEBUG_FLAGS as DF } from '../../flags.js';
 
 /**
- * @todo Turn below into simple classes so we can have runtime checks
+ * @todo Turn below into simple classes so we can have runtime checks (or not?)
  */
 /**
  * The anotomy of response extractor type
