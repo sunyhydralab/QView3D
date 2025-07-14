@@ -181,7 +181,7 @@ export class GenericSerialFabricator {
                                 extractor.callback(extractorResult.groups);
 
                                 if (DF.SHOW_EVERYTHING || DF.SHOW_EXTRACTOR_RESULT)
-                                        console.info(`The extractor ${extractor.regex} returned ${Object.values(extractorResult.groups)}} from ${line}`);
+                                        console.info(`The extractor ${extractor.regex} returned ${Object.values(extractorResult.groups)} from ${line}`);
 
                                 break; /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
                             } else {
