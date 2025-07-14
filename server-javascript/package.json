@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/sunyhydralab/QView3D#readme",
   "dependencies": {
+    "express": "^5.1.0",
     "serialport": "^13.0.0",
     "sqlite3": "^5.1.7"
   },
