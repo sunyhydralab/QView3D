@@ -11,5 +11,5 @@ export const DEBUG_FLAGS = {
     EXTRACTOR_FAILED_MATCH: false, // Annoying
     AUTOMATIC_EXTRACTOR_GIVEN: true,
     SHOW_EXTRACTOR_RESULT: true,
-    SHOW_DUMMY_EXTRACTOR_RESPONSE: false, // Not important
+    SHOW_DUMMY_EXTRACTOR_RESPONSE: false, // Not important/Causes duplicate logs
 };
