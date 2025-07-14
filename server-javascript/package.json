@@ -2,7 +2,7 @@
   "name": "qview3d-server",
   "version": "0.0.1",
   "description": "Provides the server for the Qview3D project",
-  "main": "index.js",
+  "main": "run.js",
   "type": "module",
   "scripts": {
     "run": "echo 'Just run files individually'"
