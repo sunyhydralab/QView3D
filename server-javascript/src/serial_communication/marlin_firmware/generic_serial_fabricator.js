@@ -2,7 +2,7 @@
 
 // Used to communicate with serial devices
 import { SerialPort } from 'serialport';
-import { DEBUG_FLAGS as DF } from './flags.js';
+import { DEBUG_FLAGS as DF } from '../../flags.js';
 
 /**
  * @todo Turn below into simple classes so we can have runtime checks

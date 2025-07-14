@@ -1,20 +1,8 @@
-/** 
- * @todo BIG TODO: Add ANSI colors to logged outputs to make them easier to read, 
- * create a module that will host all of the debug functions, including this function 
- */
-export var DEBUG_ENABLED = true; 
-
-import { GenericSerialFabricator } from './serial_fabricator.js';
-
-// TEMP
-class PrusaMK3 extends GenericSerialFabricator {
-    RESPONSE_TIMEOUT = 10000;
-    BOOT_TIME = 5000;
-    INFO_CMD_EXTRACTOR = /FIRMWARE_NAME:(?<firmwareVersion>[^\s]+).+MACHINE_TYPE:(?<machineType>[^\s]+).+/;
-}
+import { GenericSerialFabricator } from './serial_communication/marlin_firmware/generic_serial_fabricator.js';
+import { Prusai3MK3 } from './serial_communication/marlin_firmware/prusamk3.js';
 
 /** @todo Add a helper function that determines which specific class to use */
-const fab1 = new PrusaMK3('/dev/ttyACM1');
+const fab1 = new Prusai3MK3('/dev/ttyACM1');
 const fab2 = new GenericSerialFabricator('/dev/ttyACM0');
 
 // Test sending G-Code
@@ -41,3 +29,6 @@ for await (let gcode_line of filtered_gcode_file) {
 
     fab2.addGCodeInstructionToQueue({ instruction: gcode_line + '\n' });
 } 
+
+// Starts the processing loop
+fab2.sendDummyInstruction();
