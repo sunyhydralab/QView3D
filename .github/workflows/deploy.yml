@@ -5,13 +5,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: set up SSH
-        uses: webfactory/ssh-agent@v0.5.3
+      - uses: actions/checkout@v4
+      - uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Deploy to server
         run: |
