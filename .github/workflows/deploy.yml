@@ -1,4 +1,4 @@
-name: deploy.yml
+name: Deploy to Dokku
 on:
   workflow_dispatch:
 jobs:
