@@ -16,7 +16,7 @@ let filtered_gcode_file = gcode_file_split.filter(line => line.trim() !== '' && 
 for await (let gcode_line of filtered_gcode_file) {
     gcode_line = gcode_line.split(';')[0];
 
-    fab1.addGCodeInstructionToQueue({ instruction: gcode_line + '\n' });
+    fab1.addGCodeInstructionToQueue(gcode_line + '\n');
 }
 
 gcode_file_split = fs.readFileSync('./xyz-cali-cube-mini_MK4.gcode', { encoding: "utf8" }).split('\n');
@@ -27,7 +27,7 @@ filtered_gcode_file = gcode_file_split.filter(line => line.trim() !== '' && !lin
 for await (let gcode_line of filtered_gcode_file) {
     gcode_line = gcode_line.split(';')[0];
 
-    fab2.addGCodeInstructionToQueue({ instruction: gcode_line + '\n' });
+    fab2.addGCodeInstructionToQueue(gcode_line + '\n');
 } 
 
 // Starts the processing loop
