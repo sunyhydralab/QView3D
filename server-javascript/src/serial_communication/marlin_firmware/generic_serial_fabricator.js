@@ -5,18 +5,14 @@ import { SerialPort } from 'serialport';
 import { DEBUG_FLAGS as DF } from '../../flags.js';
 
 /**
- * @todo Turn below into simple classes so we can have runtime checks (or not?)
- */
-
-/**
  * @typedef FabricatorResponse
- * @property {'processed' | 'unsupported' | 'fabricator-disconnected'} status The status of the fabricator response
+ * @property {'processed' | 'unsupported' | 'fabricator-disconnected' | 'timed-out' | 'unexpected-response'} status The status of the fabricator response
  * @property {Object.<string, string>} [extractedResults] The data returned by the response extractor
  */
 
 /**
  * @typedef ResponseExtractor
- * @property {RegExp} regex A regular expression used to extract specific values from a fabricator's response
+ * @property {RegExp} [regex] A regular expression used to extract specific values from a fabricator's response
  * @property {function(FabricatorResponse): void} callback A function called when the extractor gets a result
  */
 
@@ -24,14 +20,6 @@ import { DEBUG_FLAGS as DF } from '../../flags.js';
  * @typedef InstructionExtractor
  * @property {string} instruction The G-Code instruction to send to the fabricator
  * @property {ResponseExtractor} extractor The extractor used to get the response from the fabricator
- */
-
-/**
- * The anotomy of FirmwareInfo type
- * @typedef {Object} FirmwareInfo
- * @property {string} [firmwareVersion]
- * @property {string} [machineType]
- * @property {string} [UUID]
  */
 
 /**
@@ -170,29 +158,39 @@ export class GenericSerialFabricator {
                         const extractor = this.#extractQ.shift();
                         
                         if (extractor !== undefined) { /** @todo ts-server thinks this value can be undefined, but we know it can't be because there are elements in the array. Try fix? */
-                            const extractorResult = extractor.regex.exec(line);
-
-                            // If we get a result, then this extractor has found what it wanted
-                            if (extractorResult !== null) {
-                                if (extractorResult.groups === undefined)
-                                    throw new Error(`The extractor ${extractor.regex} did not provide named capture groups in its implementation. This behavior is not supported in the GenericSerialFabricator class`);
-
-                                if (extractor.callback === undefined)
-                                    throw new Error(`The extractor ${extractor.regex} has no callback function which isn't supported. It extracted the results ${extractorResult.groups}`);
-
-                                // The result is stored as an object in the capture group
-                                extractor.callback(extractorResult.groups);
-
-                                if (DF.SHOW_EVERYTHING || DF.SHOW_EXTRACTOR_RESULT)
+                            if (extractor.regex !== undefined) {
+                                const extractorResult = extractor.regex.exec(line);
+                                
+                                // If we get a result, then this extractor has found what it wanted
+                                if (extractorResult !== null) {
+                                    if (extractorResult.groups === undefined)
+                                        throw new Error(`The extractor ${extractor.regex} did not provide named capture groups in its implementation. This behavior is not supported in the GenericSerialFabricator class`);
+                                                                        
+                                    // The result is stored as an object in the capture group
+                                    extractor.callback({ status: 'processed', extractedResults: extractorResult.groups });
+                                    
+                                    if (DF.SHOW_EVERYTHING || DF.SHOW_EXTRACTOR_RESULT)
                                         console.info(`The extractor ${extractor.regex} returned ${Object.values(extractorResult.groups)} from ${line}`);
-
-                                break; /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
+                                    
+                                    break; /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
+                                } else {
+                                    // Else, the extractor has not got what it wanted and should be re-added to the queue
+                                    unusedExtractors.push(extractor);
+                                    
+                                    if (DF.SHOW_EVERYTHING || DF.EXTRACTOR_FAILED_MATCH)
+                                        console.info(`The extractor ${extractor.regex} failed to match ${line}`);
+                                }
                             } else {
-                                // Else, the extractor has not got what it wanted and should be re-added to the queue
-                                unusedExtractors.push(extractor);
+                                // If no regex is present, then it is assumed that this extractor wants to see 
+                                // if the this.GCODE_PROCESSED_RESPONSE is present in the fabricator's response
+                                if (this.#responseBuf.includes(this.GCODE_PROCESSED_RESPONSE)) {
+                                    extractor.callback({ status: 'processed' });
 
-                                if (DF.SHOW_EVERYTHING || DF.EXTRACTOR_FAILED_MATCH)
-                                    console.info(`The extractor ${extractor.regex} failed to match ${line}`);
+                                    break;  /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
+                                }
+
+                                /** @todo add debug log */
+
                             }
                         }
                     }
@@ -209,12 +207,7 @@ export class GenericSerialFabricator {
                     if (nextInstr !== undefined) { /** @todo ts-server thinks this value can be undefined, but we know it can't be because there are elements in the array. Try fix? */
                         this.#openPort.write(nextInstr.instruction, this.CHARACTER_ENCODING);
                         
-                        if (nextInstr.extractor !== undefined) {
-                            this.#extractQ.push(nextInstr.extractor);
-                        } else {
-                            if (DF.SHOW_EVERYTHING || DF.NO_EXTRACTOR_PRESENT)
-                                console.info(`G-Code instruction ${nextInstr.instruction.trim()} for fabricator at port ${this.#openPort.path} has no extractor so no result will be returned`);
-                        }
+                        this.#extractQ.push(nextInstr.extractor);
                     }
                 }
             }
@@ -225,68 +218,87 @@ export class GenericSerialFabricator {
     }
 
     /**
-     * Sends a dummy instruction to the fabricator. Uses this.DUMMY_INSTRUCTION
-     * This is typically used to start the processing loop between Qview3D and the fabricator
+     * Sends a G-Code instruction to a fabricator, and uses the extractor to return the result
+     * If no response is received after this.RESPONSE_TIMEOUT, this promise will reject with an error
+     * @param {string} instruction The G-Code instruction to send to the fabricator
+     * @param {RegExp} [extractorRegEx] The extractor to be used with this G-Code instruction
+     * @param {boolean} [writeNow = false] Whether or not the G-Code instruction will be added to the queue or immediately sent to the fabricator (**Warning unsafe**)
+     * @returns {Promise<FabricatorResponse>}
      */
-    sendDummyInstruction() {
-        const _sendDummyInstruction = () => {
-            // Used to indicate to the timeout function that the current operation completed successfully
-            let operationCompleted = false;
+    sendGCodeInstruction(instruction, extractorRegEx, writeNow = false) {
+        /**
+         * Internal function used to not write code twice
+         * @param {function(any): void} resolve
+         * @param {function(any=): void} reject
+         */
+        const _sendGCode = (resolve, reject) => {
+            if (writeNow === false) {
+                this.#instructQ.push({ 
+                    instruction: instruction, 
+                    extractor: {
+                        regex: extractorRegEx,
+                        callback: resolve
+                    }
+                });
+            } else {
+                // Add the extractor to the extract queue since it won't be automatically added
+                this.#extractQ.push({regex: extractorRegEx, callback: resolve});
 
-            /** @type {ResponseExtractor} */
-            const extractor = {
-                regex: this.DUMMY_INSTRUCTION_EXTRACTOR_REGEX,
-                callback: (response) => {
-                    operationCompleted = true;
-                    this.#dummyInstructionBeingSent = false;
+                // Immediately write to the port
+                this.#openPort.write(instruction, this.CHARACTER_ENCODING);
 
-                    if (DF.SHOW_EVERYTHING || DF.SHOW_DUMMY_EXTRACTOR_RESPONSE)
-                        console.info(`The dummy instruction at port ${this.#openPort.path} returned the result ${Object.values(response)}`);
-                }
+                /** @todo add debug log here */
             }
 
-            // The extractor is used to determine if the fabricator has sent back the expected response
-            this.#extractQ.push(extractor);
-
-            this.#openPort.write(this.DUMMY_INSTRUCTION, this.CHARACTER_ENCODING);
-
-            /**
-             * @todo Maybe consider not making this error? (Dummy instructions can be used to determine if the fabricator is behaving normally)
-             */
+            // The request times out after the timeout amount
             setTimeout(() => {
-                if (operationCompleted === false)
-                    throw new Error(`The dummy instruction ${this.DUMMY_INSTRUCTION.trim()} with extractor ${this.DUMMY_INSTRUCTION_EXTRACTOR_REGEX} timed out for fabricator on port ${this.#openPort.path}`); 
+                reject(
+                    new Error(`The instruction ${instruction.trim()} with extractor ${extractorRegEx} timed out for fabricator on port ${this.#openPort.path}`)
+                );
             }, this.RESPONSE_TIMEOUT);
         }
 
-        // Ensure a dummy instruction isn't currently being sent to the fabricator
-        if (this.#dummyInstructionBeingSent === false) {
-            this.#dummyInstructionBeingSent = true;
-
-            if (this.#hasBooted === true)
-                _sendDummyInstruction();
+        return new Promise((resolve, reject) => {
+            // If it hasn't booted up yet, then wait the boot time
+            if (this.#hasBooted === false)
+                setTimeout(_sendGCode, this.BOOT_TIME, resolve, reject);
             else
-                setTimeout(_sendDummyInstruction, this.BOOT_TIME);
-        } else {
-            if (DF.SHOW_EVERYTHING || DF.EXTRA_DUMMY_INSTRUCTION)
-                console.info(`A dummy instruction was already sent to fabricator at port ${this.#openPort.path}. Was this intentional?`);
-        }
+                _sendGCode(resolve, reject);
+        });
     }
 
     /**
-     * Adds a G-Code instruction to a fabricator's instruction queue. **The processing loop is not automatically started**
-     * No timeout error is thrown, nor is a response returned
-     * @param {string} instruction The G-Code instruction to send to the fabricator
-     * @param {ResponseExtractor} [customExtractor] A custom extractor that can be used to handle the results from a G-Code instruction
-     * @returns {undefined}
+     * Sends a dummy instruction to the fabricator. Uses this.DUMMY_INSTRUCTION
+     * This is typically used to start the processing loop between Qview3D and the fabricator
+     * @param {boolean} [writeNow = true] If this dummy instruction should be added to the instruction queue or sent directly to the fabricator
+     * @returns {Promise<FabricatorResponse>}
      */
-    addGCodeInstructionToQueue(instruction, customExtractor) {
-        /** FUTURE @todo Add a parser that ensures that the instruction sent is supported (correct syntax and supported by this implementation) */
-        if (customExtractor !== undefined)
-            if (customExtractor.callback === undefined)
-                throw new Error(`The G-Code instruction ${instruction.trim()} has the extractor ${customExtractor.regex} but has no callback function. This is unsupported in the GenericSerialFabricator class`);
+    async sendDummyInstruction(writeNow = true) {
+        if (this.#dummyInstructionBeingSent === false) {
+            this.#dummyInstructionBeingSent = true;
+            /** @type {FabricatorResponse} */
+            let response;
+            
+            try {
+                response = await this.sendGCodeInstruction(this.DUMMY_INSTRUCTION, this.DUMMY_INSTRUCTION_EXTRACTOR_REGEX, writeNow);
+            } catch (e) {
+                // Show the timeout error, but don't crash the program
+                console.warn(e);
+                response = { status: 'timed-out' };
+            }
+            
+            this.#dummyInstructionBeingSent = false;
 
-        this.#instructQ.push({ instruction: instruction, extractor: customExtractor });
+            if (response.status === 'processed')
+                return response;
+            else (response.status === 'timed-out')
+                return response;
+            
+            /** @todo Add a debug log here DO NOT DELETE (ignore typescript lsp) */
+            return { status: 'unexpected-response'};
+        } else {
+            throw new Error(`A dummy instruction was already sent to fabricator at port ${this.#openPort.path}. Was this intentional?`);
+        }
     }
 
     /** @todo command -> instruction for consistency */
@@ -306,15 +318,9 @@ export class GenericSerialFabricator {
     INFO_CMD_EXTRACTOR = /FIRMWARE_NAME:(?<firmwareVersion>[^\s]+).+MACHINE_TYPE:(?<machineType>[^\s]+).+UUID:(?<UUID>[^\s]+)/;
 
     /**
-     * @returns {Promise<FirmwareInfo>}
+     * @returns {Promise<FabricatorResponse>}
      */
-    async getFirmwareInfo() {
-        /** @type {ResponseExtractor} */
-        const extractor = {
-            regex: this.INFO_CMD_EXTRACTOR,
-            callback: undefined
-        }
-        
-        return await this.sendGCodeInstruction(this.INFO_CMD, extractor);
+    async getFirmwareInfo() {        
+        return await this.sendGCodeInstruction(this.INFO_CMD, this.INFO_CMD_EXTRACTOR);
     }
 }
