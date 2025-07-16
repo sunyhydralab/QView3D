@@ -31,7 +31,6 @@ import { DEBUG_FLAGS as DF } from '../../flags.js';
  * A generic class used to communicate with G-Code enabled fabricators over serial. This class is meant to be **extended**
  * 
  * It assumes that the fabricator is flashed with {@link https://github.com/MarlinFirmware/Marlin Marlin firmware}
- * @class
  */
 export class GenericSerialFabricator {
     /**
