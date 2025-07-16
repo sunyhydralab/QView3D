@@ -146,7 +146,7 @@ export class GenericSerialFabricator {
                 throw new Error(`Stream at port ${this.#openPort.path} is in object mode which is currently not supported by the default data processor in the GenericSerialFabricator class.`);
 
             
-            /** @todo Probably don't split by LINE_SPLITTER but instead split by GCODE_PROCESSED_RESPONSE. **NOTE** Check with @see gcodeProcessedResponseRegex before making edits */
+            /** @todo Probably don't split by LINE_SPLITTER but instead split by GCODE_PROCESSED_RESPONSE */
             // Split each line by the line splitter value
             const lines = this.#responseBuf.split(this.LINE_SPLITTER);
 
@@ -220,6 +220,7 @@ export class GenericSerialFabricator {
 
     /**
      * Sends a dummy instruction to the fabricator. Uses this.DUMMY_INSTRUCTION
+     * This is typically used to start the processing loop between Qview3D and the fabricator
      */
     sendDummyInstruction() {
         const _sendDummyInstruction = () => {
