@@ -267,52 +267,6 @@ export class GenericSerialFabricator {
     }
 
     /**
-     * Sends a G-Code instruction to a fabricator, and uses the extractor to return the result
-     * If no response is received after RESPONSE_TIMEOUT, this promise will reject with an error
-     * @param {string} instruction The G-Code instruction to send to the fabricator
-     * @param {ResponseExtractor} extractor The extractor to be used with this G-Code instruction
-     * @returns {Promise<any>}
-     */
-    sendGCodeInstruction(instruction, extractor) {
-        /** FUTURE @todo Add a parser that ensures that the instruction sent is supported (correct syntax and supported by this implementation) */
-        /**
-         * Internal function used to not write code twice
-         * @param {function(any): void} resolve 
-         * @param {function(any=): void} reject
-         */
-        const _sendGCode = (resolve, reject) => {            
-            if (extractor.callback === undefined) {
-                // Set the extractor method to the resolver
-                extractor.callback = resolve;
-                
-                this.#instructQ.push({ instruction: instruction, extractor: extractor });
-
-                // If nothing is in the instruction queue, then we'll send a dummy instruction to start the processing loop
-                if (this.#instructQ.length === 0)
-                    this.sendDummyInstruction();
-
-            } else {
-                throw new Error(`The sendGCodeInstruction function in the GenericSerialFabricator class does not support custom callback functions in extractors. The instruction ${instruction} has a custom callback function`);
-            }
-
-            // The instruction times out after the timeout amount
-            setTimeout(() => {
-                reject(
-                    new Error(`The instruction ${instruction.trim()} with extractor ${extractor?.regex} timed out for fabricator on port ${this.#openPort.path}`)
-                );
-            }, this.RESPONSE_TIMEOUT);
-        }
-
-        return new Promise((resolve, reject) => {
-            // If it hasn't booted up yet, then wait the boot time
-            if (this.#hasBooted === false)
-                setTimeout(_sendGCode, this.BOOT_TIME, resolve, reject);
-            else
-                _sendGCode(resolve, reject);
-        });
-    }
-
-    /**
      * Adds a G-Code instruction to a fabricator's instruction queue. **The processing loop is not automatically started**
      * No timeout error is thrown, nor is a response returned
      * @param {string} instruction The G-Code instruction to send to the fabricator
