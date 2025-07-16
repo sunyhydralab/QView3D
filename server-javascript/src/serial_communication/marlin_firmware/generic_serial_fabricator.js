@@ -7,16 +7,23 @@ import { DEBUG_FLAGS as DF } from '../../flags.js';
 /**
  * @todo Turn below into simple classes so we can have runtime checks (or not?)
  */
+
 /**
- * @typedef {Object} ResponseExtractor
- * @property {RegExp} regex A regular expression used to extract specific values from a fabricator's response
- * @property {function(Object.<string, string>): void} [callback] A function called when the extractor gets a result
+ * @typedef FabricatorResponse
+ * @property {'processed' | 'unsupported' | 'fabricator-disconnected'} status The status of the fabricator response
+ * @property {Object.<string, string>} [extractedResults] The data returned by the response extractor
  */
 
 /**
- * @typedef {Object} InstructionExtractor
+ * @typedef ResponseExtractor
+ * @property {RegExp} regex A regular expression used to extract specific values from a fabricator's response
+ * @property {function(FabricatorResponse): void} callback A function called when the extractor gets a result
+ */
+
+/**
+ * @typedef InstructionExtractor
  * @property {string} instruction The G-Code instruction to send to the fabricator
- * @property {ResponseExtractor} [extractor] The extractor used to get the response from the fabricator
+ * @property {ResponseExtractor} extractor The extractor used to get the response from the fabricator
  */
 
 /**
