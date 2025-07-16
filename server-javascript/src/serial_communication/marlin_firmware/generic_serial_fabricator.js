@@ -2,7 +2,7 @@
 
 // Used to communicate with serial devices
 import { SerialPort } from 'serialport';
-import { DEBUG_FLAGS as DF } from '../../flags.js';
+import { DEBUG_FLAGS } from '../../flags.js';
 
 /**
  * @typedef FabricatorResponse
@@ -154,44 +154,44 @@ export class GenericSerialFabricator {
                      */
                     let unusedExtractors = [];
 
-                    while (this.#extractQ.length !== 0) {
+                    while (this.#extractQ.length > 0) {
+                        /** @type {ResponseExtractor} */
+                        // @ts-ignore It's impossible for this to be undefined since there has to be something in the array
                         const extractor = this.#extractQ.shift();
                         
-                        if (extractor !== undefined) { /** @todo ts-server thinks this value can be undefined, but we know it can't be because there are elements in the array. Try fix? */
-                            if (extractor.regex !== undefined) {
-                                const extractorResult = extractor.regex.exec(line);
+                        if (extractor.regex !== undefined) {
+                            const extractorResult = extractor.regex.exec(line);
+                            
+                            // If we get a result, then this extractor has found what it wanted
+                            if (extractorResult !== null) {
+                                if (extractorResult.groups === undefined)
+                                    throw new Error(`The extractor ${extractor.regex} did not provide named capture groups in its implementation. This behavior is not supported in the GenericSerialFabricator class`);
+                                                                    
+                                // The result is stored as an object in the capture group
+                                extractor.callback({ status: 'processed', extractedResults: extractorResult.groups });
                                 
-                                // If we get a result, then this extractor has found what it wanted
-                                if (extractorResult !== null) {
-                                    if (extractorResult.groups === undefined)
-                                        throw new Error(`The extractor ${extractor.regex} did not provide named capture groups in its implementation. This behavior is not supported in the GenericSerialFabricator class`);
-                                                                        
-                                    // The result is stored as an object in the capture group
-                                    extractor.callback({ status: 'processed', extractedResults: extractorResult.groups });
-                                    
-                                    if (DF.SHOW_EVERYTHING || DF.SHOW_EXTRACTOR_RESULT)
-                                        console.info(`The extractor ${extractor.regex} returned ${Object.values(extractorResult.groups)} from ${line}`);
-                                    
-                                    break; /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
-                                } else {
-                                    // Else, the extractor has not got what it wanted and should be re-added to the queue
-                                    unusedExtractors.push(extractor);
-                                    
-                                    if (DF.SHOW_EVERYTHING || DF.EXTRACTOR_FAILED_MATCH)
-                                        console.info(`The extractor ${extractor.regex} failed to match ${line}`);
-                                }
+                                if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_EXTRACTOR_RESULT)
+                                    console.info(`The extractor ${extractor.regex} returned ${Object.values(extractorResult.groups)} from ${line}`);
+                                
+                                break; /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
                             } else {
-                                // If no regex is present, then it is assumed that this extractor wants to see 
-                                // if the this.GCODE_PROCESSED_RESPONSE is present in the fabricator's response
-                                if (this.#responseBuf.includes(this.GCODE_PROCESSED_RESPONSE)) {
-                                    extractor.callback({ status: 'processed' });
-
-                                    break;  /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
-                                }
-
-                                /** @todo add debug log */
-
+                                // Else, the extractor has not got what it wanted and should be re-added to the queue
+                                unusedExtractors.push(extractor);
+                                
+                                if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.EXTRACTOR_FAILED_MATCH)
+                                    console.info(`The extractor ${extractor.regex} failed to match ${line}`);
                             }
+                        } else {
+                            // If no regex is present, then it is assumed that this extractor wants to see 
+                            // if the this.GCODE_PROCESSED_RESPONSE is present in the fabricator's response
+                            if (this.#responseBuf.includes(this.GCODE_PROCESSED_RESPONSE)) {
+                                extractor.callback({ status: 'processed' });
+
+                                break;  /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
+                            }
+
+                            if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.MISSING_REGEX)
+                                console.info(`The extractor with the callback function ${extractor.callback} has no regex and therefore won't extract anything`);
                         }
                     }
 
@@ -202,13 +202,12 @@ export class GenericSerialFabricator {
 
             if (this.#responseBuf.includes(this.GCODE_PROCESSED_RESPONSE)) {
                 if (this.#instructQ.length > 0) {
+                    /** @type {InstructionExtractor} */
+                    // @ts-ignore It's impossible for this to be undefined since there has to be something in the array
                     const nextInstr = this.#instructQ.shift();
 
-                    if (nextInstr !== undefined) { /** @todo ts-server thinks this value can be undefined, but we know it can't be because there are elements in the array. Try fix? */
-                        this.#openPort.write(nextInstr.instruction, this.CHARACTER_ENCODING);
-                        
-                        this.#extractQ.push(nextInstr.extractor);
-                    }
+                    this.#openPort.write(nextInstr.instruction, this.CHARACTER_ENCODING);   
+                    this.#extractQ.push(nextInstr.extractor);
                 }
             }
 
@@ -240,14 +239,20 @@ export class GenericSerialFabricator {
                         callback: resolve
                     }
                 });
-            } else {
+                
+                if (this.#instructQ.length > 50)
+                    if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.MANY_GCODE_INSTRUCTIONS)
+                        console.warn(`Fabricator at port ${this.#openPort.path} has over 50 G-Code instructions in its queue which is abnormal. The sendGCodeInstruction returns a promise that should be awaited.`);
+
+            } else if (writeNow === true) {
                 // Add the extractor to the extract queue since it won't be automatically added
                 this.#extractQ.push({regex: extractorRegEx, callback: resolve});
 
                 // Immediately write to the port
                 this.#openPort.write(instruction, this.CHARACTER_ENCODING);
 
-                /** @todo add debug log here */
+                if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_POTENTIALLY_UNSAFE_WRITES)
+                    console.warn(`The G-Code instruction ${instruction.trim()} was immediately written to port ${this.#openPort.path}. This will likely lead to abnormal behavior`);
             }
 
             // The request times out after the timeout amount
@@ -291,10 +296,15 @@ export class GenericSerialFabricator {
 
             if (response.status === 'processed')
                 return response;
-            else (response.status === 'timed-out')
+            else if (response.status === 'timed-out')
                 return response;
             
-            /** @todo Add a debug log here DO NOT DELETE (ignore typescript lsp) */
+            if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.UNHANDLED_STATES) {
+                console.warn(`The sendDummyInstruction function has experienced an unhandled state! The status from the fabricator was ${response.status} instead of processed or timed-out`);
+                // Some useful info
+                console.warn(`Fabricator at port: ${this.#openPort.path}\nG-Code instruction sent: ${this.DUMMY_INSTRUCTION}\nExtractor used: ${this.DUMMY_INSTRUCTION_EXTRACTOR_REGEX}`);
+            }
+                
             return { status: 'unexpected-response'};
         } else {
             throw new Error(`A dummy instruction was already sent to fabricator at port ${this.#openPort.path}. Was this intentional?`);
@@ -320,7 +330,7 @@ export class GenericSerialFabricator {
     /**
      * @returns {Promise<FabricatorResponse>}
      */
-    async getFirmwareInfo() {        
-        return await this.sendGCodeInstruction(this.INFO_CMD, this.INFO_CMD_EXTRACTOR);
+    getFirmwareInfo() {        
+        return this.sendGCodeInstruction(this.INFO_CMD, this.INFO_CMD_EXTRACTOR);
     }
 }
