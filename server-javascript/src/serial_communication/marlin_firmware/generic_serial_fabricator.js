@@ -147,14 +147,12 @@ export class GenericSerialFabricator {
             if (this.#extractQ.length > 0) {
                 for (let i = 0; i < lines.length; i++) {
                     const line = lines[i];
-                    
-                    /** 
-                     * Extractors that aren't used yet
-                     * @type {ResponseExtractor[]} 
-                     */
-                    let unusedExtractors = [];
 
-                    while (this.#extractQ.length > 0) {
+                    const extractorCount = this.#extractQ.length;
+                    let extractorsRan = 0;
+
+                    while (extractorCount > extractorsRan) {
+                        extractorsRan++;
                         /** @type {ResponseExtractor} */
                         // @ts-ignore It's impossible for this to be undefined since there has to be something in the array
                         const extractor = this.#extractQ.shift();
@@ -176,7 +174,7 @@ export class GenericSerialFabricator {
                                 break; /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
                             } else {
                                 // Else, the extractor has not got what it wanted and should be re-added to the queue
-                                unusedExtractors.push(extractor);
+                                this.#extractQ.push(extractor);
                                 
                                 if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.EXTRACTOR_FAILED_MATCH)
                                     console.info(`The extractor ${extractor.regex} failed to match ${line}`);
@@ -194,9 +192,6 @@ export class GenericSerialFabricator {
                             }
                         }
                     }
-
-                    // Update the extractor queue
-                    this.#extractQ = unusedExtractors;
                 }
             }
 
