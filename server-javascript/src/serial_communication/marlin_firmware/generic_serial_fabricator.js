@@ -328,6 +328,7 @@ export class GenericSerialFabricator {
     INFO_CMD_EXTRACTOR = /FIRMWARE_NAME:(?<firmwareVersion>[^\s]+).+MACHINE_TYPE:(?<machineType>[^\s]+).+UUID:(?<UUID>[^\s]+)/;
 
     /**
+     * Returns the firmware information for the given fabricator
      * @returns {Promise<FabricatorResponse>}
      */
     getFirmwareInfo() {        
