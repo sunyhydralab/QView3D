@@ -271,19 +271,17 @@ export class GenericSerialFabricator {
      * Sends a G-Code instruction to a fabricator, and uses the extractor to return the result
      * If no response is received after RESPONSE_TIMEOUT, this promise will reject with an error
      * @param {string} instruction The G-Code instruction to send to the fabricator
-     * @param {ResponseExtractor} [extractor] The extractor to be used with this G-Code instruction
+     * @param {ResponseExtractor} extractor The extractor to be used with this G-Code instruction
      * @returns {Promise<any>}
      */
     sendGCodeInstruction(instruction, extractor) {
+        /** FUTURE @todo Add a parser that ensures that the instruction sent is supported (correct syntax and supported by this implementation) */
         /**
          * Internal function used to not write code twice
          * @param {function(any): void} resolve 
          * @param {function(any=): void} reject
          */
-        const _sendGCode = (resolve, reject) => {
-            if (extractor === undefined)
-                throw new Error(`The sendGCodeInstruction function in the GenericSerialFabricator class expects an extractor to be with all G-Code instructions. The G-Code instruction ${instruction} does not have an extractor. Did you mean to use addGCodeInstructionToQueue instead?`);
-            
+        const _sendGCode = (resolve, reject) => {            
             if (extractor.callback === undefined) {
                 // Set the extractor method to the resolver
                 extractor.callback = resolve;
