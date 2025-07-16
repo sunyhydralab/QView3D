@@ -232,7 +232,7 @@ export class GenericSerialFabricator {
          */
         const _sendGCode = (resolve, reject) => {
             if (writeNow === false) {
-                if (this.#instructQ.length === 0) {
+                if (this.#extractQ.length === 0) {
                     // Add the extractor to the extract queue since it won't be automatically added
                     this.#extractQ.push({regex: extractorRegEx, callback: resolve});
 
