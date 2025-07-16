@@ -316,14 +316,19 @@ export class GenericSerialFabricator {
     }
 
     /**
-     * @todo Add the ability to add a custom extractor here (Also, update docs above)
      * Adds a G-Code instruction to a fabricator's instruction queue. **The processing loop is not automatically started**
      * No timeout error is thrown, nor is a response returned
      * @param {string} instruction The G-Code instruction to send to the fabricator
+     * @param {ResponseExtractor} [customExtractor] A custom extractor that can be used to handle the results from a G-Code instruction
      * @returns {undefined}
      */
-    addGCodeInstructionToQueue(instruction) {
-        this.#instructQ.push({ instruction: instruction });
+    addGCodeInstructionToQueue(instruction, customExtractor) {
+        /** FUTURE @todo Add a parser that ensures that the instruction sent is supported (correct syntax and supported by this implementation) */
+        if (customExtractor !== undefined)
+            if (customExtractor.callback === undefined)
+                throw new Error(`The G-Code instruction ${instruction.trim()} has the extractor ${customExtractor.regex} but has no callback function. This is unsupported in the GenericSerialFabricator class`);
+
+        this.#instructQ.push({ instruction: instruction, extractor: customExtractor });
     }
 
     /** @todo command -> instruction for consistency */
