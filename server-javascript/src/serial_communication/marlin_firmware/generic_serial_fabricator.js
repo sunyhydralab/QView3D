@@ -232,14 +232,22 @@ export class GenericSerialFabricator {
          */
         const _sendGCode = (resolve, reject) => {
             if (writeNow === false) {
-                this.#instructQ.push({ 
-                    instruction: instruction, 
-                    extractor: {
-                        regex: extractorRegEx,
-                        callback: resolve
-                    }
-                });
-                
+                if (this.#instructQ.length === 0) {
+                    // Add the extractor to the extract queue since it won't be automatically added
+                    this.#extractQ.push({regex: extractorRegEx, callback: resolve});
+
+                    // Immediately write to the port
+                    this.#openPort.write(instruction, this.CHARACTER_ENCODING);
+                } else {
+                    this.#instructQ.push({ 
+                        instruction: instruction, 
+                        extractor: {
+                            regex: extractorRegEx,
+                            callback: resolve
+                        }
+                    });
+                }
+                    
                 if (this.#instructQ.length > 50)
                     if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.MANY_GCODE_INSTRUCTIONS)
                         console.warn(`Fabricator at port ${this.#openPort.path} has over 50 G-Code instructions in its queue which is abnormal. The sendGCodeInstruction returns a promise that should be awaited.`);
