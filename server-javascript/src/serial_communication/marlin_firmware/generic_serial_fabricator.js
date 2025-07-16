@@ -40,20 +40,6 @@ import { DEBUG_FLAGS as DF } from '../../flags.js';
  * It assumes that the fabricator is flashed with {@link https://github.com/MarlinFirmware/Marlin Marlin firmware}
  */
 export class GenericSerialFabricator {
-    /**
-     * The dummy instruction to send to the fabricator when there's nothing in the instruction queue
-     * @readonly
-     * @type {string}
-     */
-    DUMMY_INSTRUCTION = 'M118 Hello, human.\n';
-
-    /**
-     * The dummy instruction's extractor regex
-     * @readonly
-     * @type {RegExp}
-     */
-    DUMMY_INSTRUCTION_EXTRACTOR_REGEX = /(?<dumbo>Hello, human.)/;
-
     /** 
      * Baud rate of the connection to the serial port
      * @readonly 
@@ -95,6 +81,20 @@ export class GenericSerialFabricator {
      * @type {string}
      */
     GCODE_PROCESSED_RESPONSE = 'ok\n';
+
+        /**
+     * The dummy instruction to send to the fabricator when there's nothing in the instruction queue
+     * @readonly
+     * @type {string}
+     */
+    DUMMY_INSTRUCTION = 'M118 Hello, human.\n';
+
+    /**
+     * The dummy instruction's extractor regex
+     * @readonly
+     * @type {RegExp}
+     */
+    DUMMY_INSTRUCTION_EXTRACTOR_REGEX = /(?<dumbo>Hello, human.)/;
 
     /** 
      * String buffer used internally to process results from G-Code instructions
