@@ -220,7 +220,6 @@ export class GenericSerialFabricator {
 
     /**
      * Sends a dummy instruction to the fabricator. Uses this.DUMMY_INSTRUCTION
-     * @returns {undefined}
      */
     sendDummyInstruction() {
         const _sendDummyInstruction = () => {
