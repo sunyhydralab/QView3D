@@ -1,6 +1,6 @@
 # Architecture of GenericSerialFabricator
 
-G-Code instruction queue (Contains `GCodeInstruction` objects)
+G-Code instruction queue (Contains `InstructionExtractor` objects)
 
 G-Code extractor queue (Contains `ResponseExtractor` objects)
 
