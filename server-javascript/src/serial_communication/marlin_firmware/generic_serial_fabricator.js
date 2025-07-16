@@ -173,7 +173,7 @@ export class GenericSerialFabricator {
 
                                 break; /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
                             } else {
-                                // Else, the extractor has not got what it wanted and should be re-added to the queue
+                                // Else, the extractor didn't get what it wanted and should be re-added to the queue
                                 this.#extractQ.push(extractor);
 
                                 if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.EXTRACTOR_FAILED_MATCH)
