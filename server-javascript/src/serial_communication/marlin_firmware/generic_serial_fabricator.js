@@ -70,7 +70,7 @@ export class GenericSerialFabricator {
      */
     GCODE_PROCESSED_RESPONSE = 'ok\n';
 
-        /**
+    /**
      * The dummy instruction to send to the fabricator when there's nothing in the instruction queue
      * @readonly
      * @type {string}
@@ -156,26 +156,26 @@ export class GenericSerialFabricator {
                         /** @type {ResponseExtractor} */
                         // @ts-ignore It's impossible for this to be undefined since there has to be something in the array
                         const extractor = this.#extractQ.shift();
-                        
+
                         if (extractor.regex !== undefined) {
                             const extractorResult = extractor.regex.exec(line);
-                            
+
                             // If we get a result, then this extractor has found what it wanted
                             if (extractorResult !== null) {
                                 if (extractorResult.groups === undefined)
                                     throw new Error(`The extractor ${extractor.regex} did not provide named capture groups in its implementation. This behavior is not supported in the GenericSerialFabricator class`);
-                                                                    
+
                                 // The result is stored as an object in the capture group
                                 extractor.callback({ status: 'processed', extractedResults: extractorResult.groups });
-                                
+
                                 if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_EXTRACTOR_RESULT)
                                     console.info(`The extractor ${extractor.regex} returned ${Object.values(extractorResult.groups)} from ${line}`);
-                                
+
                                 break; /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
                             } else {
                                 // Else, the extractor has not got what it wanted and should be re-added to the queue
                                 this.#extractQ.push(extractor);
-                                
+
                                 if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.EXTRACTOR_FAILED_MATCH)
                                     console.info(`The extractor ${extractor.regex} failed to match ${line}`);
                             }
@@ -201,7 +201,7 @@ export class GenericSerialFabricator {
                     // @ts-ignore It's impossible for this to be undefined since there has to be something in the array
                     const nextInstr = this.#instructQ.shift();
 
-                    this.#openPort.write(nextInstr.instruction, this.CHARACTER_ENCODING);   
+                    this.#openPort.write(nextInstr.instruction, this.CHARACTER_ENCODING);
                     this.#extractQ.push(nextInstr.extractor);
                 }
             }
@@ -229,27 +229,27 @@ export class GenericSerialFabricator {
             if (writeNow === false) {
                 if (this.#extractQ.length === 0) {
                     // Add the extractor to the extract queue since it won't be automatically added
-                    this.#extractQ.push({regex: extractorRegEx, callback: resolve});
+                    this.#extractQ.push({ regex: extractorRegEx, callback: resolve });
 
                     // Immediately write to the port
                     this.#openPort.write(instruction, this.CHARACTER_ENCODING);
                 } else {
-                    this.#instructQ.push({ 
-                        instruction: instruction, 
+                    this.#instructQ.push({
+                        instruction: instruction,
                         extractor: {
                             regex: extractorRegEx,
                             callback: resolve
                         }
                     });
                 }
-                    
+
                 if (this.#instructQ.length > 50)
                     if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.MANY_GCODE_INSTRUCTIONS)
                         console.warn(`Fabricator at port ${this.#openPort.path} has over 50 G-Code instructions in its queue which is abnormal. The sendGCodeInstruction returns a promise that should be awaited.`);
 
             } else if (writeNow === true) {
                 // Add the extractor to the extract queue since it won't be automatically added
-                this.#extractQ.push({regex: extractorRegEx, callback: resolve});
+                this.#extractQ.push({ regex: extractorRegEx, callback: resolve });
 
                 // Immediately write to the port
                 this.#openPort.write(instruction, this.CHARACTER_ENCODING);
@@ -286,7 +286,7 @@ export class GenericSerialFabricator {
             this.#dummyInstructionBeingSent = true;
             /** @type {FabricatorResponse} */
             let response;
-            
+
             try {
                 response = await this.sendGCodeInstruction(this.DUMMY_INSTRUCTION, this.DUMMY_INSTRUCTION_EXTRACTOR_REGEX, writeNow);
             } catch (e) {
@@ -294,21 +294,21 @@ export class GenericSerialFabricator {
                 console.warn(e);
                 response = { status: 'timed-out' };
             }
-            
+
             this.#dummyInstructionBeingSent = false;
 
             if (response.status === 'processed')
                 return response;
             else if (response.status === 'timed-out')
                 return response;
-            
+
             if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.UNHANDLED_STATES) {
                 console.warn(`The sendDummyInstruction function has experienced an unhandled state! The status from the fabricator was ${response.status} instead of processed or timed-out`);
                 // Some useful info
                 console.warn(`Fabricator at port: ${this.#openPort.path}\nG-Code instruction sent: ${this.DUMMY_INSTRUCTION}\nExtractor used: ${this.DUMMY_INSTRUCTION_EXTRACTOR_REGEX}`);
             }
-                
-            return { status: 'unexpected-response'};
+
+            return { status: 'unexpected-response' };
         } else {
             throw new Error(`A dummy instruction was already sent to fabricator at port ${this.#openPort.path}. Was this intentional?`);
         }
@@ -334,7 +334,7 @@ export class GenericSerialFabricator {
      * Returns the firmware information for the given fabricator
      * @returns {Promise<FabricatorResponse>}
      */
-    getFirmwareInfo() {        
+    getFirmwareInfo() {
         return this.sendGCodeInstruction(this.INFO_CMD, this.INFO_CMD_EXTRACTOR);
     }
 }
