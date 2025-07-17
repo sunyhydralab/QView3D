@@ -24,7 +24,7 @@ import { DEBUG_FLAGS } from '../../flags.js';
  */
 
 /**
- * @todo Put all timeouts into an array so that they can be closed when the connection to the serial port is unexpectedly lost
+ * @todo ONLY use the .close() method to close connections to fabricators (when this is implemented)
  */
 
 /**
