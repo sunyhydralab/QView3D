@@ -169,7 +169,7 @@ export class GenericSerialFabricator {
                                 extractor.callback({ status: 'processed', extractedResults: extractorResult.groups });
 
                                 if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_EXTRACTOR_RESULT)
-                                    console.info(`The extractor ${extractor.regex} returned ${Object.values(extractorResult.groups)} from ${line}`);
+                                    console.info(`The extractor ${extractor.regex} returned ${Object.values(extractorResult.groups)} from '${line}'`);
 
                                 break; /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
                             } else {
@@ -181,7 +181,7 @@ export class GenericSerialFabricator {
                             }
                         } else {
                             if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.MISSING_REGEX)
-                                console.info(`The extractor with the callback function ${extractor.callback} has no regex and therefore won't extract anything`);
+                                console.info(`An extractor has no RegEx and therefore won't extract any results from the line '${line}'`);
 
                             // If no regex is present, then it is assumed that this extractor wants to see 
                             // if the this.GCODE_PROCESSED_RESPONSE is present in the fabricator's response
