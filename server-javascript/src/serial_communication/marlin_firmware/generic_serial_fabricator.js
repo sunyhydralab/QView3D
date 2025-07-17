@@ -260,11 +260,19 @@ export class GenericSerialFabricator {
             }
             
             // End all existing extractors
-            for (const extractor of this.#extractQ) {
+            while (this.#extractQ.length > 0) {
+                /** @type {ResponseExtractor} */
+                // @ts-ignore
+                const extractor = this.#extractQ.shift();
+
                 extractor.callback({ status: 'fabricator-disconnected' });
             }
             
-            for (const inst of this.#instructQ) {
+            while (this.#instructQ.length > 0) {
+                /** @type {InstructionExtractor} */
+                // @ts-ignore
+                const inst = this.#instructQ.shift();
+
                 inst.extractor.callback({ status: 'fabricator-disconnected' });
             }
             
