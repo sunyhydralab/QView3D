@@ -252,8 +252,12 @@ export class GenericSerialFabricator {
             this.#timeouts.get('handleIdleTimeout')?.refresh();
         }
 
-        // Handles the closing of the connection between the fabricator and the Node process
-        const closeListener = () => {
+        /**
+         * Handles the closing of the connection between the fabricator and the Node process
+         * @param {Error} [err] Error object sent when an error causes the connection between the node process and the fabricator to end
+         * @todo Fix the type for this particular error object. This object possesses the 'disconnected' property
+         */
+        const closeListener = (err) => {
             // Close all active timeouts
             for (const timeout of this.#timeouts) {
                 timeout[1].close();
