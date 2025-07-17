@@ -265,6 +265,12 @@ export class GenericSerialFabricator {
          * @param {function(Error=): void} reject
          */
         const _sendGCode = (resolve, reject) => {
+            // Ensure the connection to the fabricator isn't closed
+            if (this.#openPort.closed === false) {
+                resolve({ status: 'fabricator-disconnected' });
+                return; // Stop the execution of this function
+            }
+
             if (writeNow === false) {
                 if (this.#extractQ.length === 0) {
                     // Add the extractor to the extract queue since it won't be automatically added
