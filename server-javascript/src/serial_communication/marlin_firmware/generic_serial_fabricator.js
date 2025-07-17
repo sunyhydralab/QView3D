@@ -322,7 +322,7 @@ export class GenericSerialFabricator {
 
     /**
      * Sends a dummy instruction to the fabricator. Uses this.DUMMY_INSTRUCTION
-     * This is typically used to start the processing loop between Qview3D and the fabricator
+     * This is typically used to start the processing loop between the data processor and the fabricator
      * @param {boolean} [writeNow = true] If this dummy instruction should be added to the instruction queue or sent directly to the fabricator
      * @returns {Promise<FabricatorResponse>}
      */
