@@ -266,7 +266,7 @@ export class GenericSerialFabricator {
          */
         const _sendGCode = (resolve, reject) => {
             // Ensure the connection to the fabricator isn't closed
-            if (this.#openPort.closed === false) {
+            if (this.#openPort.closed === true) {
                 resolve({ status: 'fabricator-disconnected' });
                 return; // Stop the execution of this function
             }
