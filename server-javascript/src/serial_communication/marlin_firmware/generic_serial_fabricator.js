@@ -151,6 +151,8 @@ export class GenericSerialFabricator {
         // Internal function used to determine whether or not the current fabricator is idle
         const _handleIdle = () => {
             this.#hasBooted = false;
+            // Refreshes the boot up timer because we have to wait for the fabricator to boot up again
+            hasBootedTimeout.refresh();
 
             if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.FABRICATOR_IDLE)
                 console.info(`The fabricator at port ${this.#openPort.path} is idle`);
