@@ -17,4 +17,5 @@ export const DEBUG_FLAGS = {
     NONEXISTENT_FUTURE: true, // Code that may or may not be necessary but was added just-in-case.
                               // If any of these logs appear, then the log should be deleted and the code it references should 
                               // be left alone because the log proves that that code path is reachable and therefore valid
+    FABRICATOR_CLOSED: true,
 };
