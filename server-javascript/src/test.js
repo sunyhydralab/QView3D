@@ -34,10 +34,10 @@ import { Prusai3MK3 } from './serial_communication/marlin_firmware/prusamk3.js';
 // fab2.sendDummyInstruction();
 
 class TestFabricator extends GenericSerialFabricator {
-    RESPONSE_TIMEOUT = 100000;
+    RESPONSE_TIMEOUT = 100000000;
 }
 
 const z = console.log
 const fab3 = new TestFabricator('/dev/pts/2');
-z(await fab3.sendGCodeInstruction('GTEST\n', undefined, true));
-z(await fab3.getFirmwareInfo());
+z(fab3.sendGCodeInstruction('GTEST\n'));
+z(fab3.getFirmwareInfo());
