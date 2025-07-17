@@ -23,6 +23,10 @@ import { DEBUG_FLAGS } from '../../flags.js';
  */
 
 /**
+ * @todo Put all timeouts into an array so that they can be closed when the connection to the serial port is unexpectedly lost
+ */
+
+/**
  * A generic class used to communicate with G-Code enabled fabricators over serial. This class is meant to be **extended**
  * 
  * It assumes that the fabricator is flashed with {@link https://github.com/MarlinFirmware/Marlin Marlin firmware}
