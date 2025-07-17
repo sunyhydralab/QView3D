@@ -14,4 +14,7 @@ export const DEBUG_FLAGS = {
     UNHANDLED_STATES: true, // When the code doesn't support this particular state of the program, a log will be shown
     MISSING_REGEX: true, // Pollutes logs (but can be useful)
     FABRICATOR_IDLE: true,
+    NONEXISTENT_FUTURE: true, // Code that may or may not be necessary but was added just-in-case.
+                              // If any of these logs appear, then the log should be deleted and the code it references should 
+                              // be left alone because the log proves that that code path is reachable and therefore valid
 };
