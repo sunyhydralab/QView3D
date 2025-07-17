@@ -305,8 +305,12 @@ export class GenericSerialFabricator {
          * @param {function(Error=): void} reject
          */
         const _sendGCode = (resolve, reject) => {
-            // Ensure the connection to the fabricator isn't closed
-            if (this.#openPort.closed === true) {
+            // Ensure the connection to the fabricator isn't 
+            // **WARNING** The Node SerialPort library doesn't update the .closed property when a fabricator unexpectedly disconnects
+            /** However, the isOpen property seems to update @todo Why? */
+            // **WARNING** The Node SerialPort library doesn't update .isOpen property when a stream is destroyed using the .destroy method
+            /** However, the .closed property seems to update @todo Why? */
+            if (this.#openPort.isOpen === false || this.#openPort.closed === true) {
                 resolve({ status: 'fabricator-disconnected' });
                 return; // Stop the execution of this function
             }
