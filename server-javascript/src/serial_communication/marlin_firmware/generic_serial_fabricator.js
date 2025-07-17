@@ -163,8 +163,11 @@ export class GenericSerialFabricator {
         const handleIdleTimeout = setTimeout(_handleIdle, this.IDLE_TIMEOUT);
         this.#timeouts.set('handleIdleTimeout', handleIdleTimeout);
 
-        // When data is received, this callback function will run
-        this.#openPort.on('data', chunk => {
+        /**
+         * When data is received, this callback function will run
+         * @param {Buffer | string | any} chunk
+         */
+        const dataListener = (chunk) => {
             if (chunk instanceof Buffer)
                 chunk = chunk.toString(this.CHARACTER_ENCODING);
 
@@ -247,7 +250,36 @@ export class GenericSerialFabricator {
             
             // Refresh the timeout tracking whether the fabricator is idle or not
             this.#timeouts.get('handleIdleTimeout')?.refresh();
-        })
+        }
+
+        // Handles the closing of the connection between the fabricator and the Node process
+        const closeListener = () => {
+            // Close all active timeouts
+            for (const timeout of this.#timeouts) {
+                timeout[1].close();
+            }
+            
+            // End all existing extractors
+            for (const extractor of this.#extractQ) {
+                extractor.callback({ status: 'fabricator-disconnected' });
+            }
+            
+            for (const inst of this.#instructQ) {
+                inst.extractor.callback({ status: 'fabricator-disconnected' });
+            }
+            
+            // Remove the data event listener
+            this.#openPort.removeListener('data', dataListener);
+
+            /** @todo Ensure everything has been deleted else we have a memory leak */
+
+            if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.FABRICATOR_CLOSED)
+                console.info(`Fabricator at port ${this.#openPort.path} has closed its connection`);
+        };
+        
+        this.#openPort
+            .on('data', dataListener)
+            .on('close', closeListener);
     }
 
     /**
