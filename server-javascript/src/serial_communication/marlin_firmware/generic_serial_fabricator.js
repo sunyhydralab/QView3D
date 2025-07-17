@@ -261,8 +261,8 @@ export class GenericSerialFabricator {
     sendGCodeInstruction(instruction, extractorRegEx, writeNow = false) {
         /**
          * Internal function used to not write code twice
-         * @param {function(any): void} resolve
-         * @param {function(any=): void} reject
+         * @param {function(FabricatorResponse): void} resolve
+         * @param {function(Error=): void} reject
          */
         const _sendGCode = (resolve, reject) => {
             if (writeNow === false) {
