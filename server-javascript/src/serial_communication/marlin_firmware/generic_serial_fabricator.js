@@ -133,10 +133,10 @@ export class GenericSerialFabricator {
     #dummyInstructionBeingSent = false;
 
     /**
-     * Used to determine if this fabricator is idle
-     * @type {number}
+     * Used to close all timeouts when the connection with the fabricator unexpectedly closes (or just closes)
+     * @type {Map<string, NodeJS.Timeout>}
      */
-    #timeOfLastOperation = Date.now();
+    #timeouts = new Map();
 
     /**
      * @param {string} port The name of the port e.g., `/dev/ttyACM0` on Linux systems or `COM1` on Windows
@@ -145,22 +145,20 @@ export class GenericSerialFabricator {
         this.#openPort = new SerialPort({ path: port, baudRate: this.BAUD_RATE });
 
         // Wait a specific amount of time before allowing G-Code instructions to be sent over serial
-        setTimeout(() => this.#hasBooted = true, this.BOOT_TIME);
+        const hasBootedTimeout = setTimeout(() => this.#hasBooted = true, this.BOOT_TIME);
+        this.#timeouts.set('hasBootedTimeout', hasBootedTimeout);
 
         // Internal function used to determine whether or not the current fabricator is idle
         const _handleIdle = () => {
-            const currentTime = Date.now();
+            this.#hasBooted = false;
 
-            if (currentTime - this.#timeOfLastOperation >= this.IDLE_TIMEOUT) {
-                this.#hasBooted = false;
-
-                if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.FABRICATOR_IDLE)
-                    console.info(`The fabricator at port ${this.#openPort.path} is idle`);
-            }
+            if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.FABRICATOR_IDLE)
+                console.info(`The fabricator at port ${this.#openPort.path} is idle`);
         }
 
         // Automatically make the fabricator idle after the this.IDLE_TIMEOUT has passed
-        setTimeout(_handleIdle, this.IDLE_TIMEOUT);
+        const handleIdleTimeout = setTimeout(_handleIdle, this.IDLE_TIMEOUT);
+        this.#timeouts.set('handleIdleTimeout', handleIdleTimeout);
 
         // When data is received, this callback function will run
         this.#openPort.on('data', chunk => {
@@ -243,12 +241,9 @@ export class GenericSerialFabricator {
 
             // Because the last line could be incomplete, add that line to the buffer. All other lines are discarded as noise
             this.#responseBuf = lines[lines.length - 1];
-
-            // Update time of last operation
-            this.#timeOfLastOperation = Date.now();
             
-            // Automatically make the fabricator idle after the this.IDLE_TIMEOUT has passed
-            setTimeout(_handleIdle, this.IDLE_TIMEOUT);
+            // Refresh the timeout tracking whether the fabricator is idle or not
+            this.#timeouts.get('handleIdleTimeout')?.refresh();
         })
     }
 
