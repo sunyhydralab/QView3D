@@ -2,6 +2,7 @@
 
 // Used to communicate with serial devices
 import { SerialPort } from 'serialport';
+// Debug flags
 import { DEBUG_FLAGS } from '../../flags.js';
 
 /**
