@@ -46,6 +46,13 @@ export class GenericSerialFabricator {
      */
     BOOT_TIME = 800;
 
+    /**
+     * The amount of time before the fabricator becomes idle (and therefore we need to wait for it to boot up again before sending another instruction)
+     * @readonly
+     * @type {number}
+     */
+    IDLE_TIMEOUT = 120000;
+
     /** 
      * The maximum amount of time to wait for a response from a fabricator in ms
      * @readonly
@@ -126,6 +133,12 @@ export class GenericSerialFabricator {
     #dummyInstructionBeingSent = false;
 
     /**
+     * Used to determine if this fabricator is idle
+     * @type {number}
+     */
+    #timeOfLastOperation = Date.now();
+
+    /**
      * @param {string} port The name of the port e.g., `/dev/ttyACM0` on Linux systems or `COM1` on Windows
      */
     constructor(port) {
@@ -133,6 +146,21 @@ export class GenericSerialFabricator {
 
         // Wait a specific amount of time before allowing G-Code instructions to be sent over serial
         setTimeout(() => this.#hasBooted = true, this.BOOT_TIME);
+
+        // Internal function used to determine whether or not the current fabricator is idle
+        const _handleIdle = () => {
+            const currentTime = Date.now();
+
+            if (currentTime - this.#timeOfLastOperation >= this.IDLE_TIMEOUT) {
+                this.#hasBooted = false;
+
+                if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.FABRICATOR_IDLE)
+                    console.info(`The fabricator at port ${this.#openPort.path} is idle`);
+            }
+        }
+
+        // Automatically make the fabricator idle after the this.IDLE_TIMEOUT has passed
+        setTimeout(_handleIdle, this.IDLE_TIMEOUT);
 
         // When data is received, this callback function will run
         this.#openPort.on('data', chunk => {
@@ -215,6 +243,12 @@ export class GenericSerialFabricator {
 
             // Because the last line could be incomplete, add that line to the buffer. All other lines are discarded as noise
             this.#responseBuf = lines[lines.length - 1];
+
+            // Update time of last operation
+            this.#timeOfLastOperation = Date.now();
+            
+            // Automatically make the fabricator idle after the this.IDLE_TIMEOUT has passed
+            setTimeout(_handleIdle, this.IDLE_TIMEOUT);
         })
     }
 
@@ -322,26 +356,26 @@ export class GenericSerialFabricator {
     }
 
     /** @todo command -> instruction for consistency */
-    // Commands to communicate with fabricators
-    // ..._CMD is the command, 
-    // ..._CMD_EXTRACTOR is used to get the output of the command
+    // G-Code Instructions to communicate with fabricators
+    // ..._INSTR is the G-Code instruction, 
+    // ..._INSTR_EXTRACTOR is used to get results after the instruction has executed
     /** 
      * @readonly 
      * @type {string}
      */
-    INFO_CMD = 'M115\n';
+    INFO_INSTR = 'M115\n';
 
     /** 
      * @readonly 
      * @type {RegExp} 
      */
-    INFO_CMD_EXTRACTOR = /FIRMWARE_NAME:(?<firmwareVersion>[^\s]+).+MACHINE_TYPE:(?<machineType>[^\s]+).+UUID:(?<UUID>[^\s]+)/;
+    INFO_INSTR_EXTRACTOR = /FIRMWARE_NAME:(?<firmwareVersion>[^\s]+).+MACHINE_TYPE:(?<machineType>[^\s]+).+UUID:(?<UUID>[^\s]+)/;
 
     /**
      * Returns the firmware information for the given fabricator
      * @returns {Promise<FabricatorResponse>}
      */
     getFirmwareInfo() {
-        return this.sendGCodeInstruction(this.INFO_CMD, this.INFO_CMD_EXTRACTOR);
+        return this.sendGCodeInstruction(this.INFO_INSTR, this.INFO_INSTR_EXTRACTOR);
     }
 }

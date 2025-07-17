@@ -12,6 +12,6 @@ export const DEBUG_FLAGS = {
     MANY_GCODE_INSTRUCTIONS: true,
     SHOW_POTENTIALLY_UNSAFE_WRITES: true,
     UNHANDLED_STATES: true, // When the code doesn't support this particular state of the program, a log will be shown
-    MISSING_REGEX: true, // Pollutes logs (but can be useful) 
-
+    MISSING_REGEX: true, // Pollutes logs (but can be useful)
+    FABRICATOR_IDLE: true,
 };
