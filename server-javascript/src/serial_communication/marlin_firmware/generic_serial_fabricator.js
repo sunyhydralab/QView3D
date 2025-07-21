@@ -134,12 +134,6 @@ export class GenericSerialFabricator {
     #dummyInstructionBeingSent = false;
 
     /**
-     * Used to close all timeouts when the connection with the fabricator unexpectedly closes (or just closes)
-     * @type {Map<string, NodeJS.Timeout>}
-     */
-    #timeouts = new Map();
-
-    /**
      * @param {string} port The name of the port e.g., `/dev/ttyACM0` on Linux systems or `COM1` on Windows
      */
     constructor(port) {
@@ -147,7 +141,6 @@ export class GenericSerialFabricator {
 
         // Wait a specific amount of time before allowing G-Code instructions to be sent over serial
         const hasBootedTimeout = setTimeout(() => this.#hasBooted = true, this.BOOT_TIME);
-        this.#timeouts.set('hasBootedTimeout', hasBootedTimeout);
 
         // Internal function used to determine whether or not the current fabricator is idle
         const _handleIdle = () => {
@@ -161,7 +154,6 @@ export class GenericSerialFabricator {
 
         // Automatically make the fabricator idle after the this.IDLE_TIMEOUT has passed
         const handleIdleTimeout = setTimeout(_handleIdle, this.IDLE_TIMEOUT);
-        this.#timeouts.set('handleIdleTimeout', handleIdleTimeout);
 
         /**
          * When data is received, this callback function will run
@@ -249,7 +241,7 @@ export class GenericSerialFabricator {
             this.#responseBuf = lines[lines.length - 1];
             
             // Refresh the timeout tracking whether the fabricator is idle or not
-            this.#timeouts.get('handleIdleTimeout')?.refresh();
+            handleIdleTimeout.refresh();
         }
 
         /**
@@ -258,10 +250,9 @@ export class GenericSerialFabricator {
          * @todo Fix the type for this particular error object. This object possesses the 'disconnected' property
          */
         const closeListener = (err) => {
-            // Close all active timeouts
-            for (const timeout of this.#timeouts) {
-                clearTimeout(timeout[1]);
-            }
+            // Clear idle and hasBooted timeouts
+            clearTimeout(handleIdleTimeout);
+            clearTimeout(hasBootedTimeout);
             
             // End all existing extractors
             while (this.#extractQ.length > 0) {
