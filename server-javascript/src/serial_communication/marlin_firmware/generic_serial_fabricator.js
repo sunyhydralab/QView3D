@@ -41,6 +41,14 @@ export class GenericSerialFabricator {
     BAUD_RATE = 115200;
 
     /**
+     * Used to determine what counts as an abnormal amount of requests to a fabricator at once
+     * This is mostly used for debugging purposes
+     * @readonly
+     * @type {number}
+     */
+    ABNORMAL_REQUEST_AMOUNT = 4;
+
+    /**
      * The amount of time to wait in ms before sending G-Code instructions to the fabricator
      * @readonly 
      * @type {number} 
@@ -326,9 +334,9 @@ export class GenericSerialFabricator {
                     });
                 }
 
-                if (this.#instructQ.length > 50)
+                if (this.#instructQ.length > this.ABNORMAL_REQUEST_AMOUNT)
                     if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.MANY_GCODE_INSTRUCTIONS)
-                        console.warn(`Fabricator at port ${this.#openPort.path} has over 50 G-Code instructions in its queue which is abnormal. The sendGCodeInstruction returns a promise that should be awaited.`);
+                        console.warn(`Fabricator at port ${this.#openPort.path} has over ${this.ABNORMAL_REQUEST_AMOUNT} G-Code instructions in its queue which is abnormal. The sendGCodeInstruction returns a promise that should be awaited.`);
 
             } else if (writeNow === true) {
                 // Add the extractor to the extract queue since it won't be automatically added
