@@ -14,6 +14,7 @@ import { DEBUG_FLAGS } from '../../flags.js';
 /**
  * @typedef ResponseExtractor
  * @property {RegExp} [regex] A regular expression used to extract specific values from a fabricator's response
+ * @property {'in-progress' | 'done' | 'started' | 'stale'} status Status of the fabricator's response
  * @property {function(FabricatorResponse): void} callback A function called when the extractor gets a result
  */
 
@@ -193,6 +194,9 @@ export class GenericSerialFabricator {
                         // @ts-ignore It's impossible for this to be undefined since there has to be something in the array
                         const extractor = this.#extractQ.shift();
 
+                        /** @todo By default, whenever a response from the fabricator is received, every extractor becomes 'in-progress' Will this cause issues? */
+                        extractor.status = 'in-progress'; // A response has been received by the fabricator, so the extractor is now in-progress
+
                         if (extractor.regex !== undefined) {
                             const extractorResult = extractor.regex.exec(line);
 
@@ -202,6 +206,7 @@ export class GenericSerialFabricator {
                                     throw new Error(`The extractor ${extractor.regex} did not provide named capture groups in its implementation. This behavior is not supported in the GenericSerialFabricator class`);
 
                                 // The result is stored as an object in the capture group
+                                extractor.status = 'done';
                                 extractor.callback({ status: 'processed', extractedResults: extractorResult.groups });
 
                                 if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_EXTRACTOR_RESULT)
@@ -222,6 +227,7 @@ export class GenericSerialFabricator {
                             // If no regex is present, then it is assumed that this extractor wants to see 
                             // if the this.GCODE_PROCESSED_RESPONSE is present in the fabricator's response
                             if (this.#responseBuf.includes(this.GCODE_PROCESSED_RESPONSE)) {
+                                extractor.status = 'done';
                                 extractor.callback({ status: 'processed' });
 
                                 break;  /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
@@ -316,21 +322,20 @@ export class GenericSerialFabricator {
                 resolve({ status: 'fabricator-disconnected' });
                 return; // Stop the execution of this function
             }
+            /** @type {ResponseExtractor} */
+            const extractor = { regex: extractorRegEx, status: 'started', callback: resolve }
 
             if (writeNow === false) {
                 if (this.#extractQ.length === 0) {
                     // Add the extractor to the extract queue since it won't be automatically added
-                    this.#extractQ.push({ regex: extractorRegEx, callback: resolve });
+                    this.#extractQ.push(extractor);
 
                     // Immediately write to the port
                     this.#openPort.write(instruction, this.CHARACTER_ENCODING);
                 } else {
                     this.#instructQ.push({
                         instruction: instruction,
-                        extractor: {
-                            regex: extractorRegEx,
-                            callback: resolve
-                        }
+                        extractor: extractor
                     });
                 }
 
@@ -340,7 +345,7 @@ export class GenericSerialFabricator {
 
             } else if (writeNow === true) {
                 // Add the extractor to the extract queue since it won't be automatically added
-                this.#extractQ.push({ regex: extractorRegEx, callback: resolve });
+                this.#extractQ.push(extractor);
 
                 // Immediately write to the port
                 this.#openPort.write(instruction, this.CHARACTER_ENCODING);
@@ -350,11 +355,17 @@ export class GenericSerialFabricator {
             }
 
             // The request times out after the timeout amount
-            setTimeout(() => {
-                resolve({ status: 'timed-out'});
-                
-                if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_TIMED_OUT_INSTRUCTIONS)
-                    console.warn(`The instruction ${instruction.trim()} with extractor ${extractorRegEx} timed out for fabricator on port ${this.#openPort.path}`);
+            const responseTimeout = setTimeout(() => {
+                // Only timeout when we never get a response from the fabricator, or the response is stale (it stopped responding after some time) 
+                if (extractor.status === 'started' || extractor.status === 'stale') {
+                    resolve({ status: 'timed-out'});
+                    
+                    if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_TIMED_OUT_INSTRUCTIONS)
+                        console.warn(`The instruction ${instruction.trim()} with extractor ${extractorRegEx} timed out for fabricator on port ${this.#openPort.path}`);
+                } else if (extractor.status === 'in-progress') {
+                    extractor.status = 'stale'; // If the fabricator doesn't respond again, then this value won't update
+                    responseTimeout.refresh();
+                }
             }, this.RESPONSE_TIMEOUT);
         }
 
