@@ -287,7 +287,7 @@ export class GenericSerialFabricator {
 
     /**
      * Sends a G-Code instruction to a fabricator, and uses the extractor to return the result
-     * If no response is received after this.RESPONSE_TIMEOUT, this promise will reject with an error
+     * If no response is received after this.RESPONSE_TIMEOUT, the status of the response will be 'timed-out' without any extracted results  
      * @param {string} instruction The G-Code instruction to send to the fabricator
      * @param {RegExp} [extractorRegEx] The extractor to be used with this G-Code instruction
      * @param {boolean} [writeNow = false] Whether or not the G-Code instruction will be added to the queue or immediately sent to the fabricator (**Warning unsafe**)
@@ -297,9 +297,8 @@ export class GenericSerialFabricator {
         /**
          * Internal function used to not write code twice
          * @param {function(FabricatorResponse): void} resolve
-         * @param {function(Error=): void} reject
          */
-        const _sendGCode = (resolve, reject) => {
+        const _sendGCode = (resolve) => {
             // Ensure the connection to the fabricator isn't 
             // **WARNING** The Node SerialPort library doesn't update the .closed property when a fabricator unexpectedly disconnects
             /** However, the isOpen property seems to update @todo Why? */
@@ -344,18 +343,19 @@ export class GenericSerialFabricator {
 
             // The request times out after the timeout amount
             setTimeout(() => {
-                reject(
-                    new Error(`The instruction ${instruction.trim()} with extractor ${extractorRegEx} timed out for fabricator on port ${this.#openPort.path}`)
-                );
+                resolve({ status: 'timed-out'});
+                
+                if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_TIMED_OUT_INSTRUCTIONS)
+                    console.warn(`The instruction ${instruction.trim()} with extractor ${extractorRegEx} timed out for fabricator on port ${this.#openPort.path}`);
             }, this.RESPONSE_TIMEOUT);
         }
 
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             // If it hasn't booted up yet, then wait the boot time
             if (this.#hasBooted === false)
-                setTimeout(_sendGCode, this.BOOT_TIME, resolve, reject);
+                setTimeout(_sendGCode, this.BOOT_TIME, resolve);
             else
-                _sendGCode(resolve, reject);
+                _sendGCode(resolve);
         });
     }
 
