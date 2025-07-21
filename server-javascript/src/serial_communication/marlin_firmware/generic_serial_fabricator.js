@@ -217,7 +217,7 @@ export class GenericSerialFabricator {
                             }
                         } else {
                             if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.MISSING_REGEX)
-                                console.info(`An extractor has no RegEx and therefore won't extract any results from the line '${line}'`);
+                                console.info(`An extractor sent to fabricator at port ${this.#openPort.path} has no RegEx and therefore won't extract any results from the line '${line}'`);
 
                             // If no regex is present, then it is assumed that this extractor wants to see 
                             // if the this.GCODE_PROCESSED_RESPONSE is present in the fabricator's response
