@@ -260,7 +260,7 @@ export class GenericSerialFabricator {
         const closeListener = (err) => {
             // Close all active timeouts
             for (const timeout of this.#timeouts) {
-                timeout[1].close();
+                clearTimeout(timeout[1]);
             }
             
             // End all existing extractors
