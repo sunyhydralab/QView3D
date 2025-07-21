@@ -384,7 +384,7 @@ export class GenericSerialFabricator {
                 response = await this.sendGCodeInstruction(this.DUMMY_INSTRUCTION, this.DUMMY_INSTRUCTION_EXTRACTOR_REGEX, writeNow);
             } catch (e) {
                 // Show the timeout error, but don't crash the program
-                console.warn(e);
+                console.warn(e); /** @todo Add a proper debug log */
                 response = { status: 'timed-out' };
             }
 
