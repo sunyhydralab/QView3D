@@ -194,6 +194,9 @@ export class GenericSerialFabricator {
                         // @ts-ignore It's impossible for this to be undefined since there has to be something in the array
                         const extractor = this.#extractQ.shift();
 
+                        // If this extractor has timed out, then its response is no longer desired
+                        if (extractor.status === 'timed-out')
+                            break;
                         /** @todo By default, whenever a response from the fabricator is received, every extractor becomes 'in-progress' Will this cause issues? */
                         extractor.status = 'in-progress'; // A response has been received by the fabricator, so the extractor is now in-progress
 
@@ -359,6 +362,7 @@ export class GenericSerialFabricator {
                 // Only timeout when we never get a response from the fabricator, or the response is stale (it stopped responding after some time) 
                 if (extractor.status === 'started' || extractor.status === 'stale') {
                     resolve({ status: 'timed-out'});
+                    extractor.status = 'timed-out';
                     
                     if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_TIMED_OUT_INSTRUCTIONS)
                         console.warn(`The instruction ${instruction.trim()} with extractor ${extractorRegEx} timed out for fabricator on port ${this.#openPort.path}`);
