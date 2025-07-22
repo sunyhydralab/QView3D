@@ -210,7 +210,7 @@ export class GenericSerialFabricator {
                                 extractor.callback({ status: 'processed', extractedResults: extractorResult.groups });
 
                                 if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_EXTRACTOR_RESULT)
-                                    console.info(`The extractor ${extractor.regex} returned ${Object.values(extractorResult.groups)} from '${line}'`);
+                                    console.info(`The extractor ${extractor.regex} returned ${Object.values(extractorResult.groups)} from '${line.trim()}'`);
 
                                 break; /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
                             } else {
