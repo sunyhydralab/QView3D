@@ -366,6 +366,9 @@ export class GenericSerialFabricator {
                     extractor.status = 'stale'; // If the fabricator doesn't respond again, then this value won't update
                     responseTimeout.refresh();
                 }
+
+                if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_EXTRACTOR_STATE_AFTER_TIMEOUT)
+                    console.info(`The state of extractor ${extractor.regex} for instruction ${instruction.trim()} on port ${this.#openPort.path} is ${extractor.status} after response timeout.`);
             }, this.RESPONSE_TIMEOUT);
         }
 
