@@ -1,8 +1,8 @@
 from operator import or_
 import os
 import re
-from models.db import db
-from Classes.Issues import Issue
+from config.db import db
+from Classes.Issues import Issue  # assuming the Issue model is defined in the issue.py file in the models directory
 from datetime import timezone, timedelta
 from flask import jsonify
 from globals import current_app

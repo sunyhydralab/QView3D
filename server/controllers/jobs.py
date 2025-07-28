@@ -1,7 +1,7 @@
 import shutil
 from flask import Blueprint, jsonify, request, Response
 from Classes.Jobs import Job
-from models.db import db
+from config.db import db
 import json
 import os 
 import gzip

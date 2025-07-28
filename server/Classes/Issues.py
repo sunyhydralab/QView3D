@@ -1,10 +1,10 @@
-from models.db import db
+from config.db import db
 from flask import jsonify
 from sqlalchemy.exc import SQLAlchemyError
 
 from datetime import datetime
 import discord
-from models.config import Config
+from config.config import Config
 from globals import current_app
 
 class Issue(db.Model):

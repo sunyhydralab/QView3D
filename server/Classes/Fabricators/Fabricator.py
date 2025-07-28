@@ -9,8 +9,8 @@ from Classes.Fabricators.Device import Device
 from typing_extensions import TextIO
 from Classes.Jobs import Job
 from Mixins.hasEndingSequence import hasEndingSequence
-from models.config import Config
-from models.db import db
+from config.config import Config
+from config.db import db
 from datetime import datetime, timezone
 from globals import current_app, root_path
 

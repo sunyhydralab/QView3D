@@ -15,7 +15,7 @@ import discord
 from discord.ext import commands
 import certifi
 from datetime import datetime
-from models.config import Config
+from config.config import Config
 
 
 
@@ -124,7 +124,7 @@ def run_discord_bot():
 
     @bot.command()
     async def testembedformatting(ctx):
-        from server.Classes.Issues import Issue
+        from Classes.Issues import Issue
         try:
             raise Exception("Test issue")
         except Exception as e:

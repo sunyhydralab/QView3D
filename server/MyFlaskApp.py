@@ -8,11 +8,11 @@ from dotenv import load_dotenv
 from flask_socketio import SocketIO
 from globals import root_path, emulator_connections, event_emitter, tabs
 from routes import defineRoutes
-from models.config import Config
+from config.config import Config
 from Classes.FabricatorList import FabricatorList
 from Classes.Loggers.ABCLogger import ABCLogger
 from werkzeug.serving import WSGIRequestHandler
-from models.db import db
+from config.db import db
 
 class MyFlaskApp(Flask):
     def __init__(self):

@@ -11,7 +11,7 @@ from Classes.Queue import Queue
 from threading import Thread
 import time
 from globals import current_app as app, tabs
-from models.db import db
+from config.db import db
 
 class FabricatorList:
     def __init__(self, passed_app=app):
