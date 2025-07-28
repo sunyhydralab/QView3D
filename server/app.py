@@ -19,8 +19,6 @@ from models.config import Config
 
 
 
-
-
 async def websocket_server():
     print("Websocket Server")
     logger = logging.getLogger("websockets.server")
@@ -126,7 +124,7 @@ def run_discord_bot():
 
     @bot.command()
     async def testembedformatting(ctx):
-        from models.issues import Issue
+        from server.Classes.Issues import Issue
         try:
             raise Exception("Test issue")
         except Exception as e:

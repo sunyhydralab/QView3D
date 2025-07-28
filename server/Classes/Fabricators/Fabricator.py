@@ -360,7 +360,7 @@ class Fabricator(db.Model):
                     "fabricator_status_update", {"id": self.dbID, "status": "error"}
                 )
             # create issue
-            from models.issues import Issue
+            from Classes.Issues import Issue
             Issue.create_issue(f"CODE ISSUE: Print Failed: {self.name} - {self.queue[0].file_name_original}", self.error, self.queue[0].id)
             # send log to discord
             if Config['discord_enabled']:

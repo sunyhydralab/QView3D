@@ -2,7 +2,6 @@ import shutil
 from flask import Blueprint, jsonify, request, Response
 from Classes.Jobs import Job
 from models.db import db
-from models.printers import Printer
 import json
 import os 
 import gzip
