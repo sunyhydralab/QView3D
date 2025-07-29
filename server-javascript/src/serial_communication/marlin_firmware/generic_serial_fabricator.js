@@ -14,7 +14,7 @@ import { DEBUG_FLAGS } from '../../flags.js';
 /**
  * @typedef ResponseExtractor
  * @property {RegExp} [regex] A regular expression used to extract specific values from a fabricator's response
- * @property {'in-progress' | 'done' | 'started' | 'stale'} status Status of the fabricator's response
+ * @property {'in-progress' | 'done' | 'started' | 'stale' | 'timed-out'} status Status of the fabricator's response
  * @property {function(FabricatorResponse): void} callback A function called when the extractor gets a result
  */
 
