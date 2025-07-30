@@ -1,4 +1,4 @@
-![QView3D Logo](QView3Dlogo.png)
+![QView3D Logo](assets/QView3Dlogo.png)
 
 # QView3D
 
@@ -50,7 +50,7 @@ The project is maintained by computer science students at SUNY New Paltz, under 
 
 ## Architecture Diagram
 
-![QView3D Diagram](QViewDiagram.png)
+![QView3D Diagram](assets/QView3D_diagram.png)
 
 ## Setup and Installation
 
