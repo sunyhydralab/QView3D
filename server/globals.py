@@ -15,6 +15,8 @@ event_emitter = EventEmitter()
 
 background_loop = None
 
+# Start a background loop for asyncio tasks
+
 def start_background_loop():
     global background_loop
     background_loop = asyncio.new_event_loop()
@@ -22,6 +24,8 @@ def start_background_loop():
     background_loop.run_forever()
 
 threading.Thread(target=start_background_loop, daemon=True).start()
+
+# Function to find the custom Flask app instance
 
 def _find_custom_app():
     from flask import current_app as flask_current_app
@@ -62,6 +66,8 @@ def compress_with_gzip(log_file_path):
         raise FileNotFoundError(f"The file '{log_file_path}' does not exist.")
     except IOError as e:
         raise IOError(f"An error occurred while compressing the file: {e}")
+
+# Function to manage indentation levels for code blocks
 
 def tabs(tab_change: int = 0):
     global tab_num

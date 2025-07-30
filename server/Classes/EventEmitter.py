@@ -2,6 +2,22 @@ import asyncio
 from typing import Callable
 
 class EventEmitter:
+    """
+    Represents an event emitter that allows registering and emitting events.
+    
+    Attributes:
+        _listeners (dict): A dictionary to hold event listeners.
+        _events (dict): A dictionary mapping event names to lists of callbacks.
+        
+        Methods:
+            on(event_name, callback):
+                Registers a callback for a specific event.
+            emit(event_name, *args, **kwargs):
+                Emits an event, calling all registered callbacks with the provided data.
+            remove_event(event_name):
+                Removes all listeners for a specific event.          
+    """
+    
     def __init__(self):
         self._listeners = None
         self._events = {}
