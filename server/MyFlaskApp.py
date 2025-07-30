@@ -1,16 +1,15 @@
-import logging
 import os
-import subprocess
 from flask import Flask
 from dotenv import load_dotenv
 from globals import root_path, emulator_connections, event_emitter, tabs
 from config.config import Config
 from Classes.FabricatorList import FabricatorList
-from Classes.Loggers.ABCLogger import ABCLogger
 from services.database_service import DatabaseService
 from services.logging_service import LoggingService
 from services.socketio_service import SocketIOService
 from services.routes_service import RoutesService
+from services.cli_service import CLIService
+from services.utilities_service import UtilitiesService
 
 class MyFlaskApp(Flask):
     def __init__(self):
@@ -53,12 +52,17 @@ class MyFlaskApp(Flask):
         self.routes_service = RoutesService(self)
         print(f"{tabs(tab_change=-1)}routes defined")
         
+        print(f"{tabs()}setting up CLI commands...")
+        self.cli_service = CLIService(self)
+        print("Done")
+        
+        print(f"{tabs()}setting up utilities...")
+        self.utilities_service = UtilitiesService(self)
+        print("Done")
+        
         print(f"{tabs()}initializing fabricator list...")
         self.fabricator_list = FabricatorList(self)
         print(f"{tabs(tab_change=-1)}fabricator list initialized")
-        
-        # Setup CLI commands
-        self.setup_cli_commands()
         
         print(f"{tabs()}Flask app setup complete")
 
@@ -68,14 +72,6 @@ class MyFlaskApp(Flask):
         self.config["ip"] = Config.get('ip')
         self.config["port"] = Config.get('port')
         self.config["base_url"] = Config.get('base_url')
-    
-    def setup_cli_commands(self):
-        """Setup Flask CLI commands."""
-        @self.cli.command("test")
-        def run_tests():
-            """Run all tests."""
-            import subprocess
-            subprocess.run(["python", "../Tests/parallel_test_runner.py"])
 
     @property
     def logger(self):
@@ -85,10 +81,6 @@ class MyFlaskApp(Flask):
     def logger(self, logger):
         self._logger = logger
 
-    @logger.getter
-    def logger(self):
-        return self._logger
-
     @property
     def fabricator_list(self):
         return self._fabricator_list
@@ -97,45 +89,16 @@ class MyFlaskApp(Flask):
     def fabricator_list(self, fabricator_list):
         self._fabricator_list = fabricator_list
 
-    @fabricator_list.getter
-    def fabricator_list(self):
-        return self._fabricator_list
-
-    def handle_errors_and_logging(self, e: Exception | str, logger=None, level=logging.ERROR):
-        """
-        Handles errors and logs them
-        :param Exception | str e: the exception to handle
-        :param ABCLogger | None logger: the logger to use
-        :param int level: the logging level
-        """
-        if logger is not None:
-            logger.log(level, e, stacklevel=5)
-        elif self.logger is None:
-            if isinstance(e, str):
-                print(e.strip())
-            else:
-                import traceback
-                print(traceback.format_exception(None, e, e.__traceback__))
-        else:
-            self.logger.log(level, e, stacklevel=5)
-        return False
-
+    # Delegate to services
+    def handle_errors_and_logging(self, e, logger=None, level=None):
+        """Handle errors and logging by delegating to ErrorService."""
+        from services.error_service import ErrorService
+        return ErrorService.handle_errors_and_logging(e, logger or self.logger, level)
+    
     def get_emu_ports(self):
-        fake_device = next(iter(self.emulator_connections.values()), None)
-        if fake_device:
-            return [fake_device.fake_port, fake_device.fake_name, fake_device.fake_hwid]
-        return [None, None, None]
-
+        """Get emulator ports by delegating to UtilitiesService."""
+        return self.utilities_service.get_emu_ports()
+    
     def run_go_command(self, command):
-        try:
-            result = subprocess.run(
-                command,
-                shell=True,
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
-            return result.stdout.decode('utf-8')
-        except subprocess.CalledProcessError as e:
-            self.handle_errors_and_logging(e)
-            return None
+        """Run Go command by delegating to UtilitiesService."""
+        return self.utilities_service.run_go_command(command)
