@@ -1,127 +1,81 @@
 import logging
 import os
 import subprocess
-import sys
-from flask import request, Response, send_from_directory, Flask
-from flask_migrate import Migrate
+from flask import Flask
 from dotenv import load_dotenv
-from flask_socketio import SocketIO
 from globals import root_path, emulator_connections, event_emitter, tabs
-from routes import defineRoutes
 from config.config import Config
 from Classes.FabricatorList import FabricatorList
 from Classes.Loggers.ABCLogger import ABCLogger
-from werkzeug.serving import WSGIRequestHandler
-from config.db import db
+from services.database_service import DatabaseService
+from services.logging_service import LoggingService
+from services.socketio_service import SocketIOService
+from services.routes_service import RoutesService
 
 class MyFlaskApp(Flask):
     def __init__(self):
         print(f"{tabs(tab_change=1)}call to super...", end="")
         super().__init__(__name__, static_folder=os.path.abspath(os.path.join(root_path, "client", "dist")))
         print(" Done")
-        print(f"{tabs()}setting up werkzeug logging...", end=" ")
-        # Get the werkzeug logger
-        logger = logging.getLogger('werkzeug')
-        # Change the output stream to stdout
-        for handler in logger.handlers:
-            if isinstance(handler, logging.StreamHandler):
-                handler.setStream(sys.stdout)
-        # Ensure Werkzeug's request handler also logs to stdout
-        WSGIRequestHandler.log = lambda self, type, message, *args: print(
-            f"{self.address_string().replace("%", "%%")} - - [{self.log_date_time_string()}] {message % args}",
-            file=sys.stdout)
-        print("Done")
+        
         print(f"{tabs()}loading config...")
         print(f"{tabs(tab_change=1)}loading dotenv...", end="")
         load_dotenv()
         print(" Done")
+        
         print(f"{tabs()}loading config from file...", end="")
-        self.config.from_object(__name__)  # update application instantly
-        # start database connection
+        self.config.from_object(__name__)
+        self.setup_config()
+        print(" Done")
+        
+        # Initialize services
+        print(f"{tabs()}setting up logging service...", end=" ")
+        self.logging_service = LoggingService(self)
+        self._logger = self.logging_service.get_logger()
+        print("Done")
+        
+        print(f"{tabs(tab_change=-1)}initializing db...", end="")
+        self.database_service = DatabaseService(self)
+        print(" Done")
+        
+        print(f"{tabs()}setting up SocketIO...", end="")
+        self.socketio_service = SocketIOService(self)
+        self.socketio = self.socketio_service.get_socketio()
+        print(" Done")
+        
+        print(f"{tabs()}setting up custom variables...", end="")
+        self._fabricator_list = None
+        self.emulator_connections = emulator_connections
+        self.event_emitter = event_emitter
+        print(" Done")
+        
+        print(f"{tabs()}defining routes...")
+        self.routes_service = RoutesService(self)
+        print(f"{tabs(tab_change=-1)}routes defined")
+        
+        print(f"{tabs()}initializing fabricator list...")
+        self.fabricator_list = FabricatorList(self)
+        print(f"{tabs(tab_change=-1)}fabricator list initialized")
+        
+        # Setup CLI commands
+        self.setup_cli_commands()
+        
+        print(f"{tabs()}Flask app setup complete")
+
+    def setup_config(self):
+        """Setup Flask configuration from Config file."""
         self.config["environment"] = Config.get('environment')
         self.config["ip"] = Config.get('ip')
         self.config["port"] = Config.get('port')
         self.config["base_url"] = Config.get('base_url')
-        basedir = os.path.abspath(os.path.join(root_path, "server"))
-        database_file = os.path.abspath(os.path.join(basedir, Config.get('database_uri')))
-        if isinstance(database_file, bytes):
-            database_file = database_file.decode('utf-8')
-        databaseuri = 'sqlite:///' + database_file
-        self.config['SQLALCHEMY_DATABASE_URI'] = databaseuri
-        self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        print(" Done")
-        print(f"{tabs(tab_change=-1)}initializing db...", end="")
-        db.init_app(self)
-        Migrate(self, db)
-        print(" Done")
-        print(f"{tabs()}setting up custom variables...", end="")
-        self._fabricator_list = None
-        self._logger = None
-        from Classes.Loggers.Logger import Logger
-        logs = os.path.join(root_path, "logs")
-        os.makedirs(logs, exist_ok=True)
-        self.logger = Logger("App", consoleLogger=sys.stdout, fileLogger=os.path.abspath(os.path.join(logs, f"{__name__}.log")),
-                            consoleLevel=logging.ERROR)
-
-        self.socketio = SocketIO(self, cors_allowed_origins="*", engineio_logger=False, socketio_logger=False,
-                            async_mode='eventlet' if self.config["environment"] == 'production' else 'threading',
-                            transport=['websocket', 'polling'])  # make it eventlet on production!
-
-        self.emulator_connections = emulator_connections
-        self.event_emitter = event_emitter
-        print(" Done")
-        print(f"{tabs()}defining routes...")
-        # Register all routes
-        defineRoutes(self)
-        print(f"{tabs(tab_change=-1)}routes defined")
-        print(f"{tabs()}initializing fabricator list...")
-        self.fabricator_list = FabricatorList(self)
-        print(f"{tabs(tab_change=-1)}fabricator list initialized")
-        # TODO: figure out how to run the emu from here
-        # emu_path = os.path.abspath(os.path.join(".", root_path, "printeremu", "cmd", "test_printer.go"))
-        # self.run_go_command(f"go run .\\{emu_path} 1 -conn")
-
+    
+    def setup_cli_commands(self):
+        """Setup Flask CLI commands."""
         @self.cli.command("test")
         def run_tests():
             """Run all tests."""
             import subprocess
             subprocess.run(["python", "../Tests/parallel_test_runner.py"])
-
-        @self.before_request
-        def handle_preflight():
-            if request.method == "OPTIONS":
-                res = Response()
-                res.headers['X-Content-Type-Options'] = '*'
-                res.headers['Access-Control-Allow-Origin'] = '*'
-                res.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-                res.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-                return res
-
-        print(f"{tabs()}setting up static routes...", end="")
-
-        # Serve static files
-        @self.route('/')
-        def serve_static(path='index.html'):
-            return send_from_directory(self.static_folder, path)
-
-        @self.route('/assets/<path:filename>')
-        def serve_assets(filename):
-            return send_from_directory(os.path.join(self.static_folder, 'assets'), filename)
-
-        @self.socketio.on('ping')
-        def handle_ping():
-            self.socketio.emit('pong')
-
-        @self.socketio.on('connect')
-        def handle_connect():
-            print("Client connected")
-
-        @self.socketio.on('disconnect')
-        def handle_disconnect():
-            print("Client disconnected")
-
-        print(" Done")
-
 
     @property
     def logger(self):
