@@ -2,7 +2,7 @@ import os
 import shutil
 import threading
 import certifi
-from MyFlaskApp import MyFlaskApp
+from QViewApp import QViewApp
 from globals import tabs
 from config.config import Config
 from services.websocket_service import start_websocket
@@ -17,7 +17,7 @@ websocket_thread.start()
 
 # Start Flask app
 print(f"{tabs()}Starting Flask application...")
-app = MyFlaskApp()
+app = QViewApp()
 print(f"{tabs(tab_change=-1)}Flask application started")
 
 # Start Discord bot

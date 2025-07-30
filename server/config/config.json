@@ -1,6 +1,6 @@
 {
     "environment": "development",
-    "databaseURI": "hvamc",
+    "databaseURI": "QView",
     "emulator_port": 8001,
     "discord": {
         "enabled": false,

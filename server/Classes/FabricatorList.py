@@ -340,7 +340,7 @@ class FabricatorThread(Thread):
         """
         create a new FabricatorThread for the given fabricator
         :param Fabricator fabricator: the fabricator to create a thread for
-        :param MyFlaskApp passed_app: the app for context actions
+        :param QViewApp passed_app: the app for context actions
         """
         super().__init__(*args, **kwargs)
         self.fabricator: Fabricator = fabricator

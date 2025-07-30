@@ -29,9 +29,9 @@ threading.Thread(target=start_background_loop, daemon=True).start()
 
 def _find_custom_app():
     from flask import current_app as flask_current_app
-    from MyFlaskApp import MyFlaskApp
+    from QViewApp import QViewApp
     app = flask_current_app._get_current_object()
-    return app if isinstance(app, MyFlaskApp) else None
+    return app if isinstance(app, QViewApp) else None
 
 current_app = LocalProxy(_find_custom_app)
 

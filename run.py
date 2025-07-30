@@ -11,7 +11,7 @@ CLIENT_LOCAL_PATH = "client"
 SERVER_LOCAL_PATH = "server"
 
 # The name of the database file
-DATABASE_FILE_NAME="hvamc.db"
+DATABASE_FILE_NAME="QView.db"
 
 # If the database file should be deleted before running the server, then set this to true
 START_FROM_NEW_DATABASE = True

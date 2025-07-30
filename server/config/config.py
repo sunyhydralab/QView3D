@@ -14,7 +14,7 @@ configFileLoc = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__f
 config = load_config(configFileLoc)
 environment = config.get('environment', 'development')
 ip = config.get('ip', 'localhost')
-database_uri = config.get('databaseURI', 'hvamc') + ".db"
+database_uri = config.get('databaseURI', 'QView') + ".db"
 port = os.environ.get('FLASK_RUN_PORT', 8000),
 emulator_port = os.environ.get('EMULATOR_PORT', 8001)
 

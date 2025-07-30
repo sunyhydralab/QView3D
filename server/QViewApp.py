@@ -11,7 +11,23 @@ from services.routes_service import RoutesService
 from services.cli_service import CLIService
 from services.utilities_service import UtilitiesService
 
-class MyFlaskApp(Flask):
+class QViewApp(Flask):
+
+    """
+    Represents the custom Flask application for QView3D server.
+    
+    Inherits from Flask and initializes various services and configurations.
+    
+    Attributes:
+        logging_service (LoggingService): Custom logging service for the application.
+        database_service (DatabaseService): Database connection and migration management.
+        socketio_service (SocketIOService): SocketIO service for real-time communication.
+        routes_service (RoutesService): Route definitions and handling.
+        cli_service (CLIService): Command-line interface service for the application.
+        utilities_service (UtilitiesService): Utility functions for the application.
+        fabricator_list (FabricatorList): List of fabricators managed by the application.   
+    
+    """
     def __init__(self):
         print(f"{tabs(tab_change=1)}call to super...", end="")
         super().__init__(__name__, static_folder=os.path.abspath(os.path.join(root_path, "client", "dist")))

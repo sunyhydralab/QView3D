@@ -32,7 +32,7 @@ class LoggingService:
         
         return Logger("App", 
                      consoleLogger=sys.stdout, 
-                     fileLogger=os.path.abspath(os.path.join(logs, "MyFlaskApp.log")),
+                     fileLogger=os.path.abspath(os.path.join(logs, "QViewApp.log")),
                      consoleLevel=logging.ERROR)
     
     def get_logger(self):
