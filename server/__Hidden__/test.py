@@ -22,7 +22,7 @@ def main():
     model_id = 1  # Default to Prusa MK4
 
     # Get root path for proper execution
-    from globals import root_path
+    from config.paths import root_path
     emu_path = os.path.abspath(os.path.join(root_path, "printeremu"))
     cmd = "./cmd/test_printer.go"
     emu_cmd = "-conn"

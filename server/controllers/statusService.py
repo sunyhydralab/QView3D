@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 import os
-from globals import current_app as app
+from services.app_service import current_app as app
 from traceback import format_exc
 status_bp = Blueprint("status", __name__)
 

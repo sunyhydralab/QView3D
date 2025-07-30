@@ -5,8 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
 import discord
 from config.config import Config
-from globals import current_app
-
+from services.app_service import current_app
 class Issue(db.Model):
 
     """

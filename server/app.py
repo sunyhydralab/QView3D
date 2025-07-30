@@ -3,7 +3,7 @@ import shutil
 import threading
 import certifi
 from QViewApp import QViewApp
-from globals import tabs
+from utils.formatting import tabs
 from config.config import Config
 from services.websocket_service import start_websocket
 from services.discord_service import start_discord_bot

@@ -1,7 +1,9 @@
 import os
 from flask import Flask
 from dotenv import load_dotenv
-from globals import root_path, emulator_connections, event_emitter, tabs
+from config.paths import root_path
+from utils.formatting import tabs
+from services.websocket_service import emulator_connections, event_emitter
 from config.config import Config
 from Classes.FabricatorList import FabricatorList
 from services.database_service import DatabaseService

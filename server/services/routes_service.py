@@ -1,7 +1,7 @@
 import os
 from flask import request, Response, send_from_directory
 from flask_cors import CORS
-from globals import tabs
+from utils.formatting import tabs
 
 class RoutesService:
     def __init__(self, app):

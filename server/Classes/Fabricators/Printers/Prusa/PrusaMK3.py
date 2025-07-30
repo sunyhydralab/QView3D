@@ -2,7 +2,7 @@ from Classes.FabricatorConnection import FabricatorConnection
 from Classes.Fabricators.Printers.Prusa.PrusaPrinter import PrusaPrinter
 from Classes.Vector3 import Vector3
 from Mixins.hasResponseCodes import checkOK, checkTime, checkXYZ
-from globals import current_app
+from services.app_service import current_app
 
 
 class PrusaMK3(PrusaPrinter):

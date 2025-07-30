@@ -5,7 +5,7 @@ from config.db import db
 from Classes.Issues import Issue  # assuming the Issue model is defined in the issue.py file in the models directory
 from datetime import timezone, timedelta
 from flask import jsonify
-from globals import current_app
+from services.app_service import current_app
 from traceback import format_exc
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime

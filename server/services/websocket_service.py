@@ -6,7 +6,11 @@ import uuid
 import os
 import websockets
 from websockets.asyncio.server import Server
-from globals import emulator_connections, event_emitter
+from Classes.EventEmitter import EventEmitter
+
+# Moved from globals.py - WebSocket-specific global state
+emulator_connections = {}
+event_emitter = EventEmitter()
 
 async def websocket_server():
     print("Websocket Server")

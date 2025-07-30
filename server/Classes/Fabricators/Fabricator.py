@@ -12,7 +12,8 @@ from Mixins.hasEndingSequence import hasEndingSequence
 from config.config import Config
 from config.db import db
 from datetime import datetime, timezone
-from globals import current_app, root_path
+from services.app_service import current_app
+from config.paths import root_path
 
 class Fabricator(db.Model):
     __tablename__ = "Fabricators"

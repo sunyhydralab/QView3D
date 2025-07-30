@@ -1,12 +1,10 @@
-import asyncio
+
 import json
 import threading
 from time import sleep
-
 from flask import Blueprint, jsonify, request, current_app
 import os
 import subprocess
-from globals import background_loop
 
 emulator_bp = Blueprint("emulator", __name__)
 
@@ -24,7 +22,7 @@ def startEmulator():
             model_id = 2
 
         # Get root path for proper execution
-        from globals import root_path
+        from config.paths import root_path
         emu_path = os.path.abspath(os.path.join(root_path, "printeremu"))
         cmd = "./cmd/test_printer.go"
         emu_cmd = "-conn"
@@ -50,17 +48,10 @@ def startEmulator():
 
         try:
             print("Starting registration process")
-            message = {
-                'event': 'printer_connect',
-                'data': 'start_from_front'
-            }
 
-            json_message = json.dumps(message)
-
-            print("last before sending")
-            future = asyncio.run_coroutine_threadsafe(socket.send(json_message), background_loop)
-            future.result()  # block until the message is sent
-            print(f"Sent start message: {json_message}")  # Log sent message
+            # Use SocketIO to emit the start event
+            current_app.socketio.emit('printer_connect', {'data': 'start_from_front'})
+            print(f"Sent start message via SocketIO")
 
             return jsonify({"message": "Emulator started successfully"}), 200
         except Exception as e:
@@ -83,20 +74,9 @@ def registerEmulator():
             return jsonify({"error": "No emulator connection found"}), 404
 
         try:
-            message = {
-                'event': 'printer_connect',
-                'data': 'register_from_front'
-            }
-
-            json_message = json.dumps(message)
-
-            # Send the message to the emulator
-            print("last before sending")
-
-            future = asyncio.run_coroutine_threadsafe(socket.send(json_message), background_loop)
-            future.result()  # block until the message is sent
-            sleep(1)
-            print(f"Sent registration message: {json_message}")  # Log sent message
+            print("Starting registration process")
+            current_app.socketio.emit('printer_connect', {'data': 'register_from_front'})
+            print(f"Sent registration message via SocketIO")
 
             # TODO: add to db
             # # add emulator to the db
@@ -119,21 +99,18 @@ def disconnectEmulator():
     try:
         data = request.get_json()
 
-        from app import emulator_connections
+        from services.websocket_service import emulator_connections
 
         print(emulator_connections)
 
         socket = next(iter(emulator_connections.values()))
 
         try:
-            message = {
-                'event': 'printer_disconnect',
-                'data': 'disconnect_from_front'
-            }
+            print("Sending disconnect message")
 
-            json_message = json.dumps(message)
-
-            asyncio.run(socket.send(json_message))
+            # Use SocketIO to emit the disconnect event
+            current_app.socketio.emit('printer_disconnect', {'data': 'disconnect_from_front'})
+            print(f"Sent disconnect message via SocketIO")
 
             return jsonify({"message": "Emulator disconnected successfully"}), 200
         except Exception as e:

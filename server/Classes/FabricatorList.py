@@ -10,7 +10,8 @@ from Classes.Jobs import Job
 from Classes.Queue import Queue
 from threading import Thread
 import time
-from globals import current_app as app, tabs
+from services.app_service import current_app as app
+from utils.formatting import tabs
 from config.db import db
 
 class FabricatorList:

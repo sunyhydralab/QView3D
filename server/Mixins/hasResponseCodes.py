@@ -1,7 +1,7 @@
 import re
 from abc import ABCMeta, abstractmethod
 from Classes.Vector3 import Vector3
-from globals import current_app
+from services.app_service import current_app
 
 class hasResponsecodes(metaclass=ABCMeta):
     headPosition: Vector3 = None

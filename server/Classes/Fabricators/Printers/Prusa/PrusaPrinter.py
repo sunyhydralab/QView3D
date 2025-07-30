@@ -2,7 +2,7 @@ from abc import ABCMeta
 from Classes.Fabricators.Printers.Printer import Printer
 from Mixins.hasEndingSequence import hasEndingSequence
 from Mixins.hasResponseCodes import checkXYZ, checkOK, checkTime
-from globals import current_app
+from services.app_service import current_app
 
 class PrusaPrinter(Printer, hasEndingSequence, metaclass=ABCMeta):
     VENDORID = 0x2C99

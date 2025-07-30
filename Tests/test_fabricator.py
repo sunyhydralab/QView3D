@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 import re
 import pytest
-from globals import current_app as app
+from services.app_service import current_app as app
 from Classes.Jobs import Job
 from parallel_test_runner import testLevel
 
@@ -88,7 +88,7 @@ def test_pause_and_resume(app, fabricator):
 
         fabricator.resetToIdle()
         assert fabricator.getStatus() == "idle", f"Failed to reset to idle on {fabricator.getDescription()}, fab status: {fabricator.getStatus()}, dev status: {fabricator.device.status}"
-    from globals import current_app
+    from services.app_service import current_app
     fabricator.device.logger.critical(f"app: ,{current_app}")
     fabricator.device.logger.critical(f"app.socketio: ,{current_app.socketio}")
     from Classes.Fabricators.Printers.Prusa.PrusaMK3 import PrusaMK3

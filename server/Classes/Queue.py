@@ -1,5 +1,5 @@
 from collections import deque
-from globals import current_app
+from services.app_service import current_app
 from Classes.Jobs import Job
 
 class Queue(deque):

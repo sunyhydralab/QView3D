@@ -2,7 +2,7 @@ import os
 from flask_migrate import Migrate
 from config.db import db
 from config.config import Config
-from globals import root_path
+from config.paths import root_path
 
 class DatabaseService:
     def __init__(self, app):

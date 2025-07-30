@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 from Classes.Loggers.Logger import Logger
-from globals import root_path
+from config.paths import root_path
 from werkzeug.serving import WSGIRequestHandler
 
 class LoggingService:
