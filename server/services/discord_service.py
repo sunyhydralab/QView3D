@@ -77,7 +77,7 @@ def sync_send_discord_message(message):
         print(f"Channel with ID {channel_id} not found or inaccessible.")
         return
     try:
-        asyncio.run_coroutine_threadsafe(channel.send(message), bot.loop)
+        bot.loop.create_task(channel.send(message))
         print("Message sent successfully!")
     except Exception as e:
         print(f"An error occurred while sending the message: {type(e).__name__} - {e}")
@@ -95,7 +95,7 @@ def sync_send_discord_embed(embed):
         print(f"Channel with ID {channel_id} not found or inaccessible.")
         return
     try:
-        asyncio.run_coroutine_threadsafe(channel.send(embed=embed), bot.loop)
+        bot.loop.create_task(channel.send(embed=embed))
     except Exception as e:
         print(f"An error occurred while sending the embed: {type(e).__name__} - {e}")
 
@@ -114,6 +114,6 @@ def sync_send_discord_file(file_path: str | bytes | PathLike, message: str = Non
     try:
         with open(file_path, 'rb') as f:
             file = discord.File(f, filename=file_path.split("/")[-1])
-            asyncio.run_coroutine_threadsafe(channel.send(message or "", file=file), bot.loop)
+            bot.loop.create_task(channel.send(message or "", file=file))
     except Exception as e:
         print(f"An error occurred while sending the file: {type(e).__name__} - {e}")
