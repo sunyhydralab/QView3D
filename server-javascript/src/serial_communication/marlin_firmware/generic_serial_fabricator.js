@@ -426,7 +426,7 @@ export class GenericSerialFabricator {
 
     // G-Code Instructions to communicate with fabricators
     // ..._INSTR is the G-Code instruction, 
-    // ..._INSTR_EXTR is used to get results after the instruction has executed
+    // ..._INSTR_EXTR is used to get results after the instruction is executed by the fabricator
     
     /**
      * Used to get firmware information from the fabricator
