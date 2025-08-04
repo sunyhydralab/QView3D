@@ -182,7 +182,8 @@ export class GenericSerialFabricator {
             const lines = this.#responseBuf.split(this.LINE_SPLITTER);
 
             if (this.#extractQ.length > 0) {
-                for (let i = 0; i < lines.length; i++) {
+                // Because the last line is incomplete, it should not be checked using extractors just yet (hence the -1 to the length)
+                for (let i = 0; i < lines.length - 1; i++) {
                     const line = lines[i];
 
                     const extractorCount = this.#extractQ.length;
@@ -262,7 +263,8 @@ export class GenericSerialFabricator {
                 }
             }
 
-            // Because the last line could be incomplete, add that line to the buffer. All other lines are discarded as noise
+            // Because the last line is incomplete, it was not checked and therefore needs to be added as the start of the next  
+            // All other lines are discarded as noise
             this.#responseBuf = lines[lines.length - 1];
             
             // Refresh the timeout tracking whether the fabricator is idle or not
