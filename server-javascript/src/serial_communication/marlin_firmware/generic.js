@@ -14,7 +14,7 @@ import { DEBUG_FLAGS } from '../../flags.js';
 /**
  * @typedef ResponseExtractor
  * @property {RegExp[]} [regexes] A regular expression used to extract specific values from a fabricator's response
- * @property {'in-progress' | 'done' | 'started' | 'stale' | 'timed-out'} status Status of the fabricator's response
+ * @property {'in-progress' | 'done' | 'started' | 'stale' | 'timed-out' | 'will-never-complete'} status Status of the fabricator's response
  * @property {function(FabricatorResponse): void} callback A function called when the extractor gets a result
  */
 
@@ -22,10 +22,6 @@ import { DEBUG_FLAGS } from '../../flags.js';
  * @typedef InstructionExtractor
  * @property {string} instruction The G-Code instruction to send to the fabricator
  * @property {ResponseExtractor} extractor The extractor used to get the response from the fabricator
- */
-
-/**
- * @todo ONLY use the .close() method to close connections to fabricators (when this is implemented) Do not use .destroy!
  */
 
 /**
@@ -291,6 +287,7 @@ export class GenericMarlinFabricator {
                 const extractor = this.#extractQ.shift();
 
                 extractor.callback({ status: 'fabricator-disconnected' });
+                extractor.status = 'will-never-complete';
             }
             
             while (this.#instructQ.length > 0) {
@@ -299,6 +296,7 @@ export class GenericMarlinFabricator {
                 const inst = this.#instructQ.shift();
 
                 inst.extractor.callback({ status: 'fabricator-disconnected' });
+                inst.extractor.status = 'will-never-complete';
             }
             
             // Remove the data event listener
@@ -429,6 +427,14 @@ export class GenericMarlinFabricator {
         } else {
             throw new Error(`A dummy instruction was already sent to fabricator at port ${this.#openPort.path}. Was this intentional?`);
         }
+    }
+
+    /**
+     * Closes the serial connection
+     * @returns {void}
+     */
+    closeSerialConnection() {
+        this.#openPort.close();
     }
 
     // G-Code Instructions to communicate with fabricators
