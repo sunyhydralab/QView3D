@@ -30,6 +30,13 @@ import { DEBUG_FLAGS } from '../../flags.js';
  * It assumes that the fabricator is flashed with {@link https://github.com/MarlinFirmware/Marlin Marlin firmware}
  */
 export class GenericMarlinFabricator {
+    /**
+     * Used to figure out which fabricator should use this class
+     * @readonly
+     * @type {string[]}
+     */
+    SUPPORTED_FABRICATORS = ['all'];
+
     /** 
      * Baud rate of the connection to the serial port
      * @readonly 
