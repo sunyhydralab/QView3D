@@ -50,7 +50,7 @@ export class GenericMarlinFabricator {
      * @readonly 
      * @type {number} 
      */
-    BOOT_TIME = 2000;
+    BOOT_TIME = 800;
 
     /**
      * The amount of time before the fabricator becomes idle (and therefore we need to wait for it to boot up again before sending another instruction)
