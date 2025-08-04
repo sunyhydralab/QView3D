@@ -33,7 +33,7 @@ import { DEBUG_FLAGS } from '../../flags.js';
  * 
  * It assumes that the fabricator is flashed with {@link https://github.com/MarlinFirmware/Marlin Marlin firmware}
  */
-export class GenericSerialFabricator {
+export class GenericMarlinFabricator {
     /** 
      * Baud rate of the connection to the serial port
      * @readonly 
@@ -54,7 +54,7 @@ export class GenericSerialFabricator {
      * @readonly 
      * @type {number} 
      */
-    BOOT_TIME = 800;
+    BOOT_TIME = 2000;
 
     /**
      * The amount of time before the fabricator becomes idle (and therefore we need to wait for it to boot up again before sending another instruction)
@@ -175,7 +175,7 @@ export class GenericSerialFabricator {
             if (typeof chunk === 'string')
                 this.#responseBuf += chunk;
             else
-                throw new Error(`Stream at port ${this.#openPort.path} is in object mode which is currently not supported by the default data processor in the GenericSerialFabricator class.`);
+                throw new Error(`Stream at port ${this.#openPort.path} is in object mode which is currently not supported by the default data processor in the GenericMarlinFabricator class.`);
 
             /** @todo Probably don't split by LINE_SPLITTER but instead split by GCODE_PROCESSED_RESPONSE */
             // Split each line by the line splitter value
@@ -209,7 +209,7 @@ export class GenericSerialFabricator {
                                 
                                 if (currentMatch !== null) {
                                     if (currentMatch.groups === undefined)
-                                        throw new Error(`The extractor ${extractor.regexes} did not provide named capture groups in its implementation. This behavior is not supported in the GenericSerialFabricator class`);
+                                        throw new Error(`The extractor ${extractor.regexes} did not provide named capture groups in its implementation. This behavior is not supported in the GenericMarlinFabricator class`);
 
                                     if (extractorResult === null)
                                         extractorResult = {};
