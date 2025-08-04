@@ -140,8 +140,11 @@ export class GenericMarlinFabricator {
 
     /**
      * @param {string} port The name of the port e.g., `/dev/ttyACM0` on Linux systems or `COM1` on Windows
+     * @param {Object} [overrides] Used to dynamically override any of the default properties of this class **unsafe**
      */
-    constructor(port) {
+    constructor(port, overrides) {
+        Object.assign(this, overrides); /** @todo Add something that checks to see if the properties provided are valid? */
+
         this.#openPort = new SerialPort({ path: port, baudRate: this.BAUD_RATE });
 
         // Wait a specific amount of time before allowing G-Code instructions to be sent over serial
