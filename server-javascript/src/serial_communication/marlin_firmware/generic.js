@@ -64,7 +64,7 @@ export class GenericMarlinFabricator {
      * @readonly
      * @type {number}
      */
-    RESPONSE_TIMEOUT = 10000;
+    RESPONSE_TIMEOUT = 7000;
 
     /** 
      * The character encoding used to transmit and receive messages
