@@ -434,10 +434,12 @@ export class GenericMarlinFabricator {
 
     /**
      * Closes the serial connection
-     * @returns {void}
+     * @returns {Promise<any>}
      */
     closeSerialConnection() {
-        this.#openPort.close();
+        return new Promise((resolve) => {
+            this.#openPort.close(resolve);
+        });
     }
 
     // G-Code Instructions to communicate with fabricators
