@@ -462,7 +462,7 @@ export class GenericSerialFabricator {
     ];
 
     /**
-     * Returns the firmware information for the given fabricator
+     * Returns the firmware information received from the info instruction
      * @returns {Promise<FabricatorResponse>}
      */
     getFirmwareInfo() {
