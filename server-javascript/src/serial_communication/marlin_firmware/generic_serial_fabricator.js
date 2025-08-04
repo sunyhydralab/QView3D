@@ -343,7 +343,7 @@ export class GenericSerialFabricator {
                 extractorRegEx = [ extractorRegEx ];
             
             /** @type {ResponseExtractor} */
-            const extractor = { regexes: extractorRegEx, status: 'started', callback: resolve }
+            const extractor = { regexes: extractorRegEx, status: 'started', callback: resolve };
 
             if (writeNow === false) {
                 if (this.#extractQ.length === 0) {
