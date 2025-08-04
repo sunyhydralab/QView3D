@@ -202,7 +202,7 @@ export class GenericSerialFabricator {
                         extractor.status = 'in-progress'; // A response has been received by the fabricator, so the extractor is now in-progress
 
                         if (extractor.regexes !== undefined) {
-                            let extractorResult = {};
+                            let extractorResult = null;
 
                             for (const regex of extractor.regexes) {
                                 const currentMatch = regex.exec(line);
@@ -210,6 +210,9 @@ export class GenericSerialFabricator {
                                 if (currentMatch !== null) {
                                     if (currentMatch.groups === undefined)
                                         throw new Error(`The extractor ${extractor.regexes} did not provide named capture groups in its implementation. This behavior is not supported in the GenericSerialFabricator class`);
+
+                                    if (extractorResult === null)
+                                        extractorResult = {};
 
                                     Object.assign(extractorResult, currentMatch.groups);
                                 }
@@ -222,7 +225,7 @@ export class GenericSerialFabricator {
                                 extractor.callback({ status: 'processed', extractedResults: extractorResult });
 
                                 if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_EXTRACTOR_RESULT)
-                                    console.info(`The extractor ${extractor.regexes} returned ${extractorResult} from '${line.trim()}'`);
+                                    console.info(`The extractor ${extractor.regexes} returned '${Object.values(extractorResult)}' from '${line.trim()}'`);
 
                                 break; /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
                             } else {
