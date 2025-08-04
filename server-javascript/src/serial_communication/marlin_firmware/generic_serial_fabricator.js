@@ -8,12 +8,12 @@ import { DEBUG_FLAGS } from '../../flags.js';
 /**
  * @typedef FabricatorResponse
  * @property {'processed' | 'unsupported' | 'fabricator-disconnected' | 'timed-out' | 'unexpected-response'} status The status of the fabricator response
- * @property {Object.<string, string>} [extractedResults] The data returned by the response extractor
+ * @property {Object} [extractedResults] The data returned by the response extractor
  */
 
 /**
  * @typedef ResponseExtractor
- * @property {RegExp} [regex] A regular expression used to extract specific values from a fabricator's response
+ * @property {RegExp[]} [regexes] A regular expression used to extract specific values from a fabricator's response
  * @property {'in-progress' | 'done' | 'started' | 'stale' | 'timed-out'} status Status of the fabricator's response
  * @property {function(FabricatorResponse): void} callback A function called when the extractor gets a result
  */
@@ -200,20 +200,28 @@ export class GenericSerialFabricator {
                         /** @todo By default, whenever a response from the fabricator is received, every extractor becomes 'in-progress' Will this cause issues? */
                         extractor.status = 'in-progress'; // A response has been received by the fabricator, so the extractor is now in-progress
 
-                        if (extractor.regex !== undefined) {
-                            const extractorResult = extractor.regex.exec(line);
+                        if (extractor.regexes !== undefined) {
+                            let extractorResult = {};
+
+                            for (const regex of extractor.regexes) {
+                                const extractedResult = regex.exec(line);
+                                
+                                if (extractedResult !== null) {
+                                    if (extractedResult.groups === undefined)
+                                        throw new Error(`The extractor ${extractor.regexes} did not provide named capture groups in its implementation. This behavior is not supported in the GenericSerialFabricator class`);
+
+                                    Object.assign(extractorResult, extractedResult.groups);
+                                }
+                            }
 
                             // If we get a result, then this extractor has found what it wanted
                             if (extractorResult !== null) {
-                                if (extractorResult.groups === undefined)
-                                    throw new Error(`The extractor ${extractor.regex} did not provide named capture groups in its implementation. This behavior is not supported in the GenericSerialFabricator class`);
-
                                 // The result is stored as an object in the capture group
                                 extractor.status = 'done';
-                                extractor.callback({ status: 'processed', extractedResults: extractorResult.groups });
+                                extractor.callback({ status: 'processed', extractedResults: extractorResult });
 
                                 if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_EXTRACTOR_RESULT)
-                                    console.info(`The extractor ${extractor.regex} returned ${Object.values(extractorResult.groups)} from '${line.trim()}'`);
+                                    console.info(`The extractor ${extractor.regexes} returned ${extractorResult} from '${line.trim()}'`);
 
                                 break; /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
                             } else {
@@ -221,7 +229,7 @@ export class GenericSerialFabricator {
                                 this.#extractQ.push(extractor);
 
                                 if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.EXTRACTOR_FAILED_MATCH)
-                                    console.info(`The extractor ${extractor.regex} failed to match ${line}`);
+                                    console.info(`The extractor ${extractor.regexes} failed to match ${line}`);
                             }
                         } else {
                             if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.MISSING_REGEX)
@@ -306,7 +314,7 @@ export class GenericSerialFabricator {
      * Sends a G-Code instruction to a fabricator, and uses the extractor to return the result
      * If no response is received after this.RESPONSE_TIMEOUT, the status of the response will be 'timed-out' without any extracted results  
      * @param {string} instruction The G-Code instruction to send to the fabricator
-     * @param {RegExp} [extractorRegEx] The extractor to be used with this G-Code instruction
+     * @param {RegExp | RegExp[]} [extractorRegEx] The extractor to be used with this G-Code instruction
      * @param {boolean} [writeNow = false] Whether or not the G-Code instruction will be added to the queue or immediately sent to the fabricator (**Warning unsafe**)
      * @returns {Promise<FabricatorResponse>}
      */
@@ -325,8 +333,12 @@ export class GenericSerialFabricator {
                 resolve({ status: 'fabricator-disconnected' });
                 return; // Stop the execution of this function
             }
+            
+            if (extractorRegEx instanceof RegExp)
+                extractorRegEx = [ extractorRegEx ];
+            
             /** @type {ResponseExtractor} */
-            const extractor = { regex: extractorRegEx, status: 'started', callback: resolve }
+            const extractor = { regexes: extractorRegEx, status: 'started', callback: resolve }
 
             if (writeNow === false) {
                 if (this.#extractQ.length === 0) {
@@ -372,7 +384,7 @@ export class GenericSerialFabricator {
                 }
 
                 if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_EXTRACTOR_STATE_AFTER_TIMEOUT)
-                    console.info(`The state of extractor ${extractor.regex} for instruction ${instruction.trim()} on port ${this.#openPort.path} is ${extractor.status} after response timeout.`);
+                    console.info(`The state of extractor ${extractor.regexes} for instruction ${instruction.trim()} on port ${this.#openPort.path} is ${extractor.status} after response timeout.`);
             }, this.RESPONSE_TIMEOUT);
         }
 
@@ -435,17 +447,25 @@ export class GenericSerialFabricator {
      */
     INFO_INSTR = 'M115\n';
 
-    /** 
-     * @readonly 
-     * @type {RegExp} 
+    /**
+     * Extracts FIRMWARE_NAME, MACHINE_TYPE, PROTOCOL_VERSION, and UUID from the output from the info instruction
+     * The extracted values are stored in a dictionary with values firmwareName, protocolVersion, machineType, and UUID
+     * Any of these variables can be 'undefined', so ensure that they exist
+     * @readonly
+     * @type {RegExp[]}
      */
-    INFO_INSTR_EXTRACTOR = /FIRMWARE_NAME:(?<firmwareVersion>[^\s]+).+MACHINE_TYPE:(?<machineType>[^\s]+).+UUID:(?<UUID>[^\s]+)/;
+    INFO_INSTR_EXTR = [
+        /FIRMWARE_NAME:(?<firmwareName>.+)\s(?:SOURCE_CODE_URL|FIRMWARE_URL)/,
+        /PROTOCOL_VERSION:(?<protocolVersion>.+)\s(?:MACHINE_TYPE)/,
+        /MACHINE_TYPE:(?<machineType>.+)\s(?:EXTRUDER_COUNT)/,
+        /UUID:(?<UUID>.+)\s?/
+    ];
 
     /**
      * Returns the firmware information for the given fabricator
      * @returns {Promise<FabricatorResponse>}
      */
     getFirmwareInfo() {
-        return this.sendGCodeInstruction(this.INFO_INSTR, this.INFO_INSTR_EXTRACTOR);
-    }
+        return this.sendGCodeInstruction(this.INFO_INSTR, this.INFO_INSTR_EXTR);
+    }    
 }
