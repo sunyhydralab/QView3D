@@ -29,7 +29,8 @@ if Config['discord_enabled']:
 else:
     print("Discord bot is disabled")
 
-# Directory cleanup
+# Directory cleanup 
+# TODO: DELETE LOGGING
 with app.app_context():
     try:
         uploads_folder = os.path.abspath('../uploads')

@@ -269,33 +269,77 @@ class Printer(Device, metaclass=ABCMeta):
         callables = self.callablesHashtable.get(self.extractIndex(gcode, logger), [checkOK])
         current_app.socketio.emit("gcode_line", {"line": (gcode.decode() if isinstance(gcode, bytes) else gcode).strip(), "fabricator_id": self.dbID})
         self.serialConnection.write(gcode)
-        line = ''
+        line = b''
+
+        # Check for timeout
+
+        timeout_counter = 0
+        max_timeout = 100
+
+        # Increase timeout for temperature commands
+        gcode_str = gcode.decode().strip().split()[0]
+        if gcode_str in ["M109", "M190"]:
+            max_timeout = 1200  # 20 minutes 
+        else:
+            max_timeout = 100   
+
         for func in callables:
+            # Reset timeout counter for each callable
+            timeout_counter = 0
             while True:
                 if self.status == "cancelled": return True
+
+                # Check if timeout has been reached
+                timeout_counter += 1
+                if timeout_counter > max_timeout:
+                    if should_log: logger.warning(f"Timeout waiting for response to {gcode.decode().strip()}")
+                    if gcode_str in ["M109", "M190"]:
+                        if should_log: logger.info(f"Temperature command {gcode_str} timed out, assuming success")
+                        break
+                    break
                 try:
                     line = self.serialConnection.readline()
+
+                    #Empty line, continue
+                    if not line:
+                        continue
+
                     decLine = line.decode("utf-8").strip()
+
+                    # If the line is empty after decoding, continue
+                    if not decLine:
+                        continue
+
                     if "processing" in decLine or "echo" in decLine: continue
                     if "T:" in decLine and "B:" in decLine:
                         self.handleTempLine(decLine)
-                        if func != checkBedTemp and func != checkExtruderTemp and "ok" not in decLine.lower():
+
+                        if func == checkBedTemp and self.bedTemperature and self.bedTargetTemp:
+                            if abs(self.bedTemperature - self.bedTargetTemp) <= 2:  # Within 2 degrees
+                                if should_log: logger.info(f"Bed temperature reached: {self.bedTemperature}°C")
+                                break
+                        elif func == checkExtruderTemp and self.nozzleTemperature and self.nozzleTargetTemp:
+                            if abs(self.nozzleTemperature - self.nozzleTargetTemp) <= 2:  # Within 2 degrees
+                                if should_log: logger.info(f"Nozzle temperature reached: {self.nozzleTemperature}°C")
+                                break
+                        elif func != checkBedTemp and func != checkExtruderTemp and "ok" not in decLine.lower():
                             continue
+                        
                     if func(line, self):
                         break
                     if should_log: logger.debug(f"{gcode.decode().strip()}: {decLine}")
                     # current_app.socketio.emit("console_update",{"message": decLine, "level": "debug", "fabricator_id": self.dbID})
                 except SerialTimeoutException as e:
-                    if "no data" in e:
+                    if "no data" in str(e):
                         if should_log: logger.debug(f"No report temp line sent.")
-                        self.serialConnection.write("M155 S1")
+                        self.serialConnection.write(b"M155 S1\n") # Convert to Bytes. Added a new line to ensure the command is sent correctly
                     else:
                         if current_app: return current_app.handle_errors_and_logging(e, logger)
                         else: print(traceback.format_exc())
                         return False
                 except UnicodeDecodeError:
-                    if should_log: logger.debug(f"{gcode.decode().strip()}: {line.strip()}")
-                    else: print(f"{gcode.decode().strip()}: {line.strip()}")
+                    if should_log: logger.debug(f"{gcode.decode().strip()}: {line}")
+                    else: print(f"{gcode.decode().strip()}: {line}")
                     # current_app.socketio.emit("console_update",{"message": gcode.decode().strip(), "level": "debug", "fabricator_id": self.dbID})
                 except Exception as e:
                     if current_app: return current_app.handle_errors_and_logging(e, logger)
@@ -340,13 +384,18 @@ class Printer(Device, metaclass=ABCMeta):
         except Exception as e:
             current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
 
-    def handleTempLine(self, line: str , logger: JobLogger = None) -> None:
+    def handleTempLine(self, line: str | bytes , logger: JobLogger = None) -> None:
         """
         Method to handle temperature lines in the serial response
         :param str line: the line to parse
         :param JobLogger logger: the logger to use
         """
         try:
+            # Convert bytes to string if needed
+            if isinstance(line, bytes):
+                line = line.decode('utf-8', errors='ignore')
+
+            # Use regex to find the temperatures in the line (Ari's OG code)    
             temp_t = re.search(r'T:(\d+.\d+)', line)
             temp_b = re.search(r'B:(\d+.\d+)', line)
             if not temp_t:

@@ -320,19 +320,15 @@ class Fabricator(db.Model):
                 if self.device.serialConnection is not None and self.device.serialConnection.is_open: assert self.device.disconnect(), "Failed to disconnect"
             self.status = newStatus
             self.device.status = newStatus
-            if self.queue[0] is None and len(self.queue) > 0:
-                self.queue[0] = self.queue[0]
             if len(self.queue) > 0:
-                assert self.queue[0] == self.queue[0], "Job is not the first in the queue"
                 if self.queue[0] is not None:
-                    self.queue[0].status = newStatus
                     self.queue[0].status = newStatus
                     db.session.commit()
             if current_app:
                 current_app.socketio.emit(
                     "status_update", {"fabricator_id": self.dbID, "status": newStatus}
                 )
-                if self.queue[0] is not None:
+                if len(self.queue) > 0 and self.queue[0] is not None:
                     Job.update_job_status(self.queue[0].id, newStatus)
             else:
                 print(f"current app is None, status: {newStatus}")
