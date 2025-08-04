@@ -411,22 +411,12 @@ export class GenericSerialFabricator {
     async sendDummyInstruction(writeNow = true) {
         if (this.#dummyInstructionBeingSent === false) {
             this.#dummyInstructionBeingSent = true;
-            /** @type {FabricatorResponse} */
-            let response;
 
-            try {
-                response = await this.sendGCodeInstruction(this.DUMMY_INSTRUCTION, this.DUMMY_INSTRUCTION_EXTRACTOR_REGEX, writeNow);
-            } catch (e) {
-                // Show the timeout error, but don't crash the program
-                console.warn(e); /** @todo Add a proper debug log */
-                response = { status: 'timed-out' };
-            }
+            const response = await this.sendGCodeInstruction(this.DUMMY_INSTRUCTION, this.DUMMY_INSTRUCTION_EXTRACTOR_REGEX, writeNow);
 
             this.#dummyInstructionBeingSent = false;
 
-            if (response.status === 'processed')
-                return response;
-            else if (response.status === 'timed-out')
+            if (response.status === 'processed' || response.status === 'timed-out')
                 return response;
 
             if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.UNHANDLED_STATES) {
