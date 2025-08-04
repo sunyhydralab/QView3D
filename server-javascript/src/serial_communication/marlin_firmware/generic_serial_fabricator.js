@@ -204,13 +204,13 @@ export class GenericSerialFabricator {
                             let extractorResult = {};
 
                             for (const regex of extractor.regexes) {
-                                const extractedResult = regex.exec(line);
+                                const currentMatch = regex.exec(line);
                                 
-                                if (extractedResult !== null) {
-                                    if (extractedResult.groups === undefined)
+                                if (currentMatch !== null) {
+                                    if (currentMatch.groups === undefined)
                                         throw new Error(`The extractor ${extractor.regexes} did not provide named capture groups in its implementation. This behavior is not supported in the GenericSerialFabricator class`);
 
-                                    Object.assign(extractorResult, extractedResult.groups);
+                                    Object.assign(extractorResult, currentMatch.groups);
                                 }
                             }
 
