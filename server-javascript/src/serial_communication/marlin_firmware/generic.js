@@ -280,7 +280,7 @@ export class GenericMarlinFabricator {
          * @todo Fix the type for this particular error object. This object possesses the 'disconnected' property
          */
         const closeListener = (err) => {
-            // Clear idle and hasBooted timeouts
+            // Clear (remove) idle and hasBooted timeouts
             clearTimeout(handleIdleTimeout);
             clearTimeout(hasBootedTimeout);
             
