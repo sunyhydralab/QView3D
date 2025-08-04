@@ -371,7 +371,7 @@ export class GenericSerialFabricator {
                 this.#openPort.write(instruction, this.CHARACTER_ENCODING);
 
                 if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_POTENTIALLY_UNSAFE_WRITES)
-                    console.warn(`The G-Code instruction ${instruction.trim()} was immediately written to port ${this.#openPort.path}. This will likely lead to abnormal behavior`);
+                    console.warn(`The G-Code instruction '${instruction.trim()}' was immediately written to port '${this.#openPort.path}'. This will likely lead to abnormal behavior`);
             }
 
             // The request times out after the timeout amount
