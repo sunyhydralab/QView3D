@@ -435,7 +435,9 @@ class Printer(Device, metaclass=ABCMeta):
                     except IndexError:
                         temp = None
                 if temp:
-                    self.nozzleTargetTemp = float(temp)
+                    # FIX: Extract just the number part before converting to float
+                    temp_str = temp.split()[0] if ' ' in temp else temp  # Get first part if space exists
+                    self.nozzleTargetTemp = float(temp_str)
             case "M140":
                 try:
                     temp = decGcode.split("S")[1].split("\n")[0]

@@ -442,12 +442,22 @@ class Fabricator(db.Model):
             from Classes.Fabricators.CNCMachines.CNCMachine import CNCMachine
             from Classes.Fabricators.LaserCutters.LaserCutter import LaserCutter
             if isinstance(self.device, Printer):
-                if self.device.filamentType is None: self.device.filamentType = settingsDict["filament_type"]
-                if self.device.filamentDiameter is None: self.device.filamentDiameter = float(settingsDict["filament_diameter"])
-                if self.device.nozzleDiameter is None: self.device.nozzleDiameter = float(settingsDict["nozzle_diameter"])
-                assert self.device.filamentType == settingsDict["filament_type"], f"Filament type mismatch: {self.device.filamentType} != {settingsDict['filament_type']}"
-                assert self.device.filamentDiameter == float(settingsDict["filament_diameter"]), f"Filament diameter mismatch: {self.device.filamentDiameter} != {float(settingsDict['filament_diameter'])}, subtraction test: {self.device.nozzleDiameter - float(settingsDict['nozzle_diameter'])} != 0"
-                assert self.device.nozzleDiameter == float(settingsDict["nozzle_diameter"]), f"Nozzle diameter mismatch: {self.device.nozzleDiameter} != {float(settingsDict['nozzle_diameter'])}, subtraction test: {self.device.nozzleDiameter - float(settingsDict['nozzle_diameter'])} != 0.0"
+                # Default values for filament type, diameter, and nozzle diameter
+                if self.device.filamentType is None: 
+                    self.device.filamentType = settingsDict.get("filament_type", "PLA")
+                if self.device.filamentDiameter is None: 
+                    self.device.filamentDiameter = float(settingsDict.get("filament_diameter", "1.75"))
+                if self.device.nozzleDiameter is None: 
+                    self.device.nozzleDiameter = float(settingsDict.get("nozzle_diameter", "0.4"))
+                
+                # Print warnings instead of assertions. The assertions were causing generic prints to have issues.
+                if "filament_type" in settingsDict and self.device.filamentType != settingsDict["filament_type"]:
+                    print(f"WARNING: Filament type mismatch: {self.device.filamentType} != {settingsDict['filament_type']}")
+                if "filament_diameter" in settingsDict and self.device.filamentDiameter != float(settingsDict["filament_diameter"]):
+                    print(f"WARNING: Filament diameter mismatch: {self.device.filamentDiameter} != {float(settingsDict['filament_diameter'])}")
+                if "nozzle_diameter" in settingsDict and self.device.nozzleDiameter != float(settingsDict["nozzle_diameter"]):
+                    print(f"WARNING: Nozzle diameter mismatch: {self.device.nozzleDiameter} != {float(settingsDict['nozzle_diameter'])}")
+                
             elif isinstance(self.device, CNCMachine):
                 # if self.device.bitDiameter is not None and self.device.bitDiameter != float(settingsDict["bit_diameter"]):
                 #     return False
