@@ -33,9 +33,10 @@ export class GenericMarlinFabricator {
     /**
      * Used to figure out which fabricator should use this class
      * @readonly
+     * @static
      * @type {string[]}
      */
-    SUPPORTED_FABRICATORS = ['all'];
+    static SUPPORTED_FABRICATORS = ['all'];
 
     /** 
      * Baud rate of the connection to the serial port
