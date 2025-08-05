@@ -38,3 +38,7 @@ export const SHOW_TIMED_OUT_INSTRUCTIONS = true;
 
 // Pollutes logs (but can be useful)
 export const SHOW_EXTRACTOR_STATE_AFTER_TIMEOUT = false;
+
+// Debug flags for
+// ../serial_communication/marlin_firmware/helpers.js
+export const SHOW_PICKED_DRIVER = true;
