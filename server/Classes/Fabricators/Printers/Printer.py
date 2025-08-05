@@ -267,6 +267,10 @@ class Printer(Device, metaclass=ABCMeta):
             gcode = gcode.encode("utf-8")
         assert isinstance(gcode, bytes), f"Expected bytes, got {type(gcode)}"
         callables = self.callablesHashtable.get(self.extractIndex(gcode, logger), [checkOK])
+
+        # Print command being sent
+        print(f">>> SENDING GCODE: {gcode.decode().strip()}")
+
         current_app.socketio.emit("gcode_line", {"line": (gcode.decode() if isinstance(gcode, bytes) else gcode).strip(), "fabricator_id": self.dbID})
         self.serialConnection.write(gcode)
         line = b''
@@ -292,6 +296,8 @@ class Printer(Device, metaclass=ABCMeta):
                 # Check if timeout has been reached
                 timeout_counter += 1
                 if timeout_counter > max_timeout:
+                    # Print timeout
+                    print(f">>> TIMEOUT waiting for response to: {gcode.decode().strip()}")
                     if should_log: logger.warning(f"Timeout waiting for response to {gcode.decode().strip()}")
                     if gcode_str in ["M109", "M190"]:
                         if should_log: logger.info(f"Temperature command {gcode_str} timed out, assuming success")
@@ -310,22 +316,33 @@ class Printer(Device, metaclass=ABCMeta):
                     if not decLine:
                         continue
 
+                    # Print ALL responses received
+                    print(f"<<< RECEIVED: {decLine}")
+
                     if "processing" in decLine or "echo" in decLine: continue
                     if "T:" in decLine and "B:" in decLine:
+                        # Highlight temperature lines
+                        print(f"<<< TEMPERATURE LINE: {decLine}")
                         self.handleTempLine(decLine)
 
                         if func == checkBedTemp and self.bedTemperature and self.bedTargetTemp:
                             if abs(self.bedTemperature - self.bedTargetTemp) <= 2:  # Within 2 degrees
+                                # Print when bed temp reached
+                                print(f"<<< BED TEMP REACHED: {self.bedTemperature}°C (target: {self.bedTargetTemp}°C)")
                                 if should_log: logger.info(f"Bed temperature reached: {self.bedTemperature}°C")
                                 break
                         elif func == checkExtruderTemp and self.nozzleTemperature and self.nozzleTargetTemp:
                             if abs(self.nozzleTemperature - self.nozzleTargetTemp) <= 2:  # Within 2 degrees
+                                # Print when nozzle temp reached
+                                print(f"<<< NOZZLE TEMP REACHED: {self.nozzleTemperature}°C (target: {self.nozzleTargetTemp}°C)")
                                 if should_log: logger.info(f"Nozzle temperature reached: {self.nozzleTemperature}°C")
                                 break
                         elif func != checkBedTemp and func != checkExtruderTemp and "ok" not in decLine.lower():
                             continue
                         
                     if func(line, self):
+                        # Print when command completes successfully
+                        print(f"<<< COMMAND COMPLETED: {gcode.decode().strip()} -> {decLine}")
                         break
                     if should_log: logger.debug(f"{gcode.decode().strip()}: {decLine}")
                     # current_app.socketio.emit("console_update",{"message": decLine, "level": "debug", "fabricator_id": self.dbID})
@@ -385,15 +402,13 @@ class Printer(Device, metaclass=ABCMeta):
             current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
 
     def handleTempLine(self, line: str | bytes , logger: JobLogger = None) -> None:
-        """
-        Method to handle temperature lines in the serial response
-        :param str line: the line to parse
-        :param JobLogger logger: the logger to use
-        """
         try:
             # Convert bytes to string if needed
             if isinstance(line, bytes):
                 line = line.decode('utf-8', errors='ignore')
+
+            # Print what we're parsing
+            print(f">>> PARSING TEMP LINE: {line}")
 
             # Use regex to find the temperatures in the line (Ari's OG code)    
             temp_t = re.search(r'T:(\d+.\d+)', line)
@@ -404,16 +419,20 @@ class Printer(Device, metaclass=ABCMeta):
                 temp_b = re.search(r'B:(\d+)', line)
             if temp_t:
                 self.nozzleTemperature = float(temp_t.group(1))
+                print(f">>> PARSED NOZZLE TEMP: {self.nozzleTemperature}°C")
             if temp_b:
                 self.bedTemperature = float(temp_b.group(1))
+                print(f">>> PARSED BED TEMP: {self.bedTemperature}°C")
             if current_app:
                 current_app.socketio.emit('temp_update', {'fabricator_id': self.dbID, 'extruder_temp': self.nozzleTemperature,
                                                           'bed_temp': self.bedTemperature})
+                print(f">>> EMITTED TEMP UPDATE: Nozzle={self.nozzleTemperature}°C, Bed={self.bedTemperature}°C")
         except ValueError:
             pass
         except Exception as e:
             current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
 
+    # TODO: Do we need this? Can we just send raw gcode?
     def extractIndex(self, gcode: bytes, logger=None) -> str:
         """
         Method to extract the index of the gcode for use in the callablesHashtable
@@ -435,8 +454,8 @@ class Printer(Device, metaclass=ABCMeta):
                     except IndexError:
                         temp = None
                 if temp:
-                    # FIX: Extract just the number part before converting to float
-                    temp_str = temp.split()[0] if ' ' in temp else temp  # Get first part if space exists
+                    # Extract just the number part before converting to float
+                    temp_str = temp.split()[0] if ' ' in temp else temp
                     self.nozzleTargetTemp = float(temp_str)
             case "M140":
                 try:
@@ -447,7 +466,9 @@ class Printer(Device, metaclass=ABCMeta):
                     except IndexError:
                         temp = None
                 if temp:
-                    self.bedTargetTemp = float(temp)
+                    #  Apply same fix here
+                    temp_str = temp.split()[0] if ' ' in temp else temp
+                    self.bedTargetTemp = float(temp_str)
             case "M109":
                 try:
                     temp = decGcode.split("S")[1].split("\n")[0]
@@ -457,10 +478,12 @@ class Printer(Device, metaclass=ABCMeta):
                     except IndexError:
                         temp = None
                 if temp:
-                    if logger is not None: logger.info(f"Waiting for hotend temperature to stabilize at {temp}\u00B0C...")
-                    self.nozzleTargetTemp = float(temp)
+                    # Apply same fix here
+                    temp_str = temp.split()[0] if ' ' in temp else temp
+                    if logger is not None: logger.info(f"Waiting for hotend temperature to stabilize at {temp_str}\u00B0C...")
+                    self.nozzleTargetTemp = float(temp_str)
                     current_app.socketio.emit("console_update",
-                                          {"message": f"Waiting for hotend temperature to stabilize at {temp}\u00B0C...", "level": "info",
+                                          {"message": f"Waiting for hotend temperature to stabilize at {temp_str}\u00B0C...", "level": "info",
                                            "fabricator_id": self.dbID})
                 else:
                     if logger is not None: logger.info("Waiting for hotend temperature to stabilize...")
@@ -473,10 +496,12 @@ class Printer(Device, metaclass=ABCMeta):
                 except IndexError:
                     temp = None
                 if temp:
-                    if logger is not None: logger.info(f"Waiting for bed temperature to stabilize at {temp}\u00B0C...")
-                    self.bedTargetTemp = float(temp)
+                    #  Apply same fix here
+                    temp_str = temp.split()[0] if ' ' in temp else temp
+                    if logger is not None: logger.info(f"Waiting for bed temperature to stabilize at {temp_str}\u00B0C...")
+                    self.bedTargetTemp = float(temp_str)
                     current_app.socketio.emit("console_update",
-                                          {"message": f"Waiting for bed temperature to stabilize at {temp}\u00B0C...", "level": "info",
+                                          {"message": f"Waiting for bed temperature to stabilize at {temp_str}\u00B0C...", "level": "info",
                                            "fabricator_id": self.dbID})
                 else:
                     if logger is not None: logger.info("Waiting for bed temperature to stabilize...")
