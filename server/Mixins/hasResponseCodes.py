@@ -33,7 +33,7 @@ def checkBedTemp(line, dev):
     try:
         match = re.search(r'B:(\d+\.?\d*) ?/?(\d+\.?\d*)?', line)
         temps = match.groups() if match else None
-        return checkTemp(temps, dev, ["bedTemperature", "bedTargetTemperature"])
+        return checkTemp(temps, dev, ["bedTemperature", "bedTargetTemp"])  # Name matches Printer.py
     except Exception as e:
         return current_app.handle_errors_and_logging(e, dev.logger)
 
@@ -44,7 +44,7 @@ def checkExtruderTemp(line, dev):
     try:
         match = re.search(r'T:(\d+\.?\d*) ?/?(\d+\.?\d*)?', line)
         temps = match.groups() if match else None
-        return checkTemp(temps, dev, ["extruderTemperature", "extruderTargetTemperature"])
+        return checkTemp(temps, dev, ["nozzleTemperature", "nozzleTargetTemp"])  # Name matchses Printer.py
     except Exception as e:
         return current_app.handle_errors_and_logging(e, dev.logger)
 

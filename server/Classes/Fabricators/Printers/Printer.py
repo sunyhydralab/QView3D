@@ -326,11 +326,14 @@ class Printer(Device, metaclass=ABCMeta):
                         self.handleTempLine(decLine)
 
                         if func == checkBedTemp and self.bedTemperature and self.bedTargetTemp:
+                            print(f">>> CHECKING BED TEMP: Current={self.bedTemperature}°C, Target={self.bedTargetTemp}°C, Diff={abs(self.bedTemperature - self.bedTargetTemp)}")
                             if abs(self.bedTemperature - self.bedTargetTemp) <= 2:  # Within 2 degrees
                                 # Print when bed temp reached
                                 print(f"<<< BED TEMP REACHED: {self.bedTemperature}°C (target: {self.bedTargetTemp}°C)")
                                 if should_log: logger.info(f"Bed temperature reached: {self.bedTemperature}°C")
                                 break
+                            else:
+                                print(f">>> BED TEMP NOT REACHED YET: Need {self.bedTargetTemp - self.bedTemperature:.1f}°C more")
                         elif func == checkExtruderTemp and self.nozzleTemperature and self.nozzleTargetTemp:
                             if abs(self.nozzleTemperature - self.nozzleTargetTemp) <= 2:  # Within 2 degrees
                                 # Print when nozzle temp reached
@@ -340,6 +343,12 @@ class Printer(Device, metaclass=ABCMeta):
                         elif func != checkBedTemp and func != checkExtruderTemp and "ok" not in decLine.lower():
                             continue
                         
+                    # Special handling for M190, 'ok' as completion
+                    gcode_str = gcode.decode().strip().split()[0]
+                    if gcode_str == "M190" and "ok" in decLine.lower():
+                        print(f"<<< M190 COMPLETED WITH OK: {decLine}")
+                        break
+                    
                     if func(line, self):
                         # Print when command completes successfully
                         print(f"<<< COMMAND COMPLETED: {gcode.decode().strip()} -> {decLine}")
