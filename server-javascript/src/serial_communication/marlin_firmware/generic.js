@@ -463,7 +463,6 @@ export class GenericMarlinFabricator {
 
     /**
      * Extracts FIRMWARE_NAME, MACHINE_TYPE, PROTOCOL_VERSION, and UUID from the output from the info instruction
-     * The extracted values are stored in an object with properties firmwareName, protocolVersion, machineType, and UUID
      * Any of these variables can be 'undefined', so ensure that they exist
      * @readonly
      * @type {RegExp[]}
@@ -477,6 +476,7 @@ export class GenericMarlinFabricator {
 
     /**
      * Returns the firmware information received from the info instruction
+     * The extracted values are stored in an object with properties firmwareName, protocolVersion, machineType, and UUID
      * @returns {Promise<FabricatorResponse>}
      */
     getFirmwareInfo() {
