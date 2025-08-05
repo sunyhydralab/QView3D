@@ -1,9 +1,11 @@
 import logging
 import os
 import sys
+import shutil
 from Classes.Loggers.Logger import Logger
 from config.paths import root_path
 from werkzeug.serving import WSGIRequestHandler
+from flask import current_app
 
 class LoggingService:
     def __init__(self, app):
@@ -37,3 +39,24 @@ class LoggingService:
     
     def get_logger(self):
         return self.logger
+
+def cleanup_directories():
+    """
+    Clean up and recreate upload and temporary directories.
+    
+    Removes existing uploads and tempcsv folders and recreates them as empty directories.
+    This ensures a clean state on application startup.
+    """
+    try:
+        uploads_folder = os.path.abspath('../uploads')
+        tempcsv = os.path.abspath('../tempcsv')
+        
+        for folder in [uploads_folder, tempcsv]:
+            if os.path.exists(folder):
+                shutil.rmtree(folder)
+                current_app.logger.info(f"{folder} removed and will be recreated.")
+            os.makedirs(folder)
+            current_app.logger.info(f"{folder} recreated as an empty directory.")
+            
+    except Exception as e:
+        current_app.handle_errors_and_logging(e)

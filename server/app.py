@@ -7,6 +7,7 @@ from utils.formatting import tabs
 from config.config import Config
 from services.websocket_service import start_websocket
 from services.discord_service import start_discord_bot
+from services.logging_service import cleanup_directories
 
 # SSL setup
 os.environ["SSL_CERT_FILE"] = certifi.where()
@@ -30,19 +31,8 @@ else:
     print("Discord bot is disabled")
 
 # Directory cleanup 
-# TODO: DELETE LOGGING
 with app.app_context():
-    try:
-        uploads_folder = os.path.abspath('../uploads')
-        tempcsv = os.path.abspath('../tempcsv')
-        for folder in [uploads_folder, tempcsv]:
-            if os.path.exists(folder):
-                shutil.rmtree(folder)
-                app.logger.info(f"{folder} removed and will be recreated.")
-            os.makedirs(folder)
-            app.logger.info(f"{folder} recreated as an empty directory.")
-    except Exception as e:
-        app.handle_errors_and_logging(e)
+    cleanup_directories()
 
 def run_socketio(app):
     try:
