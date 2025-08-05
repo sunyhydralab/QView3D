@@ -2,8 +2,14 @@
 
 // Used to communicate with serial devices
 import { SerialPort } from 'serialport';
-// Debug flags
-import { DEBUG_FLAGS } from '../../flags.js';
+// Import relevant debug flags
+import { 
+    ENABLE_ALL_FLAGS, EXTRACTOR_FAILED_MATCH, FABRICATOR_CLOSED, 
+    FABRICATOR_IDLE, MANY_GCODE_INSTRUCTIONS, MISSING_REGEX, 
+    SHOW_EXTRACTOR_RESULT, SHOW_EXTRACTOR_STATE_AFTER_TIMEOUT, 
+    SHOW_POTENTIALLY_UNSAFE_WRITES, SHOW_TIMED_OUT_INSTRUCTIONS, 
+    UNHANDLED_STATES 
+} from '../../flags.js';
 
 /**
  * @typedef FabricatorResponse
@@ -164,7 +170,7 @@ export class GenericMarlinFabricator {
             // Refreshes the boot up timer because we have to wait for the fabricator to boot up again
             hasBootedTimeout.refresh();
 
-            if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.FABRICATOR_IDLE)
+            if (ENABLE_ALL_FLAGS || FABRICATOR_IDLE)
                 console.info(`The fabricator at port ${this.#openPort.path} is idle`);
         }
 
@@ -231,7 +237,7 @@ export class GenericMarlinFabricator {
                                 extractor.status = 'done';
                                 extractor.callback({ status: 'processed', extractedResults: extractorResult });
 
-                                if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_EXTRACTOR_RESULT)
+                                if (ENABLE_ALL_FLAGS || SHOW_EXTRACTOR_RESULT)
                                     console.info(`The extractor ${extractor.regexes} returned '${Object.values(extractorResult)}' from '${line.trim()}'`);
 
                                 break; /** @todo End the loop since an extractor got a result. Check to see if this causes bugs */
@@ -239,11 +245,11 @@ export class GenericMarlinFabricator {
                                 // Else, the extractor didn't get what it wanted and should be re-added to the queue
                                 this.#extractQ.push(extractor);
 
-                                if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.EXTRACTOR_FAILED_MATCH)
+                                if (ENABLE_ALL_FLAGS || EXTRACTOR_FAILED_MATCH)
                                     console.info(`The extractor ${extractor.regexes} failed to match ${line}`);
                             }
                         } else {
-                            if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.MISSING_REGEX)
+                            if (ENABLE_ALL_FLAGS || MISSING_REGEX)
                                 console.info(`An extractor sent to fabricator at port ${this.#openPort.path} has no RegEx and therefore won't extract any results from the line '${line}'`);
 
                             // If no regex is present, then it is assumed that this extractor wants to see 
@@ -315,7 +321,7 @@ export class GenericMarlinFabricator {
 
             /** @todo Ensure everything has been deleted else we have a memory leak */
 
-            if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.FABRICATOR_CLOSED)
+            if (ENABLE_ALL_FLAGS || FABRICATOR_CLOSED)
                 console.info(`Fabricator at port ${this.#openPort.path} has closed its connection`);
         };
         
@@ -369,7 +375,7 @@ export class GenericMarlinFabricator {
                 }
 
                 if (this.#instructQ.length > this.ABNORMAL_REQUEST_AMOUNT)
-                    if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.MANY_GCODE_INSTRUCTIONS)
+                    if (ENABLE_ALL_FLAGS || MANY_GCODE_INSTRUCTIONS)
                         console.warn(`Fabricator at port ${this.#openPort.path} has over ${this.ABNORMAL_REQUEST_AMOUNT} G-Code instructions in its queue which is abnormal. The sendGCodeInstruction returns a promise that should be awaited.`);
 
             } else if (writeNow === true) {
@@ -379,7 +385,7 @@ export class GenericMarlinFabricator {
                 // Immediately write to the port
                 this.#openPort.write(instruction, this.CHARACTER_ENCODING);
 
-                if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_POTENTIALLY_UNSAFE_WRITES)
+                if (ENABLE_ALL_FLAGS || SHOW_POTENTIALLY_UNSAFE_WRITES)
                     console.warn(`The G-Code instruction '${instruction.trim()}' was immediately written to port '${this.#openPort.path}'. This will likely lead to abnormal behavior`);
             }
 
@@ -390,14 +396,14 @@ export class GenericMarlinFabricator {
                     resolve({ status: 'timed-out'});
                     extractor.status = 'timed-out';
                     
-                    if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_TIMED_OUT_INSTRUCTIONS)
+                    if (ENABLE_ALL_FLAGS || SHOW_TIMED_OUT_INSTRUCTIONS)
                         console.warn(`The instruction ${instruction.trim()} with extractor ${extractorRegEx} timed out for fabricator on port ${this.#openPort.path}`);
                 } else if (extractor.status === 'in-progress') {
                     extractor.status = 'stale'; // If the fabricator doesn't respond again, then this value won't update
                     responseTimeout.refresh();
                 }
 
-                if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.SHOW_EXTRACTOR_STATE_AFTER_TIMEOUT)
+                if (ENABLE_ALL_FLAGS || SHOW_EXTRACTOR_STATE_AFTER_TIMEOUT)
                     console.info(`The state of extractor ${extractor.regexes} for instruction ${instruction.trim()} on port ${this.#openPort.path} is ${extractor.status} after response timeout.`);
             }, this.RESPONSE_TIMEOUT);
         }
@@ -428,7 +434,7 @@ export class GenericMarlinFabricator {
             if (response.status === 'processed' || response.status === 'timed-out')
                 return response;
 
-            if (DEBUG_FLAGS.SHOW_EVERYTHING || DEBUG_FLAGS.UNHANDLED_STATES) {
+            if (ENABLE_ALL_FLAGS || UNHANDLED_STATES) {
                 console.warn(`The sendDummyInstruction function has experienced an unhandled state! The status from the fabricator was ${response.status} instead of processed or timed-out`);
                 // Some useful info
                 console.warn(`Fabricator at port: ${this.#openPort.path}\nG-Code instruction sent: ${this.DUMMY_INSTRUCTION}\nExtractor used: ${this.DUMMY_INSTRUCTION_EXTRACTOR_REGEX}`);

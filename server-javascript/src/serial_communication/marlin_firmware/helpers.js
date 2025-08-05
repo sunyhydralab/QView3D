@@ -1,3 +1,5 @@
+// Import relevant debug flags
+import { ENABLE_ALL_FLAGS, UNHANDLED_STATES } from "../../flags.js";
 import { GenericMarlinFabricator } from "./generic.js";
 
 /**
