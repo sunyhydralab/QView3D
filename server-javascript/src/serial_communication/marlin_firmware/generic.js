@@ -190,7 +190,6 @@ export class GenericMarlinFabricator {
             else
                 throw new Error(`Stream at port ${this.#openPort.path} is in object mode which is currently not supported by the default data processor in the GenericMarlinFabricator class.`);
 
-            /** @todo Probably don't split by LINE_SPLITTER but instead split by GCODE_PROCESSED_RESPONSE */
             // Split each line by the line splitter value
             const lines = this.#responseBuf.split(this.LINE_SPLITTER);
 
@@ -290,7 +289,7 @@ export class GenericMarlinFabricator {
         /**
          * Handles the closing of the connection between the fabricator and the Node process
          * @param {Error} [err] Error object sent when an error causes the connection between the node process and the fabricator to end
-         * @todo Fix the type for this particular error object. This object possesses the 'disconnected' property
+         * @todo Fix the type for this particular error object. This object possesses the 'disconnected' property [VERY LOW PRIORITY]
          */
         const closeListener = (err) => {
             // Clear (remove) idle and hasBooted timeouts
