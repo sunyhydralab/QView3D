@@ -31,7 +31,7 @@ export const MISSING_REGEX = false;
 
 export const FABRICATOR_IDLE = true;
 
-export const FABRICATOR_CLOSED = true;
+export const FABRICATOR_CONNECTION_CLOSED = false;
 
 // Whether or not to log when a request to a fabricator times out
 export const SHOW_TIMED_OUT_INSTRUCTIONS = true;

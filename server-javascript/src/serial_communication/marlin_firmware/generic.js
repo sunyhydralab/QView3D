@@ -4,7 +4,7 @@
 import { SerialPort } from 'serialport';
 // Import relevant debug flags
 import { 
-    ENABLE_ALL_FLAGS, EXTRACTOR_FAILED_MATCH, FABRICATOR_CLOSED, 
+    ENABLE_ALL_FLAGS, EXTRACTOR_FAILED_MATCH, FABRICATOR_CONNECTION_CLOSED, 
     FABRICATOR_IDLE, MANY_GCODE_INSTRUCTIONS, MISSING_REGEX, 
     SHOW_EXTRACTOR_RESULT, SHOW_EXTRACTOR_STATE_AFTER_TIMEOUT, 
     SHOW_POTENTIALLY_UNSAFE_WRITES, SHOW_TIMED_OUT_INSTRUCTIONS, 
@@ -320,7 +320,7 @@ export class GenericMarlinFabricator {
 
             /** @todo Ensure everything has been deleted else we have a memory leak */
 
-            if (ENABLE_ALL_FLAGS || FABRICATOR_CLOSED)
+            if (ENABLE_ALL_FLAGS || FABRICATOR_CONNECTION_CLOSED)
                 console.info(`Fabricator at port ${this.#openPort.path} has closed its connection`);
         };
         
