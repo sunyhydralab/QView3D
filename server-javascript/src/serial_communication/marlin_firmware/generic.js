@@ -390,6 +390,9 @@ export class GenericMarlinFabricator {
 
             // The request times out after the timeout amount
             const responseTimeout = setTimeout(() => {
+                // Used in the debugging code below to show the previous state of the extractor
+                const previousState = extractor.status;
+
                 // Only timeout when we never get a response from the fabricator, or the response is stale (it stopped responding after some time) 
                 if (extractor.status === 'started' || extractor.status === 'stale') {
                     resolve({ status: 'timed-out'});
@@ -403,7 +406,7 @@ export class GenericMarlinFabricator {
                 }
 
                 if (ENABLE_ALL_FLAGS || SHOW_EXTRACTOR_STATE_AFTER_TIMEOUT)
-                    console.info(`The state of extractor ${extractor.regexes} for instruction ${instruction.trim()} on port ${this.#openPort.path} is ${extractor.status} after response timeout.`);
+                    console.info(`The state of extractor '${extractor.regexes}' for instruction '${instruction.trim()}' on port '${this.#openPort.path}' is '${extractor.status}' after response timeout. It was '${previousState}' before.`);
             }, this.RESPONSE_TIMEOUT);
         }
 
