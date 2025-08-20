@@ -1,5 +1,6 @@
-import { GenericSerialFabricator } from './serial_communication/marlin_firmware/generic_serial_fabricator.js';
+import { GenericMarlinFabricator as GenericSerialFabricator } from './serial_communication/marlin_firmware/generic.js';
 import { Prusai3MK3 } from './serial_communication/marlin_firmware/prusamk3.js';
+import { getFabricatorFromSerialPort } from './serial_communication/marlin_firmware/helpers.js';
 
 // /** @todo Add a helper function that determines which specific class to use */
 // const fab1 = new Prusai3MK3('/dev/ttyACM1');
@@ -30,14 +31,19 @@ import { Prusai3MK3 } from './serial_communication/marlin_firmware/prusamk3.js';
 //     await fab2.sendGCodeInstruction(gcode_line + '\n');
 // } 
 
-// // Starts the processing loop
+// Starts the processing loop
 // fab2.sendDummyInstruction();
 
-class TestFabricator extends GenericSerialFabricator {
-    RESPONSE_TIMEOUT = 100000000;
-}
+// class TestFabricator extends GenericSerialFabricator {
+//     RESPONSE_TIMEOUT = 100000000;
+// }
 
-const z = console.log
-const fab3 = new TestFabricator('/dev/pts/2');
-z(fab3.sendGCodeInstruction('GTEST\n'));
-z(fab3.getFirmwareInfo());
+// const z = console.log
+// const fab3 = new TestFabricator('/dev/pts/2');
+// z(await fab3.sendGCodeInstruction('GTEST\n'));
+// z(await fab3.getFirmwareInfo());
+
+const fab2 = await getFabricatorFromSerialPort('/dev/ttyUSB0');
+const fab1 = await getFabricatorFromSerialPort('/dev/ttyACM0');
+// const fab3 = await getFabricatorFromSerialPort('/dev/ttyACM1');
+const fab4 = await getFabricatorFromSerialPort('/dev/ttyACM2');
