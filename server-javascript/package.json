@@ -1,0 +1,33 @@
+{
+  "name": "qview3d-server",
+  "version": "0.0.1",
+  "description": "Provides the server for the Qview3D project",
+  "main": "run.js",
+  "type": "module",
+  "scripts": {
+    "run": "echo 'Just run files individually'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sunyhydralab/QView3D.git"
+  },
+  "keywords": [
+    "qview3d",
+    "qview",
+    "qview3d-server",
+    "qview-server"
+  ],
+  "author": "Qview3D Contributors",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/sunyhydralab/QView3D/issues"
+  },
+  "homepage": "https://github.com/sunyhydralab/QView3D#readme",
+  "dependencies": {
+    "express": "^5.1.0",
+    "serialport": "^13.0.0"
+  },
+  "devDependencies": {
+    "jsdoc": "^4.0.4"
+  }
+}
