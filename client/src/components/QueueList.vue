@@ -5,15 +5,19 @@ import { ref } from 'vue'
 
 const props = defineProps<{ fabricator: Fabricator }>()
 const currentFabricator = props.fabricator
-const allJobs = currentFabricator.queue
+
+const allJobs = ref(currentFabricator.queue || [])
 const showDetails = ref(true)
 
 const deleteJob = async (jobId: number) => {
   await removeJob([jobId])
-  allJobs.splice(
-    allJobs.findIndex((job) => job.id === jobId),
-    1,
-  )
+  
+  if (allJobs.value) {
+    const jobIndex = allJobs.value.findIndex((job) => job.id === jobId)
+    if (jobIndex !== -1) {
+      allJobs.value.splice(jobIndex, 1)
+    }
+  }
 }
 
 function toggleDetails() {

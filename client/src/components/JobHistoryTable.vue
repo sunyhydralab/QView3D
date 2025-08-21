@@ -8,9 +8,22 @@ const allJobs = ref<Job[]>([])
 
 // Load all jobs when component is mounted
 onMounted(async () => {
-  allJobs.value = await getAllJobs()
-  allJobs.value = allJobs.value[0]
-  console.log(jobHistory.value)
+  try {
+    const jobs = await getAllJobs()
+    
+    if (Array.isArray(jobs)) {
+      allJobs.value = jobs
+    } else if (jobs && Array.isArray(jobs[0])) {
+      allJobs.value = jobs[0]
+    } else {
+      allJobs.value = []
+    }
+    
+    console.log(jobHistory.value)
+  } catch (error) {
+    console.error('Failed to load jobs:', error)
+    allJobs.value = []
+  }
 })
 const jobsPerPage = 20
 const currentPage = ref(1)

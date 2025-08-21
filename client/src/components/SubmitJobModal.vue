@@ -5,7 +5,7 @@ import { autoQueue, addJobToQueue } from '@/models/job'
 import { addToast } from '@/components/Toast.vue'
 
 import GCodePreviewModal from './GCodePreviewModal.vue'
-import GcodeRender from './GcodePreviewModalRendered.vue'
+
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
@@ -21,6 +21,9 @@ const fileName = ref("No file selected.")
 const quantity = ref(1)
 const ticketId = ref(0)
 const jobName = ref("")
+
+const isPreviewOpen = ref(false)
+const isRenderPreviewOpen = ref(false)
 
 // Save the selected file and updating the file and job names.
 const handleFileUpload = (event: Event) => {
@@ -240,7 +243,7 @@ const allSelected = computed(() =>
     </div>
   </div>
   <GCodePreviewModal v-if="isPreviewOpen" :file="selectedFile" @close="isPreviewOpen = false" />
-  <GcodeRender v-if="isRenderPreviewOpen" :file="selectedFile" @close="isRenderPreviewOpen = false" />
+  <!-- <GcodeRender v-if="isRenderPreviewOpen" :file="selectedFile" @close="isRenderPreviewOpen = false" /> -->
 </template>
 
 <style scoped>
