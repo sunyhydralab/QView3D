@@ -23,6 +23,7 @@ export interface Fabricator {
   colorChangeBuffer?: number
   colorbuff?: number
   isSelected: boolean
+  consoles?: string[][] 
 }
 
 export enum FabricatorStatus {
