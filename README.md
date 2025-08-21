@@ -21,7 +21,6 @@ The project is maintained by computer science students at SUNY New Paltz, under 
 - [**Christopher Jamieson**](https://github.com/shift16)
 - [**Youssup Song**](https://github.com/youssup)
 
-
 ## Features
 
 - **Concurrent Communication**: Manage multiple 3D printers simultaneously.
