@@ -8,15 +8,24 @@ import router from './router'
 import '@fortawesome/fontawesome-free/css/all.css';
 import { connectSocket } from './services/socket'
 
-// Set the mode on app start
-setModeToSystem()
+async function initializeApp() {
+  // Set the mode on app start
+  setModeToSystem()
 
-// Initialize socket connection
-connectSocket()
+  // Initialize socket connection
+  connectSocket()
 
-// Setup WebSockets
-setupSockets(await retrieveRegisteredFabricators())
+  // Setup WebSockets with await inside async function
+  const fabricators = await retrieveRegisteredFabricators()
+  setupSockets(fabricators)
 
-const app = createApp(App)
-app.use(router)
-app.mount('#app')
+  // Create and mount the app
+  const app = createApp(App)
+  app.use(router)
+  app.mount('#app')
+}
+
+// Call the async initialization function
+initializeApp().catch((error) => {
+  console.error('Failed to initialize app:', error)
+})
