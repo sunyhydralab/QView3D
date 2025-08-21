@@ -5,3 +5,4 @@ class PrusaMK4S(PrusaMK4):
     PRODUCTID = 0x001A
     DESCRIPTION = "Original Prusa MK4S - CDC"
     MAXFEEDRATE = 36000
+    cancelCMD = b"M410"

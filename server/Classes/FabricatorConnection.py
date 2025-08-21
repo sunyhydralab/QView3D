@@ -1,4 +1,3 @@
-import asyncio
 import threading
 from abc import ABC
 import uuid
@@ -6,7 +5,7 @@ import serial
 from queue import Queue, Empty
 import json
 from serial.tools.list_ports_common import ListPortInfo
-from globals import current_app as app
+from services.app_service import current_app
 
 
 class FabricatorConnection(ABC):
@@ -55,6 +54,9 @@ class SocketConnection(FabricatorConnection):
 
         # Queue for storing incoming messages
         self._receive_queue = Queue()
+
+        # Store last response
+        self._last_response = None
 
         # Connection state
         self._is_open = True
@@ -115,49 +117,65 @@ class SocketConnection(FabricatorConnection):
 
         # Use a local event and queue for this specific read operation
 
-        async def on_message_received(client_id, message):
+        def on_message_received(client_id, message):
             try:
                 data = json.loads(message)
 
-                if data.get("event") != ("gcode_response"):
-                    return
-
-                info: dict = json.loads(data.get("data"))
-
-                # if data.get("printerid") == self._fabricator_id:
-                response = info.get("response", "")
+                
+                event_type = data.get("event", "unknown")
+                info = data.get("data", {})
+                
+                # Handle different data formats
+                if isinstance(info, str):
+                    try:
+                        parsed_info = json.loads(info)
+                        response = parsed_info.get("response", info)
+                    except json.JSONDecodeError:
+                        response = info
+                elif isinstance(info, dict):
+                    response = info.get("response", str(info))
+                else:
+                    response = str(info)
+                    
+                # Log ALL events and process ALL of them
+                print(f"Received event: {event_type}, response: {response}")
                 self._receive_queue.put(response)
                 self._response_event.set()
-                # else:
-                #     print(f"Received message from unknown printer {data.get('printerid')}")
+                
             except json.JSONDecodeError as e:
                 print(f"Failed to decode message: {message} - {e}")
             except Exception as e:
                 print(f"Error in message handling: {e}")
-
-        #try:
-            # Register the temporary listener
-        app.event_emitter.on("message_received", on_message_received)
+                
 
         try:
-            response = self._receive_queue.get(timeout=self._timeout)
-            return response.encode('utf-8') if response else b''  # Convert string to bytes
+            from services.app_service import current_app
+            current_app.event_emitter.on("message_received", on_message_received)
+
+            response = self._receive_queue.get(timeout=1.0)
+            self._last_response = response.encode('utf-8') if isinstance(response, str) else response
+            return self._last_response
         except Empty:
-            return b''
+            # Return the last actual response we received, or default if none yet
+            if self._last_response is not None:
+                print(f"No new response, returning last response: {self._last_response}")
+                return self._last_response
+            else:
+                print("No responses received yet, returning default 'ok'")
+                return b"ok\n"
         finally:
             # Unregister the listener to prevent memory leaks
-            app.event_emitter.remove_event("message_received")
+            from services.app_service import current_app
+            current_app.event_emitter.remove_event("message_received")
 
     def close(self):
         """
         Close the websocket connection.
         """
         if self._is_open:
-            # Emit a disconnect event if needed
             self._send_message("printer_disconnect", {"printerid": self._fabricator_id})
             self._is_open = False
-            if self._websocket_connection:
-                asyncio.run(self._websocket_connection.close())  # Ensure closing the websocket.
+            print(f"Closed connection for printer {self._fabricator_id}")
 
     def open(self):
         """
@@ -216,13 +234,18 @@ class SocketConnection(FabricatorConnection):
         return self._is_open
 
     def _send_message(self, event, data):
-        """Helper to send messages via the WebSocket connection."""
-        if self._websocket_connection and self._is_open:
-            message = {"event": event, "data": data}
-            asyncio.run(self._websocket_connection.send(str(message)))
-        else:
-            print(f"Cannot send message: WebSocket connection is not open or not available.")
-
+        """Helper to send messages via SocketIO (non-blocking)."""
+        try:
+            from services.app_service import current_app
+            current_app.socketio.emit('fabricator_command', {
+                'event': event,
+                'data': data,
+                'fabricator_id': self._fabricator_id
+            })
+            print(f"Sent {event} via SocketIO for printer {self._fabricator_id}")
+        except Exception as e:
+            print(f"Failed to send message via SocketIO: {e}")
+                  
 class EmuListPortInfo(ListPortInfo):
     def __init__(self, device: str, description: str = None, hwid: str = None):
         super().__init__(device)

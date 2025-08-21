@@ -1,14 +1,13 @@
 import shutil
 from flask import Blueprint, jsonify, request, Response
 from Classes.Jobs import Job
-from models.db import db
-from models.printers import Printer
+from config.db import db
 import json
 import os 
 import gzip
 import serial
 import serial.tools.list_ports
-from globals import current_app
+from services.app_service import current_app
 from traceback import format_exc
 from Classes.Fabricators.Fabricator import Fabricator
 
@@ -282,18 +281,32 @@ def releasejob():
 
         if key == 3:
             Job.update_job_status(jobpk, "error")
-            fabricator.setStatus("error") # printer ready to accept new prints
+            fabricator.setStatus("ready")  # printer ready to accept new prints
+            if current_app:
+                current_app.socketio.emit("fabricator_status_update", {"id": printerid, "status": "ready"})
 
         elif key == 2:
 
             if currentStatus!="offline":
                 fabricator.setStatus("ready") # printer ready to accept new prints
+                if current_app:
+                    current_app.socketio.emit("fabricator_status_update", {"id": printerid, "status": "ready"})
+            # nuke logs
+            logger = fabricator.getActiveJobLogger()
+            if logger is not None:
+                logger.nukeLogs()
 
             return rerunjob(printerid, jobpk, "front")
 
         elif key == 1:
             if currentStatus!="offline":
                 fabricator.setStatus("ready") # printer ready to accept new prints
+                if current_app:
+                    current_app.socketio.emit("fabricator_status_update", {"id": printerid, "status": "ready"})
+            # nuke logs
+            logger = fabricator.getActiveJobLogger()
+            if logger is not None:
+                logger.nukeLogs()
                 
         if current_app:
             db.session.commit()
@@ -422,7 +435,7 @@ def delete_job():
 def setStatus():
     try:
         data = request.get_json() # get json data
-        printer_id = data['printerid']
+        printer_id = data['id']
         newStatus = data['status']
         fabricator: Fabricator | None = findPrinterObject(printer_id)
         if fabricator is not None:

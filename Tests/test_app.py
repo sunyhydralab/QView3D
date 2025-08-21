@@ -11,7 +11,7 @@ def __desc__(): return "App Tests"
 def test_db_to_make_sure_it_has_valid_file_path(app):
     db_file_no_path = app.config["SQLALCHEMY_DATABASE_URI"].split("/")[-1].split("\\")[-1]
     assert db_file_no_path, "database_uri doesn't exist?"
-    assert db_file_no_path == "hvamc.db", f"database_uri is {db_file_no_path}"
+    assert db_file_no_path == "QView.db", f"database_uri is {db_file_no_path}"
     assert os.path.exists(app.config["SQLALCHEMY_DATABASE_URI"].split("sqlite:///")[
                               -1]), f"Database file {app.config["SQLALCHEMY_DATABASE_URI"].split("sqlite:///")[-1]} does not exist"
 

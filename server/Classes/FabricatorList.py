@@ -2,14 +2,17 @@ from flask import jsonify, Response
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from sqlalchemy import inspect
+
+from Classes.Fabricators.Printers.Printer import Printer
 from Classes.Ports import Ports
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.Jobs import Job
 from Classes.Queue import Queue
 from threading import Thread
 import time
-from globals import current_app as app, tabs
-from models.db import db
+from services.app_service import current_app as app
+from utils.formatting import tabs
+from config.db import db
 
 class FabricatorList:
     def __init__(self, passed_app=app):
@@ -333,11 +336,12 @@ class FabricatorList:
             return jsonify({"error": "Fabricator not found"}), 404
 
 class FabricatorThread(Thread):
+    terminated = False
     def __init__(self, fabricator: Fabricator, passed_app=app, *args, **kwargs):
         """
         create a new FabricatorThread for the given fabricator
         :param Fabricator fabricator: the fabricator to create a thread for
-        :param MyFlaskApp passed_app: the app for context actions
+        :param QViewApp passed_app: the app for context actions
         """
         super().__init__(*args, **kwargs)
         self.fabricator: Fabricator = fabricator
@@ -362,14 +366,21 @@ class FabricatorThread(Thread):
     def run(self):
         with self.app.app_context():
             self.fabricator.responseCount = 0
-            while True:
-                time.sleep(2)
+            while not self.terminated:
+                time.sleep(.5)
                 queueSize = len(self.fabricator.queue)
                 if self.fabricator.getStatus() == "printing" and queueSize > 0:
                     assert isinstance(self.fabricator.queue[0], Job), f"self.fabricator.queue[0]={self.fabricator.queue[0]}, type(self.fabricator.queue[0])={type(self.fabricator.queue[0])}, self.fabricator.queue={self.fabricator.queue}, type(self.fabricator.queue)={type(self.fabricator.queue)}"
                     if self.fabricator.queue[0].released == 1:
                         if not self.fabricator.begin():
                             self.app.handle_errors_and_logging(Exception(f"Fabricator {self.fabricator.getName()} failed to begin") if not self.fabricator.error else self.fabricator.error, level=50)
+                elif self.fabricator.device.status == "homing":
+                    while self.fabricator.device.status == "homing":
+                        time.sleep(.5)
+                elif isinstance(self.fabricator.device, Printer) and self.fabricator.getStatus() == "ready":
+                    self.fabricator.device.handleTempLine(self.fabricator.device.serialConnection.read())
+                else:
+                    time.sleep(.5)
 
     def stop(self):
-        self.fabricator.terminated = 1
+        self.terminated = True

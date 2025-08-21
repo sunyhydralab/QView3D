@@ -43,7 +43,7 @@ class Logger(ABCLogger):
             self.addHandler(consoleLogger)
         else: self.consoleLogger = None
         if fileLogger is None:
-            from globals import root_path
+            from config.paths import root_path
             log_folder = os.path.abspath(os.path.join(root_path,"logs", deviceName))
             os.makedirs(log_folder, exist_ok=True)
             fileLogger = CustomFileHandler(os.path.join(log_folder, "fabricator.log"))

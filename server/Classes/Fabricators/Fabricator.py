@@ -9,10 +9,11 @@ from Classes.Fabricators.Device import Device
 from typing_extensions import TextIO
 from Classes.Jobs import Job
 from Mixins.hasEndingSequence import hasEndingSequence
-from models.config import Config
-from models.db import db
+from config.config import Config
+from config.db import db
 from datetime import datetime, timezone
-from globals import current_app, root_path
+from services.app_service import current_app
+from config.paths import root_path
 
 class Fabricator(db.Model):
     __tablename__ = "Fabricators"
@@ -27,6 +28,7 @@ class Fabricator(db.Model):
         nullable=False,
     )
     devicePort = db.Column(db.String(50), nullable=False)
+    active_job_logger = None
 
     def __init__(self, port: ListPortInfo | SysFS | None, name: str = "", consoleLogger: TextIO | None = None, fileLogger: str | None = None):
         """
@@ -195,8 +197,11 @@ class Fabricator(db.Model):
             from Classes.Fabricators.Printers.MakerBot.Replicator2 import Replicator2
             if serialPort.pid == Replicator2.PRODUCTID:
                 return Replicator2(self.dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
+            else:
+                return None
         else:
             #TODO: assume generic printer, do stuff
+            print("generic printer")
             return None
 
     @classmethod
@@ -232,13 +237,15 @@ class Fabricator(db.Model):
             #     self.device.startupSequence()
             assert self.setStatus("printing"), "Failed to set status to printing"
             self.error = self.device.parseGcode(self.queue[0], isVerbose=isVerbose) # this is the actual command to read the file and fabricate.
+            job_logger = self.queue[0].getLogger()
             self.handleVerdict()
             if isVerbose and self.device.logger is not None: self.device.logger.debug(f"Verdict handled, status: {self.status}")
             return True
         except Exception as e:
             self.error = e
+            current_app.handle_errors_and_logging(e, self.device.logger, level=50)
             current_app.socketio.emit("error_update", {"fabricator_id": self.dbID, "job_id": self.queue[0].id ,"error": str(e)})
-            return current_app.handle_errors_and_logging(e, self.device.logger, level=50)
+            return False
 
     def pause(self) -> bool:
         """
@@ -314,16 +321,14 @@ class Fabricator(db.Model):
             self.status = newStatus
             self.device.status = newStatus
             if len(self.queue) > 0:
-                assert self.queue[0] == self.queue[0], "Job is not the first in the queue"
                 if self.queue[0] is not None:
-                    self.queue[0].status = newStatus
                     self.queue[0].status = newStatus
                     db.session.commit()
             if current_app:
                 current_app.socketio.emit(
                     "status_update", {"fabricator_id": self.dbID, "status": newStatus}
                 )
-                if self.queue[0] is not None:
+                if len(self.queue) > 0 and self.queue[0] is not None:
                     Job.update_job_status(self.queue[0].id, newStatus)
             else:
                 print(f"current app is None, status: {newStatus}")
@@ -341,10 +346,18 @@ class Fabricator(db.Model):
         assert self.queue[0] is not None, "Job is None"
         if self.device.verdict == "complete":
             self.setStatus("complete")
+            if current_app:
+                current_app.socketio.emit(
+                    "fabricator_status_update", {"id": self.dbID, "status": "complete"}
+                )
         elif self.device.verdict == "error":
             self.setStatus("error")
+            if current_app:
+                current_app.socketio.emit(
+                    "fabricator_status_update", {"id": self.dbID, "status": "error"}
+                )
             # create issue
-            from models.issues import Issue
+            from Classes.Issues import Issue
             Issue.create_issue(f"CODE ISSUE: Print Failed: {self.name} - {self.queue[0].file_name_original}", self.error, self.queue[0].id)
             # send log to discord
             if Config['discord_enabled']:
@@ -361,10 +374,17 @@ class Fabricator(db.Model):
             if isinstance(self.device, hasEndingSequence): self.device.endSequence()
             else: self.device.home()
             self.setStatus("cancelled")
+            if current_app:
+                current_app.socketio.emit(
+                    "fabricator_status_update", {"id": self.dbID, "status": "cancelled"}
+                )
             self.queue.removeJob()
-            self.queue[0] = None
         elif self.device.verdict== "misprint":
             self.setStatus("misprint")
+            if current_app:
+                current_app.socketio.emit(
+                    "fabricator_status_update", {"id": self.dbID, "status": "misprint"}
+                )
 
     def getName(self) -> str:
         """
@@ -402,6 +422,15 @@ class Fabricator(db.Model):
     def getQueue(self):
         return self.queue
 
+    def getActiveJobLogger(self):
+        """
+        gets the active job logger
+        :rtype: JobLogger | None
+        """
+        if self.active_job_logger is None:
+            return None
+        return self.active_job_logger
+
     def checkValidJob(self):
         """checks if the job is valid for the fabricator"""
         try:
@@ -413,12 +442,22 @@ class Fabricator(db.Model):
             from Classes.Fabricators.CNCMachines.CNCMachine import CNCMachine
             from Classes.Fabricators.LaserCutters.LaserCutter import LaserCutter
             if isinstance(self.device, Printer):
-                if self.device.filamentType is None: self.device.filamentType = settingsDict["filament_type"]
-                if self.device.filamentDiameter is None: self.device.filamentDiameter = float(settingsDict["filament_diameter"])
-                if self.device.nozzleDiameter is None: self.device.nozzleDiameter = float(settingsDict["nozzle_diameter"])
-                assert self.device.filamentType == settingsDict["filament_type"], f"Filament type mismatch: {self.device.filamentType} != {settingsDict['filament_type']}"
-                assert self.device.filamentDiameter == float(settingsDict["filament_diameter"]), f"Filament diameter mismatch: {self.device.filamentDiameter} != {float(settingsDict['filament_diameter'])}, subtraction test: {self.device.nozzleDiameter - float(settingsDict['nozzle_diameter'])} != 0"
-                assert self.device.nozzleDiameter == float(settingsDict["nozzle_diameter"]), f"Nozzle diameter mismatch: {self.device.nozzleDiameter} != {float(settingsDict['nozzle_diameter'])}, subtraction test: {self.device.nozzleDiameter - float(settingsDict['nozzle_diameter'])} != 0.0"
+                # Default values for filament type, diameter, and nozzle diameter
+                if self.device.filamentType is None: 
+                    self.device.filamentType = settingsDict.get("filament_type", "PLA")
+                if self.device.filamentDiameter is None: 
+                    self.device.filamentDiameter = float(settingsDict.get("filament_diameter", "1.75"))
+                if self.device.nozzleDiameter is None: 
+                    self.device.nozzleDiameter = float(settingsDict.get("nozzle_diameter", "0.4"))
+                
+                # Print warnings instead of assertions. The assertions were causing generic prints to have issues.
+                if "filament_type" in settingsDict and self.device.filamentType != settingsDict["filament_type"]:
+                    print(f"WARNING: Filament type mismatch: {self.device.filamentType} != {settingsDict['filament_type']}")
+                if "filament_diameter" in settingsDict and self.device.filamentDiameter != float(settingsDict["filament_diameter"]):
+                    print(f"WARNING: Filament diameter mismatch: {self.device.filamentDiameter} != {float(settingsDict['filament_diameter'])}")
+                if "nozzle_diameter" in settingsDict and self.device.nozzleDiameter != float(settingsDict["nozzle_diameter"]):
+                    print(f"WARNING: Nozzle diameter mismatch: {self.device.nozzleDiameter} != {float(settingsDict['nozzle_diameter'])}")
+                
             elif isinstance(self.device, CNCMachine):
                 # if self.device.bitDiameter is not None and self.device.bitDiameter != float(settingsDict["bit_diameter"]):
                 #     return False

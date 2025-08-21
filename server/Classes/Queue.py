@@ -1,5 +1,5 @@
 from collections import deque
-from globals import current_app
+from services.app_service import current_app
 from Classes.Jobs import Job
 
 class Queue(deque):
@@ -22,7 +22,7 @@ class Queue(deque):
         self.append(job)
         if current_app:
             current_app.socketio.emit(
-                 "queue_update", {"queue": self.convertQueueToJson(), "printerid": job.fabricator_id}
+                 "queue_update", {"queue": self.convertQueueToJson(), "fabricator_id": job.fabricator_id}
             )
         return True
 
@@ -41,7 +41,7 @@ class Queue(deque):
             self.appendleft(job)
         if current_app:
             current_app.socketio.emit(
-                "queue_update", {"queue": self.convertQueueToJson(), "printerid": job.fabricator_id}
+                "queue_update", {"queue": self.convertQueueToJson(), "fabricator_id": job.fabricator_id}
             )
         return True
 
@@ -70,7 +70,7 @@ class Queue(deque):
             self.insert(index + 1, job_to_move)
         if current_app:
             current_app.socketio.emit(
-                "queue_update", {"queue": self.convertQueueToJson(), "printerid": job_to_move.fabricator_id}
+                "queue_update", {"queue": self.convertQueueToJson(), "fabricator_id": job_to_move.fabricator_id}
             )
 
     def reorder(self, arr):
@@ -89,7 +89,7 @@ class Queue(deque):
 
         if current_app:
             current_app.socketio.emit(
-                "queue_update", {"queue": self.convertQueueToJson(), "printerid": self[0].fabricator_id if len(self) > 0 else None}
+                "queue_update", {"queue": self.convertQueueToJson(), "fabricator_id": self[0].fabricator_id if len(self) > 0 else None}
             )
     
     def deleteJob(self, jobid: int, fabricator_id: int) -> Job | str:
@@ -106,7 +106,7 @@ class Queue(deque):
                 self.remove(job)
                 current_app.socketio.emit(
                     "queue_update",
-                    {"queue": self.convertQueueToJson(), "printerid": fabricator_id},
+                    {"queue": self.convertQueueToJson(), "fabricator_id": fabricator_id},
                 )
                 return deletedjob
         return "Job not found in queue."
@@ -148,7 +148,7 @@ class Queue(deque):
             self.addToBack(job_to_move)
         if current_app:
             current_app.socketio.emit(
-                "queue_update", {"queue": self.convertQueueToJson(), "printerid": fabricator_id}
+                "queue_update", {"queue": self.convertQueueToJson(), "fabricator_id": fabricator_id}
             )
 
     def getJob(self, job_to_find) -> Job | None:

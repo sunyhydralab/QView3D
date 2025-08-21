@@ -1,45 +1,15 @@
 <script setup lang="ts">
-import 'bootstrap/dist/js/bootstrap.bundle'
-import '@cyhnkckali/vue3-color-picker/dist/style.css'
-import "@/assets/main.css"
 import { RouterView } from 'vue-router'
-import NavBar from '@/components/NavBar.vue'
-import { onMounted, ref} from 'vue';
-import {setupSockets} from '@/model/sockets';
-import {retrievePrintersInfo, printers} from '@/model/ports';
-import {setupTimeSocket} from '@/model/jobs';
-import FooterComponent from './components/FooterComponent.vue'
-import {watch} from 'vue';
-import IsLoading from './components/IsLoading.vue'
-
-const isLoading = ref(false)
-
-onMounted(async () => {
-  printers.value = await retrievePrintersInfo()
-
-  // sockets
-  setupSockets(printers.value)
-  setupTimeSocket(printers.value)
-})
-
-// For updating the frontend when information on the printer changes
-watch(printers, (updatedPrinter) => {
-  if (updatedPrinter) {
-    setupSockets(printers.value)
-    setupTimeSocket(printers.value)
-  }
-})
+import Navbar from '@/components/Navbar.vue'
+import SettingsPanel from '@/components/SettingsPanel.vue'
+import Toast from '@/components/Toast.vue'
 </script>
 
 <template>
-    <IsLoading v-if="isLoading" />
-    <nav style="padding-bottom: 2.5rem;">
-        <NavBar/>
-    </nav>
-    <div class="">
-        <RouterView/>
-    </div>
-    <FooterComponent/>
+  <nav class="fixed top-0 left-0 right-0 z-50shadow-md">
+    <Navbar />
+  </nav>
+  <RouterView class="pt-20 px-10 min-h-screen h-full"/>
+  <SettingsPanel />
+  <Toast />
 </template>
-
-<style scoped></style>

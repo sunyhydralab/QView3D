@@ -100,7 +100,7 @@ def fabricator(request, app):
 
 @pytest.fixture(scope="session", autouse=True)
 def app():
-    from globals import current_app as app
+    from services.app_service import current_app as app
     with app.app_context():
         yield app
         app.fabricator_list.teardown()
@@ -146,7 +146,7 @@ def line_separator(interrupter: str, symbol: str = "-", length: int = 136, color
 
 def setup_logger(port):
     # set up fie location for output logs
-    from globals import root_path
+    from config.paths import root_path
     log_folder = os.path.join(root_path,"Tests", "logs")
     os.makedirs(log_folder, exist_ok=True)
     from datetime import datetime

@@ -1,4 +1,4 @@
-![QView3D Logo](QView3Dlogo.png)
+![QView3D Logo](assets/QView3Dlogo.png)
 
 # QView3D
 
@@ -50,7 +50,7 @@ The project is maintained by computer science students at SUNY New Paltz, under 
 
 ## Architecture Diagram
 
-![QView3D Diagram](QViewDiagram.png)
+![QView3D Diagram](assets/QViewDiagram.png)
 
 ## Setup and Installation
 
@@ -62,15 +62,15 @@ Clone the repository:
 git clone https://github.com/sunyhydralab/QView3D.git
 ```
 
-Install [Docker](https://docs.docker.com/engine/install/)
+Run the following commands to install dependencies and start the application:
 
-### Run Locally:
+```sh
+cd QView3D
+``` 
 
-WSL 2*/Linux/Mac
-
-Run the file `docker-run.sh` by typing `./docker-run.sh`
-
-When in the Docker container, run `qview3d-install` and then `qview3d-run` and type `dev` or `dev-client` if you're a developer looking to add features or `prod` if you're looking to test the project. `dev-client` is for testing mostly the client and `dev` is for testing mostly the server
+```sh
+python run.py
+```
 
 ## Pull Requests
 

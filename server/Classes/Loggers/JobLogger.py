@@ -3,13 +3,15 @@ import os
 import shutil
 from os import PathLike
 from typing import TextIO
-from globals import current_app, compress_with_gzip
+from services.app_service import current_app
+from utils.file_utils import compress_with_gzip
 
 from Classes.Loggers.ABCLogger import ABCLogger, CustomColorFormatter, CustomFileHandler
 
 class JobLogger(ABCLogger):
     fileLogger: str | PathLike = None
     fileLoggers = {"CRITICAL": ABCLogger.CRITICAL, "ERROR": ABCLogger.ERROR, "WARNING": ABCLogger.WARNING, "INFO": ABCLogger.INFO, "DEBUG": ABCLogger.DEBUG}
+    name = "JobLogger"
 
     def __init__(self, deviceName, jobName, startTime, port=None, consoleLogger: TextIO | None = None, fileLogger=None, loggingLevel=logging.INFO, showFile=True, showLevel=True, showDate=True):
         """
@@ -29,8 +31,10 @@ class JobLogger(ABCLogger):
             title.append(port)
         if deviceName:
             title.append(deviceName)
-        super().__init__(f"_".join(["JobLogger"] + title))
+        name = f"_".join(["JobLogger"] + title)
+        super().__init__(name)
         super().setLevel(ABCLogger.DEBUG)
+        self.name = name
         info = []
         if showDate:
             info.append("%(asctime)s")
@@ -49,7 +53,7 @@ class JobLogger(ABCLogger):
 
         # create the file loggers
         if fileLogger is None:
-            from globals import root_path
+            from config.paths import root_path
             fileLogger = os.path.abspath(os.path.join(root_path, "logs", deviceName, jobName, startTime))
             os.makedirs(fileLogger, exist_ok=True)
         else:

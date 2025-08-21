@@ -1,577 +1,265 @@
 <script setup lang="ts">
-import { printers } from '../model/ports'
-import {
-  selectedPrinters,
-  file,
-  fileName,
-  quantity,
-  priority,
-  favorite,
-  name,
-  tdid,
-  filament,
-  useAddJobToQueue,
-  useGetFile,
-  useAutoQueue
-} from '@/model/jobs'
-import { ref, onMounted, watchEffect, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import { toast } from '@/model/toast'
-import GCode3DImageViewer from '@/components/GCode3DImageViewer.vue'
-import GCodeThumbnail from '@/components/GCodeThumbnail.vue'
+import { ref, computed, onMounted } from 'vue'
+import { fabricatorList, retrieveRegisteredFabricators, type Fabricator } from '@/models/fabricator'
+import { autoQueue, addJobToQueue } from '@/models/job'
+import { addToast } from '@/components/Toast.vue'
 
-const isLoading = ref(false)
-const { addJobToQueue } = useAddJobToQueue()
-const { auto } = useAutoQueue()
-const { getFile } = useGetFile()
+import GCodePreviewModal from './GCodePreviewModal.vue'
 
-const route = useRoute()
+const emit = defineEmits<{
+  (e: 'close'): void
+}>()
 
-const job = route.params.job ? JSON.parse(route.params.job as string) : null
-const printer = route.params.printer ? JSON.parse(route.params.printer as string) : null
-const isAsteriksVisible = ref(true)
+// Load fabricators when modal is mounted
+onMounted(() => {
+  retrieveRegisteredFabricators()
+})
 
-// Form reference
-const form = ref<HTMLFormElement | null>(null)
-let isSubmitDisabled = false
+// File Upload Handling
+const selectedFile = ref<File | null>(null)
+const fileName = ref("No file selected.")
+const quantity = ref(1)
+const ticketId = ref(0)
+const jobName = ref("")
 
-const isGcodeImageVisible = ref(false)
-const isImageVisible = ref(true)
+const isPreviewOpen = ref(false)
+const isRenderPreviewOpen = ref(false)
 
-// file upload
+// Save the selected file and updating the file and job names.
 const handleFileUpload = (event: Event) => {
-  isLoading.value = true
-  const target = event.target as HTMLInputElement
-  const uploadedFile = target.files ? target.files[0] : undefined
-  if (uploadedFile && uploadedFile.name.length > 50) {
-    toast.error('The file name should not be longer than 50 characters')
-    target.value = ''
-    file.value = undefined
-    fileName.value = ''
-  } else {
-    file.value = uploadedFile
-    fileName.value = uploadedFile?.name || ''
-    name.value = fileName.value.replace('.gcode', '') || ''
-
-    if (file.value) {
-      getFilament(file.value)
-        .then((filamentType) => {
-          filament.value = filamentType ? filamentType.toString() : ''
-        })
-        .catch(() => {
-          filament.value = ''
-        })
-    } else {
-      filament.value = ''
-    }
-  }
-  isLoading.value = false
+  const input = event.target as HTMLInputElement
+  selectedFile.value = input.files?.[0] as File
+  fileName.value = selectedFile.value.name
+  if (jobName.value === "")
+    jobName.value = selectedFile.value.name
 }
 
-// validate quantity
-const validateQuantity = () => {
-  if (quantity.value < 1 && selectedPrinters.value.length > 0) {
-    quantity.value = selectedPrinters.value.length
-  }
-  if (quantity.value < selectedPrinters.value.length) {
-    toast.error('Quantity must be greater than or equal to the number of selected printers')
-    return false
-  }
-  return true
-}
-
-// fills printers array with printers that have threads from the database
-onMounted(async () => {
-  try {
-    isLoading.value = true
-    if (
-      printer &&
-      !selectedPrinters.value.some((selectedPrinter) => selectedPrinter.id === printer.id)
-    ) {
-      selectedPrinters.value.push(printer)
-    }
-
-    if (job) {
-      file.value = await getFile(job)
-      fileName.value = file.value?.name || ''
-      name.value = job.name
-      if (file.value) {
-        getFilament(file.value)
-          .then((filamentType) => {
-            filament.value = filamentType ? filamentType.toString() : ''
-          })
-          .catch(() => {
-            filament.value = ''
-          })
-      } else {
-        filament.value = ''
-      }
-    }
-    isLoading.value = false
-
-    const modal = document.getElementById('gcodeImageModal')
-
-    modal?.addEventListener('hidden.bs.modal', () => {
-      isGcodeImageVisible.value = false
-      isImageVisible.value = true
-      isAsteriksVisible.value = true
-    })
-
-    const filamentDropdown = document.getElementById('filamentDropdown')
-
-    filamentDropdown?.addEventListener('shown.bs.dropdown', () => {
-      isAsteriksVisible.value = false
-    })
-
-    filamentDropdown?.addEventListener('hidden.bs.dropdown', () => {
-      isAsteriksVisible.value = true
-    })
-  } catch (error) {
-    console.error('There has been a problem with your fetch operation:', error)
-  }
-})
-
-const onlyNumber = ($event: KeyboardEvent) => {
-  let keyCode = $event.keyCode
-  if ((keyCode < 48 || keyCode > 57) && (keyCode < 96 || keyCode > 105) && keyCode !== 8) {
-    // 48-57 are the keycodes for 0-9, 96-105 are for the numpad 0-9, 8 is for backspace
-    $event.preventDefault()
-  }
-}
-
-// sends job to printer queue
-const handleSubmit = async () => {
-  isLoading.value = true
-  let isFavoriteSet = false
-  let res = null
-  if (selectedPrinters.value.length == 0) {
-    let numPrints = quantity.value
-    for (let i = 0; i < numPrints; i++) {
-      const formData = new FormData() // create FormData object
-      formData.append('file', file.value as File) // append form data
-      formData.append('name', name.value as string)
-      formData.append('priority', priority.value.toString())
-      formData.append('td_id', tdid.value.toString())
-      formData.append('filament', filament.value as string)
-      // If favorite is true and it's not set yet, set it for the first job only
-      if (favorite.value && !isFavoriteSet) {
-        formData.append('favorite', 'true')
-        isFavoriteSet = true
-      } else {
-        formData.append('favorite', 'false')
-      }
-      try {
-        // formData.append("quantity", quantity.value.toString())
-        res = await auto(formData)
-        // if (form.value) {
-        //     form.value.reset()
-        // }
-      } catch (error) {
-        console.error('There has been a problem with your fetch operation:', error)
-      }
-    }
-    resetValues()
-  } else {
-    let sub = validateQuantity()
-    if (sub == true) {
-      let printsPerPrinter = Math.floor(quantity.value / selectedPrinters.value.length) // number of even prints per printer
-      let remainder = quantity.value % selectedPrinters.value.length //remainder to be evenly distributed
-      for (const printer of selectedPrinters.value) {
-        let numPrints = printsPerPrinter
-        if (remainder > 0) {
-          numPrints += 1
-          remainder -= 1
+// Submits the selected file by auto-queuing it or assigning it to selected fabricators' queues, then resets the form
+const submitJob = async () => {
+  const job = new FormData()
+  if (selectedFile.value) {
+    try {
+      setJob(job)
+      if (!anySelected.value) {
+        for (let i = 0; i < quantity.value; i++) {
+          // If no fabricator is selected, auto queue the job
+          await autoQueue(job)
         }
-        for (let i = 0; i < numPrints; i++) {
-          const formData = new FormData() // create FormData object
-          formData.append('file', file.value as File) // append form data
-          formData.append('name', name.value as string)
-          formData.append('printerid', printer?.id?.toString() || '')
-          formData.append('priority', priority.value.toString())
-          formData.append('quantity', numPrints.toString())
-          formData.append('td_id', tdid.value.toString())
-          formData.append('filament', filament.value as string)
-
-          // If favorite is true and it's not set yet, set it for the first job only
-          if (favorite.value && !isFavoriteSet) {
-            formData.append('favorite', 'true')
-            isFavoriteSet = true
-          } else {
-            formData.append('favorite', 'false')
-          }
-
-          try {
-            res = await addJobToQueue(formData)
-            // reset form
-            // if (form.value) {
-            //     form.value.reset()
-            // }
-            // reset Vue refs
-          } catch (error) {
-            console.error('There has been a problem with your fetch operation:', error)
+        addToast(`Job "${jobName.value}" auto-queued successfully`, 'success')
+      }
+      else {
+        // for every fabricator that is registered, if that fabricator is selected, then add the job to the fabricator's queue
+        for (const fabricator of fabricatorList.value) {
+          if (fabricator.isSelected) {
+            job.set('printerid', (fabricator.id?.toString() ?? ''))
+            // add as many jobs as the quantity
+            for (let i = 0; i < quantity.value; i++) {
+              await addJobToQueue(job)
+            }
           }
         }
+        addToast(`Job "${jobName.value}" added to selected fabricator queues`, 'success')
       }
-      resetValues()
+      await retrieveRegisteredFabricators()
+      // Close the modal after successful submission
+      emit('close')
+    } catch (error) {
+      console.error('Error submitting job:', error)
+      addToast(`Error submitting job: ${error}`, 'error')
     }
+    resetForm()
+    console.log('Job submitted:', job)
   }
-  if (res.success == true) {
-    toast.success('Job added to queue')
-  } else if (res.success == false) {
-    toast.error('Job failed to add to queue')
-  } else {
-    toast.error('Failed to add job to queue. Unexpected response.')
-  }
-  isLoading.value = false
-  isAsteriksVisible.value = true
 }
 
-function resetValues() {
-  selectedPrinters.value = []
-  // quantity.value = selectedPrinters.value.length;
-  if (selectedPrinters.value.length > 0) {
-    quantity.value = selectedPrinters.value.length
-  } else {
-    quantity.value = 1
-  }
-  priority.value = 0
-  favorite.value = false
-  name.value = ''
-  fileName.value = ''
-  file.value = undefined
-  tdid.value = 0
-  filament.value = ''
+// Reset the form
+const resetForm = () => {
+  selectedFile.value = null
+  fileName.value = "No file selected."
+  quantity.value = 1
+  ticketId.value = 0
+  jobName.value = ""
 }
 
-watch(selectedPrinters, () => {
-  if (quantity.value < selectedPrinters.value.length) {
-    quantity.value = selectedPrinters.value.length
-  }
-})
-
-watchEffect(() => {
-  if (quantity.value > 1000) {
-    quantity.value = 1000
-    toast.error('Quantity cannot be greater than 1000')
-  }
-  isSubmitDisabled = !(
-    file.value !== undefined &&
-    name.value.trim() !== '' &&
-    quantity.value > 0 &&
-    (quantity.value >= selectedPrinters.value.length || selectedPrinters.value.length == 0)
-  )
-})
-
-const allSelected = computed({
-  get: () =>
-    selectedPrinters.value.length > 0 && selectedPrinters.value.length === printers.value.length,
-  set: (value) => {
-    if (value) {
-      selectedPrinters.value = printers.value.slice()
-      if (quantity.value < selectedPrinters.value.length) {
-        quantity.value = selectedPrinters.value.length
-      }
-    } else {
-      selectedPrinters.value = []
-    }
-  }
-})
-
-const triggerFileInput = () => {
-  const fileInput = document.getElementById('file') as HTMLInputElement
-  fileInput.click()
+// Set the job data to be sent to the server.
+const setJob = (job: FormData) => {
+  job.append('file', selectedFile.value as File)
+  job.append('name', jobName.value as string)
+  job.append('td_id', ticketId.value.toString())
+  job.append('quantity', quantity.value.toString())
+  job.append('favorite', 'false')
+  job.append('priority', '0')
+  job.append('filament', 'PLA')
+  console.log('Set job data:', job)
 }
 
-const getFilament = (file: File) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = function (event) {
-      const lines = (event.target?.result as string).split('\n').reverse()
-      for (let line of lines) {
-        if (line.startsWith('; filament_type = ')) {
-          resolve(line.split('= ')[1])
-          return
-        }
-      }
-      resolve(null)
-    }
-    reader.onerror = function () {
-      reject(new Error('Failed to read file'))
-    }
-    reader.readAsText(file)
-  })
+// Toggles the isSelected state of a selected Fabricator
+const toggleFabricator = (selectedFabricator: Fabricator) => {
+  selectedFabricator.isSelected = !selectedFabricator.isSelected
 }
+
+// Toggle all fabricators as selected or deselected based on current selection state.
+const toggleSelectAll = () => {
+  const shouldSelect = !allSelected.value;
+
+  for (const fabricator of fabricatorList.value) {
+    fabricator.isSelected = shouldSelect;
+  }
+}
+
+// Checks if any fabricator is selected, returns true if at least one is.
+const anySelected = computed(() =>
+  fabricatorList.value.some((fabricator) => fabricator.isSelected)
+)
+
+// Checks if all fabricators are selected, returns true if they all are.
+const allSelected = computed(() =>
+  fabricatorList.value.every((fabricator) => fabricator.isSelected)
+)
 </script>
+
 <template>
-  <div
-    class="modal fade"
-    id="gcodeImageModal"
-    tabindex="-1"
-    aria-labelledby="gcodeImageModalLabel"
-    aria-hidden="true"
-  >
-    <div :class="['modal-dialog', isImageVisible ? '' : 'modal-xl', 'modal-dialog-centered']">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="gcodeImageModalLabel">
-            <b>{{ fileName }}</b> <br />
-            <div class="form-check form-switch">
-              <label class="form-check-label" for="switchView">{{
-                isImageVisible ? 'Image' : 'Viewer'
-              }}</label>
-              <input
-                class="form-check-input"
-                type="checkbox"
-                id="switchView"
-                v-model="isImageVisible"
-              />
-            </div>
-          </h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
-        </div>
-        <div class="modal-body">
-          <div class="row">
-            <GCode3DImageViewer v-if="isGcodeImageVisible && !isImageVisible" :file="file" />
-            <GCodeThumbnail v-else-if="isGcodeImageVisible && isImageVisible" :file="file" />
-          </div>
-        </div>
+  <!-- Modal Overlay -->
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+    @click.self="emit('close')">
+    <div class="bg-light-primary dark:bg-dark-primary-light rounded-lg shadow-lg max-w-md w-full mx-4 animate-fade-in">
+      <!-- Header -->
+      <div class="p-4 flex justify-between items-center">
+        <h3 class="text-lg font-medium text-black dark:text-white">Submit Job</h3>
+        <button @click="emit('close')"
+          class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+              clip-rule="evenodd" />
+          </svg>
+        </button>
       </div>
-    </div>
-  </div>
 
-  <div class="container">
-    <div class="card" style="border: 1px solid #484848; background: #d8d8d8">
-      <div class="card-body">
-        <form @submit.prevent="handleSubmit" ref="form">
-          <div class="mb-3">
-            <label for="printer" class="form-label">Select Printer</label>
-            <div
-              class="card"
-              style="
-                max-height: 120px;
-                overflow-y: auto;
-                background-color: #f4f4f4 !important;
-                border-color: #484848 !important;
-              "
-            >
-              <ul
-                class="list-unstyled card-body m-0"
-                style="padding-top: 0.5rem; padding-bottom: 0.5rem"
-              >
-                <li>
-                  <div class="form-check">
-                    <input
-                      class="form-check-input"
-                      type="checkbox"
-                      id="select-all"
-                      v-model="allSelected"
-                    />
-                    <label class="form-check-label" for="select-all"> Select All </label>
-                  </div>
-                  <div
-                    class="border-top"
-                    style="border-width: 1px; margin: 7px -16px 7px -16px"
-                  ></div>
-                </li>
-                <li v-for="printer in printers" :key="printer.id">
-                  <div class="form-check">
-                    <input
-                      class="form-check-input"
-                      type="checkbox"
-                      :value="printer"
-                      v-model="selectedPrinters"
-                      :id="'printer-' + printer.id"
-                    />
-                    <label class="form-check-label" :for="'printer-' + printer.id">
-                      {{ printer.name }}
-                    </label>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label" v-if="selectedPrinters.length === 0"
-              >No printer selected, will <b>auto queue</b></label
-            >
-            <label class="form-label" v-else-if="selectedPrinters.length === 1"
-              >Selected printer:</label
-            >
-            <label class="form-label" v-else>Selected printers:</label>
-            <ul class="list-group" style="max-height: 200px; overflow-y: auto">
-              <li v-for="printer in selectedPrinters" class="list-group-item" :key="printer.id">
-                <b>{{ printer.name }}</b> status: {{ printer.status }}
-              </li>
-            </ul>
-          </div>
-
-          <div class="mb-3">
-            <label for="file" class="form-label">Upload your .gcode file</label>
-            <div class="tooltip-modal">
-              <span v-if="isAsteriksVisible" class="text-danger">*</span>
-              <span class="tooltiptext">The file name should not be longer than 50 characters</span>
-            </div>
-            <input
-              ref="fileInput"
-              @change="handleFileUpload"
-              style="display: none"
-              type="file"
-              id="file"
-              name="file"
-              accept=".gcode"
-            />
-            <div class="input-group">
-              <button type="button" @click="triggerFileInput" class="btn btn-primary">
-                Browse
-              </button>
-              <label class="form-control" style="width: 220px">
-                <div v-if="fileName" class="ellipsis" style="width: 200px">
-                  {{ fileName }}
-                </div>
-                <div v-else>No file selected.</div>
-              </label>
-              <button
-                type="button"
-                class="btn btn-primary"
-                data-bs-toggle="modal"
-                data-bs-target="#gcodeImageModal"
-                @click="
-                  () => {
-                    isGcodeImageVisible = true
-                    isAsteriksVisible = false
-                  }
-                "
-                v-bind:disabled="!fileName"
-              >
-                <i class="fa-regular fa-image"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <label for="filament" class="form-label"
-              >Filament: <b>{{ filament || 'No filament detected' }}</b></label
-            >
-          </div>
-
-          <div class="mb-3">
-            <label for="quantity" class="form-label">Quantity</label>
-            <div v-if="isAsteriksVisible" class="text-danger tooltip-modal">
-              *
-              <span class="tooltiptext">Quantity cannot be greater than 1000</span>
-            </div>
-            <input
-              v-model="quantity"
-              class="form-control"
-              type="number"
-              id="quantity"
-              name="quantity"
-              min="1"
-              @keydown="onlyNumber($event)"
-            />
-          </div>
-
-          <div class="mb-3">
-            <label for="quantity" class="form-label">Ticket ID</label>
-            <input
-              v-model="tdid"
-              class="form-control"
-              type="number"
-              id="tdid"
-              name="tdid"
-              @keydown="onlyNumber($event)"
-            />
-          </div>
-
-          <div class="row mb-3">
-            <div class="col-2">
-              <div class="form-check">
-                <input
-                  v-model="priority"
-                  class="form-check-input"
-                  type="checkbox"
-                  id="priority"
-                  name="priority"
-                />
-                <label class="form-check-label" for="priority">Priority?</label>
-              </div>
-            </div>
-
-            <div class="col-6"></div>
-
-            <div class="col-2">
-              <div class="form-check">
-                <input
-                  v-model="favorite"
-                  class="form-check-input"
-                  type="checkbox"
-                  id="favorite"
-                  name="favorite"
-                />
-                <label class="form-check-label" for="favorite">Favorite?</label>
-              </div>
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <label for="name" class="form-label">Name</label>
-            <div class="tooltip-modal">
-              <span v-if="isAsteriksVisible" class="text-danger">*</span>
-              <span class="tooltiptext">Assign a name for the job.</span>
-            </div>
-            <input v-model="name" class="form-control" type="text" id="name" name="name"/>
-          </div>
-
-          <div>
-            <button
-              v-if="selectedPrinters.length >= 1"
-              :disabled="isLoading || isSubmitDisabled"
-              class="btn btn-primary"
-              type="submit"
-            >
-              Add to queue
+      <!-- Body -->
+      <div class="p-4 space-y-5">
+        <!-- Fabricator Selection -->
+        <div class="space-y-2">
+          <h4 class="text-md font-medium text-center text-gray-700 dark:text-gray-300">Select Fabricator</h4>
+          <div class="flex justify-center">
+            <button @click="toggleSelectAll"
+              class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark">
+              {{ allSelected ? 'Deselect All' : 'Select All' }}
             </button>
           </div>
-        </form>
+
+          <!-- Grid of fabricator buttons -->
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-2 p-2">
+            <button v-for="fabricator in fabricatorList" :key="fabricator.id" type="button"
+              class="px-3 py-2 rounded-md text-center text-sm font-medium transition-all duration-200 relative" :class="[fabricator.isSelected
+                ? 'bg-accent-secondary text-white hover:bg-accent-secondary-dark font-bold shadow-lg transform scale-105'
+                : 'bg-accent-secondary text-white hover:bg-accent-secondary-dark opacity-50'
+              ]" @click="toggleFabricator(fabricator)">
+              <div class="flex items-center justify-center space-x-1">
+                <span v-if="fabricator.isSelected" class="absolute -left-1 -top-1 bg-white rounded-full p-1 shadow-md">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-500" viewBox="0 0 20 20"
+                    fill="currentColor">
+                    <path fill-rule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clip-rule="evenodd" />
+                  </svg>
+                </span>
+                <span class="truncate">{{ fabricator.name }}</span>
+              </div>
+            </button>
+          </div>
+
+          <!-- File Upload -->
+          <div class="space-y-1">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Upload your .gcode file
+              <span class="text-red-500 ml-1">*</span>
+            </label>
+
+            <div class="flex items-center space-x-2">
+              <!-- Browse Button -->
+              <label
+                class="cursor-pointer bg-accent-primary text-white px-4 py-2 rounded-md hover:bg-accent-primary-dark flex-shrink-0">
+                Browse
+                <input type="file" accept=".gcode" class="hidden" @change="handleFileUpload" />
+              </label>
+
+              <!-- File name preview -->
+              <div class="flex-1 min-w-0 px-3 py-2 bg-gray-100 dark:bg-dark-primary rounded-md flex items-center">
+                <span class="text-gray-500 dark:text-gray-400 truncate">{{ fileName }}</span>
+              </div>
+
+              <!-- Image Button -->
+              <button type="button"
+                class="bg-accent-primary hover:bg-accent-primary-dark py-2 px-3 rounded-md flex-shrink-0"
+                :disabled="!selectedFile" @click="isPreviewOpen = true">
+                <i class="fa-regular fa-image text-white"></i>
+              </button>
+              <!-- Image Button -->
+              <button type="button"
+                class="bg-accent-primary hover:bg-accent-primary-dark py-2 px-3 rounded-md flex-shrink-0"
+                :disabled="!selectedFile" @click="isRenderPreviewOpen = true">
+                <i class="fa-solid fa-cube text-white"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quantity Input -->
+          <div>
+            <label for="quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantity</label>
+            <input id="quantity" type="number" min="1" v-model="quantity"
+              class="bg-light-primary-light dark:bg-dark-primary w-full px-3 py-2 rounded-md text-gray-700 dark:text-light-primary focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
+          </div>
+
+          <!-- Ticket ID -->
+          <div>
+            <label for="ticketId" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Ticket ID</label>
+            <input id="ticketId" type="number" min="0" v-model="ticketId"
+              class="bg-light-primary-light dark:bg-dark-primary w-full px-3 py-2 rounded-md text-gray-700 dark:text-light-primary focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
+          </div>
+
+          <!-- Job Name -->
+          <div>
+            <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name<span
+                class="text-red-500 ml-1">*</span></label>
+            <input id="name" type="text" required placeholder="Enter job name" v-model="jobName"
+              class="bg-light-primary-light dark:bg-dark-primary w-full px-3 py-2 rounded-md text-gray-700 dark:text-light-primary focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
+          </div>
+
+          <!-- No Fabricator Message -->
+          <p v-if="!anySelected" class="text-[11px] text-center text-gray-500 dark:text-gray-400">
+            <span class="text-red-400">No fabricator selected</span>, job will be <span
+              class="text-accent-primary-light">auto queued</span> to fabricator with least jobs
+          </p>
+
+          <!-- Footer -->
+          <div class="flex justify-end">
+            <button type="button"
+              class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark disabled:bg-accent-primary-light disabled:cursor-not-allowed"
+              :disabled="!selectedFile" @click="submitJob">Submit</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
+  <GCodePreviewModal v-if="isPreviewOpen" :file="selectedFile" @close="isPreviewOpen = false" />
+  <!-- <GcodeRender v-if="isRenderPreviewOpen" :file="selectedFile" @close="isRenderPreviewOpen = false" /> -->
 </template>
 
 <style scoped>
-.dropdown-menu-scrollable {
-  max-height: 200px;
-  overflow-y: auto;
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-in-out;
 }
 
-.form-control,
-.list-group-item {
-  background-color: var(--color-background-soft);
-  border-color: var(--color-modal-background-inverted);
-  color: var(--color-background-font);
-}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
 
-.ellipsis {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow:ellipsis
-}
-
-.card {
-  --bs-card-border-color: var(--color-modal-background-inverted);
-}
-
-.text-danger {
-  cursor: help;
-}
-.card-body {
-  color: var(--color-background-font);
-  background-color: var(--color-background-mute);
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 </style>

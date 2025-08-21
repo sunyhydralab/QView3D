@@ -4,7 +4,7 @@ from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.serialCommunication import sendGcode
-from globals import current_app as app
+from services.app_service import current_app as app
 from Classes.FabricatorConnection import EmuListPortInfo
 
 class Ports:

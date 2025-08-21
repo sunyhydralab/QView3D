@@ -5,7 +5,7 @@ import subprocess
 import platform
 
 # Add test root to sys.path if needed
-from globals import root_path
+from config.paths import root_path
 if root_path not in sys.path:
     sys.path.append(root_path)
 serverpath = os.path.join(root_path, "server")
@@ -66,5 +66,5 @@ if __name__ == "__main__":
                 try:
                     future.result()
                 except Exception as e:
-                    from globals import current_app
+                    from services.app_service import current_app
                     current_app.handle_errors_and_logging(e)

@@ -2,7 +2,8 @@ import os.path
 import sys
 from abc import ABC
 from time import sleep
-from globals import current_app, tabs
+from services.app_service import current_app
+from utils.formatting import tabs
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from Classes.Jobs import Job

@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { printers } from "@/model/ports";
+import { fabricatorList } from "@/models/fabricator";
 </script>
 
 <template>
-  <div v-if="printers.length === 0" class="d-flex flex-column align-items-center mt-3 fade show slide-down">
-    <img src="@/assets/sad-robot.gif" alt="Sad Robot" class="robot" />
-    <div class="text mt-3">
+  <div v-if="fabricatorList.length === 0" class="mt-10 flex flex-col items-center justify-center text-cent fade show slide-down">
+    <img src="@/assets/sad-robot.svg" alt="Sad Robot" class="robot" />
+    <div class="text-black dark:text-white">
       No printers available. Either register a printer
-      <RouterLink class="routerLink" to="/registration">here,</RouterLink>
+      <RouterLink class="text-accent-secondary dark:text-accent-secondary-light routerLink" to="/register">here,</RouterLink>
       or restart the server.
     </div>
   </div>

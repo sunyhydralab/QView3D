@@ -1,7 +1,7 @@
 from sqlalchemy.exc import SQLAlchemyError
 from flask import Blueprint, jsonify, request
 
-from globals import current_app as app
+from services.app_service import current_app as app
 from Classes.Fabricators.Device import Device
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.Ports import Ports
@@ -168,6 +168,21 @@ def moveFabricatorList():
         fabricator_ids = data['fabricator_ids']
         result = app.fabricator_list.moveFabricatorList(fabricator_ids)
         return jsonify({"success": True, "message": "Fabricator list successfully updated"}) if result != "none" else jsonify({"success": False, "message": "Fabricator list not updated"})
+    except Exception as e:
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
+
+@ports_bp.route("/getfabricatorbyid", methods=["POST"])
+def getFabricatorById():
+    """Get a fabricator by its ID."""
+    try:
+        data = request.get_json()
+        fabricator_id = data['fabricator_id']
+        fabricator = app.fabricator_list.getFabricatorByID(fabricator_id)
+        if fabricator:
+            return jsonify({"success": True, "fabricator": fabricator.__to_JSON__()})
+        else:
+            return jsonify({"error": "Fabricator not found"}), 404
     except Exception as e:
         app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
