@@ -8,7 +8,7 @@ import {
     FABRICATOR_IDLE, MANY_GCODE_INSTRUCTIONS, MISSING_REGEX, 
     SHOW_EXTRACTOR_RESULT, SHOW_EXTRACTOR_STATE_AFTER_TIMEOUT, 
     SHOW_POTENTIALLY_UNSAFE_WRITES, SHOW_TIMED_OUT_INSTRUCTIONS, 
-    UNHANDLED_STATES 
+    UNHANDLED_STATES, FABRICATOR_CONNECTION_OPENED
 } from '../../flags.js';
 
 /**
@@ -160,6 +160,9 @@ export class GenericMarlinFabricator {
         Object.assign(this, overrides); /** @todo Add something that checks to see if the properties provided are valid? */
 
         this.#openPort = new SerialPort({ path: port, baudRate: this.BAUD_RATE });
+
+        if (ENABLE_ALL_FLAGS || FABRICATOR_CONNECTION_OPENED)
+            console.info(`A connection has been opened at port '${port}' with baud rate '${this.BAUD_RATE}'`);
 
         // Wait a specific amount of time before allowing G-Code instructions to be sent over serial
         const hasBootedTimeout = setTimeout(() => this.#hasBooted = true, this.BOOT_TIME);
