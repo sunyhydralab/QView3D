@@ -16,6 +16,8 @@ async def websocket_server():
     print("Websocket Server")
     logger = logging.getLogger("websockets.server")
     file_output = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../logs/websocket.log"))
+    # Ensure the logs directory exists
+    os.makedirs(os.path.dirname(file_output), exist_ok=True)
     file_handler = logging.FileHandler(file_output)
     file_handler.setLevel(logging.DEBUG)
     logger.addHandler(file_handler)
