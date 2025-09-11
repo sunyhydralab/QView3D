@@ -12,6 +12,7 @@ const navigationItems = ref([
     { name: 'Queues', route: '/queue' },
     { name: 'Job History', route: '/history' },
     { name: 'Emulator', route: '/emulator' },
+    { name: 'Issues', route: '/issues' },
 ]);
 
 // Get current route
