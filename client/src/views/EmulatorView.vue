@@ -3,6 +3,9 @@ import { ref, reactive, onMounted, watch } from 'vue';
 import { api } from '@/models/api';
 import { onSocketEvent, emitSocketEvent } from '@/services/socket';
 import { addToast } from '@/components/Toast.vue';
+import { emulatorPrinters } from '@/models/emulatorPrinters';
+import type { IssueType, EmulatorPrinter } from '@/models/emulatorPrinters';
+
 
 // Define interfaces for socket event data
 interface EmulatorStatusData {
@@ -169,6 +172,10 @@ const disconnectEmulator = async () => {
       isRegistered.value = false;
       emulatorStatus.value = 'Offline';
       addToast('Emulator disconnected successfully', 'info');
+      
+      // Remove emulator printer from the shared array
+      const index = emulatorPrinters.value.findIndex(e => e.hwid === printerConfig.hwid);
+      if (index !== -1) emulatorPrinters.value.splice(index, 1);
     } else if (response && response.error) {
       statusMessage.value = response.error;
       addToast(`Error: ${response.error}`, 'error');
@@ -186,7 +193,7 @@ const disconnectEmulator = async () => {
 const registerPrinter = async () => {
   loading.value = true;
   statusMessage.value = 'Registering emulator with the system...';
-  
+
   try {
     const response = await api('registeremulator', { 
       model: selectedPrinterType.value,
@@ -197,6 +204,21 @@ const registerPrinter = async () => {
       statusMessage.value = response.message;
       isRegistered.value = true;
       addToast('Emulator registered successfully', 'success');
+
+      // Add or update emulator printer in the shared array
+      const existing = emulatorPrinters.value.find(e => e.hwid === printerConfig.hwid);
+      const printer: EmulatorPrinter = {
+        id: printerConfig.hwid,
+        name: printerConfig.name,
+        description: printerConfig.description,
+        date: new Date().toISOString(),
+        hwid: printerConfig.hwid,
+      };
+      if (existing) {
+        Object.assign(existing, printer);
+      } else {
+        emulatorPrinters.value.push(printer);
+      }
     } else if (response && response.error) {
       statusMessage.value = response.error;
       addToast(`Error: ${response.error}`, 'error');
