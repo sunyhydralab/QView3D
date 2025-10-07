@@ -1,4 +1,4 @@
-package main
+pythpackage main
 
 import (
 	"bufio"

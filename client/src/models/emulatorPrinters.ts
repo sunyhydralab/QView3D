@@ -31,8 +31,7 @@ export const emulatorPrinters = ref<EmulatorPrinter[]>(
       hwid: 'EMU-MOCK-5678',
       issues: 'Hardware issues', 
     },
-  ]
-);
+  ])
 
 const issueFixes: Record<Exclude<IssueType, 'No issues'>, string[]> = {
   'Hardware issues': [

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { fabricatorList } from '@/models/fabricator';
 import { emulatorPrinters, type IssueType } from '@/models/emulatorPrinters';
 
@@ -18,8 +18,24 @@ const issueFixes: Record<IssueType, string[]> = {
   ]
 };
 
-// Add a mock emulator printer for testing
+// --- User-defined hardware issues ---
+const STORAGE_KEY = 'userHardwareIssues';
+const userHardwareIssues = ref<string[]>([]);
+const newIssueText = ref('');
+
+// Load saved issues from localStorage
 onMounted(() => {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      userHardwareIssues.value = JSON.parse(saved);
+    } catch (e) {
+      console.warn('Error parsing saved hardware issues:', e);
+      userHardwareIssues.value = [];
+    }
+  }
+
+  // Add mock emulator printer if none exists
   if (emulatorPrinters.value.length === 0) {
     emulatorPrinters.value.push({
       id: 'emu-mock-1',
@@ -27,10 +43,15 @@ onMounted(() => {
       description: 'Virtual 3D Printer for Testing',
       date: new Date().toISOString(),
       hwid: 'EMU-MOCK-1234',
-      issues: 'Hardware issues', // Options: 'No issues', 'Hardware issues', 'File/Input issues'
+      issues: 'Hardware issues',
     });
   }
 });
+
+// Persist user-defined issues in localStorage whenever they change
+watch(userHardwareIssues, (newVal) => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(newVal));
+}, { deep: true });
 
 // Combine Fabricator and Emulator printers
 const allPrinters = computed(() => [
@@ -38,9 +59,30 @@ const allPrinters = computed(() => [
   ...emulatorPrinters.value
 ]);
 
-// Type guard to check if printer has 'issues'
+// Type guard
 function hasIssues(printer: any): printer is { issues: IssueType } {
   return 'issues' in printer && !!printer.issues;
+}
+
+// Add a new user-defined issue
+function addUserHardwareIssue() {
+  const trimmed = newIssueText.value.trim();
+  if (!trimmed) return;
+
+  if (userHardwareIssues.value.includes(trimmed)) {
+    alert('This issue is already added.');
+    return;
+  }
+
+  userHardwareIssues.value.push(trimmed);
+  newIssueText.value = '';
+}
+
+// Delete a user-defined issue (with confirmation)
+function deleteUserHardwareIssue(issue: string) {
+  if (confirm(`Are you sure you want to delete "${issue}"?`)) {
+    userHardwareIssues.value = userHardwareIssues.value.filter(i => i !== issue);
+  }
 }
 </script>
 
@@ -108,6 +150,42 @@ function hasIssues(printer: any): printer is { issues: IssueType } {
           <div v-else class="text-gray-500 dark:text-gray-400">
             No issue fixes defined.
           </div>
+        </div>
+      </div>
+
+      <!-- User-Defined Hardware Issues Panel -->
+      <div class="mt-8 bg-light-primary-light dark:bg-dark-primary-light rounded-lg shadow-lg p-6 hover:shadow-xl transform hover:-translate-y-1">
+        <h2 class="text-xl font-semibold mb-4 dark:text-light-primary">User-Defined Hardware Issues</h2>
+
+        <div class="flex gap-2 mb-3">
+          <input
+            v-model="newIssueText"
+            placeholder="Enter hardware issue..."
+            class="flex-1 border border-gray-400 rounded-lg p-2 text-sm dark:bg-gray-800 dark:text-white"
+          />
+          <button
+            @click="addUserHardwareIssue"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm transition-all">
+            Add
+          </button>
+        </div>
+
+        <ul v-if="userHardwareIssues.length" class="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+          <li
+            v-for="issue in userHardwareIssues"
+            :key="issue"
+            class="flex items-center justify-between bg-gray-100 dark:bg-gray-800 p-2 rounded-lg">
+            <span>{{ issue }}</span>
+            <button
+              @click="deleteUserHardwareIssue(issue)"
+              class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-xs font-medium transition-all">
+              🗑 Remove
+            </button>
+          </li>
+        </ul>
+
+        <div v-else class="text-sm text-gray-500 dark:text-gray-400">
+          No user-defined issues yet.
         </div>
       </div>
     </div>

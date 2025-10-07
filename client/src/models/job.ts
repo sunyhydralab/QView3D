@@ -135,6 +135,7 @@ export function setupJobSocketListeners() {
   }
 }
 
+/*
 export async function getAllJobs() {
   try {
     jobHistory.value = await api('getjobs')
@@ -144,6 +145,43 @@ export async function getAllJobs() {
   } catch (error) {
     addToast(`Failed to fetch jobs: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error')
     throw error
+  }
+}
+  */
+ export async function getAllJobs() {
+  try {
+    jobHistory.value = await api('getjobs')
+    // Setup socket listeners after initial data load
+    setupJobSocketListeners()
+    return jobHistory.value
+  } catch (error) {
+    addToast(`Failed to fetch jobs: ${error instanceof Error ? error.message : 'Using mock jobs'}`, 'warning')
+// Properly typed mock jobs
+    const mockJobs: Job[] = [
+      {
+        id: 101,
+        name: 'Mock Job 1',
+        file: new File([''], 'mock1.gcode', { type: 'text/plain' }),
+        file_name_original: 'mock1.gcode',
+        file_pause: false,
+        printer: 'Emulator Printer (Mock) 1',
+        printerid: 101, // match emulator printer id
+        td_id: 1,
+      },
+      {
+        id: 102,
+        name: 'Mock Job 2',
+        file: new File([''], 'mock2.gcode', { type: 'text/plain' }),
+        file_name_original: 'mock2.gcode',
+        file_pause: false,
+        printer: 'Emulator Printer (Mock) 2',
+        printerid: 102,
+        td_id: 2,
+      },
+    ]
+
+    jobHistory.value = mockJobs
+    return jobHistory.value
   }
 }
 
