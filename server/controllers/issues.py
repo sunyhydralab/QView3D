@@ -23,12 +23,13 @@ def getIssueByJob():
         return jsonify({"error": "Unexpected error occurred"}), 500
     
 @issue_bp.route('/createissue', methods=["POST"])
-def createIssue(): 
+def createIssue():
     try:
         data = request.get_json()
         issue = data['issue']
         job = data.get('job', None)
-        return Issue.create_issue(issue, job_id=job)
+        issue_type = data.get('type', 'software')  # Default to 'software' for backward compatibility
+        return Issue.create_issue(issue, job_id=job, type=issue_type)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500

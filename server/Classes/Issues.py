@@ -17,17 +17,18 @@ class Issue(db.Model):
     Attributes:
         id (int): Primary key, unique identifier for each issue.
         issue (str): Description or details of the issue.
+        type (str): Type of issue - 'software', 'hardware', or 'print_job'.
         job_id (int, optional): ID of the job associated with the issue.
 
     Methods:
-        __init__(issue, job_id=None):
+        __init__(issue, job_id=None, type='software'):
             Initializes a new Issue, saves it to the database,
             and links it to a job if job_id is provided.
         get_issues():
             Returns all issues as a JSON-like dictionary.
         get_issue_by_job(job_id):
             Returns the issue linked to a given job ID.
-        create_issue(issue, exception=None, job_id=None):
+        create_issue(issue, exception=None, job_id=None, type='software'):
             Creates a new issue, optionally logs exception details,
             and sends a Discord notification.
         delete_issue(issue_id):
@@ -40,16 +41,23 @@ class Issue(db.Model):
     # Columns in the database
     id = db.Column(db.Integer, primary_key=True) #Primary key for the issue
     issue = db.Column(db.String(200), nullable=False) # Description of the issue
+    type = db.Column(db.String(50), nullable=True, default='software') # Type of issue: software, hardware, or print_job
     job_id = db.Column(db.Integer, nullable=True) # Optional job ID associated with the issue
 
-    def __init__(self, issue, job_id = None):
+    def __init__(self, issue, job_id = None, type = 'software'):
 
         """
         Creates a new Issue object and immediately commits it to the database.
         If job_id is provided, it updates the associated Job to link to this issue.
+
+        Args:
+            issue (str): Description of the issue
+            job_id (int, optional): ID of the job associated with the issue
+            type (str, optional): Type of issue - 'software', 'hardware', or 'print_job'. Defaults to 'software'
         """
         self.issue = issue
         self.job_id = job_id
+        self.type = type
 
         # Automatically save the issue to the database
         if current_app:
@@ -75,10 +83,10 @@ class Issue(db.Model):
             issues = cls.query.all()
             if issues:
                 issues = [
-                    {"id": issue.id, "issue": issue.issue} for issue in issues
+                    {"id": issue.id, "issue": issue.issue, "type": issue.type} for issue in issues
                 ]
                 return {"success": True, "issues": issues}
-            else: 
+            else:
                 return {"success": True, "issues": []}
             # return issues
         except SQLAlchemyError as e:
@@ -110,17 +118,23 @@ class Issue(db.Model):
             )
 
     @staticmethod
-    def create_issue(issue, exception=None, job_id: int = None):
+    def create_issue(issue, exception=None, job_id: int = None, type: str = 'software'):
         """
         Creates a new issue, stores it in the database, and sends a Discord notification.
         If `exception` is provided, details are included in the Discord message.
+
+        Args:
+            issue (str): Description of the issue
+            exception (Exception, optional): Exception object to include in Discord notification
+            job_id (int, optional): ID of the job associated with the issue
+            type (str, optional): Type of issue - 'software', 'hardware', or 'print_job'. Defaults to 'software'
         """
 
-        # Note: Confirm Discord is function correctly. 
+        # Note: Confirm Discord is function correctly.
 
         try:
             from app import sync_send_discord_embed
-            Issue(issue, job_id)
+            Issue(issue, job_id, type)
 
             embed = discord.Embed(title='New Issue Created',
                                   description='A issue occurred when running a job',
