@@ -13,18 +13,24 @@ SERVER_LOCAL_PATH = "server"
 # The name of the database file
 DATABASE_FILE_NAME="QView.db"
 
-# If the database file should be deleted before running the server, then set this to true
-START_FROM_NEW_DATABASE = True
+# Load configuration from centralized config.json
+import json
+config_path = os.path.join(SERVER_LOCAL_PATH, 'config', 'config.json')
+with open(config_path, 'r') as f:
+    config = json.load(f)
 
 # Server configuration
-FLASK_SERVER_IP = "localhost" # TODO Have this affect the server
-FLASK_SERVER_PORT = 8000 # TODO Have this affect the server
-FLASK_SERVER_WEB_SOCKET_PORT = 8001 # TODO Have this affect the server
+FLASK_SERVER_IP = config.get('server', {}).get('ip', 'localhost')
+FLASK_SERVER_PORT = config.get('server', {}).get('port', 8000)
+FLASK_SERVER_WEB_SOCKET_PORT = config.get('server', {}).get('websocket_port', 8001)
 
 # Client configuration
-VITE_CLIENT_IP = "SAME_AS_SERVER"
-VITE_CLIENT_PORT = 8002
-VITE_LOG_LEVEL = "error"
+VITE_CLIENT_IP = config.get('client', {}).get('ip', 'SAME_AS_SERVER')
+VITE_CLIENT_PORT = config.get('client', {}).get('port', 8002)
+VITE_LOG_LEVEL = config.get('client', {}).get('log_level', 'error')
+
+# Database configuration
+START_FROM_NEW_DATABASE = config.get('database', {}).get('start_from_new', True)
 
 # Checks to make sure the script is being run in the root directory of the project (it assumes this by default)
 if not (os.path.exists(CLIENT_LOCAL_PATH) and os.path.exists(SERVER_LOCAL_PATH)):
