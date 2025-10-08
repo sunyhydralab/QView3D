@@ -35,8 +35,10 @@ with app.app_context():
     cleanup_directories()
 
 def run_socketio(app):
+    from config.config import Config
+    port = Config.get('server_port', 8000)
     try:
-        app.socketio.run(app, allow_unsafe_werkzeug=True, port=8000)
+        app.socketio.run(app, allow_unsafe_werkzeug=True, port=port)
     except Exception as e:
         app.handle_errors_and_logging(e)
 
