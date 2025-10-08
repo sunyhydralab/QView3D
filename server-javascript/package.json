@@ -5,7 +5,8 @@
   "main": "run.js",
   "type": "module",
   "scripts": {
-    "run": "echo 'Just run files individually'"
+    "run": "echo 'Just run files individually'",
+    "emulator": "node src/emulator/start_emulator.js"
   },
   "repository": {
     "type": "git",
@@ -25,7 +26,8 @@
   "homepage": "https://github.com/sunyhydralab/QView3D#readme",
   "dependencies": {
     "express": "^5.1.0",
-    "serialport": "^13.0.0"
+    "serialport": "^13.0.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "jsdoc": "^4.0.4"
