@@ -25,6 +25,9 @@ discord_prefix = discord_config.get('command_prefix', '!')
 discord_issues_channel = discord_config.get('issues_channel', None)
 discord_issues_role = discord_config.get('issues_role', None)
 
+# Queue configuration
+queue = config.get('queue', {})
+
 Config = {
     'base_url': base_url(),
     'environment': environment,
@@ -32,6 +35,10 @@ Config = {
     'database_uri': database_uri,
     'port': port,
     'emulator_port': emulator_port,
+    # Queue settings
+    'queue_auto_progress': queue.get('auto_progress', True),
+    'queue_auto_progress_delay': queue.get('auto_progress_delay', 2),
+    # Discord settings
     'discord_enabled': discord_enabled,
     'discord_token': discord_token,
     'command_prefix': discord_prefix,

@@ -2,6 +2,10 @@
     "environment": "development",
     "databaseURI": "QView",
     "emulator_port": 8001,
+    "queue": {
+        "auto_progress": true,
+        "auto_progress_delay": 2
+    },
     "discord": {
         "enabled": false,
         "token": "<token>",

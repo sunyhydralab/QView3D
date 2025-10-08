@@ -194,14 +194,29 @@ class Queue(deque):
         """
         return self[0] if len(self) > 0 else None
 
-    def removeJob(self) -> Job | None:
+    def removeJob(self, fabricator_id: int | None = None) -> Job | None:
         """
         Remove the next job from the queue.
+        :param int | None fabricator_id: Fabricator ID for queue_update event
         :return: the removed job or None if the queue is empty
         :rtype Job | None
         """
         if len(self) == 0:
             return None
-        self.popleft()
+
+        removed_job = self.popleft()
+
         if current_app:
+            # Get fabricator_id from job if not provided
+            if fabricator_id is None and removed_job:
+                fabricator_id = getattr(removed_job, 'fabricator_id', None)
+
+            # Emit queue_update for frontend sync
+            if fabricator_id is not None:
+                current_app.socketio.emit(
+                    "queue_update",
+                    {"queue": self.convertQueueToJson(), "fabricator_id": fabricator_id}
+                )
+
+            # Legacy event for compatibility
             current_app.socketio.emit("job_removed", {"queue": self.__list__()})

@@ -80,6 +80,10 @@ class FabricatorList:
         :param str name: the name of the fabricator to add
         """
         serialPort: ListPortInfo | SysFS | None = Ports.getPortByName(serialPortName)
+        if serialPort is None:
+            err = Exception(f"Serial port '{serialPortName}' not found. Please make sure the device is connected.")
+            app.handle_errors_and_logging(err)
+            raise err
         dbFab: Fabricator | None = next((fabricator for fabricator in Fabricator.queryAll() if fabricator.getHwid() == serialPort.hwid.split(' LOCATION=')[0]), None)
         listFab: Fabricator | None = next((fabricator for fabricator in self if fabricator.getHwid() == serialPort.hwid.split(' LOCATION=')[0]), None)
         newFab: Fabricator | None = None
@@ -364,23 +368,92 @@ class FabricatorThread(Thread):
         }
 
     def run(self):
+        """Main thread loop - monitors fabricator status and processes job queue"""
         with self.app.app_context():
+            from config.config import Config
+
             self.fabricator.responseCount = 0
+
+            # Load queue configuration
+            autoProgress = Config.get('queue_auto_progress', True)
+            progressDelay = Config.get('queue_auto_progress_delay', 2)
+
             while not self.terminated:
                 time.sleep(.5)
-                queueSize = len(self.fabricator.queue)
-                if self.fabricator.getStatus() == "printing" and queueSize > 0:
-                    assert isinstance(self.fabricator.queue[0], Job), f"self.fabricator.queue[0]={self.fabricator.queue[0]}, type(self.fabricator.queue[0])={type(self.fabricator.queue[0])}, self.fabricator.queue={self.fabricator.queue}, type(self.fabricator.queue)={type(self.fabricator.queue)}"
-                    if self.fabricator.queue[0].released == 1:
-                        if not self.fabricator.begin():
-                            self.app.handle_errors_and_logging(Exception(f"Fabricator {self.fabricator.getName()} failed to begin") if not self.fabricator.error else self.fabricator.error, level=50)
+
+                status = self.fabricator.getStatus()
+                queue = self.fabricator.queue
+                queueSize = len(queue)
+
+                # Auto-progress when job finishes
+                if autoProgress and status in ["complete", "cancelled", "misprint"]:
+                    self._handleJobCompletion(queue, queueSize, progressDelay)
+
+                # Start next job if ready
+                elif status == "ready" and queueSize > 0:
+                    self._processNextJob(queue, autoProgress)
+
+                # Wait for homing to complete
                 elif self.fabricator.device.status == "homing":
                     while self.fabricator.device.status == "homing":
                         time.sleep(.5)
-                elif isinstance(self.fabricator.device, Printer) and self.fabricator.getStatus() == "ready":
+
+                # Monitor temperature when idle
+                elif isinstance(self.fabricator.device, Printer) and status == "ready":
                     self.fabricator.device.handleTempLine(self.fabricator.device.serialConnection.read())
-                else:
-                    time.sleep(.5)
+
+    def _handleJobCompletion(self, queue, queueSize, delay):
+        """Handle completion of current job and transition to next"""
+        if queueSize == 0:
+            self.fabricator.setStatus("idle")
+            return
+
+        completedJob = queue[0]
+        queue.removeJob(fabricator_id=self.fabricator.dbID)
+
+        remaining = len(queue)
+
+        if remaining > 0:
+            # More jobs waiting - transition to ready after delay
+            self.fabricator.setStatus("ready")
+            if self.app.logger:
+                self.app.logger.info(
+                    f"Fabricator {self.fabricator.getName()} completed job {completedJob.id}. "
+                    f"{remaining} job(s) remaining. Auto-progressing in {delay}s..."
+                )
+            time.sleep(delay)
+        else:
+            # Queue empty - go idle
+            self.fabricator.setStatus("idle")
+            if self.app.logger:
+                self.app.logger.info(
+                    f"Fabricator {self.fabricator.getName()} completed job {completedJob.id}. "
+                    f"Queue empty, going idle."
+                )
+
+    def _processNextJob(self, queue, autoProgress):
+        """Process the next job in the queue"""
+        assert isinstance(queue[0], Job), (
+            f"Expected Job instance, got {type(queue[0])}"
+        )
+
+        # Auto-release if enabled
+        if autoProgress and queue[0].released == 0:
+            queue[0].setReleased(1)
+            if self.app.logger:
+                self.app.logger.info(
+                    f"Auto-releasing job {queue[0].id} for {self.fabricator.getName()}"
+                )
+
+        # Begin printing if released
+        if queue[0].released == 1:
+            self.fabricator.setStatus("printing")
+            if not self.fabricator.begin():
+                error = (
+                    self.fabricator.error or
+                    Exception(f"Fabricator {self.fabricator.getName()} failed to begin")
+                )
+                self.app.handle_errors_and_logging(error, level=50)
 
     def stop(self):
         self.terminated = True
