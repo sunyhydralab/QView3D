@@ -1,11 +1,25 @@
 {
     "environment": "development",
     "databaseURI": "QView",
-    "emulator_port": 8001,
+    "server": {
+        "ip": "localhost",
+        "port": 8000,
+        "websocket_port": 8001
+    },
+    "client": {
+        "ip": "SAME_AS_SERVER",
+        "port": 8002,
+        "log_level": "error"
+    },
+    "database": {
+        "file_name": "QView.db",
+        "start_from_new": true
+    },
     "queue": {
         "auto_progress": true,
         "auto_progress_delay": 2
     },
+    "thread_health_check_interval": 30,
     "discord": {
         "enabled": false,
         "token": "<token>",

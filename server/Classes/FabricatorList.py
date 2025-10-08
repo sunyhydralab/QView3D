@@ -30,6 +30,7 @@ class FabricatorList:
             print(f"{tabs()}initializing fabricator threads...")
             self.fabricator_threads = []
             self.ping_thread = None
+            self.health_monitor_thread = None
             for fabricator in self.fabricators:
                 print(f"{tabs(tab_change=1)}initializing fabricator for {fabricator.getName()}...")
                 print(f"{tabs(tab_change=1)}connecting to {fabricator.devicePort}...")
@@ -40,6 +41,12 @@ class FabricatorList:
                 print(" Done")
                 print(f"{tabs(tab_change=-1)}fabricator for {fabricator.getName()} initialized")
             print(f"{tabs(tab_change=-1)}fabricator threads initialized")
+
+            # Start health monitoring
+            print(f"{tabs()}starting thread health monitor...", end="")
+            self.health_monitor_thread = HealthMonitorThread(self, self.app)
+            self.health_monitor_thread.start()
+            print(" Done")
 
     def __iter__(self):
         return iter(self.fabricators)
@@ -69,7 +76,9 @@ class FabricatorList:
         }
 
     def teardown(self):
-        """stop all fabricator threads"""
+        """Stop all fabricator threads and health monitor"""
+        if self.health_monitor_thread:
+            self.health_monitor_thread.stop()
         [thread.stop() for thread in self.fabricator_threads]
         self.fabricator_threads = []
 
@@ -386,7 +395,7 @@ class FabricatorThread(Thread):
                 queueSize = len(queue)
 
                 # Auto-progress when job finishes
-                if autoProgress and status in ["complete", "cancelled", "misprint"]:
+                if autoProgress and status in ["complete", "cancelled", "misprint", "error"]:
                     self._handleJobCompletion(queue, queueSize, progressDelay)
 
                 # Start next job if ready
@@ -409,27 +418,34 @@ class FabricatorThread(Thread):
             return
 
         completedJob = queue[0]
-        queue.removeJob(fabricator_id=self.fabricator.dbID)
 
-        remaining = len(queue)
-
-        if remaining > 0:
-            # More jobs waiting - transition to ready after delay
-            self.fabricator.setStatus("ready")
-            if self.app.logger:
+        # Log completion before removal
+        if self.app.logger:
+            remaining_after_removal = queueSize - 1
+            if remaining_after_removal > 0:
                 self.app.logger.info(
                     f"Fabricator {self.fabricator.getName()} completed job {completedJob.id}. "
-                    f"{remaining} job(s) remaining. Auto-progressing in {delay}s..."
+                    f"{remaining_after_removal} job(s) remaining. Auto-progressing in {delay}s..."
                 )
-            time.sleep(delay)
-        else:
-            # Queue empty - go idle
-            self.fabricator.setStatus("idle")
-            if self.app.logger:
+            else:
                 self.app.logger.info(
                     f"Fabricator {self.fabricator.getName()} completed job {completedJob.id}. "
                     f"Queue empty, going idle."
                 )
+
+        # Sleep before transitioning to prevent immediate re-processing
+        time.sleep(delay)
+
+        # Remove completed job and check remaining queue
+        queue.removeJob(fabricator_id=self.fabricator.dbID)
+        remaining = len(queue)
+
+        if remaining > 0:
+            # More jobs waiting - transition to ready to trigger next job
+            self.fabricator.setStatus("ready")
+        else:
+            # Queue empty - go idle
+            self.fabricator.setStatus("idle")
 
     def _processNextJob(self, queue, autoProgress):
         """Process the next job in the queue"""
@@ -454,6 +470,44 @@ class FabricatorThread(Thread):
                     Exception(f"Fabricator {self.fabricator.getName()} failed to begin")
                 )
                 self.app.handle_errors_and_logging(error, level=50)
+
+    def stop(self):
+        self.terminated = True
+
+
+class HealthMonitorThread(Thread):
+    """Monitors fabricator threads and restarts dead ones"""
+    terminated = False
+
+    def __init__(self, fabricator_list, passed_app=app, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fabricator_list = fabricator_list
+        self.app = passed_app
+        self.daemon = True
+        from config.config import Config
+        self.check_interval = Config.get('thread_health_check_interval', 30)
+
+    def run(self):
+        """Check thread health every interval"""
+        with self.app.app_context():
+            while not self.terminated:
+                time.sleep(self.check_interval)
+
+                for thread in list(self.fabricator_list.fabricator_threads):
+                    if not thread.is_alive() and not thread.terminated:
+                        # Thread died unexpectedly
+                        fabricator = thread.fabricator
+                        if self.app.logger:
+                            self.app.logger.error(
+                                f"Thread for {fabricator.getName()} died unexpectedly, restarting"
+                            )
+
+                        # Remove dead thread
+                        self.fabricator_list.fabricator_threads.remove(thread)
+
+                        # Start new thread
+                        new_thread = self.fabricator_list.start_fabricator_thread(fabricator)
+                        self.fabricator_list.fabricator_threads.append(new_thread)
 
     def stop(self):
         self.terminated = True
