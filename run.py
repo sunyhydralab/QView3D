@@ -9,6 +9,8 @@ import os
 # Relative locations of the client and server directories from the root directory
 CLIENT_LOCAL_PATH = "client"
 SERVER_LOCAL_PATH = "server"
+MIDDLEWARE_LOCAL_PATH = "middleware"
+JS_SERVER_LOCAL_PATH = "server-javascript"
 
 # The name of the database file
 DATABASE_FILE_NAME="QView.db"
@@ -20,6 +22,17 @@ START_FROM_NEW_DATABASE = True
 FLASK_SERVER_IP = "localhost" # TODO Have this affect the server
 FLASK_SERVER_PORT = 8000 # TODO Have this affect the server
 FLASK_SERVER_WEB_SOCKET_PORT = 8001 # TODO Have this affect the server
+
+# JavaScript Server configuration
+JS_SERVER_PORT = 3000
+JS_SERVER_WS_PORT = 3001
+
+# Middleware configuration
+MIDDLEWARE_PORT = 3500
+MIDDLEWARE_WS_PORT = 3501
+
+# Backend selection: "python", "javascript", "hybrid"
+BACKEND_MODE = "python"  # Default to Python backend
 
 # Client configuration
 VITE_CLIENT_IP = "SAME_AS_SERVER"
@@ -67,6 +80,51 @@ def start_server(fresh_database):
         env={"PATH": os.path.join(".", ".python-venv", "bin")}
     )
 
+def start_js_server():
+    # Start the JavaScript server in the background
+    return subprocess.Popen(
+        ["node", "src/index.js"],
+        cwd=JS_SERVER_LOCAL_PATH
+    )
+
+def start_middleware():
+    # Start the middleware service in the background
+    return subprocess.Popen(
+        ["node", "src/index.js"],
+        cwd=MIDDLEWARE_LOCAL_PATH
+    )
+
+def update_config_json():
+    # Update the config.json file with middleware settings
+    import json
+    config_path = os.path.join(SERVER_LOCAL_PATH, "config", "config.json")
+
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+
+    # Add middleware configuration
+    config['middleware'] = {
+        "mode": BACKEND_MODE,
+        "port": MIDDLEWARE_PORT,
+        "ws_port": MIDDLEWARE_WS_PORT
+    }
+
+    config['backends'] = {
+        "python": {
+            "url": f"http://{FLASK_SERVER_IP}:{FLASK_SERVER_PORT}",
+            "ws_port": FLASK_SERVER_WEB_SOCKET_PORT
+        },
+        "javascript": {
+            "url": f"http://localhost:{JS_SERVER_PORT}",
+            "ws_port": JS_SERVER_WS_PORT
+        }
+    }
+
+    with open(config_path, 'w') as f:
+        json.dump(config, f, indent=4)
+
+    print(f"Updated config.json with backend mode: {BACKEND_MODE}")
+
 def install_software(current_os: str):
     # Setup virtual environment
     # subprocess.run waits for the process to end before continuing the script
@@ -98,13 +156,36 @@ def install_software(current_os: str):
 
     print("Install complete")
 
+def get_backend_selection():
+    global BACKEND_MODE
+    print("\nSelect Backend Mode:")
+    print("  1. Python Backend (default, full-featured)")
+    print("  2. JavaScript Backend (serial communication focus)")
+    print("  3. Hybrid Mode (intelligent routing via middleware)")
+
+    selection = input("Enter selection [1-3] (default: 1): ").strip()
+
+    match selection:
+        case "1" | "":
+            BACKEND_MODE = "python"
+        case "2":
+            BACKEND_MODE = "javascript"
+        case "3":
+            BACKEND_MODE = "hybrid"
+        case _:
+            print("Invalid selection, using Python backend")
+            BACKEND_MODE = "python"
+
+    print(f"Backend mode set to: {BACKEND_MODE}")
+    return BACKEND_MODE
+
 def get_user_configuration():
     # .upper() ensures that lower case letters are fine as well
-    user_configuration = input("Would like to: Install Dependencies[I], Run the program in debug mode[D](The default), Run the program in release mode[R], and Cancel[C] ").upper()
-    
+    user_configuration = input("Would like to: Install Dependencies[I], Run the program in debug mode[D](The default), Run the program in release mode[R], Select Backend[B], and Cancel[C] ").upper()
+
     # Ensure the user input is correct
     match user_configuration:
-        case "I" | "D" | "R" | "C": # Return the configuration
+        case "I" | "D" | "R" | "B" | "C": # Return the configuration
             return user_configuration
         case "": # Handle the default case
             return "D"
@@ -114,11 +195,31 @@ def get_user_configuration():
             return get_user_configuration()
         
 def start_debug(fresh_database):
-    return start_client(), start_server(fresh_database)
+    # Update config.json with current backend mode
+    update_config_json()
+
+    # Start services based on backend mode
+    processes = []
+
+    if BACKEND_MODE == "python":
+        # Python only mode
+        processes.append(start_client())
+        processes.append(start_server(fresh_database))
+    elif BACKEND_MODE == "javascript":
+        # JavaScript only mode
+        processes.append(start_client())
+        processes.append(start_js_server())
+    elif BACKEND_MODE == "hybrid":
+        # Hybrid mode: start both backends and middleware
+        processes.append(start_client())
+        processes.append(start_server(fresh_database))
+        processes.append(start_js_server())
+        processes.append(start_middleware())
+
+    return processes
 
 
-flask_process = None
-vite_process = None
+running_processes = []
 is_installing = False
 
 # Get the user configuration
@@ -135,10 +236,13 @@ match user_configuration:
         elif current_os in ["Linux", "Darwin"]:
             install_software("LINUX/MAC")
     case "D":
-        vite_process, flask_process = start_debug(START_FROM_NEW_DATABASE)
+        running_processes = start_debug(START_FROM_NEW_DATABASE)
     case "R":
         print("Doesn't do anything yet")
         pass # TODO Add release mode
+    case "B":
+        get_backend_selection()
+        running_processes = start_debug(START_FROM_NEW_DATABASE)
     case "C":
         print("Process canceled")
         exit(0)
@@ -150,7 +254,7 @@ try:
         input() # Stop the loop from running indefinitely
 except KeyboardInterrupt: # Loop will close when a KeyboardInterrupt exception is thrown
     # Terminate the background processes
-    if (flask_process != None and vite_process != None):
-        flask_process.terminate()
-        vite_process.terminate()
-    print("Flask and Vite terminated")
+    for process in running_processes:
+        if process is not None:
+            process.terminate()
+    print("All processes terminated")
