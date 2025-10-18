@@ -1,0 +1,3 @@
+cd printeremu
+
+go run ./cmd/test_printer.go

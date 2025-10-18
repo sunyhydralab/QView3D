@@ -8,9 +8,9 @@ def get3DPrinterList():
     ports = serial.tools.list_ports.comports()
     # print(ports)
     # Print out the list of ports.
+    # Save the port and description to list. With key value pairs of port and description.
+    printerList = []
     for port in ports:
-        # Save the port and description to list. With key value pairs of port and description.
-        printerList = []
         # Keep a list of supported printers.
         supportedPrinters = ["Original Prusa i3 MK3", "Makerbot"] 
         

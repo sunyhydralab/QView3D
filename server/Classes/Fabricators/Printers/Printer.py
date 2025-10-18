@@ -1,0 +1,578 @@
+import traceback
+import sys
+from Classes.Loggers.JobLogger import JobLogger
+from abc import ABCMeta
+import re
+from datetime import datetime
+from time import sleep
+from services.app_service import current_app
+from Classes.Fabricators.Device import Device
+from Classes.Jobs import Job
+from Mixins.hasResponseCodes import checkTime, checkExtruderTemp, checkXYZ, checkBedTemp, checkOK
+from serial.serialutil import SerialException, SerialTimeoutException
+
+
+class Printer(Device, metaclass=ABCMeta):
+    cancelCMD: bytes = b"M112\n"
+    keepAliveCMD: bytes = b"M113 S1\n"
+    doNotKeepAliveCMD: bytes = b"M113 S0\n"
+    statusCMD: bytes = b"M115\n"
+    getLocationCMD: bytes = b"M114\n"
+    pauseCMD: bytes = b"M601\n"
+    resumeCMD: bytes = b"M602\n"
+    getMachineNameCMD: bytes = b"M997\n"
+    startTimeCMD: str = "M75"
+
+    callablesHashtable = {
+        "M31": [checkTime],  # Print time
+        "M104": [],  # Set hotend temp
+        "M109": [checkExtruderTemp],  # Wait for hotend to reach target temp
+        "M114": [checkXYZ],  # Get current position
+        "M140": [],  # Set bed temp
+        "M190": [checkBedTemp],  # Wait for bed to reach target temp
+    }
+    callablesHashtable = {**Device.callablesHashtable, **callablesHashtable}
+    
+    bedTemperature: int | float | None = None
+    bedTargetTemp: float = 0.0
+    nozzleTemperature: int | float |  None = None
+    nozzleTargetTemp: float = 0.0
+
+    def __init__(self, dbID, serialPort, consoleLogger=None, fileLogger=None, addLogger: bool =False, websocket_connection=None, name:str = None):
+        super().__init__(dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
+        self.filamentType = None
+        self.filamentDiameter = None
+        self.nozzleDiameter = None
+
+    def parseGcode(self, job: Job, isVerbose: bool = False):
+        assert isinstance(job, Job), f"Expected Job, got {type(job)}"
+        file = job.file_path
+        assert isinstance(file, str), f"Expected file to be a str, got {type(file)}"
+        assert isinstance(isVerbose, bool), f"Expected isVerbose to be a bool, got {type(isVerbose)}"
+        assert self.serialConnection.is_open, "Serial connection is not open"
+        assert self.status == "printing", f"Printer status is {self.status}, expected printing"
+        try:
+            with open(file, "r") as g:
+                # create a logger for this job
+
+                jobName = str(job.file_name_original)
+                if jobName:
+                    jobName = "-".join(jobName.split(".")[0].split("_"))
+                logger = JobLogger(self.name, jobName, job.date.strftime('%m-%d-%Y_%H-%M-%S'), self.serialPort.device, consoleLogger=sys.stdout if isVerbose else None, fileLogger=None)
+                job.job_logger = logger
+
+                logger.info(f"Starting {job.name} on {self.name} at {job.date.strftime('%m-%d-%Y %H:%M:%S')}")
+                # Read the file and store the lines in a list
+                if self.status == "cancelled":
+                    self.sendGcode(self.cancelCMD, isVerbose, logger)
+                    self.verdict = "cancelled"
+                    logger.info("Job cancelled")
+                    logger.nukeLogs()
+                    return True
+
+                lines = g.readlines()
+
+                #  Time handling
+                comment_lines = [line for line in lines if line.strip() and line.startswith(";")]
+
+                max_layer_height = 0
+                for i in reversed(range(len(comment_lines))):
+                    # Check if the line contains ";LAYER_CHANGE"
+                    if ";LAYER_CHANGE" in comment_lines[i]:
+                        # Check if the next line exists
+                        if i < len(comment_lines) - 1:
+                            # Save the next line
+                            line = comment_lines[i + 1]
+                            # Use regex to find the numerical value after ";Z:"
+                            match = re.search(r";Z:(\d+\.?\d*)", line)
+                            if match:
+                                max_layer_height = float(match.group(1))
+                                break
+                if max_layer_height != 0:
+                    job.setMaxLayerHeight(max_layer_height)
+
+                total_time = job.getTimeFromFile(comment_lines)
+                job.setTime(total_time, 0)
+                # job.setTime(total_time, 0)
+
+                # Only send the lines that are not empty and don't start with ";"
+                # so we can correctly get the progress
+                command_lines = [
+                    line for line in lines if line.strip() and not line.startswith(";")
+                ]
+                # store the total to find the percentage later on
+                total_lines = len(command_lines)
+                # set the sent lines to 0
+                sent_lines = 0
+                # previous line to check for layer height
+                prev_line = ""
+                # Replace file with the path to the file. "r" means read mode. 
+                # now instead of reading from 'g', we are reading line by line
+                current_app.socketio.emit("console_update", {"message": "Starting Job", "level": "info", "fabricator_id": self.dbID})
+                for line in lines:
+                    if self.status == "cancelled":
+                        self.sendGcode(self.cancelCMD, isVerbose, logger)
+                        self.verdict = "cancelled"
+                        logger.info("Job cancelled")
+                        logger.nukeLogs()
+                        return True
+
+                        # print("LINE: ", line, " STATUS: ", self.status, " FILE PAUSE: ", job.getFilePause())
+                    if "layer" in line.lower() and self.status == 'colorchange':
+                        #TODO: implement color change
+                        pass
+
+                    # if line contains ";LAYER_CHANGE", do job.currentLayerHeight(the next line)
+                    if prev_line and ";LAYER_CHANGE" in prev_line:
+                        match = re.search(r";Z:(\d+\.?\d*)", line)
+                        if match:
+                            current_layer_height = float(match.group(1))
+                            job.setCurrentLayerHeight(current_layer_height)
+                    prev_line = line
+
+                    # remove whitespace
+                    line = line.strip()
+                    # Don't send empty lines and comments. ";" is a comment in gcode.
+                    if ";" in line:  # Remove inline comments
+                        line = line.split(";")[
+                            0
+                        ].strip()  # Remove comments starting with ";"
+
+                    if len(line) == 0 or line.startswith(";"):
+                        continue
+                    if job.getTimeStarted() == 0 and ("M75" in line or self.startTimeCMD in line):
+                        job.setTimeStarted(1)
+                        job.setTime(job.calculateEta(), 1)
+                        job.setTime(datetime.now(), 2)
+                        if current_app:
+                            current_app.socketio.emit("console_update", {"message": "Fabricating...", "level": "info", "fabricator_id": self.dbID})
+
+                    assert self.sendGcode(line, logger=logger), f"Failed to send {line}"
+
+                    if job.getFilePause() == 1:
+                        # self.setStatus("printing")
+                        job.setTime(job.colorEta(), 1)
+                        job.setTime(job.calculateColorChangeTotal(), 0)
+                        job.setTime(datetime.min, 3)
+                        job.setFilePause(0)
+                        if self.status == "cancelled":
+                            self.sendGcode(self.cancelCMD, logger=logger)
+                            self.verdict = "cancelled"
+                            logger.info("Job cancelled")
+                            logger.nukeLogs()
+                            return True
+                        self.status = "printing"
+
+                    if "M600" in line:
+                        job.setTime(datetime.now(), 3)
+                        # job.setTime(job.calculateTotalTime(), 0)
+                        # job.setTime(job.updateEta(), 1)
+                        self.status = "colorchange"
+                        # self.setColorChangeBuffer(3)
+                        # self.setColorChangeBuffer(1)
+                        job.setFilePause(1)
+
+                    if ("M569" in line) and (job.getExtruded() == 0):
+                        job.setExtruded(1)
+
+                    #  software pausing
+                    if self.status == "paused":
+                        self.pause()
+                        job.setTime(datetime.now(), 3)
+                        while self.status == "paused":
+                            sleep(.5)
+                            readline = self.serialConnection.readline().decode("utf-8").strip()
+                            if readline:
+                                logger.debug(readline)
+                                if "T:" in readline and "B:" in readline:
+                                    logger.debug(f"Temperature line: {readline}")
+                                    self.handleTempLine(readline)
+                            if self.status == "cancelled":
+                                self.sendGcode(self.cancelCMD)
+                                self.verdict = "cancelled"
+                                logger.info("Job cancelled")
+                                logger.nukeLogs()
+                                current_app.socketio.emit("console_update", {"message": "Job cancelled", "level": "info", "fabricator_id": self.dbID})
+                                return True
+                            elif self.status == "printing":
+                                self.resume()
+                                job.setTime(job.colorEta(), 1)
+                                job.setTime(job.calculateColorChangeTotal(), 0)
+                                job.setTime(datetime.min, 3)
+                    # software color change
+                    if self.status == "colorchange" and job.getFilePause() == 0:
+                        job.setTime(datetime.now(), 3)
+                        # job.setTime(job.calculateTotalTime(), 0)
+                        # job.setTime(job.updateEta(), 1)
+                        print("SENDING COLORCHANGE")
+                        self.sendGcode("M600")  # color change command
+                        job.setTime(job.colorEta(), 1)
+                        job.setTime(job.calculateColorChangeTotal(), 0)
+                        job.setTime(datetime.min, 3)
+                        job.setFilePause(1)
+                        #self.setColorChangeBuffer(0)
+                        # self.setStatus("printing")
+
+                    # Increment the sent lines
+                    sent_lines += 1
+                    job.setSentLines(sent_lines)
+                    # Calculate the progress
+                    progress = (sent_lines / total_lines) * 100
+
+                    # Call the setProgress method
+                    job.setProgress(progress)
+
+                    # if self.status == "complete" and job.extruded != 0:
+                    if self.status == "complete":
+                        self.verdict = "complete"
+                        logger.info("Job complete")
+                        logger.nukeLogs()
+                        current_app.socketio.emit("console_update", {"message": "Job complete", "level": "info", "fabricator_id": self.dbID})
+                        return True
+
+                    if self.status == "error":
+                        self.verdict = "error"
+                        logger.error("Job error")
+                        logger.nukeLogs(error=True)
+                        current_app.socketio.emit("console_update", {"message": "Job error", "level": "error", "fabricator_id": self.dbID})
+                        return True
+            self.verdict = "complete"
+            self.status = "complete"
+            logger.info("Job complete")
+            logger.nukeLogs()
+            current_app.socketio.emit("console_update", {"message": "Job complete", "level": "info", "fabricator_id": self.dbID})
+            return True
+        except Exception as e:
+            self.verdict = "error"
+            current_app.socketio.emit("error_update",{"fabricator_id": self.dbID, "job_id": job.id, "error": str(e)})
+            current_app.socketio.emit("console_update", {"message": "Job error", "level": "error", "fabricator_id": self.dbID})
+            current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
+            logger.nukeLogs(error=True)
+            return e
+        
+    def sendGcode(self, gcode: bytes | str, isVerbose: bool = True, logger: JobLogger = None) -> bool:
+        """
+        Method to send gcode to the printer
+        :param bytes | str | LiteralString gcode: the line of gcode to send to the printer
+        :param bool isVerbose: whether to log or not
+        :param JobLogger logger: the logger to use
+        :rtype: bool
+        """
+        should_log = isVerbose and logger is not None
+        if logger is None: logger = self.logger
+        assert self.serialConnection is not None, "Serial connection is None"
+        assert self.serialConnection.is_open, "Serial connection is not open"
+        if isinstance(gcode, str):
+            if gcode[-1] != "\n": gcode += "\n"
+            gcode = gcode.encode("utf-8")
+        assert isinstance(gcode, bytes), f"Expected bytes, got {type(gcode)}"
+        callables = self.callablesHashtable.get(self.extractIndex(gcode, logger), [checkOK])
+
+        # Print command being sent
+        print(f">>> SENDING GCODE: {gcode.decode().strip()}")
+
+        current_app.socketio.emit("gcode_line", {"line": (gcode.decode() if isinstance(gcode, bytes) else gcode).strip(), "fabricator_id": self.dbID})
+        self.serialConnection.write(gcode)
+        line = b''
+
+        # Check for timeout
+
+        timeout_counter = 0
+        max_timeout = 100
+
+        # Increase timeout for temperature commands
+        gcode_str = gcode.decode().strip().split()[0]
+        if gcode_str in ["M109", "M190"]:
+            max_timeout = 1200  # 20 minutes 
+        else:
+            max_timeout = 100   
+
+        for func in callables:
+            # Reset timeout counter for each callable
+            timeout_counter = 0
+            while True:
+                if self.status == "cancelled": return True
+
+                # Check if timeout has been reached
+                timeout_counter += 1
+                if timeout_counter > max_timeout:
+                    # Print timeout
+                    print(f">>> TIMEOUT waiting for response to: {gcode.decode().strip()}")
+                    if should_log: logger.warning(f"Timeout waiting for response to {gcode.decode().strip()}")
+                    if gcode_str in ["M109", "M190"]:
+                        if should_log: logger.info(f"Temperature command {gcode_str} timed out, assuming success")
+                        break
+                    break
+                try:
+                    line = self.serialConnection.readline()
+
+                    #Empty line, continue
+                    if not line:
+                        continue
+
+                    decLine = line.decode("utf-8").strip()
+
+                    # If the line is empty after decoding, continue
+                    if not decLine:
+                        continue
+
+                    # Print ALL responses received
+                    print(f"<<< RECEIVED: {decLine}")
+
+                    if "processing" in decLine or "echo" in decLine: continue
+                    if "T:" in decLine and "B:" in decLine:
+                        # Highlight temperature lines
+                        print(f"<<< TEMPERATURE LINE: {decLine}")
+                        self.handleTempLine(decLine)
+
+                        if func == checkBedTemp and self.bedTemperature and self.bedTargetTemp:
+                            print(f">>> CHECKING BED TEMP: Current={self.bedTemperature}°C, Target={self.bedTargetTemp}°C, Diff={abs(self.bedTemperature - self.bedTargetTemp)}")
+                            if abs(self.bedTemperature - self.bedTargetTemp) <= 2:  # Within 2 degrees
+                                # Print when bed temp reached
+                                print(f"<<< BED TEMP REACHED: {self.bedTemperature}°C (target: {self.bedTargetTemp}°C)")
+                                if should_log: logger.info(f"Bed temperature reached: {self.bedTemperature}°C")
+                                break
+                            else:
+                                print(f">>> BED TEMP NOT REACHED YET: Need {self.bedTargetTemp - self.bedTemperature:.1f}°C more")
+                        elif func == checkExtruderTemp and self.nozzleTemperature and self.nozzleTargetTemp:
+                            if abs(self.nozzleTemperature - self.nozzleTargetTemp) <= 2:  # Within 2 degrees
+                                # Print when nozzle temp reached
+                                print(f"<<< NOZZLE TEMP REACHED: {self.nozzleTemperature}°C (target: {self.nozzleTargetTemp}°C)")
+                                if should_log: logger.info(f"Nozzle temperature reached: {self.nozzleTemperature}°C")
+                                break
+                        elif func != checkBedTemp and func != checkExtruderTemp and "ok" not in decLine.lower():
+                            continue
+                        
+                    # Special handling for M190, 'ok' as completion
+                    gcode_str = gcode.decode().strip().split()[0]
+                    if gcode_str == "M190" and "ok" in decLine.lower():
+                        print(f"<<< M190 COMPLETED WITH OK: {decLine}")
+                        break
+                    
+                    if func(line, self):
+                        # Print when command completes successfully
+                        print(f"<<< COMMAND COMPLETED: {gcode.decode().strip()} -> {decLine}")
+                        break
+                    if should_log: logger.debug(f"{gcode.decode().strip()}: {decLine}")
+                    # current_app.socketio.emit("console_update",{"message": decLine, "level": "debug", "fabricator_id": self.dbID})
+                except SerialTimeoutException as e:
+                    if "no data" in str(e):
+                        if should_log: logger.debug(f"No report temp line sent.")
+                        self.serialConnection.write(b"M155 S1\n") # Convert to Bytes. Added a new line to ensure the command is sent correctly
+                    else:
+                        if current_app: return current_app.handle_errors_and_logging(e, logger)
+                        else: print(traceback.format_exc())
+                        return False
+                except UnicodeDecodeError:
+                    if should_log: logger.debug(f"{gcode.decode().strip()}: {line}")
+                    else: print(f"{gcode.decode().strip()}: {line}")
+                    # current_app.socketio.emit("console_update",{"message": gcode.decode().strip(), "level": "debug", "fabricator_id": self.dbID})
+                except Exception as e:
+                    if current_app: return current_app.handle_errors_and_logging(e, logger)
+                    else: print(traceback.format_exc())
+                    return False
+        if not callables:
+            # current_app.socketio.emit("console_update", {"message": f"{gcode.decode().strip()}: ok", "level": "info", "fabricator_id": self.dbID})
+            if should_log: logger.info(f"{gcode.decode().strip()}: ok")
+        else:
+            # current_app.socketio.emit("console_update", {"message": f"{gcode.decode().strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}", "level": "info", "fabricator_id": self.dbID})
+            if should_log: logger.info(
+                f"{gcode.decode().strip()}: {(line.decode() if isinstance(line, bytes) else line).strip()}")
+        return True
+
+    def changeFilament(self, filamentType: str, filamentDiameter: float, logger: JobLogger = None):
+        """
+        Method to change filament
+        :param str filamentType: type of plastic the filament is made of
+        :param float filamentDiameter:  diameter of the filament in mm
+        :param JobLogger logger: the logger to use
+        """
+        if not isinstance(filamentDiameter, float):
+            filamentDiameter = float(filamentDiameter)
+        try:
+            assert self.status == "idle", "Printer is not idle"
+            self.filamentType = filamentType
+            self.filamentDiameter = filamentDiameter
+        except Exception as e:
+            current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
+
+    def changeNozzle(self, nozzleDiameter: float, logger: JobLogger = None):
+        """
+        Method to change nozzle size
+        :param float nozzleDiameter: The diameter of the nozzle in mm
+        :param JobLogger logger: the logger to use
+        """
+        try:
+            if not isinstance(nozzleDiameter, float):
+                nozzleDiameter = float(nozzleDiameter)
+            assert self.status == "idle", "Printer is not idle"
+            self.nozzleDiameter = nozzleDiameter
+        except Exception as e:
+            current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
+
+    def handleTempLine(self, line: str | bytes , logger: JobLogger = None) -> None:
+        try:
+            # Convert bytes to string if needed
+            if isinstance(line, bytes):
+                line = line.decode('utf-8', errors='ignore')
+
+            # Print what we're parsing
+            print(f">>> PARSING TEMP LINE: {line}")
+
+            # Use regex to find the temperatures in the line (Ari's OG code)    
+            temp_t = re.search(r'T:(\d+.\d+)', line)
+            temp_b = re.search(r'B:(\d+.\d+)', line)
+            if not temp_t:
+                temp_t = re.search(r'T:(\d+)', line)
+            if not temp_b:
+                temp_b = re.search(r'B:(\d+)', line)
+            if temp_t:
+                self.nozzleTemperature = float(temp_t.group(1))
+                print(f">>> PARSED NOZZLE TEMP: {self.nozzleTemperature}°C")
+            if temp_b:
+                self.bedTemperature = float(temp_b.group(1))
+                print(f">>> PARSED BED TEMP: {self.bedTemperature}°C")
+            if current_app:
+                current_app.socketio.emit('temp_update', {'fabricator_id': self.dbID, 'extruder_temp': self.nozzleTemperature,
+                                                          'bed_temp': self.bedTemperature})
+                print(f">>> EMITTED TEMP UPDATE: Nozzle={self.nozzleTemperature}°C, Bed={self.bedTemperature}°C")
+        except ValueError:
+            pass
+        except Exception as e:
+            current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
+
+    # TODO: Do we need this? Can we just send raw gcode?
+    def extractIndex(self, gcode: bytes, logger=None) -> str:
+        """
+        Method to extract the index of the gcode for use in the callablesHashtable
+        :param bytes gcode: the line of gcode to extract the index from
+        :param JobLogger | None logger: the logger to use
+        :rtype: str
+        """
+        if logger is None: logger = self.logger
+        hashIndex = gcode.decode().split("\n")[0].split(" ")[0]
+        decGcode = gcode.decode()
+
+        match hashIndex:
+            case "M104":
+                try:
+                    temp = decGcode.split("S")[1].split("\n")[0]
+                except IndexError:
+                    try:
+                        temp = decGcode.split("R")[1].split("\n")[0]
+                    except IndexError:
+                        temp = None
+                if temp:
+                    # Extract just the number part before converting to float
+                    temp_str = temp.split()[0] if ' ' in temp else temp
+                    self.nozzleTargetTemp = float(temp_str)
+            case "M140":
+                try:
+                    temp = decGcode.split("S")[1].split("\n")[0]
+                except IndexError:
+                    try:
+                        temp = decGcode.split("R")[1].split("\n")[0]
+                    except IndexError:
+                        temp = None
+                if temp:
+                    #  Apply same fix here
+                    temp_str = temp.split()[0] if ' ' in temp else temp
+                    self.bedTargetTemp = float(temp_str)
+            case "M109":
+                try:
+                    temp = decGcode.split("S")[1].split("\n")[0]
+                except IndexError:
+                    try:
+                        temp = decGcode.split("R")[1].split("\n")[0]
+                    except IndexError:
+                        temp = None
+                if temp:
+                    # Apply same fix here
+                    temp_str = temp.split()[0] if ' ' in temp else temp
+                    if logger is not None: logger.info(f"Waiting for hotend temperature to stabilize at {temp_str}\u00B0C...")
+                    self.nozzleTargetTemp = float(temp_str)
+                    current_app.socketio.emit("console_update",
+                                          {"message": f"Waiting for hotend temperature to stabilize at {temp_str}\u00B0C...", "level": "info",
+                                           "fabricator_id": self.dbID})
+                else:
+                    if logger is not None: logger.info("Waiting for hotend temperature to stabilize...")
+                    current_app.socketio.emit("console_update",
+                                          {"message": "Waiting for hotend temperature to stabilize...", "level": "info",
+                                           "fabricator_id": self.dbID})
+            case "M190":
+                try:
+                    temp = decGcode.split("S")[1].split("\n")[0]
+                except IndexError:
+                    temp = None
+                if temp:
+                    #  Apply same fix here
+                    temp_str = temp.split()[0] if ' ' in temp else temp
+                    if logger is not None: logger.info(f"Waiting for bed temperature to stabilize at {temp_str}\u00B0C...")
+                    self.bedTargetTemp = float(temp_str)
+                    current_app.socketio.emit("console_update",
+                                          {"message": f"Waiting for bed temperature to stabilize at {temp_str}\u00B0C...", "level": "info",
+                                           "fabricator_id": self.dbID})
+                else:
+                    if logger is not None: logger.info("Waiting for bed temperature to stabilize...")
+                    current_app.socketio.emit("console_update",
+                                          {"message": "Waiting for bed temperature to stabilize...", "level": "info",
+                                           "fabricator_id": self.dbID})
+            case "G28":
+                if logger is not None: logger.info("Homing...")
+                current_app.socketio.emit("console_update", {"message": "Homing...", "level": "info", "fabricator_id": self.dbID})
+        return hashIndex
+
+    def pause(self, logger: JobLogger = None):
+        if not self.pauseCMD:
+            if self.logger is not None: self.logger.error("Pause command not implemented.")
+            return True
+        try:
+            assert self.pauseCMD is not None
+            assert isinstance(self, Device)
+            assert self.serialConnection is not None
+            assert self.serialConnection.is_open
+            if hasattr(self, "keepAliveCMD") and self.keepAliveCMD:
+                self.sendGcode(self.keepAliveCMD)
+            self.sendGcode(self.pauseCMD)
+            if self.logger is not None: self.logger.info("Job Paused")
+            return True
+        except Exception as e:
+            return current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
+
+    def resume(self, logger: JobLogger = None) -> bool:
+        if self.resumeCMD is None:
+            if self.logger is not None: self.logger.error("Resume command not implemented.")
+            return False
+        try:
+            assert isinstance(self, Device), "self is not an instance of Device"
+            assert self.serialConnection is not None, "Serial connection is None"
+            assert self.serialConnection.is_open, "Serial connection is not open"
+            if hasattr(self, "doNotKeepAliveCMD") and self.doNotKeepAliveCMD: self.sendGcode(self.doNotKeepAliveCMD, False)
+            self.sendGcode(self.resumeCMD, False)
+            if self.logger is not None: self.logger.info("Job Resumed")
+            return True
+        except Exception as e:
+            return current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
+
+    def connect(self) -> bool:
+        assert super().connect(), "Failed to connect to printer"
+        try:
+            assert self.serialConnection is not None, "Serial connection is None"
+            assert self.serialConnection.is_open, "Serial connection is not open"
+            self.sendGcode("M155 S1\n", False)
+            return True
+        except Exception as e:
+            return current_app.handle_errors_and_logging(e, self.logger)
+
+    def disconnect(self) -> bool:
+        try:
+            if self.serialConnection and self.serialConnection.is_open:
+                self.sendGcode("M155 S100\n", False)
+                self.sendGcode("M155 S0\n", False)
+                self.sendGcode("M104 S0\n", False)
+                self.sendGcode("M140 S0\n", False)
+                self.sendGcode("M84\n", False)
+                self.serialConnection.close()
+            return True
+        except Exception as e:
+            return current_app.handle_errors_and_logging(e, self.logger)

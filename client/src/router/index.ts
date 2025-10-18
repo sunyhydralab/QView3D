@@ -1,48 +1,34 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
-import MainView from '@/views/MainView.vue'
-import QueueViewVue from '@/views/QueueView.vue'
-import RegisteredViewVue from '@/views/RegisteredView.vue'
-import SubmitJobVue from '@/views/SubmitJob.vue'
-import JobHistoryVue from '@/views/JobHistory.vue'
-import ErrorView from '@/views/ErrorView.vue'
-import { isLoading } from '@/model/jobs'
-
-const routes = [
-  {
-    path: '/',
-    name: 'MainView',
-    component: MainView
-  },
-  {
-    path: '/queue',
-    name: 'QueueViewVue',
-    component: QueueViewVue
-  },
-  {
-    path: '/registration',
-    name: 'RegisteredViewVue',
-    component: RegisteredViewVue
-  },
-  {
-    path: '/submit/:job?/:printer?',
-    name: 'SubmitJobVue',
-    component: SubmitJobVue
-  },
-  {
-    path: '/history',
-    name: 'JobHistoryVue',
-    component: JobHistoryVue
-  }, 
-  {
-    path: '/error',
-    name: 'ErrorView',
-    component: ErrorView
-  }, 
-]
+import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
-  history: createWebHashHistory(),
-  routes
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    {
+      path: '/',
+      name: 'home',
+      component: () => import('../views/Dashboard.vue'),
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: () => import('../views/Registration.vue'),
+    },
+    {
+      path: '/queue',
+      name: 'queue',
+      component: () => import('../views/Queues.vue'),
+    },
+    {
+      path: '/history',
+      name: 'history',
+      component: () => import('../views/JobHistory.vue'),
+    },
+    {
+      path: '/emulator',
+      name: 'emulator',
+      component: () => import('../views/EmulatorView.vue')
+    }
+  ],
 })
 
 export default router
