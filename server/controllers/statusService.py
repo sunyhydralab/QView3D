@@ -71,3 +71,11 @@ def editName():
 def getVersion():
     res = jsonify(os.environ.get('SERVER_VERSION'))
     return res
+
+@status_bp.route("/health", methods=["GET"])
+def health():
+    """Health check endpoint for middleware monitoring."""
+    return jsonify({
+        "status": "healthy",
+        "service": "qview3d-python-backend"
+    }), 200
