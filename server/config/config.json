@@ -8,5 +8,20 @@
         "command_prefix": "!",
         "issues_channel": "<issues_channel>",
         "issues_role": "<issues_role>"
+    },
+    "middleware": {
+        "mode": "python",
+        "port": 3500,
+        "ws_port": 3501
+    },
+    "backends": {
+        "python": {
+            "url": "http://localhost:8000",
+            "ws_port": 8001
+        },
+        "javascript": {
+            "url": "http://localhost:3000",
+            "ws_port": 3001
+        }
     }
 }
