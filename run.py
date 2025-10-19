@@ -156,14 +156,21 @@ def install_software(current_os: str):
     if current_os == "WINDOWS":
         # On Windows, use Scripts directory and the virtual environment's pip
         venv_pip = os.path.join(SERVER_LOCAL_PATH, ".python-venv", "Scripts", "pip.exe")
-        try:
-            subprocess.run(
-                [venv_pip, "install", "-r", os.path.join(SERVER_LOCAL_PATH, "dependencies.txt")],
-                check=True
-            )
-        except subprocess.CalledProcessError as e:
-            print(f"Error installing Python dependencies: {e}")
-            print("Trying with system pip...")
+        if os.path.exists(venv_pip):
+            try:
+                subprocess.run(
+                    [venv_pip, "install", "-r", os.path.join(SERVER_LOCAL_PATH, "dependencies.txt")],
+                    check=True
+                )
+            except subprocess.CalledProcessError as e:
+                print(f"Error installing Python dependencies: {e}")
+                print("Trying with system pip...")
+                subprocess.run(
+                    ["pip", "install", "-r", os.path.join(SERVER_LOCAL_PATH, "dependencies.txt")],
+                    check=True
+                )
+        else:
+            print("Virtual environment pip not found, using system pip...")
             subprocess.run(
                 ["pip", "install", "-r", os.path.join(SERVER_LOCAL_PATH, "dependencies.txt")],
                 check=True
@@ -171,14 +178,21 @@ def install_software(current_os: str):
     else:
         # On Linux/Mac, use bin directory
         venv_pip = os.path.join(SERVER_LOCAL_PATH, ".python-venv", "bin", "pip")
-        try:
-            subprocess.run(
-                [venv_pip, "install", "-r", os.path.join(SERVER_LOCAL_PATH, "dependencies.txt")],
-                check=True
-            )
-        except subprocess.CalledProcessError as e:
-            print(f"Error installing Python dependencies: {e}")
-            print("Trying with system pip...")
+        if os.path.exists(venv_pip):
+            try:
+                subprocess.run(
+                    [venv_pip, "install", "-r", os.path.join(SERVER_LOCAL_PATH, "dependencies.txt")],
+                    check=True
+                )
+            except subprocess.CalledProcessError as e:
+                print(f"Error installing Python dependencies: {e}")
+                print("Trying with system pip...")
+                subprocess.run(
+                    ["pip3", "install", "-r", os.path.join(SERVER_LOCAL_PATH, "dependencies.txt")],
+                    check=True
+                )
+        else:
+            print("Virtual environment pip not found, using system pip...")
             subprocess.run(
                 ["pip3", "install", "-r", os.path.join(SERVER_LOCAL_PATH, "dependencies.txt")],
                 check=True
