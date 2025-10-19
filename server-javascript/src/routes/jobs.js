@@ -1,0 +1,376 @@
+import express from 'express';
+import multer from 'multer';
+import zlib from 'zlib';
+import database from '../database.js';
+
+const router = express.Router();
+
+// Configure multer for file uploads
+const upload = multer({ storage: multer.memoryStorage() });
+
+// Get job history
+router.get('/getjobs', async (req, res) => {
+  try {
+    const {
+      page = 1,
+      pageSize = 10,
+      printerIds,
+      oldestFirst = 'false',
+      searchJob = '',
+      searchCriteria = '',
+      searchTicketId = '',
+      favoriteOnly = 'false',
+      issueIds,
+      startdate = '',
+      enddate = '',
+      fromError = 0,
+      countOnly = 0
+    } = req.query;
+
+    let sql = 'SELECT * FROM jobs WHERE 1=1';
+    const params = [];
+
+    // Filter by printer IDs
+    if (printerIds) {
+      const ids = JSON.parse(printerIds);
+      if (ids.length > 0) {
+        sql += ` AND fabricator_id IN (${ids.map(() => '?').join(',')})`;
+        params.push(...ids);
+      }
+    }
+
+    // Search by job name
+    if (searchJob) {
+      sql += ' AND name LIKE ?';
+      params.push(`%${searchJob}%`);
+    }
+
+    // Filter by favorite
+    if (favoriteOnly === 'true') {
+      sql += ' AND favorite = 1';
+    }
+
+    // Filter by issue IDs
+    if (issueIds) {
+      const ids = JSON.parse(issueIds);
+      if (ids.length > 0) {
+        sql += ` AND issue_id IN (${ids.map(() => '?').join(',')})`;
+        params.push(...ids);
+      }
+    }
+
+    // Filter by date range
+    if (startdate) {
+      sql += ' AND created_at >= ?';
+      params.push(startdate);
+    }
+    if (enddate) {
+      sql += ' AND created_at <= ?';
+      params.push(enddate);
+    }
+
+    // Count only
+    if (parseInt(countOnly) === 1) {
+      const countSql = sql.replace('SELECT *', 'SELECT COUNT(*) as count');
+      const result = await database.get(countSql, params);
+      return res.json({ count: result.count });
+    }
+
+    // Ordering
+    sql += oldestFirst === 'true' ? ' ORDER BY created_at ASC' : ' ORDER BY created_at DESC';
+
+    // Pagination
+    const offset = (parseInt(page) - 1) * parseInt(pageSize);
+    sql += ' LIMIT ? OFFSET ?';
+    params.push(parseInt(pageSize), offset);
+
+    const jobs = await database.all(sql, params);
+    res.json(jobs);
+  } catch (error) {
+    console.error('Error getting jobs:', error);
+    res.status(500).json({ error: 'Failed to get jobs', details: error.message });
+  }
+});
+
+// Add job to queue
+router.post('/addjobtoqueue', upload.single('file'), async (req, res) => {
+  try {
+    const { name, printerid, favorite, td_id, filament, priority } = req.body;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: 'File is required' });
+    }
+
+    // Compress file
+    const compressed = zlib.gzipSync(file.buffer);
+
+    // Insert job into database
+    const result = await database.run(
+      `INSERT INTO jobs (name, fabricator_id, status, file_name_original, file_blob, favorite, td_id, filament)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        name,
+        parseInt(printerid),
+        'inqueue',
+        file.originalname,
+        compressed,
+        favorite === 'true' ? 1 : 0,
+        parseInt(td_id),
+        filament
+      ]
+    );
+
+    const jobId = result.id;
+
+    // Update file name with ID
+    const baseName = file.originalname.split('.').slice(0, -1).join('.');
+    const extension = file.originalname.split('.').pop();
+    const fileName = `${baseName}_${jobId}.${extension}`;
+
+    await database.run('UPDATE jobs SET file_name = ? WHERE id = ?', [fileName, jobId]);
+
+    res.json({
+      success: true,
+      message: 'Job added to printer queue',
+      id: jobId
+    });
+  } catch (error) {
+    console.error('Error adding job:', error);
+    res.status(500).json({ error: 'Failed to add job', details: error.message });
+  }
+});
+
+// Auto queue job
+router.post('/autoqueue', upload.single('file'), async (req, res) => {
+  try {
+    const { name, favorite, td_id, filament } = req.body;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: 'File is required' });
+    }
+
+    // Find fabricator with smallest queue
+    const fabricators = await database.all(`
+      SELECT f.id, COUNT(j.id) as job_count
+      FROM fabricators f
+      LEFT JOIN jobs j ON f.id = j.fabricator_id AND j.status = 'inqueue'
+      GROUP BY f.id
+      ORDER BY job_count ASC
+      LIMIT 1
+    `);
+
+    if (fabricators.length === 0) {
+      return res.status(404).json({ error: 'No fabricators available' });
+    }
+
+    const fabricatorId = fabricators[0].id;
+
+    // Compress file
+    const compressed = zlib.gzipSync(file.buffer);
+
+    // Insert job
+    const result = await database.run(
+      `INSERT INTO jobs (name, fabricator_id, status, file_name_original, file_blob, favorite, td_id, filament)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        name,
+        fabricatorId,
+        'inqueue',
+        file.originalname,
+        compressed,
+        favorite === 'true' ? 1 : 0,
+        parseInt(td_id),
+        filament
+      ]
+    );
+
+    const jobId = result.id;
+
+    // Update file name with ID
+    const baseName = file.originalname.split('.').slice(0, -1).join('.');
+    const extension = file.originalname.split('.').pop();
+    const fileName = `${baseName}_${jobId}.${extension}`;
+
+    await database.run('UPDATE jobs SET file_name = ? WHERE id = ?', [fileName, jobId]);
+
+    res.json({
+      success: true,
+      message: 'Job added to printer queue',
+      id: jobId,
+      fabricator_id: fabricatorId
+    });
+  } catch (error) {
+    console.error('Error auto-queueing job:', error);
+    res.status(500).json({ error: 'Failed to auto-queue job', details: error.message });
+  }
+});
+
+// Cancel job
+router.post('/canceljob', async (req, res) => {
+  try {
+    const { jobpk } = req.body;
+
+    await database.run('UPDATE jobs SET status = ? WHERE id = ?', ['cancelled', jobpk]);
+
+    res.json({ success: true, message: 'Job cancelled' });
+  } catch (error) {
+    console.error('Error cancelling job:', error);
+    res.status(500).json({ error: 'Failed to cancel job', details: error.message });
+  }
+});
+
+// Cancel jobs from queue
+router.post('/cancelfromqueue', async (req, res) => {
+  try {
+    const { jobarr } = req.body;
+
+    for (const jobpk of jobarr) {
+      await database.run('UPDATE jobs SET status = ? WHERE id = ?', ['cancelled', jobpk]);
+    }
+
+    res.json({ success: true, message: 'Jobs cancelled' });
+  } catch (error) {
+    console.error('Error cancelling jobs:', error);
+    res.status(500).json({ error: 'Failed to cancel jobs', details: error.message });
+  }
+});
+
+// Update job status
+router.post('/updatejobstatus', async (req, res) => {
+  try {
+    const { jobid, status } = req.body;
+
+    await database.run('UPDATE jobs SET status = ? WHERE id = ?', [status, jobid]);
+
+    res.json({ success: true, message: 'Job status updated' });
+  } catch (error) {
+    console.error('Error updating job status:', error);
+    res.status(500).json({ error: 'Failed to update job status', details: error.message });
+  }
+});
+
+// Delete job
+router.post('/deletejob', async (req, res) => {
+  try {
+    const { jobid } = req.body;
+
+    await database.run('DELETE FROM jobs WHERE id = ?', [jobid]);
+
+    res.json({ success: true, message: 'Job deleted' });
+  } catch (error) {
+    console.error('Error deleting job:', error);
+    res.status(500).json({ error: 'Failed to delete job', details: error.message });
+  }
+});
+
+// Get file
+router.get('/getfile', async (req, res) => {
+  try {
+    const { jobid } = req.query;
+
+    const job = await database.get('SELECT file_blob, file_name_original FROM jobs WHERE id = ?', [jobid]);
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    // Decompress file
+    const decompressed = zlib.gunzipSync(job.file_blob).toString('utf-8');
+
+    res.json({
+      file: decompressed,
+      file_name: job.file_name_original
+    });
+  } catch (error) {
+    console.error('Error getting file:', error);
+    res.status(500).json({ error: 'Failed to get file', details: error.message });
+  }
+});
+
+// Favorite job
+router.post('/favoritejob', async (req, res) => {
+  try {
+    const { jobid, favorite } = req.body;
+
+    await database.run('UPDATE jobs SET favorite = ? WHERE id = ?', [favorite ? 1 : 0, jobid]);
+
+    res.json({ success: true, message: 'Job favorite status updated' });
+  } catch (error) {
+    console.error('Error updating favorite:', error);
+    res.status(500).json({ error: 'Failed to update favorite', details: error.message });
+  }
+});
+
+// Get favorite jobs
+router.get('/getfavoritejobs', async (req, res) => {
+  try {
+    const jobs = await database.all('SELECT * FROM jobs WHERE favorite = 1 ORDER BY created_at DESC');
+    res.json(jobs);
+  } catch (error) {
+    console.error('Error getting favorite jobs:', error);
+    res.status(500).json({ error: 'Failed to get favorite jobs', details: error.message });
+  }
+});
+
+// Assign issue to job
+router.post('/assignissue', async (req, res) => {
+  try {
+    const { jobid, issueid } = req.body;
+
+    await database.run('UPDATE jobs SET issue_id = ? WHERE id = ?', [issueid, jobid]);
+
+    res.json({ success: true, message: 'Issue assigned to job' });
+  } catch (error) {
+    console.error('Error assigning issue:', error);
+    res.status(500).json({ error: 'Failed to assign issue', details: error.message });
+  }
+});
+
+// Remove issue from job
+router.post('/removeissue', async (req, res) => {
+  try {
+    const { jobid } = req.body;
+
+    await database.run('UPDATE jobs SET issue_id = NULL WHERE id = ?', [jobid]);
+
+    res.json({ success: true, message: 'Issue removed from job' });
+  } catch (error) {
+    console.error('Error removing issue:', error);
+    res.status(500).json({ error: 'Failed to remove issue', details: error.message });
+  }
+});
+
+// Save comment
+router.post('/savecomment', async (req, res) => {
+  try {
+    const { jobid, comments } = req.body;
+
+    await database.run('UPDATE jobs SET comments = ? WHERE id = ?', [comments, jobid]);
+
+    res.json({ success: true, message: 'Comment saved' });
+  } catch (error) {
+    console.error('Error saving comment:', error);
+    res.status(500).json({ error: 'Failed to save comment', details: error.message });
+  }
+});
+
+// Start print
+router.post('/startprint', async (req, res) => {
+  try {
+    const { printerid, jobid } = req.body;
+
+    await database.run(
+      'UPDATE jobs SET status = ?, time_start = CURRENT_TIMESTAMP WHERE id = ?',
+      ['printing', jobid]
+    );
+
+    res.json({ success: true, message: 'Print started' });
+  } catch (error) {
+    console.error('Error starting print:', error);
+    res.status(500).json({ error: 'Failed to start print', details: error.message });
+  }
+});
+
+export default router;
