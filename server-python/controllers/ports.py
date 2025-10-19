@@ -186,3 +186,28 @@ def getFabricatorById():
     except Exception as e:
         app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
+
+@ports_bp.route("/api/fabricators/models", methods=["GET"])
+def getFabricatorModels():
+    """Get unique printer models from the database."""
+    try:
+        # Get all fabricators
+        fabricators = Fabricator.queryAll()
+
+        # Extract unique models
+        models = set()
+        for fab in fabricators:
+            # Check if fabricator has a model attribute
+            if hasattr(fab, 'model') and fab.model:
+                models.add(fab.model)
+
+        # If no models found, return default list
+        if not models:
+            return jsonify(['Prusa MK3', 'Prusa MK4', 'Ender 3', 'MakerBot Replicator'])
+
+        # Return sorted list of unique models
+        return jsonify(sorted(list(models)))
+    except Exception as e:
+        app.handle_errors_and_logging(e)
+        # Return default models on error
+        return jsonify(['Prusa MK3', 'Prusa MK4', 'Ender 3', 'MakerBot Replicator'])
