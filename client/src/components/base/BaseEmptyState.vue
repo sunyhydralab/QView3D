@@ -7,15 +7,15 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  iconColor: 'text-gray-400'
+  iconColor: 'text-dark-primary dark:text-light-primary'
 });
 </script>
 
 <template>
   <div class="text-center py-16 animate-fade-in">
     <i :class="[icon, iconColor]" class="text-6xl mb-4" />
-    <p class="text-xl font-medium text-gray-700 dark:text-gray-300">{{ title }}</p>
-    <p v-if="description" class="text-gray-500 dark:text-gray-400 mt-2">{{ description }}</p>
+    <p class="text-xl font-medium text-dark-primary dark:text-light-primary">{{ title }}</p>
+    <p v-if="description" class="text-dark-primary dark:text-light-primary mt-2">{{ description }}</p>
     <slot />
   </div>
 </template>

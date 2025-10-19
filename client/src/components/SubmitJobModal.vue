@@ -125,9 +125,9 @@ const allSelected = computed(() =>
     <div class="bg-light-primary dark:bg-dark-primary-light rounded-lg shadow-lg max-w-md w-full mx-4 animate-fade-in">
       <!-- Header -->
       <div class="p-4 flex justify-between items-center">
-        <h3 class="text-lg font-medium text-black dark:text-white">Submit Job</h3>
+        <h3 class="text-lg font-medium text-dark-primary dark:text-light-primary-light">Submit Job</h3>
         <button @click="emit('close')"
-          class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+          class="text-dark-primary hover:text-accent-primary dark:text-light-primary dark:hover:text-accent-primary-light">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd"
               d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
@@ -140,7 +140,7 @@ const allSelected = computed(() =>
       <div class="p-4 space-y-5">
         <!-- Fabricator Selection -->
         <div class="space-y-2">
-          <h4 class="text-md font-medium text-center text-gray-700 dark:text-gray-300">Select Fabricator</h4>
+          <h4 class="text-md font-medium text-center text-dark-primary dark:text-light-primary">Select Fabricator</h4>
           <div class="flex justify-center">
             <button @click="toggleSelectAll"
               class="px-4 py-2 bg-accent-primary text-white rounded-md hover:bg-accent-primary-dark">
@@ -171,7 +171,7 @@ const allSelected = computed(() =>
 
           <!-- File Upload -->
           <div class="space-y-1">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label class="block text-sm font-medium text-dark-primary dark:text-light-primary">
               Upload your .gcode file
               <span class="text-red-500 ml-1">*</span>
             </label>
@@ -185,8 +185,8 @@ const allSelected = computed(() =>
               </label>
 
               <!-- File name preview -->
-              <div class="flex-1 min-w-0 px-3 py-2 bg-gray-100 dark:bg-dark-primary rounded-md flex items-center">
-                <span class="text-gray-500 dark:text-gray-400 truncate">{{ fileName }}</span>
+              <div class="flex-1 min-w-0 px-3 py-2 bg-light-primary dark:bg-dark-primary rounded-md flex items-center">
+                <span class="text-dark-primary dark:text-light-primary truncate">{{ fileName }}</span>
               </div>
 
               <!-- Image Button -->
@@ -206,30 +206,30 @@ const allSelected = computed(() =>
 
           <!-- Quantity Input -->
           <div>
-            <label for="quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantity</label>
+            <label for="quantity" class="block text-sm font-medium text-dark-primary dark:text-light-primary">Quantity</label>
             <input id="quantity" type="number" min="1" v-model="quantity"
-              class="bg-light-primary-light dark:bg-dark-primary w-full px-3 py-2 rounded-md text-gray-700 dark:text-light-primary focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
+              class="bg-light-primary-light dark:bg-dark-primary w-full px-3 py-2 rounded-md text-dark-primary dark:text-light-primary focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
           </div>
 
           <!-- Ticket ID -->
           <div>
-            <label for="ticketId" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Ticket ID</label>
+            <label for="ticketId" class="block text-sm font-medium text-dark-primary dark:text-light-primary">Ticket ID</label>
             <input id="ticketId" type="number" min="0" v-model="ticketId"
-              class="bg-light-primary-light dark:bg-dark-primary w-full px-3 py-2 rounded-md text-gray-700 dark:text-light-primary focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
+              class="bg-light-primary-light dark:bg-dark-primary w-full px-3 py-2 rounded-md text-dark-primary dark:text-light-primary focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
           </div>
 
           <!-- Job Name -->
           <div>
-            <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name<span
+            <label for="name" class="block text-sm font-medium text-dark-primary dark:text-light-primary">Name<span
                 class="text-red-500 ml-1">*</span></label>
             <input id="name" type="text" required placeholder="Enter job name" v-model="jobName"
-              class="bg-light-primary-light dark:bg-dark-primary w-full px-3 py-2 rounded-md text-gray-700 dark:text-light-primary focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
+              class="bg-light-primary-light dark:bg-dark-primary w-full px-3 py-2 rounded-md text-dark-primary dark:text-light-primary focus:outline-none focus:border-accent-primary focus:ring-2 focus:ring-accent-primary" />
           </div>
 
           <!-- No Fabricator Message -->
-          <p v-if="!anySelected" class="text-[11px] text-center text-gray-500 dark:text-gray-400">
-            <span class="text-red-400">No fabricator selected</span>, job will be <span
-              class="text-accent-primary-light">auto queued</span> to fabricator with least jobs
+          <p v-if="!anySelected" class="text-[11px] text-center text-dark-primary dark:text-light-primary">
+            <span class="text-red-500 dark:text-red-400">No fabricator selected</span>, job will be <span
+              class="text-accent-primary dark:text-accent-primary-light">auto queued</span> to fabricator with least jobs
           </p>
 
           <!-- Footer -->

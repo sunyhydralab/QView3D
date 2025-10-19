@@ -62,15 +62,15 @@ async function handleDeregister() {
       
       <div class="space-y-3">
         <!-- Model info -->
-        <div class="flex items-center text-gray-700 dark:text-gray-300">
+        <div class="flex items-center text-dark-primary dark:text-light-primary">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-accent-primary" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0110 2v5a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 01.7-.954l6-2a1 1 0 011.3.954V2zm1.4 9.154a1 1 0 00-1.4.897v5.047a1 1 0 001.3.953l6-2A1 1 0 0019 14v-5a1 1 0 00-1-1h-5a1 1 0 00-.3.046l-6 2z" clip-rule="evenodd" />
           </svg>
           <span class="truncate text-sm">{{ model }}</span>
         </div>
-        
+
         <!-- Date info -->
-        <div class="flex items-center text-gray-700 dark:text-gray-300">
+        <div class="flex items-center text-dark-primary dark:text-light-primary">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-accent-primary" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
           </svg>
@@ -86,12 +86,12 @@ async function handleDeregister() {
     </div>
     
     <!-- Card actions -->
-    <div 
-      class="px-5 py-3 bg-gray-50 dark:bg-dark-primary flex justify-end space-x-2"
+    <div
+      class="px-5 py-3 bg-light-primary dark:bg-dark-primary flex justify-end space-x-2"
     >
       <!-- Deregister button -->
-      <button 
-        class="p-1 text-gray-500 hover:text-red-500 transition-colors duration-200 rounded flex items-center"
+      <button
+        class="p-1 text-dark-primary dark:text-light-primary hover:text-red-500 dark:hover:text-red-400 transition-colors duration-200 rounded flex items-center"
         @click="handleDeregister"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
