@@ -6,7 +6,7 @@
         <h1 class="text-4xl font-bold bg-gradient-to-r from-accent-primary via-accent-primary-light to-accent-secondary bg-clip-text text-transparent">
           Issue Tracker
         </h1>
-        <p class="mt-2 text-gray-600 dark:text-gray-400">
+        <p class="mt-2 text-dark-primary dark:text-light-primary">
           Monitor and manage printer, job, and software issues
         </p>
       </div>
@@ -39,7 +39,7 @@
             class="flex-1 relative z-10 px-6 py-4 rounded-xl font-medium transition-all duration-200"
             :class="activeTab === tab.id
               ? 'text-white'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-primary'"
+              : 'text-dark-primary dark:text-light-primary hover:bg-light-primary dark:hover:bg-dark-primary'"
           >
             <div class="flex items-center justify-center space-x-2">
               <i :class="tab.icon" class="text-lg"/>
@@ -129,10 +129,17 @@ const activeComponent = computed(() => {
 });
 
 const filteredIssues = computed(() => {
+  if (!issues.value || !Array.isArray(issues.value)) {
+    return [];
+  }
   return issues.value.filter(issue => issue.category === activeTab.value);
 });
 
 const getCountByCategory = (category) => {
+  // Defensive check to prevent errors if issues.value is undefined
+  if (!issues.value || !Array.isArray(issues.value)) {
+    return 0;
+  }
   return issues.value.filter(issue =>
     issue.category === category && issue.status === 'open'
   ).length;
@@ -186,10 +193,13 @@ const handleTouchEnd = () => {
 
 const loadIssues = async () => {
   try {
-    const response = await api('getissues', 'GET');
-    issues.value = response;
+    const response = await api('getissues', undefined, 'GET');
+    // Ensure we always have an array, even if the API returns unexpected data
+    issues.value = response?.issues || [];
   } catch (error) {
     console.error('Failed to load issues:', error);
+    // Keep issues as empty array on error to prevent filter errors
+    issues.value = [];
   }
 };
 
