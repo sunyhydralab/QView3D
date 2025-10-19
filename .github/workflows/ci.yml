@@ -30,18 +30,18 @@ jobs:
           npm run build
         working-directory: client
 
-      - name: Setup server
+      - name: Setup Python server
         run: |
-          cd ./server/
+          cd ./server-python/
           pip install -r dependencies.txt
-          flask db init 
-          flask db migrate 
+          flask db init
+          flask db migrate
           flask db upgrade
 
-      - name: Start server
+      - name: Start Python server
         run: |
           nohup flask run &
-        working-directory: server
+        working-directory: server-python
 
       - name: Wait for server to start
         run: |
