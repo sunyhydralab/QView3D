@@ -9,8 +9,10 @@ import os
 QView3D Application Launcher
 ============================
 
-Frontend Port Configuration:
-- The frontend allows switching between backends in the settings panel
+Architecture:
+- Middleware (port 3500) is ALWAYS running - it's the permanent communication layer
+- Frontend ALWAYS connects to middleware (port 3500)
+- Middleware routes requests to the appropriate backend (Python or JavaScript)
 - Clear your browser's localStorage if you encounter port issues:
   1. Open browser console (F12)
   2. Run: localStorage.clear()
@@ -20,7 +22,7 @@ Backend Modes:
 - python: Python Flask backend (port 8000) - DEFAULT
 - javascript: Node.js backend (port 3000) - Serial communication focus
 
-Server switching is handled in the frontend settings panel.
+The middleware automatically routes requests and provides fallback between backends.
 """
 
 # TODO Allow a .env file to overwrite the below configurations
@@ -28,6 +30,7 @@ Server switching is handled in the frontend settings panel.
 CLIENT_LOCAL_PATH = "client"
 SERVER_LOCAL_PATH = "server-python"
 JS_SERVER_LOCAL_PATH = "server-javascript"
+MIDDLEWARE_LOCAL_PATH = "middleware"
 
 # The name of the database file
 DATABASE_FILE_NAME="QView.db"
@@ -106,6 +109,15 @@ def start_js_server():
         "node src/index.js",
         shell=True,
         cwd=JS_SERVER_LOCAL_PATH
+    )
+
+def start_middleware():
+    # Start the middleware in the background
+    # Middleware is ALWAYS running - it's the permanent communication layer
+    return subprocess.Popen(
+        "node src/index.js",
+        shell=True,
+        cwd=MIDDLEWARE_LOCAL_PATH
     )
 
 
@@ -210,6 +222,13 @@ def install_software(current_os: str):
         cwd=JS_SERVER_LOCAL_PATH
     )
 
+    # Install middleware dependencies
+    subprocess.run(
+        "npm i",
+        shell=True,
+        cwd=MIDDLEWARE_LOCAL_PATH
+    )
+
     print("Install complete")
 
 
@@ -241,8 +260,10 @@ def start_debug(fresh_database):
         print("Starting QView3D with Python Backend")
         print("="*60)
         print(f"Frontend: http://{VITE_CLIENT_IP}:{VITE_CLIENT_PORT}")
-        print(f"Backend: http://{FLASK_SERVER_IP}:{FLASK_SERVER_PORT}")
+        print(f"Middleware: http://localhost:3500 (Always On)")
+        print(f"Python Backend: http://{FLASK_SERVER_IP}:{FLASK_SERVER_PORT}")
         print("-"*60)
+        processes.append(start_middleware())  # ALWAYS start middleware first
         processes.append(start_client())
         processes.append(start_server(fresh_database))
     elif BACKEND_MODE == "javascript":
@@ -251,8 +272,10 @@ def start_debug(fresh_database):
         print("Starting QView3D with JavaScript Backend")
         print("="*60)
         print(f"Frontend: http://{VITE_CLIENT_IP}:{VITE_CLIENT_PORT}")
-        print(f"Backend: http://localhost:{JS_SERVER_PORT}")
+        print(f"Middleware: http://localhost:3500 (Always On)")
+        print(f"JavaScript Backend: http://localhost:{JS_SERVER_PORT}")
         print("-"*60)
+        processes.append(start_middleware())  # ALWAYS start middleware first
         processes.append(start_client())
         processes.append(start_js_server())
 
