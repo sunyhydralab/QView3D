@@ -5,7 +5,9 @@
   "main": "run.js",
   "type": "module",
   "scripts": {
-    "run": "echo 'Just run files individually'"
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "node --test test/**/*.test.js"
   },
   "repository": {
     "type": "git",
@@ -27,6 +29,13 @@
     "express": "5.1.0",
     "@serialport/stream": "13.0.0",
     "@serialport/bindings-cpp": "13.0.0",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "ws": "^8.18.0",
+    "sqlite3": "^5.1.7",
+    "multer": "^1.4.5-lts.1",
+    "compression": "^1.7.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
   }
 }
