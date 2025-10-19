@@ -1,28 +1,54 @@
 import express from 'express';
+import cors from 'cors';
+import compression from 'compression';
 import { SerialPort } from './serialport.js';
 import { Printer } from './printer.js';
-import cors from 'cors';
+import database from './database.js';
+import jobsRouter from './routes/jobs.js';
+import fabricatorsRouter from './routes/fabricators.js';
+import issuesRouter from './routes/issues.js';
 
 const app = express();
-const PORT = 3000;
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const PORT = process.env.PORT || 3000;
 
 // Store active printers
 const activePrinters = new Map();
+
+// Initialize database
+database.init()
+  .then(() => console.log('Database initialized'))
+  .catch(err => {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
+  });
+
+// Middleware
+app.use(cors());
+app.use(compression());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Request logging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
 
 // Health endpoint
 app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
-    service: 'qview3d-javascript-backend'
+    service: 'qview3d-javascript-backend',
+    uptime: process.uptime()
   });
 });
 
-// Get available serial ports
+// Register route handlers
+app.use('/', jobsRouter);
+app.use('/', fabricatorsRouter);
+app.use('/', issuesRouter);
+
+// Serial port direct access routes
 app.get('/api/serial/ports', async (req, res) => {
   try {
     const ports = await SerialPort.list();
@@ -40,7 +66,6 @@ app.get('/api/serial/ports', async (req, res) => {
   }
 });
 
-// Connect to a printer
 app.post('/api/serial/connect', (req, res) => {
   try {
     const { port, baudRate = 115200 } = req.body;
@@ -69,7 +94,6 @@ app.post('/api/serial/connect', (req, res) => {
   }
 });
 
-// Send G-code command
 app.post('/api/serial/send', (req, res) => {
   try {
     const { port, command } = req.body;
@@ -84,7 +108,6 @@ app.post('/api/serial/send', (req, res) => {
       return res.status(404).json({ error: 'No active printer on this port' });
     }
 
-    // Send raw command
     printer._sendGcodeCommand(command + '\n');
 
     res.json({
@@ -101,7 +124,6 @@ app.post('/api/serial/send', (req, res) => {
   }
 });
 
-// Get printer status
 app.get('/api/printers', (req, res) => {
   const printers = Array.from(activePrinters.entries()).map(([port, printer]) => ({
     port,
@@ -111,7 +133,6 @@ app.get('/api/printers', (req, res) => {
   res.json(printers);
 });
 
-// Disconnect printer
 app.post('/api/serial/disconnect', (req, res) => {
   try {
     const { port } = req.body;
@@ -142,6 +163,27 @@ app.post('/api/serial/disconnect', (req, res) => {
   }
 });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    details: err.message
+  });
+});
+
+// Start server
 app.listen(PORT, () => {
   console.log(`QView3D JavaScript backend listening on port ${PORT}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  database.close().then(() => process.exit(0));
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  database.close().then(() => process.exit(0));
 });
