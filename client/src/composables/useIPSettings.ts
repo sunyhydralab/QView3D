@@ -1,4 +1,9 @@
 import {computed} from 'vue'
+import { migratePortSettings, validatePortSettings } from '@/utils/portMigration'
+
+// Run migration on module load
+migratePortSettings();
+validatePortSettings();
 
 // declare IP settings
 export const API_IP_ADDRESS = computed(() => localStorage.getItem("apiIPAddress") || "localhost")

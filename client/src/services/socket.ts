@@ -14,11 +14,15 @@ export function connectSocket() {
     return
   }
 
-  // Create the socket connection
+  console.log(`Attempting socket connection to ${API_URL.value}`)
+
+  // Create the socket connection with improved resilience
   socket.value = io(API_URL.value, {
-    reconnectionAttempts: 5,
-    reconnectionDelay: 1000,
-    timeout: 5000,
+    reconnectionAttempts: 3,
+    reconnectionDelay: 2000,
+    reconnectionDelayMax: 10000,
+    timeout: 10000,
+    transports: ['websocket', 'polling'], // Try both transports
   })
 
   // Connection events

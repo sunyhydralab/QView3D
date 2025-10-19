@@ -5,6 +5,25 @@ import os
 
 # NPM and Python3 with venv and pip must be installed to use this script
 
+"""
+QView3D Application Launcher
+============================
+
+Frontend Port Configuration:
+- The frontend now defaults to port 3500 (middleware) for best experience
+- If you had port 8000 cached, clear your browser's localStorage:
+  1. Open browser console (F12)
+  2. Run: localStorage.clear()
+  3. Refresh the page
+
+Backend Modes:
+- hybrid: Runs both backends with middleware router (port 3500) - RECOMMENDED
+- python: Python Flask backend only (port 8000)
+- javascript: Node.js backend only (port 3001)
+
+In Debug Mode, you can switch between backends using the settings panel.
+"""
+
 # TODO Allow a .env file to overwrite the below configurations
 # Relative locations of the client and server directories from the root directory
 CLIENT_LOCAL_PATH = "client"
@@ -277,6 +296,13 @@ def start_debug(fresh_database):
         processes.append(start_js_server())
     elif BACKEND_MODE == "hybrid":
         # Hybrid mode: start both backends and middleware
+        print("\n" + "="*60)
+        print("Starting QView3D in Hybrid Mode")
+        print("="*60)
+        print(f"Frontend will connect to middleware on port {MIDDLEWARE_PORT}")
+        print("Backends: Python (8000) + JavaScript (3001)")
+        print("The middleware provides automatic failover between backends")
+        print("-"*60)
         processes.append(start_client())
         processes.append(start_server(fresh_database))
         processes.append(start_js_server())
