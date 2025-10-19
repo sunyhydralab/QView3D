@@ -35,6 +35,11 @@ export class BackendSelector {
     // Check route map for specific routes
     for (const [pattern, backendName] of Object.entries(this.routeMap)) {
       if (this.matchRoute(path, pattern)) {
+        // Handle 'either' - load balance between backends
+        if (backendName === 'either') {
+          return this.selectHealthyBackend();
+        }
+
         const backend = this.backends[backendName];
 
         // If preferred backend is healthy, use it
@@ -58,6 +63,27 @@ export class BackendSelector {
     // Default to Python backend
     logger.debug(`No route match for ${path}, using default backend`);
     return this.backends[defaultBackend];
+  }
+
+  // Select a healthy backend for load balancing
+  selectHealthyBackend() {
+    const pythonHealthy = this.healthMonitor.isBackendHealthy('python');
+    const javascriptHealthy = this.healthMonitor.isBackendHealthy('javascript');
+
+    // Both healthy - alternate based on a simple round-robin
+    if (pythonHealthy && javascriptHealthy) {
+      this.roundRobinCounter = (this.roundRobinCounter || 0) + 1;
+      return this.roundRobinCounter % 2 === 0
+        ? this.backends.python
+        : this.backends.javascript;
+    }
+
+    // Only one healthy - use the healthy one
+    if (pythonHealthy) return this.backends.python;
+    if (javascriptHealthy) return this.backends.javascript;
+
+    // None healthy - default to python
+    return this.backends.python;
   }
 
   getAlternateBackend(currentBackendName) {
