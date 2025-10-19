@@ -1,23 +1,20 @@
-import logging
+"""Simplified error service"""
 import traceback
-from Classes.Loggers.ABCLogger import ABCLogger
+from services.logger import logger
 
 class ErrorService:
     @staticmethod
-    def handle_errors_and_logging(e: Exception | str, logger=None, level=logging.ERROR):
-        """
-        Handles errors and logs them
-        :param Exception | str e: the exception to handle
-        :param ABCLogger | None logger: the logger to use
-        :param int level: the logging level
-        """
-        if logger is not None:
-            logger.log(level, e, stacklevel=5)
-        elif logger is None:
-            if isinstance(e, str):
-                print(e.strip())
-            else:
-                print(traceback.format_exception(None, e, e.__traceback__))
+    def handle_errors_and_logging(e, log_instance=None, level=None):
+        """Simple error handler"""
+        error_msg = str(e) if isinstance(e, Exception) else e
+
+        # Use provided logger or global
+        log = log_instance or logger
+
+        # Log error with traceback in debug mode
+        if logger.debug:
+            log.error(error_msg, exc=traceback.format_exc())
         else:
-            logger.log(level, e, stacklevel=5)
+            log.error(error_msg)
+
         return False
