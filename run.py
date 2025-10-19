@@ -154,6 +154,18 @@ def install_software(current_os: str):
         cwd=CLIENT_LOCAL_PATH
     )
 
+    # Install middleware dependencies
+    subprocess.run(
+        ["npm", "i"],
+        cwd=MIDDLEWARE_LOCAL_PATH
+    )
+
+    # Install JavaScript server dependencies
+    subprocess.run(
+        ["npm", "i"],
+        cwd=JS_SERVER_LOCAL_PATH
+    )
+
     print("Install complete")
 
 def get_backend_selection():
