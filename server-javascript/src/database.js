@@ -67,8 +67,15 @@ class Database {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           title TEXT NOT NULL,
           description TEXT,
+          category TEXT DEFAULT 'printer',
           severity TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          fabricator_id INTEGER,
+          job_id INTEGER,
+          status TEXT DEFAULT 'open',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          resolved_at DATETIME,
+          FOREIGN KEY (fabricator_id) REFERENCES fabricators (id),
+          FOREIGN KEY (job_id) REFERENCES jobs (id)
         )
       `;
 

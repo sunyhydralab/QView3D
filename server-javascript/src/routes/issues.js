@@ -6,7 +6,23 @@ const router = express.Router();
 // Get all issues
 router.get('/getissues', async (req, res) => {
   try {
-    const issues = await database.all('SELECT * FROM issues ORDER BY created_at DESC');
+    const { category, status } = req.query;
+    let query = 'SELECT * FROM issues WHERE 1=1';
+    const params = [];
+
+    if (category) {
+      query += ' AND category = ?';
+      params.push(category);
+    }
+
+    if (status) {
+      query += ' AND status = ?';
+      params.push(status);
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    const issues = await database.all(query, params);
     res.json(issues);
   } catch (error) {
     console.error('Error getting issues:', error);
@@ -17,11 +33,11 @@ router.get('/getissues', async (req, res) => {
 // Create new issue
 router.post('/createissue', async (req, res) => {
   try {
-    const { title, description, severity } = req.body;
+    const { title, description, category, severity, fabricator_id, job_id } = req.body;
 
     const result = await database.run(
-      'INSERT INTO issues (title, description, severity) VALUES (?, ?, ?)',
-      [title, description || '', severity || 'low']
+      'INSERT INTO issues (title, description, category, severity, fabricator_id, job_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [title, description || '', category || 'printer', severity || 'low', fabricator_id || null, job_id || null]
     );
 
     res.json({
@@ -38,7 +54,7 @@ router.post('/createissue', async (req, res) => {
 // Update issue
 router.post('/updateissue', async (req, res) => {
   try {
-    const { id, title, description, severity } = req.body;
+    const { id, title, description, severity, status, category } = req.body;
 
     const issue = await database.get('SELECT id FROM issues WHERE id = ?', [id]);
 
@@ -47,8 +63,8 @@ router.post('/updateissue', async (req, res) => {
     }
 
     await database.run(
-      'UPDATE issues SET title = ?, description = ?, severity = ? WHERE id = ?',
-      [title, description, severity, id]
+      'UPDATE issues SET title = ?, description = ?, severity = ?, status = ?, category = ? WHERE id = ?',
+      [title, description, severity, status, category, id]
     );
 
     res.json({ success: true, message: 'Issue updated successfully' });
@@ -97,6 +113,50 @@ router.get('/getissue', async (req, res) => {
   } catch (error) {
     console.error('Error getting issue:', error);
     res.status(500).json({ error: 'Failed to get issue', details: error.message });
+  }
+});
+
+// Resolve issue
+router.post('/resolveissue', async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    const issue = await database.get('SELECT id FROM issues WHERE id = ?', [id]);
+
+    if (!issue) {
+      return res.status(404).json({ error: 'Issue not found' });
+    }
+
+    await database.run(
+      'UPDATE issues SET status = ?, resolved_at = CURRENT_TIMESTAMP WHERE id = ?',
+      ['resolved', id]
+    );
+
+    res.json({ success: true, message: 'Issue resolved successfully' });
+  } catch (error) {
+    console.error('Error resolving issue:', error);
+    res.status(500).json({ error: 'Failed to resolve issue', details: error.message });
+  }
+});
+
+// Get issues by category
+router.get('/getissuesbycategory', async (req, res) => {
+  try {
+    const { category } = req.query;
+
+    if (!category || !['printer', 'job', 'software'].includes(category)) {
+      return res.status(400).json({ error: 'Invalid category. Must be printer, job, or software' });
+    }
+
+    const issues = await database.all(
+      'SELECT * FROM issues WHERE category = ? ORDER BY created_at DESC',
+      [category]
+    );
+
+    res.json(issues);
+  } catch (error) {
+    console.error('Error getting issues by category:', error);
+    res.status(500).json({ error: 'Failed to get issues', details: error.message });
   }
 });
 
