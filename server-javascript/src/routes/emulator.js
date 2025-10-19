@@ -1,395 +1,231 @@
+/**
+ * Emulator Routes - Simplified Mock Printer Management
+ *
+ * This module provides simplified mock printer functionality for frontend testing.
+ * Unlike the Python backend which creates full database entries, this JavaScript
+ * version keeps it simple:
+ *
+ * - Creates mock printers with EMU_ prefix ports (e.g., EMU_A3F7G9H2)
+ * - Stores them in the database just like regular printers
+ * - No complex G-code simulation or temperature tracking
+ * - Just basic database entries for UI testing
+ *
+ * Endpoints:
+ * - POST /startemulator - Create a new mock printer
+ * - POST /disconnectemulator - Remove a mock printer
+ * - GET /list - List all mock printers
+ * - POST /updatestatus/:printerId - Update mock printer status for testing
+ */
 import express from 'express';
 import database from '../database.js';
-import virtualSerialManager, { VirtualSerialPort } from '../virtualSerial.js';
+import virtualSerialManager from '../virtualSerial.js';
 import wsManager from '../websocket.js';
 import fabricatorManager from '../fabricatorManager.js';
 
 const router = express.Router();
 
-// Store active emulator instances
-const activeEmulators = new Map();
+// Generate random string for mock serial
+function generateMockSerial() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
 
-// Start emulator
+// Start emulator - simplified to just create a mock printer in the database
 router.post('/startemulator', async (req, res) => {
   try {
     const { model, config } = req.body;
+    const printerName = config?.name || `Mock ${model || 'Printer'}`;
 
-    // Create virtual serial port
-    const portPath = virtualSerialManager.createPort(config?.port || null);
-    const virtualPort = virtualSerialManager.getPort(portPath);
+    // Generate a unique mock port with EMU_ prefix
+    const mockSerial = generateMockSerial();
+    const portPath = `EMU_${mockSerial}`;
 
-    // Open the virtual port
-    virtualPort.open((err) => {
-      if (err) {
-        console.error('Error opening virtual port:', err);
-        return res.status(500).json({ error: 'Failed to open virtual port' });
-      }
-
-      // Store emulator info
-      activeEmulators.set(portPath, {
-        model,
-        config: {
-          ...config,
-          port: portPath
-        },
-        virtualPort,
-        started: new Date()
-      });
-
-      // Broadcast status update
-      wsManager.broadcast({
-        event: 'emulator_status',
-        data: {
-          status: 'Connected',
-          message: `Emulator started on ${portPath}`
-        }
-      });
-
-      console.log(`Emulator started: ${model} on ${portPath}`);
-
-      res.json({
-        success: true,
-        message: 'Emulator started successfully',
-        port: portPath,
-        model
-      });
-    });
-  } catch (error) {
-    console.error('Error starting emulator:', error);
-    res.status(500).json({ error: 'Failed to start emulator', details: error.message });
-  }
-});
-
-// Disconnect emulator
-router.post('/disconnectemulator', async (req, res) => {
-  try {
-    const { printerConfig } = req.body;
-    const portPath = printerConfig?.port;
-
-    if (!portPath) {
-      return res.status(400).json({ error: 'No port specified' });
-    }
-
-    const emulator = activeEmulators.get(portPath);
-
-    if (!emulator) {
-      return res.status(404).json({ error: 'Emulator not found' });
-    }
-
-    // Close virtual port
-    if (emulator.virtualPort) {
-      emulator.virtualPort.close();
-    }
-
-    // Delete virtual port
-    virtualSerialManager.deletePort(portPath);
-
-    // Remove from active emulators
-    activeEmulators.delete(portPath);
-
-    // Try to remove from database if it was registered
-    const fabricator = await database.get('SELECT id FROM fabricators WHERE devicePort = ?', [portPath]);
-    if (fabricator) {
-      await database.run('DELETE FROM fabricators WHERE id = ?', [fabricator.id]);
-      fabricatorManager.removeQueue(fabricator.id);
-    }
-
-    // Broadcast status update
-    wsManager.broadcast({
-      event: 'emulator_status',
-      data: {
-        status: 'Offline',
-        message: 'Emulator disconnected'
-      }
-    });
-
-    res.json({
-      success: true,
-      message: 'Emulator disconnected successfully'
-    });
-  } catch (error) {
-    console.error('Error disconnecting emulator:', error);
-    res.status(500).json({ error: 'Failed to disconnect emulator', details: error.message });
-  }
-});
-
-// Register emulator as a fabricator
-router.post('/registeremulator', async (req, res) => {
-  try {
-    const { model, config } = req.body;
-    const portPath = config?.port;
-
-    if (!portPath) {
-      return res.status(400).json({ error: 'No port specified' });
-    }
-
-    const emulator = activeEmulators.get(portPath);
-
-    if (!emulator) {
-      return res.status(404).json({ error: 'Emulator not found. Please start the emulator first.' });
-    }
-
-    // Check if already registered
+    // Check if this port already exists
     const existing = await database.get('SELECT id FROM fabricators WHERE devicePort = ?', [portPath]);
-
     if (existing) {
-      return res.json({
-        success: true,
-        message: 'Emulator already registered',
-        fabricator_id: existing.id
-      });
+      return res.status(400).json({ error: 'Mock printer with this port already exists' });
     }
 
-    // Get max position
+    // Get max position for ordering
     const maxPos = await database.get('SELECT MAX(position) as max_pos FROM fabricators');
     const position = (maxPos?.max_pos || 0) + 1;
 
-    // Register as fabricator
+    // Create mock printer in database
     const result = await database.run(
       'INSERT INTO fabricators (name, devicePort, position, status) VALUES (?, ?, ?, ?)',
-      [config.name || 'Emulator Printer', portPath, position, 'ready']
+      [printerName, portPath, position, 'ready']
     );
 
-    // Create queue for the emulator
-    fabricatorManager.createQueue(result.id);
-
-    // Broadcast registration success
-    wsManager.broadcast({
-      event: 'emulator_registered',
-      data: {
-        name: config.name || 'Emulator Printer',
-        id: result.id
-      }
-    });
-
+    // Broadcast to frontend
     wsManager.broadcast({
       event: 'fabricator_added',
       data: {
         id: result.id,
-        name: config.name || 'Emulator Printer',
+        name: printerName,
         devicePort: portPath,
         status: 'ready'
       }
     });
 
-    console.log(`Emulator registered as fabricator ID: ${result.id}`);
+    console.log(`Mock printer created: ${printerName} on ${portPath}`);
 
     res.json({
       success: true,
-      message: 'Emulator registered successfully',
-      fabricator_id: result.id
+      message: 'Mock printer created successfully',
+      port: portPath,
+      model: model || 'Mock Printer',
+      printer: {
+        id: result.id,
+        name: printerName,
+        port: portPath,
+        status: 'ready'
+      }
     });
   } catch (error) {
-    console.error('Error registering emulator:', error);
-    res.status(500).json({ error: 'Failed to register emulator', details: error.message });
+    console.error('Error creating mock printer:', error);
+    res.status(500).json({ error: 'Failed to create mock printer', details: error.message });
   }
 });
 
-// Set emulator temperature
-router.post('/setemulatortemperature', async (req, res) => {
+// Disconnect emulator - remove mock printer from database
+router.post('/disconnectemulator', async (req, res) => {
   try {
-    const { extruder, bed, port } = req.body;
+    const { printerConfig, port } = req.body;
+    const portPath = port || printerConfig?.port;
 
-    // Find the emulator port
-    let emulator = null;
-    let emulatorPort = null;
-
-    if (port) {
-      emulator = activeEmulators.get(port);
-      emulatorPort = port;
-    } else {
-      // Find first active emulator
-      for (const [path, emu] of activeEmulators.entries()) {
-        emulator = emu;
-        emulatorPort = path;
-        break;
-      }
+    if (!portPath) {
+      return res.status(400).json({ error: 'No port specified' });
     }
 
-    if (!emulator) {
-      return res.status(404).json({ error: 'No active emulator found' });
+    // Check if it's a mock printer (EMU_ prefix)
+    if (!portPath.startsWith('EMU_')) {
+      return res.status(400).json({ error: 'Can only disconnect mock printers' });
     }
 
-    const virtualPort = emulator.virtualPort;
+    // Remove from database
+    const fabricator = await database.get('SELECT id FROM fabricators WHERE devicePort = ?', [portPath]);
+    if (fabricator) {
+      await database.run('DELETE FROM fabricators WHERE id = ?', [fabricator.id]);
+      fabricatorManager.removeQueue(fabricator.id);
 
-    if (extruder !== undefined) {
-      virtualPort.write(`M104 S${extruder}\n`);
-    }
-
-    if (bed !== undefined) {
-      virtualPort.write(`M140 S${bed}\n`);
-    }
-
-    // Broadcast temperature update
-    setTimeout(() => {
+      // Broadcast removal
       wsManager.broadcast({
-        event: 'emulator_temperature',
-        data: {
-          extruder: virtualPort.state.extruderTemp,
-          bed: virtualPort.state.bedTemp,
-          targetExtruder: virtualPort.state.targetExtruderTemp,
-          targetBed: virtualPort.state.targetBedTemp
-        }
+        event: 'fabricator_removed',
+        data: { id: fabricator.id }
       });
-    }, 100);
+    }
+
+    console.log(`Mock printer disconnected: ${portPath}`);
 
     res.json({
       success: true,
-      message: 'Temperature set successfully'
+      message: 'Mock printer disconnected successfully'
     });
   } catch (error) {
-    console.error('Error setting temperature:', error);
-    res.status(500).json({ error: 'Failed to set temperature', details: error.message });
+    console.error('Error disconnecting mock printer:', error);
+    res.status(500).json({ error: 'Failed to disconnect mock printer', details: error.message });
   }
 });
 
-// Run emulator test
+// Register emulator - same as start emulator (for backward compatibility)
+router.post('/registeremulator', async (req, res) => {
+  // Just redirect to startemulator since they do the same thing now
+  return router.post('/startemulator')(req, res);
+});
+
+// List all mock printers
+router.get('/list', async (req, res) => {
+  try {
+    // Query all fabricators with EMU_ prefix
+    const mockPrinters = await database.all('SELECT * FROM fabricators WHERE devicePort LIKE "EMU_%"');
+
+    const printersList = mockPrinters.map(printer => ({
+      id: printer.id,
+      name: printer.name,
+      model: printer.model || 'Mock Printer',
+      port: printer.devicePort,
+      status: printer.status
+    }));
+
+    res.json({
+      success: true,
+      printers: printersList
+    });
+  } catch (error) {
+    console.error('Error listing mock printers:', error);
+    res.status(500).json({ error: 'Failed to list mock printers', details: error.message });
+  }
+});
+
+// Update mock printer status (for testing)
+router.post('/updatestatus/:printerId', async (req, res) => {
+  try {
+    const { printerId } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ['ready', 'printing', 'paused', 'error', 'offline', 'maintenance'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        error: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
+      });
+    }
+
+    // Find the fabricator
+    const fabricator = await database.get('SELECT * FROM fabricators WHERE id = ?', [printerId]);
+
+    if (!fabricator) {
+      return res.status(404).json({ error: 'Printer not found' });
+    }
+
+    // Check if it's a mock printer
+    if (!fabricator.devicePort.startsWith('EMU_')) {
+      return res.status(400).json({ error: 'Can only update status of mock printers' });
+    }
+
+    // Update status
+    await database.run('UPDATE fabricators SET status = ? WHERE id = ?', [status, printerId]);
+
+    // Broadcast update
+    wsManager.broadcast({
+      event: 'fabricator_update',
+      data: {
+        id: printerId,
+        status: status
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Status updated successfully',
+      printer_id: printerId,
+      new_status: status
+    });
+  } catch (error) {
+    console.error('Error updating mock printer status:', error);
+    res.status(500).json({ error: 'Failed to update status', details: error.message });
+  }
+});
+
+// Legacy endpoints for backward compatibility (no-op responses)
+router.post('/setemulatortemperature', async (req, res) => {
+  res.json({ success: true, message: 'Temperature setting not needed for mock printers' });
+});
+
 router.post('/runemulatortest', async (req, res) => {
-  try {
-    const { type, port } = req.body;
-
-    // Find the emulator port
-    let emulator = null;
-    let emulatorPort = null;
-
-    if (port) {
-      emulator = activeEmulators.get(port);
-      emulatorPort = port;
-    } else {
-      // Find first active emulator
-      for (const [path, emu] of activeEmulators.entries()) {
-        emulator = emu;
-        emulatorPort = path;
-        break;
-      }
-    }
-
-    if (!emulator) {
-      return res.status(404).json({ error: 'No active emulator found' });
-    }
-
-    const virtualPort = emulator.virtualPort;
-
-    // Run test based on type
-    if (type === 'simple_move') {
-      const commands = [
-        'G28',           // Home
-        'G1 X50 Y50 Z10 F3000',  // Move to position
-        'G1 X0 Y0 F3000',        // Return to origin
-        'M114'           // Report position
-      ];
-
-      for (const cmd of commands) {
-        virtualPort.write(cmd + '\n');
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-    }
-
-    res.json({
-      success: true,
-      message: 'Test completed successfully'
-    });
-  } catch (error) {
-    console.error('Error running test:', error);
-    res.status(500).json({ error: 'Failed to run test', details: error.message });
-  }
+  res.json({ success: true, message: 'Test completed (mock - no actual test run)' });
 });
 
-// Reset emulator
 router.post('/resetemulator', async (req, res) => {
-  try {
-    const { port } = req.body;
-
-    // Find the emulator port
-    let emulator = null;
-
-    if (port) {
-      emulator = activeEmulators.get(port);
-    } else {
-      // Find first active emulator
-      for (const [path, emu] of activeEmulators.entries()) {
-        emulator = emu;
-        break;
-      }
-    }
-
-    if (!emulator) {
-      return res.status(404).json({ error: 'No active emulator found' });
-    }
-
-    const virtualPort = emulator.virtualPort;
-
-    // Reset state
-    virtualPort.state = {
-      x: 0,
-      y: 0,
-      z: 0,
-      e: 0,
-      extruderTemp: 25,
-      bedTemp: 25,
-      targetExtruderTemp: 0,
-      targetBedTemp: 0,
-      fanSpeed: 0,
-      isPrinting: false,
-      progress: 0
-    };
-
-    // Broadcast reset
-    wsManager.broadcast({
-      event: 'emulator_status',
-      data: {
-        status: 'Reset',
-        message: 'Emulator has been reset'
-      }
-    });
-
-    wsManager.broadcast({
-      event: 'emulator_temperature',
-      data: {
-        extruder: 25,
-        bed: 25,
-        targetExtruder: 0,
-        targetBed: 0
-      }
-    });
-
-    res.json({
-      success: true,
-      message: 'Emulator reset successfully'
-    });
-  } catch (error) {
-    console.error('Error resetting emulator:', error);
-    res.status(500).json({ error: 'Failed to reset emulator', details: error.message });
-  }
+  res.json({ success: true, message: 'Reset completed (mock - no state to reset)' });
 });
 
-// Get emulator status
 router.get('/emulatorstatus', async (req, res) => {
-  try {
-    const emulators = [];
-
-    for (const [port, emulator] of activeEmulators.entries()) {
-      const fabricator = await database.get('SELECT * FROM fabricators WHERE devicePort = ?', [port]);
-
-      emulators.push({
-        port,
-        model: emulator.model,
-        config: emulator.config,
-        registered: !!fabricator,
-        fabricator_id: fabricator?.id || null,
-        state: emulator.virtualPort.state,
-        started: emulator.started
-      });
-    }
-
-    res.json({
-      success: true,
-      emulators
-    });
-  } catch (error) {
-    console.error('Error getting emulator status:', error);
-    res.status(500).json({ error: 'Failed to get emulator status', details: error.message });
-  }
+  // Redirect to list endpoint
+  return router.get('/list')(req, res);
 });
 
 export default router;
