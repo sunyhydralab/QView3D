@@ -32,6 +32,7 @@ class Database {
         CREATE TABLE IF NOT EXISTS fabricators (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
+          model TEXT,
           devicePort TEXT UNIQUE,
           hwid TEXT,
           status TEXT DEFAULT 'offline',
@@ -93,6 +94,14 @@ class Database {
             console.error('Error creating jobs table:', err);
             reject(err);
             return;
+          }
+        });
+
+        // Add model column to existing fabricators table if missing
+        this.db.run(`ALTER TABLE fabricators ADD COLUMN model TEXT`, (err) => {
+          // Ignore error if column already exists
+          if (err && !err.message.includes('duplicate column')) {
+            console.log('Model column migration:', err.message);
           }
         });
 

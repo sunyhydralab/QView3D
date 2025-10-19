@@ -192,4 +192,24 @@ router.post('/getfabricatorbyid', async (req, res) => {
   }
 });
 
+// Get all unique printer models from database
+router.get('/models', async (req, res) => {
+  try {
+    // Get unique model names from fabricators
+    const models = await database.all('SELECT DISTINCT model FROM fabricators WHERE model IS NOT NULL ORDER BY model ASC');
+    const modelNames = models.map(m => m.model).filter(Boolean);
+
+    // If no models in database, return common models
+    if (modelNames.length === 0) {
+      return res.json(['Prusa MK3', 'Prusa MK4', 'Ender 3', 'MakerBot Replicator']);
+    }
+
+    res.json(modelNames);
+  } catch (error) {
+    console.error('Error getting printer models:', error);
+    // Return default models on error
+    res.json(['Prusa MK3', 'Prusa MK4', 'Ender 3', 'MakerBot Replicator']);
+  }
+});
+
 export default router;
