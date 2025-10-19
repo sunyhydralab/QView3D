@@ -175,3 +175,20 @@ export async function removeJob(jobarr: number[]) {
     console.error(error)
   }
 }
+
+export async function moveJobInQueue(fabricatorId: number, jobIds: number[]) {
+  try {
+    const response = await api('reorderqueue', {
+      fabricator_id: fabricatorId,
+      job_ids: jobIds
+    })
+    if (response) {
+      return response
+    } else {
+      console.error('Failed to reorder queue')
+    }
+  } catch (error) {
+    console.error('Error reordering queue:', error)
+    throw error
+  }
+}
