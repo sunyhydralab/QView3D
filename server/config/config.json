@@ -3,7 +3,7 @@
     "databaseURI": "QView",
     "emulator_port": 8001,
     "middleware": {
-        "mode": "hybrid",
+        "mode": "python",
         "port": 3500,
         "ws_port": 3501
     },

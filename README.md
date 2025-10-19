@@ -53,23 +53,47 @@ The project is maintained by computer science students at SUNY New Paltz, under 
 
 ## Setup and Installation
 
-The software is currently designed to run on Ubuntu 20.04 LTS and later. MacOS and Windows are supported; but Windows compatibility is still being worked on, and works with npm run start.
+### System Requirements
+- **Ubuntu**: 20.04 LTS or later (native support)
+- **macOS**: Supported
+- **Windows**: Use WSL (Windows Subsystem for Linux) for best compatibility
+
+### Installation Steps
 
 Clone the repository:
-
 ```sh
 git clone https://github.com/sunyhydralab/QView3D.git
+cd QView3D
 ```
 
-Run the following commands to install dependencies and start the application:
+### Running on Different Operating Systems
 
-```sh
-cd QView3D
-``` 
-
+#### Linux/macOS
 ```sh
 python run.py
 ```
+
+#### Windows (using WSL)
+1. Install WSL if not already installed:
+   ```powershell
+   wsl --install
+   ```
+
+2. Open WSL terminal and navigate to project:
+   ```sh
+   cd /mnt/c/path/to/QView3D
+   python run.py
+   ```
+
+#### Windows (native - experimental)
+```sh
+python run.py
+# Note: Serial port access may require administrator privileges
+```
+
+### First Run
+1. Select 'I' to install dependencies
+2. Run again and press Enter for hybrid mode (both backends)
 
 ## Pull Requests
 

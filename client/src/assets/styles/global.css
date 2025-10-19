@@ -29,7 +29,7 @@
 }
 
 .gradient-button {
-  @apply group relative px-6 py-3 rounded-xl font-medium text-white overflow-hidden shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105;
+  @apply relative px-6 py-3 rounded-xl font-medium text-white overflow-hidden shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105;
   @apply bg-gradient-to-r from-accent-primary to-accent-primary-light;
   @apply flex items-center space-x-2;
 }
