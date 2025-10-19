@@ -18,8 +18,7 @@ eventlet>=0.37.0
 gunicorn>=23.0.0
 websockets>=14.1
 uuid>=1.30
-discord.py>=2.4.0
-certifi>=2024.8.30
+certifi==2024.8.30
 typing_extensions>=4.12.2
 setuptools>=76.0.0
 PyVISA>=1.14.1

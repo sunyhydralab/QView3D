@@ -359,15 +359,6 @@ class Fabricator(db.Model):
             # create issue
             from Classes.Issues import Issue
             Issue.create_issue(f"CODE ISSUE: Print Failed: {self.name} - {self.queue[0].file_name_original}", self.error, self.queue[0].id)
-            # send log to discord
-            if Config['discord_enabled']:
-                printFile = self.queue[0].file_name_original.split(".gcode")[0]
-                printFile = "-".join(printFile.split("_"))
-                logFile = os.path.join(root_path, "logs", self.name, printFile, self.queue[0].date.strftime('%m-%d-%Y_%H-%M-%S'), "color", "INFO.log.gz")
-                role_message = '<@&{role_id}>'.format(role_id=Config['discord_issues_role'])
-                from app import sync_send_discord_file
-                sync_send_discord_file(logFile, role_message)
-                print("made it past send_discord_file")
             self.getQueue().deleteJob(self.queue[0].id, self.dbID)
             self.device.disconnect()
         elif self.device.verdict == "cancelled":

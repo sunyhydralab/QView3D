@@ -3,8 +3,6 @@ from flask import jsonify
 from sqlalchemy.exc import SQLAlchemyError
 
 from datetime import datetime
-import discord
-from config.config import Config
 from services.app_service import current_app
 class Issue(db.Model):
 
@@ -112,29 +110,19 @@ class Issue(db.Model):
     @staticmethod
     def create_issue(issue, exception=None, job_id: int = None):
         """
-        Creates a new issue, stores it in the database, and sends a Discord notification.
-        If `exception` is provided, details are included in the Discord message.
+        Creates a new issue and stores it in the database.
+        If `exception` is provided, it is logged for debugging.
         """
 
-        # Note: Confirm Discord is function correctly. 
-
         try:
-            from app import sync_send_discord_embed
             Issue(issue, job_id)
 
-            embed = discord.Embed(title='New Issue Created',
-                                  description='A issue occurred when running a job',
-                                  color=discord.Color.red())
-
-            embed.add_field(name='Issue', value=issue, inline=False)
+            # Log exception if provided
             if exception:
                 import traceback
-                exceptionFormatted = "".join(traceback.format_exception(None, exception, exception.__traceback__)).replace("  ", "‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ")
-                embed.add_field(name='Exception', value=exceptionFormatted, inline=False)
-            embed.timestamp = datetime.now()
+                exception_details = "".join(traceback.format_exception(None, exception, exception.__traceback__))
+                print(f"Issue created with exception: {exception_details}")
 
-            if Config['discord_enabled'] and issue.startswith("CODE ISSUE: Print Failed:"):
-                sync_send_discord_embed(embed=embed)
             return {"success": True, "message": "Issue successfully created"}
         except SQLAlchemyError as e:
             if current_app:
