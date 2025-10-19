@@ -213,7 +213,7 @@ def get_backend_selection():
     print("\nSelect Backend Mode:")
     print("  1. Python Backend (default, full-featured)")
     print("  2. JavaScript Backend (serial communication focus)")
-    print("  3. Hybrid Mode (intelligent routing via middleware)")
+    print("  3. Hybrid Mode (run both backends simultaneously)")
 
     selection = input("Enter selection [1-3] (default: 1): ").strip()
 
