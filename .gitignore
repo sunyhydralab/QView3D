@@ -19,8 +19,12 @@ printeremu/testserver/node_modules/
 /server/logs/
 /server/__Hidden__/
 /server/.python-venv
+/server-python/.python-venv
+/server-python/__pycache__/
 /uploads
 /tempcsv
+QView.db
+qview.log
 
 # Logs
 logs

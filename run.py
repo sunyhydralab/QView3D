@@ -8,7 +8,7 @@ import os
 # TODO Allow a .env file to overwrite the below configurations
 # Relative locations of the client and server directories from the root directory
 CLIENT_LOCAL_PATH = "client"
-SERVER_LOCAL_PATH = "server"
+SERVER_LOCAL_PATH = "server-python"
 MIDDLEWARE_LOCAL_PATH = "middleware"
 JS_SERVER_LOCAL_PATH = "server-javascript"
 
@@ -32,7 +32,10 @@ MIDDLEWARE_PORT = 3500
 MIDDLEWARE_WS_PORT = 3501
 
 # Backend selection: "python", "javascript", "hybrid"
-BACKEND_MODE = "python"  # Default to Python backend
+# - python: Use Python Flask backend only
+# - javascript: Use Node.js backend only
+# - hybrid: Run both backends with middleware for automatic fallback
+BACKEND_MODE = "hybrid"  # Default to hybrid mode for redundancy
 
 # Client configuration
 VITE_CLIENT_IP = "SAME_AS_SERVER"
