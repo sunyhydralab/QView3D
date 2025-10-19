@@ -95,17 +95,15 @@ def start_server(fresh_database):
 
     # Start the server in the background
     if current_os == "WINDOWS":
-        # On Windows, use Scripts directory
-        venv_flask = os.path.abspath(os.path.join(SERVER_LOCAL_PATH, ".python-venv", "Scripts", "flask.exe"))
+        # Run app.py directly instead of using flask run
         return subprocess.Popen(
-            [venv_flask, 'run'],
+            ["py", "app.py"],
             cwd=os.path.abspath(SERVER_LOCAL_PATH)
         )
     else:
-        # On Linux/Mac, use bin directory
-        venv_flask = os.path.abspath(os.path.join(SERVER_LOCAL_PATH, ".python-venv", "bin", "flask"))
+        # On Linux/Mac, run app.py directly
         return subprocess.Popen(
-            [venv_flask, 'run'],
+            ["python3", "app.py"],
             cwd=os.path.abspath(SERVER_LOCAL_PATH)
         )
 
