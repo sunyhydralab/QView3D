@@ -72,14 +72,20 @@ def start_server(fresh_database):
                 print(ose)
 
     # Start the server in the background
-    return subprocess.Popen(
-        # Command for the server
-        ['flask', 'run'],
-        # The working directory for the command
-        cwd=SERVER_LOCAL_PATH,
-        # Enable the Python virtual environment
-        env={"PATH": os.path.join(".", ".python-venv", "bin")}
-    )
+    if current_os == "WINDOWS":
+        # On Windows, use Scripts directory
+        venv_flask = os.path.abspath(os.path.join(SERVER_LOCAL_PATH, ".python-venv", "Scripts", "flask.exe"))
+        return subprocess.Popen(
+            [venv_flask, 'run'],
+            cwd=os.path.abspath(SERVER_LOCAL_PATH)
+        )
+    else:
+        # On Linux/Mac, use bin directory
+        venv_flask = os.path.abspath(os.path.join(SERVER_LOCAL_PATH, ".python-venv", "bin", "flask"))
+        return subprocess.Popen(
+            [venv_flask, 'run'],
+            cwd=os.path.abspath(SERVER_LOCAL_PATH)
+        )
 
 def start_js_server():
     # Start the JavaScript server in the background
@@ -144,11 +150,36 @@ def install_software(current_os: str):
         raise Exception("What OS are you using?")
 
     # Install server dependencies
-    subprocess.run(
-        ["pip", "install", "-r", os.path.join("server", "dependencies.txt")],
-        # Enable the Python virtual environment
-        env={"PATH": os.path.join(".", "server", ".python-venv", "bin")}
-    )
+    if current_os == "WINDOWS":
+        # On Windows, use Scripts directory and the virtual environment's pip
+        venv_pip = os.path.join("server", ".python-venv", "Scripts", "pip.exe")
+        try:
+            subprocess.run(
+                [venv_pip, "install", "-r", os.path.join("server", "dependencies.txt")],
+                check=True
+            )
+        except subprocess.CalledProcessError as e:
+            print(f"Error installing Python dependencies: {e}")
+            print("Trying with system pip...")
+            subprocess.run(
+                ["pip", "install", "-r", os.path.join("server", "dependencies.txt")],
+                check=True
+            )
+    else:
+        # On Linux/Mac, use bin directory
+        venv_pip = os.path.join("server", ".python-venv", "bin", "pip")
+        try:
+            subprocess.run(
+                [venv_pip, "install", "-r", os.path.join("server", "dependencies.txt")],
+                check=True
+            )
+        except subprocess.CalledProcessError as e:
+            print(f"Error installing Python dependencies: {e}")
+            print("Trying with system pip...")
+            subprocess.run(
+                ["pip3", "install", "-r", os.path.join("server", "dependencies.txt")],
+                check=True
+            )
 
     # Install client dependencies
     subprocess.run(
@@ -246,13 +277,16 @@ user_configuration = get_user_configuration()
 # Get the current OS being used
 current_os = platform.system()
 
+# Map platform system to our OS strings
+if current_os == "Windows":
+    current_os = "WINDOWS"
+elif current_os in ["Linux", "Darwin"]:
+    current_os = "LINUX/MAC"
+
 match user_configuration:
     case "I":
         is_installing = True
-        if current_os == "Windows":
-            install_software("WINDOWS")
-        elif current_os in ["Linux", "Darwin"]:
-            install_software("LINUX/MAC")
+        install_software(current_os)
     case "D":
         running_processes = start_debug(START_FROM_NEW_DATABASE)
     case "R":
@@ -269,7 +303,15 @@ match user_configuration:
 # If the user chooses to install software, then the loop will not start
 try:
     while not is_installing:
-        input() # Stop the loop from running indefinitely
+        try:
+            input() # Stop the loop from running indefinitely
+        except EOFError:
+            # Handle EOF when running in non-interactive mode (like WSL)
+            print("Running in non-interactive mode. Services started.")
+            # Keep the processes running by waiting
+            import time
+            while True:
+                time.sleep(1)
 except KeyboardInterrupt: # Loop will close when a KeyboardInterrupt exception is thrown
     # Terminate the background processes
     for process in running_processes:
