@@ -1,149 +1,26 @@
-<template>
-  <div class="space-y-6">
-    <!-- Header with Create Button -->
-    <div class="flex justify-between items-center">
-      <div>
-        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Printer Issues</h2>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Hardware and connectivity problems
-        </p>
-      </div>
-      <button
-        @click="$emit('create')"
-        class="group relative px-6 py-3 rounded-xl font-medium text-white overflow-hidden shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-      >
-        <div class="absolute inset-0 bg-gradient-to-r from-accent-primary to-accent-primary-light group-hover:from-accent-primary-dark group-hover:to-accent-primary transition-all duration-200"></div>
-        <div class="relative flex items-center space-x-2">
-          <i class="fas fa-plus"></i>
-          <span>New Issue</span>
-        </div>
-      </button>
-    </div>
-
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-6 text-white shadow-lg">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-red-100 text-sm">Critical</p>
-            <p class="text-3xl font-bold mt-1">{{ stats.critical }}</p>
-          </div>
-          <i class="fas fa-exclamation-triangle text-4xl text-red-200"></i>
-        </div>
-      </div>
-      <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl p-6 text-white shadow-lg">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-yellow-100 text-sm">Warning</p>
-            <p class="text-3xl font-bold mt-1">{{ stats.warning }}</p>
-          </div>
-          <i class="fas fa-exclamation-circle text-4xl text-yellow-200"></i>
-        </div>
-      </div>
-      <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-green-100 text-sm">Resolved</p>
-            <p class="text-3xl font-bold mt-1">{{ stats.resolved }}</p>
-          </div>
-          <i class="fas fa-check-circle text-4xl text-green-200"></i>
-        </div>
-      </div>
-    </div>
-
-    <!-- Issues List -->
-    <div v-if="issues.length === 0" class="text-center py-16">
-      <i class="fas fa-check-circle text-6xl text-green-500 dark:text-green-400 mb-4"></i>
-      <p class="text-xl font-medium text-gray-700 dark:text-gray-300">No printer issues!</p>
-      <p class="text-gray-500 dark:text-gray-400 mt-2">All systems running smoothly</p>
-    </div>
-
-    <div v-else class="space-y-4">
-      <TransitionGroup name="list">
-        <div
-          v-for="issue in sortedIssues"
-          :key="issue.id"
-          class="group bg-white dark:bg-dark-primary-light rounded-xl shadow-md hover:shadow-xl transition-all duration-200 overflow-hidden border-l-4"
-          :class="getSeverityBorderClass(issue.severity)"
-        >
-          <div class="p-6">
-            <div class="flex items-start justify-between">
-              <div class="flex-1">
-                <div class="flex items-center space-x-3 mb-2">
-                  <span
-                    class="px-3 py-1 rounded-full text-xs font-semibold"
-                    :class="getSeverityBadgeClass(issue.severity)"
-                  >
-                    {{ issue.severity || 'low' }}
-                  </span>
-                  <span
-                    v-if="issue.status === 'resolved'"
-                    class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                  >
-                    Resolved
-                  </span>
-                  <span class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ formatDate(issue.created_at) }}
-                  </span>
-                </div>
-
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  {{ issue.title }}
-                </h3>
-
-                <p class="text-gray-600 dark:text-gray-300 mb-4">
-                  {{ issue.description }}
-                </p>
-
-                <div v-if="issue.fabricator_id" class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                  <i class="fas fa-print"></i>
-                  <span>Printer ID: {{ issue.fabricator_id }}</span>
-                </div>
-              </div>
-
-              <div class="flex flex-col space-y-2 ml-4">
-                <button
-                  v-if="issue.status === 'open'"
-                  @click="$emit('resolve', issue.id)"
-                  class="px-4 py-2 rounded-lg text-sm font-medium bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800 transition-colors"
-                  title="Mark as resolved"
-                >
-                  <i class="fas fa-check mr-1"></i> Resolve
-                </button>
-                <button
-                  @click="$emit('edit', issue)"
-                  class="px-4 py-2 rounded-lg text-sm font-medium bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 dark:bg-accent-primary-light/10 dark:text-accent-primary-light dark:hover:bg-accent-primary-light/20 transition-colors"
-                  title="Edit issue"
-                >
-                  <i class="fas fa-edit mr-1"></i> Edit
-                </button>
-                <button
-                  @click="$emit('delete', issue.id)"
-                  class="px-4 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800 transition-colors"
-                  title="Delete issue"
-                >
-                  <i class="fas fa-trash mr-1"></i> Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </TransitionGroup>
-    </div>
-  </div>
-</template>
-
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
+import BaseStatCard from './base/BaseStatCard.vue';
+import BaseBadge from './base/BaseBadge.vue';
+import BaseCard from './base/BaseCard.vue';
+import BaseEmptyState from './base/BaseEmptyState.vue';
+import { useSeverity } from '@/composables/useSeverity';
+import { useRelativeTime } from '@/composables/useFormatting';
 
-const props = defineProps({
-  issues: {
-    type: Array,
-    required: true
-  }
-});
+interface Issue {
+  id: number;
+  title: string;
+  description: string;
+  severity: string;
+  status: string;
+  created_at: string;
+  fabricator_id?: number;
+}
 
-defineEmits(['refresh', 'create', 'edit', 'delete', 'resolve']);
+const props = defineProps<{ issues: Issue[] }>();
+defineEmits(['create', 'edit', 'delete', 'resolve']);
+
+const { getConfig, getSeverityOrder } = useSeverity();
 
 const stats = computed(() => ({
   critical: props.issues.filter(i => i.severity === 'critical' && i.status === 'open').length,
@@ -153,71 +30,81 @@ const stats = computed(() => ({
 
 const sortedIssues = computed(() => {
   return [...props.issues].sort((a, b) => {
-    // Sort by status (open first), then by severity, then by date
-    if (a.status !== b.status) {
-      return a.status === 'open' ? -1 : 1;
-    }
-    const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-    const aSeverity = severityOrder[a.severity] || 3;
-    const bSeverity = severityOrder[b.severity] || 3;
-    if (aSeverity !== bSeverity) {
-      return aSeverity - bSeverity;
-    }
-    return new Date(b.created_at) - new Date(a.created_at);
+    if (a.status !== b.status) return a.status === 'open' ? -1 : 1;
+    const severityDiff = getSeverityOrder(a.severity) - getSeverityOrder(b.severity);
+    if (severityDiff !== 0) return severityDiff;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 });
-
-const getSeverityBorderClass = (severity) => {
-  switch (severity) {
-    case 'critical': return 'border-red-500';
-    case 'high': return 'border-orange-500';
-    case 'medium': return 'border-yellow-500';
-    default: return 'border-blue-500';
-  }
-};
-
-const getSeverityBadgeClass = (severity) => {
-  switch (severity) {
-    case 'critical': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-    case 'high': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
-    case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-    default: return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-  }
-};
-
-const formatDate = (dateString) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
-};
 </script>
 
-<style scoped>
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.3s ease;
-}
+<template>
+  <div class="space-y-6">
+    <div class="flex justify-between items-center">
+      <div>
+        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Printer Issues</h2>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Hardware and connectivity problems</p>
+      </div>
+      <button
+        @click="$emit('create')"
+        class="gradient-button"
+      >
+        <i class="fas fa-plus"></i>
+        <span>New Issue</span>
+      </button>
+    </div>
 
-.list-enter-from {
-  opacity: 0;
-  transform: translateY(-10px);
-}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <BaseStatCard title="Critical" :value="stats.critical" icon="fas fa-exclamation-triangle" gradient="from-red-500 to-red-600" />
+      <BaseStatCard title="Warning" :value="stats.warning" icon="fas fa-exclamation-circle" gradient="from-yellow-500 to-yellow-600" />
+      <BaseStatCard title="Resolved" :value="stats.resolved" icon="fas fa-check-circle" gradient="from-green-500 to-green-600" />
+    </div>
 
-.list-leave-to {
-  opacity: 0;
-  transform: translateY(10px);
-}
+    <BaseEmptyState
+      v-if="issues.length === 0"
+      icon="fas fa-check-circle"
+      title="No printer issues!"
+      description="All systems running smoothly"
+      icon-color="text-green-500 dark:text-green-400"
+    />
 
-.list-move {
-  transition: transform 0.3s ease;
-}
-</style>
+    <div v-else class="space-y-4">
+      <TransitionGroup name="list">
+        <BaseCard
+          v-for="issue in sortedIssues"
+          :key="issue.id"
+          padding="md"
+          class="border-l-4"
+          :class="getConfig(issue.severity).borderClass"
+        >
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <div class="flex items-center space-x-3 mb-2">
+                <BaseBadge size="sm">{{ issue.severity || 'low' }}</BaseBadge>
+                <BaseBadge v-if="issue.status === 'resolved'" variant="success" size="sm">Resolved</BaseBadge>
+                <span class="text-sm text-gray-500 dark:text-gray-400">{{ useRelativeTime(issue.created_at) }}</span>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">{{ issue.title }}</h3>
+              <p class="text-gray-600 dark:text-gray-300 mb-4">{{ issue.description }}</p>
+              <div v-if="issue.fabricator_id" class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                <i class="fas fa-print"></i>
+                <span>Printer ID: {{ issue.fabricator_id }}</span>
+              </div>
+            </div>
+            <div class="flex flex-col space-y-2 ml-4">
+              <button v-if="issue.status === 'open'" @click="$emit('resolve', issue.id)" class="action-button success">
+                <i class="fas fa-check mr-1"></i> Resolve
+              </button>
+              <button @click="$emit('edit', issue)" class="action-button primary">
+                <i class="fas fa-edit mr-1"></i> Edit
+              </button>
+              <button @click="$emit('delete', issue.id)" class="action-button danger">
+                <i class="fas fa-trash mr-1"></i> Delete
+              </button>
+            </div>
+          </div>
+        </BaseCard>
+      </TransitionGroup>
+    </div>
+  </div>
+</template>
