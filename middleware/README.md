@@ -56,10 +56,17 @@ Configuration is loaded from `server/config/config.json`:
 |--------------|---------|-------|
 | `/api/serial/*` | JavaScript | Serial port operations |
 | `/api/gcode/*` | JavaScript | G-code parsing |
-| `/getprinterinfo` | Python | Database queries |
-| `/getjobs` | Python | Job management |
-| `/register` | Python | Printer registration |
+| `/api/printers` | JavaScript | Active printer status |
+| `/getjobs` | Either | Load balanced - both backends support |
+| `/getfabricators` | Either | Load balanced |
+| `/register` | Either | Load balanced |
+| `/addjobtoqueue` | Either | Load balanced |
+| `/getissues` | Either | Load balanced |
+| `/diagnose` | Python | Python-specific diagnostics |
+| `/releasejob` | Python | Advanced job control |
 | All others | Python | Default fallback |
+
+**Note**: Routes marked "Either" use round-robin load balancing when both backends are healthy, with automatic failover if one becomes unavailable.
 
 ## Usage
 
@@ -102,13 +109,34 @@ Returns middleware and backend status.
 - `LOG_LEVEL`: Set logging level (ERROR, WARN, INFO, DEBUG)
 - `NODE_ENV`: Set to 'production' to hide error details
 
+## Backend Capabilities
+
+### Python Backend
+- Full database integration (SQLite)
+- Complete job management system
+- Fabricator registration and control
+- Issue tracking
+- Advanced diagnostics and repair tools
+- Discord bot integration
+- Emulator support
+
+### JavaScript Backend
+- SQLite database support
+- Job management (create, queue, cancel, status)
+- Fabricator registration and management
+- Issue tracking
+- Serial port communication
+- WebSocket real-time updates
+- Optimized for performance
+
 ## Backend Health Monitoring
 
-The middleware performs health checks every 5 seconds on all configured backends:
+The middleware performs health checks every 30 seconds on all configured backends:
 
 - Marks backends as healthy/unhealthy
 - Provides automatic failover in hybrid mode
 - Exposes status via `/health` endpoint
+- Load balances across healthy backends
 
 ## Response Normalization
 
