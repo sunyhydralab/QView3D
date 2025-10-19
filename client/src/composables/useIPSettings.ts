@@ -2,7 +2,7 @@ import {computed} from 'vue'
 
 // declare IP settings
 export const API_IP_ADDRESS = computed(() => localStorage.getItem("apiIPAddress") || "localhost")
-export const API_PORT = computed(() => localStorage.getItem("apiPort") || "8000")
+export const API_PORT = computed(() => localStorage.getItem("apiPort") || "3500")
 export const API_URL = computed(() => `http://${API_IP_ADDRESS.value}:${API_PORT.value}`)
 
 // Debug mode setting
