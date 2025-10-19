@@ -143,11 +143,11 @@ def install_software(current_os: str):
     # this is why it's being used instead of Popen
     if current_os == "LINUX/MAC":
         subprocess.run(
-            ["python3.12", "-m", "venv", os.path.join("server", ".python-venv")]
+            ["python3.12", "-m", "venv", os.path.join(SERVER_LOCAL_PATH, ".python-venv")]
         )
     elif current_os == "WINDOWS":
         subprocess.run(
-            ["py", "-3.12", "-m", "venv", os.path.join("server", ".python-venv")]
+            ["py", "-3.12", "-m", "venv", os.path.join(SERVER_LOCAL_PATH, ".python-venv")]
         )
     else:
         raise Exception("What OS are you using?")
@@ -155,32 +155,32 @@ def install_software(current_os: str):
     # Install server dependencies
     if current_os == "WINDOWS":
         # On Windows, use Scripts directory and the virtual environment's pip
-        venv_pip = os.path.join("server", ".python-venv", "Scripts", "pip.exe")
+        venv_pip = os.path.join(SERVER_LOCAL_PATH, ".python-venv", "Scripts", "pip.exe")
         try:
             subprocess.run(
-                [venv_pip, "install", "-r", os.path.join("server", "dependencies.txt")],
+                [venv_pip, "install", "-r", os.path.join(SERVER_LOCAL_PATH, "dependencies.txt")],
                 check=True
             )
         except subprocess.CalledProcessError as e:
             print(f"Error installing Python dependencies: {e}")
             print("Trying with system pip...")
             subprocess.run(
-                ["pip", "install", "-r", os.path.join("server", "dependencies.txt")],
+                ["pip", "install", "-r", os.path.join(SERVER_LOCAL_PATH, "dependencies.txt")],
                 check=True
             )
     else:
         # On Linux/Mac, use bin directory
-        venv_pip = os.path.join("server", ".python-venv", "bin", "pip")
+        venv_pip = os.path.join(SERVER_LOCAL_PATH, ".python-venv", "bin", "pip")
         try:
             subprocess.run(
-                [venv_pip, "install", "-r", os.path.join("server", "dependencies.txt")],
+                [venv_pip, "install", "-r", os.path.join(SERVER_LOCAL_PATH, "dependencies.txt")],
                 check=True
             )
         except subprocess.CalledProcessError as e:
             print(f"Error installing Python dependencies: {e}")
             print("Trying with system pip...")
             subprocess.run(
-                ["pip3", "install", "-r", os.path.join("server", "dependencies.txt")],
+                ["pip3", "install", "-r", os.path.join(SERVER_LOCAL_PATH, "dependencies.txt")],
                 check=True
             )
 
