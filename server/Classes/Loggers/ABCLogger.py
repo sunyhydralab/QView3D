@@ -107,6 +107,8 @@ class ABCLogger(logging.Logger, metaclass=ABCMeta):
         self.handleLog(level, msg, *args, exc_info=exc_info, stack_info=stack_info, stacklevel=stacklevel, extra=extra, **kwargs)
 
     def handleLog(self, level, msg, *args, exc_info=None, stack_info=False, stacklevel: int = 3, extra=None, **kwargs):
+        if level is None:
+            level = self.ERROR
         if level <= self.DEBUG:
             self.debug(msg,*args, stacklevel=stacklevel, exc_info=exc_info, stack_info=stack_info, extra=extra, **kwargs)
         elif level <= self.INFO:
