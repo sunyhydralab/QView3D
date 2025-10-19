@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { API_IP_ADDRESS, API_PORT, DEBUG_MODE, updateAPIAddress, updateAPIPort, updateDebugMode } from '@/composables/useIPSettings.ts';
 import Button from '@/components/Button.vue'
 
@@ -7,6 +7,22 @@ const serverIP = ref<string>(API_IP_ADDRESS.value);
 const serverPort = ref<string>(API_PORT.value);
 const debugMode = ref<boolean>(DEBUG_MODE.value);
 const isOpen = ref(false);
+
+// Server type options
+const serverTypes = [
+  { name: 'Middleware (Hybrid)', port: '3500' },
+  { name: 'Python Backend', port: '8000' },
+  { name: 'JavaScript Backend', port: '3001' }
+];
+
+const selectedServerType = ref(
+  serverTypes.find(s => s.port === serverPort.value) || serverTypes[0]
+);
+
+// Watch for server type changes and update port
+watch(selectedServerType, (newType) => {
+  serverPort.value = newType.port;
+});
 
 const togglePanel = () => {
   isOpen.value = !isOpen.value;
@@ -67,7 +83,22 @@ const saveSettings = () => {
               class="input-style mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div>
+          <!-- Server Type Selector - only shows in debug mode -->
+          <div v-if="debugMode">
+            <label for="serverType" class="block text-sm font-medium dark:text-light-primary-dark mb-2">Server Type:</label>
+            <select
+              id="serverType"
+              v-model="selectedServerType"
+              class="input-style mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-dark-primary-dark dark:text-light-primary"
+            >
+              <option v-for="type in serverTypes" :key="type.port" :value="type">
+                {{ type.name }} (Port {{ type.port }})
+              </option>
+            </select>
+          </div>
+
+          <!-- Manual Port Input - shows when not in debug mode or for custom ports -->
+          <div v-if="!debugMode">
             <label for="port" class="block text-sm font-medium dark:text-light-primary-dark">Server Port:</label>
             <input
               type="number"
@@ -76,6 +107,14 @@ const saveSettings = () => {
               required
               class="input-style mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+
+          <!-- Port Display when server type is selected -->
+          <div v-else>
+            <label class="block text-sm font-medium dark:text-light-primary-dark">Current Port:</label>
+            <div class="mt-1 px-3 py-2 bg-gray-100 dark:bg-dark-primary-light rounded-md">
+              <span class="text-sm dark:text-light-primary">{{ serverPort }}</span>
+            </div>
           </div>
           <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-dark-primary-dark rounded-lg">
             <div>
