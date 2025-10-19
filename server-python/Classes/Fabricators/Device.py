@@ -8,7 +8,7 @@ from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from Classes.Jobs import Job
 from Classes.Vector3 import Vector3
-from Classes.Loggers.Logger import Logger
+from services.logger import logger
 from Mixins.hasEndingSequence import hasEndingSequence
 from Mixins.hasResponseCodes import checkXYZ
 from Classes.FabricatorConnection import SerialConnection, SocketConnection, FabricatorConnection

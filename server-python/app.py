@@ -2,7 +2,6 @@ import os
 import threading
 import certifi
 from QViewApp import QViewApp
-from utils.formatting import tabs
 from services.websocket_service import start_websocket
 
 # SSL setup
@@ -13,9 +12,7 @@ websocket_thread = threading.Thread(target=start_websocket, daemon=True)
 websocket_thread.start()
 
 # Start Flask app
-print(f"{tabs()}Starting Flask application...")
 app = QViewApp()
-print(f"{tabs(tab_change=-1)}Flask application started")
 
 def run_socketio(app):
     try:

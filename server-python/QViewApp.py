@@ -2,7 +2,6 @@ import os
 from flask import Flask
 from dotenv import load_dotenv
 from config.paths import root_path
-from utils.formatting import tabs
 from services.websocket_service import emulator_connections, event_emitter
 from config.config import Config
 from Classes.FabricatorList import FabricatorList
@@ -31,58 +30,30 @@ class QViewApp(Flask):
     
     """
     def __init__(self):
-        print(f"{tabs(tab_change=1)}call to super...", end="")
         super().__init__(__name__, static_folder=os.path.abspath(os.path.join(root_path, "client", "dist")))
-        print(" Done")
-        
-        print(f"{tabs()}loading config...")
-        print(f"{tabs(tab_change=1)}loading dotenv...", end="")
+
+        # Load configuration
         load_dotenv()
-        print(" Done")
-        
-        print(f"{tabs()}loading config from file...", end="")
         self.config.from_object(__name__)
         self.setup_config()
-        print(" Done")
-        
+
         # Initialize services
-        print(f"{tabs()}setting up logging service...", end=" ")
         self.logging_service = LoggingService(self)
         self._logger = self.logging_service.get_logger()
-        print("Done")
-        
-        print(f"{tabs(tab_change=-1)}initializing db...", end="")
         self.database_service = DatabaseService(self)
-        print(" Done")
-        
-        print(f"{tabs()}setting up SocketIO...", end="")
         self.socketio_service = SocketIOService(self)
         self.socketio = self.socketio_service.get_socketio()
-        print(" Done")
-        
-        print(f"{tabs()}setting up custom variables...", end="")
+
+        # Setup custom variables
         self._fabricator_list = None
         self.emulator_connections = emulator_connections
         self.event_emitter = event_emitter
-        print(" Done")
-        
-        print(f"{tabs()}defining routes...")
+
+        # Initialize routes and utilities
         self.routes_service = RoutesService(self)
-        print(f"{tabs(tab_change=-1)}routes defined")
-        
-        print(f"{tabs()}setting up CLI commands...")
         self.cli_service = CLIService(self)
-        print("Done")
-        
-        print(f"{tabs()}setting up utilities...")
         self.utilities_service = UtilitiesService(self)
-        print("Done")
-        
-        print(f"{tabs()}initializing fabricator list...")
         self.fabricator_list = FabricatorList(self)
-        print(f"{tabs(tab_change=-1)}fabricator list initialized")
-        
-        print(f"{tabs()}Flask app setup complete")
 
     def setup_config(self):
         """Setup Flask configuration from Config file."""
