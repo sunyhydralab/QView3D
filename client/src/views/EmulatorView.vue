@@ -24,27 +24,27 @@ const startEmulator = async () => {
 
   try {
     // Start the emulator
-    const startResponse = await api('startemulator', 'POST', {
+    const startResponse = await api('startemulator', {
       model: 'Prusa MK4',
       config: {
         name: emulatorName.value,
         description: 'Virtual Printer for Testing',
         hwid: 'EMU-' + Math.floor(Math.random() * 10000)
       }
-    });
+    }, 'POST');
 
     if (!startResponse.success) {
       throw new Error('Failed to start emulator');
     }
 
     // Register the emulator as a fabricator
-    const registerResponse = await api('registeremulator', 'POST', {
+    const registerResponse = await api('registeremulator', {
       model: 'Prusa MK4',
       config: {
         name: emulatorName.value,
         port: startResponse.port
       }
-    });
+    }, 'POST');
 
     if (registerResponse.success) {
       isActive.value = true;

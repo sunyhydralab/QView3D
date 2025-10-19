@@ -44,8 +44,8 @@ const sortedIssues = computed(() => {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Job Issues</h2>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Print failures and quality problems</p>
+        <h2 class="text-2xl font-semibold text-dark-primary dark:text-light-primary-light">Job Issues</h2>
+        <p class="mt-1 text-sm text-dark-primary dark:text-light-primary">Print failures and quality problems</p>
       </div>
       <button @click="$emit('create')" class="gradient-button" style="background: linear-gradient(to right, var(--color-accent-secondary-dark), var(--color-accent-secondary));">
         <i class="fas fa-plus"></i>
@@ -76,11 +76,11 @@ const sortedIssues = computed(() => {
               <div class="flex items-center space-x-3 mb-2">
                 <BaseBadge size="sm">{{ issue.severity || 'low' }}</BaseBadge>
                 <BaseBadge v-if="issue.status === 'resolved'" variant="success" size="sm">Resolved</BaseBadge>
-                <span class="text-sm text-gray-500 dark:text-gray-400">{{ useRelativeTime(issue.created_at) }}</span>
+                <span class="text-sm text-dark-primary dark:text-light-primary">{{ useRelativeTime(issue.created_at) }}</span>
               </div>
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">{{ issue.title }}</h3>
-              <p class="text-gray-600 dark:text-gray-300 mb-4">{{ issue.description }}</p>
-              <div class="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+              <h3 class="text-lg font-semibold text-dark-primary dark:text-light-primary-light mb-2">{{ issue.title }}</h3>
+              <p class="text-dark-primary dark:text-light-primary mb-4">{{ issue.description }}</p>
+              <div class="flex items-center space-x-4 text-sm text-dark-primary dark:text-light-primary">
                 <div v-if="issue.job_id" class="flex items-center space-x-2">
                   <i class="fas fa-file"></i>
                   <span>Job ID: {{ issue.job_id }}</span>
