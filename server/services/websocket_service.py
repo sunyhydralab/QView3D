@@ -4,9 +4,17 @@ import threading
 import traceback
 import uuid
 import os
+import sys
 import websockets
 from websockets.asyncio.server import Server
 from Classes.EventEmitter import EventEmitter
+
+# Fix for Windows asyncio event loop policy
+if sys.platform == 'win32':
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    except Exception as e:
+        print(f"Warning: Could not set Windows event loop policy: {e}")
 
 # Moved from globals.py - WebSocket-specific global state
 emulator_connections = {}
