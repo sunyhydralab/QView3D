@@ -43,6 +43,8 @@ export const routeMap = {
   '/updateissue': 'either',
   '/deleteissue': 'either',
   '/getissue': 'either',
+  '/getissuesbycategory': 'either',
+  '/resolveissue': 'either',
 
   // Emulator operations - Python only
   '/startemulator': 'python',
