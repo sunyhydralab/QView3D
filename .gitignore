@@ -8,17 +8,8 @@ migrations/
 
 *.db
 
-server/qview3dserver.egg-info/
-server/dist
-
-printeremu/testserver/node_modules/
 /qodana.yaml
-/Tests/logs/
-/Tests/server/
 /logs/
-/server/logs/
-/server/__Hidden__/
-/server/.python-venv
 /server-python/.python-venv
 /server-python/__pycache__/
 /uploads
