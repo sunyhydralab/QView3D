@@ -11,11 +11,15 @@ export class BackendSelector {
 
   // Match route against patterns
   matchRoute(path, pattern) {
-    if (pattern.includes('*')) {
-      const regex = new RegExp('^' + pattern.replace('*', '.*') + '$');
-      return regex.test(path);
+    // Check for exact match
+    if (path === pattern) {
+      return true;
     }
-    return path === pattern;
+    // Check for prefix match (e.g., /api/serial matches /api/serial/ports)
+    if (path.startsWith(pattern + '/')) {
+      return true;
+    }
+    return false;
   }
 
   // Select backend based on route and mode

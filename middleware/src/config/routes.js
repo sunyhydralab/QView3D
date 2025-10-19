@@ -1,8 +1,8 @@
 // Route-to-backend mapping for hybrid mode
 export const routeMap = {
   // Serial operations - prefer JavaScript backend
-  '/api/serial/*': 'javascript',
-  '/api/gcode/*': 'javascript',
+  '/api/serial': 'javascript',
+  '/api/gcode': 'javascript',
   '/api/printers': 'javascript',
 
   // Database operations - both backends support now
