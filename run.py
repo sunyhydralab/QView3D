@@ -49,11 +49,12 @@ def start_client():
     global VITE_CLIENT_IP
     if VITE_CLIENT_IP == "SAME_AS_SERVER":
         VITE_CLIENT_IP = FLASK_SERVER_IP
-    
+
     # Start the client in the background
     return subprocess.Popen(
         # Command for the client
-        ["npx", "vite", "--port", str(VITE_CLIENT_PORT), "--host", VITE_CLIENT_IP, "--cors", "true", "--logLevel", VITE_LOG_LEVEL],
+        f"npx vite --port {VITE_CLIENT_PORT} --host {VITE_CLIENT_IP} --cors true --logLevel {VITE_LOG_LEVEL}",
+        shell=True,
         # The working directory for the command
         cwd=CLIENT_LOCAL_PATH
     )
@@ -83,14 +84,16 @@ def start_server(fresh_database):
 def start_js_server():
     # Start the JavaScript server in the background
     return subprocess.Popen(
-        ["node", "src/index.js"],
+        "node src/index.js",
+        shell=True,
         cwd=JS_SERVER_LOCAL_PATH
     )
 
 def start_middleware():
     # Start the middleware service in the background
     return subprocess.Popen(
-        ["node", "src/index.js"],
+        "node src/index.js",
+        shell=True,
         cwd=MIDDLEWARE_LOCAL_PATH
     )
 
@@ -149,20 +152,23 @@ def install_software(current_os: str):
 
     # Install client dependencies
     subprocess.run(
-        ["npm", "i"],
+        "npm i",
+        shell=True,
         # Set the working directory for the process to the client folder
         cwd=CLIENT_LOCAL_PATH
     )
 
     # Install middleware dependencies
     subprocess.run(
-        ["npm", "i"],
+        "npm i",
+        shell=True,
         cwd=MIDDLEWARE_LOCAL_PATH
     )
 
     # Install JavaScript server dependencies
     subprocess.run(
-        ["npm", "i"],
+        "npm i",
+        shell=True,
         cwd=JS_SERVER_LOCAL_PATH
     )
 
