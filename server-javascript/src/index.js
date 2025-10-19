@@ -1,14 +1,17 @@
 import express from 'express';
+import http from 'http';
 import cors from 'cors';
 import compression from 'compression';
 import { SerialPort } from './serialport.js';
 import { Printer } from './printer.js';
 import database from './database.js';
+import wsManager from './websocket.js';
 import jobsRouter from './routes/jobs.js';
 import fabricatorsRouter from './routes/fabricators.js';
 import issuesRouter from './routes/issues.js';
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 
 // Store active printers
@@ -172,18 +175,24 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Initialize WebSocket
+wsManager.initialize(server);
+
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`QView3D JavaScript backend listening on port ${PORT}`);
+  console.log(`WebSocket server available on same port`);
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');
+  wsManager.close();
   database.close().then(() => process.exit(0));
 });
 
 process.on('SIGINT', () => {
   console.log('SIGINT received, shutting down gracefully');
+  wsManager.close();
   database.close().then(() => process.exit(0));
 });
