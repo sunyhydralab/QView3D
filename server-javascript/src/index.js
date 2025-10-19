@@ -9,6 +9,7 @@ import wsManager from './websocket.js';
 import jobsRouter from './routes/jobs.js';
 import fabricatorsRouter from './routes/fabricators.js';
 import issuesRouter from './routes/issues.js';
+import fabricatorManager from './fabricatorManager.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -17,11 +18,17 @@ const PORT = process.env.PORT || 3000;
 // Store active printers
 const activePrinters = new Map();
 
-// Initialize database
+// Initialize database and fabricator manager
 database.init()
-  .then(() => console.log('Database initialized'))
+  .then(() => {
+    console.log('Database initialized');
+    return fabricatorManager.initialize();
+  })
+  .then(() => {
+    console.log('FabricatorManager initialized');
+  })
   .catch(err => {
-    console.error('Failed to initialize database:', err);
+    console.error('Failed to initialize:', err);
     process.exit(1);
   });
 
@@ -187,12 +194,14 @@ server.listen(PORT, () => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');
+  fabricatorManager.stopProcessor();
   wsManager.close();
   database.close().then(() => process.exit(0));
 });
 
 process.on('SIGINT', () => {
   console.log('SIGINT received, shutting down gracefully');
+  fabricatorManager.stopProcessor();
   wsManager.close();
   database.close().then(() => process.exit(0));
 });

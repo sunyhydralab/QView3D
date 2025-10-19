@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import zlib from 'zlib';
 import database from '../database.js';
+import fabricatorManager from '../fabricatorManager.js';
 
 const router = express.Router();
 
@@ -130,6 +131,11 @@ router.post('/addjobtoqueue', upload.single('file'), async (req, res) => {
 
     await database.run('UPDATE jobs SET file_name = ? WHERE id = ?', [fileName, jobId]);
 
+    // Get the job and add to queue
+    const job = await database.get('SELECT * FROM jobs WHERE id = ?', [jobId]);
+    const toFront = priority === 'high' || priority === 'front';
+    fabricatorManager.addJobToQueue(parseInt(printerid), job, toFront);
+
     res.json({
       success: true,
       message: 'Job added to printer queue',
@@ -194,6 +200,10 @@ router.post('/autoqueue', upload.single('file'), async (req, res) => {
     const fileName = `${baseName}_${jobId}.${extension}`;
 
     await database.run('UPDATE jobs SET file_name = ? WHERE id = ?', [fileName, jobId]);
+
+    // Get the job and add to queue
+    const job = await database.get('SELECT * FROM jobs WHERE id = ?', [jobId]);
+    fabricatorManager.addJobToQueue(fabricatorId, job, false);
 
     res.json({
       success: true,

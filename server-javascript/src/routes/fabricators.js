@@ -1,6 +1,7 @@
 import express from 'express';
 import { SerialPort } from '../serialport.js';
 import database from '../database.js';
+import fabricatorManager from '../fabricatorManager.js';
 
 const router = express.Router();
 
@@ -56,6 +57,9 @@ router.post('/register', async (req, res) => {
       [name, device, position, 'ready']
     );
 
+    // Create queue for the new fabricator
+    fabricatorManager.createQueue(result.id);
+
     res.json({
       success: true,
       message: 'Fabricator registered successfully',
@@ -84,6 +88,9 @@ router.post('/deletefabricator', async (req, res) => {
 
     // Delete fabricator
     await database.run('DELETE FROM fabricators WHERE id = ?', [fabricator_id]);
+
+    // Remove queue for the deleted fabricator
+    fabricatorManager.removeQueue(fabricator_id);
 
     res.json({ success: true, message: 'Fabricator deleted successfully' });
   } catch (error) {
