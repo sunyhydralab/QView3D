@@ -10,25 +10,23 @@ QView3D Application Launcher
 ============================
 
 Frontend Port Configuration:
-- The frontend now defaults to port 3500 (middleware) for best experience
-- If you had port 8000 cached, clear your browser's localStorage:
+- The frontend allows switching between backends in the settings panel
+- Clear your browser's localStorage if you encounter port issues:
   1. Open browser console (F12)
   2. Run: localStorage.clear()
   3. Refresh the page
 
 Backend Modes:
-- hybrid: Runs both backends with middleware router (port 3500) - RECOMMENDED
-- python: Python Flask backend only (port 8000)
-- javascript: Node.js backend only (port 3001)
+- python: Python Flask backend (port 8000) - DEFAULT
+- javascript: Node.js backend (port 3000) - Serial communication focus
 
-In Debug Mode, you can switch between backends using the settings panel.
+Server switching is handled in the frontend settings panel.
 """
 
 # TODO Allow a .env file to overwrite the below configurations
 # Relative locations of the client and server directories from the root directory
 CLIENT_LOCAL_PATH = "client"
 SERVER_LOCAL_PATH = "server-python"
-MIDDLEWARE_LOCAL_PATH = "middleware"
 JS_SERVER_LOCAL_PATH = "server-javascript"
 
 # The name of the database file
@@ -46,15 +44,10 @@ FLASK_SERVER_WEB_SOCKET_PORT = 8001 # TODO Have this affect the server
 JS_SERVER_PORT = 3000
 JS_SERVER_WS_PORT = 3001
 
-# Middleware configuration
-MIDDLEWARE_PORT = 3500
-MIDDLEWARE_WS_PORT = 3501
-
-# Backend selection: "python", "javascript", "hybrid"
-# - python: Use Python Flask backend only
+# Backend selection: "python" or "javascript"
+# - python: Use Python Flask backend only (default)
 # - javascript: Use Node.js backend only
-# - hybrid: Run both backends with middleware for automatic fallback
-BACKEND_MODE = "hybrid"  # Default to hybrid mode for redundancy
+BACKEND_MODE = "python"  # Default to python backend
 
 # Client configuration
 VITE_CLIENT_IP = "SAME_AS_SERVER"
@@ -115,29 +108,16 @@ def start_js_server():
         cwd=JS_SERVER_LOCAL_PATH
     )
 
-def start_middleware():
-    # Start the middleware service in the background
-    return subprocess.Popen(
-        "node src/index.js",
-        shell=True,
-        cwd=MIDDLEWARE_LOCAL_PATH
-    )
 
 def update_config_json():
-    # Update the config.json file with middleware settings
+    # Update the config.json file with backend settings
     import json
     config_path = os.path.join(SERVER_LOCAL_PATH, "config", "config.json")
 
     with open(config_path, 'r') as f:
         config = json.load(f)
 
-    # Add middleware configuration
-    config['middleware'] = {
-        "mode": BACKEND_MODE,
-        "port": MIDDLEWARE_PORT,
-        "ws_port": MIDDLEWARE_WS_PORT
-    }
-
+    # Add backend configuration
     config['backends'] = {
         "python": {
             "url": f"http://{FLASK_SERVER_IP}:{FLASK_SERVER_PORT}",
@@ -223,13 +203,6 @@ def install_software(current_os: str):
         cwd=CLIENT_LOCAL_PATH
     )
 
-    # Install middleware dependencies
-    subprocess.run(
-        "npm i",
-        shell=True,
-        cwd=MIDDLEWARE_LOCAL_PATH
-    )
-
     # Install JavaScript server dependencies
     subprocess.run(
         "npm i",
@@ -239,36 +212,14 @@ def install_software(current_os: str):
 
     print("Install complete")
 
-def get_backend_selection():
-    global BACKEND_MODE
-    print("\nSelect Backend Mode:")
-    print("  1. Python Backend (default, full-featured)")
-    print("  2. JavaScript Backend (serial communication focus)")
-    print("  3. Hybrid Mode (run both backends simultaneously)")
-
-    selection = input("Enter selection [1-3] (default: 1): ").strip()
-
-    match selection:
-        case "1" | "":
-            BACKEND_MODE = "python"
-        case "2":
-            BACKEND_MODE = "javascript"
-        case "3":
-            BACKEND_MODE = "hybrid"
-        case _:
-            print("Invalid selection, using Python backend")
-            BACKEND_MODE = "python"
-
-    print(f"Backend mode set to: {BACKEND_MODE}")
-    return BACKEND_MODE
 
 def get_user_configuration():
     # .upper() ensures that lower case letters are fine as well
-    user_configuration = input("Would like to: Install Dependencies[I], Run the program in debug mode[D](The default), Run the program in release mode[R], Select Backend[B], and Cancel[C] ").upper()
+    user_configuration = input("Would like to: Install Dependencies[I], Run the program in debug mode[D](The default), Run the program in release mode[R], and Cancel[C] ").upper()
 
     # Ensure the user input is correct
     match user_configuration:
-        case "I" | "D" | "R" | "B" | "C": # Return the configuration
+        case "I" | "D" | "R" | "C": # Return the configuration
             return user_configuration
         case "": # Handle the default case
             return "D"
@@ -285,26 +236,25 @@ def start_debug(fresh_database):
     processes = []
 
     if BACKEND_MODE == "python":
-        # Python only mode
-        processes.append(start_client())
-        processes.append(start_server(fresh_database))
-    elif BACKEND_MODE == "javascript":
-        # JavaScript only mode
-        processes.append(start_client())
-        processes.append(start_js_server())
-    elif BACKEND_MODE == "hybrid":
-        # Hybrid mode: start both backends and middleware
+        # Python backend mode
         print("\n" + "="*60)
-        print("Starting QView3D in Hybrid Mode")
+        print("Starting QView3D with Python Backend")
         print("="*60)
-        print(f"Frontend will connect to middleware on port {MIDDLEWARE_PORT}")
-        print("Backends: Python (8000) + JavaScript (3001)")
-        print("The middleware provides automatic failover between backends")
+        print(f"Frontend: http://{VITE_CLIENT_IP}:{VITE_CLIENT_PORT}")
+        print(f"Backend: http://{FLASK_SERVER_IP}:{FLASK_SERVER_PORT}")
         print("-"*60)
         processes.append(start_client())
         processes.append(start_server(fresh_database))
+    elif BACKEND_MODE == "javascript":
+        # JavaScript backend mode
+        print("\n" + "="*60)
+        print("Starting QView3D with JavaScript Backend")
+        print("="*60)
+        print(f"Frontend: http://{VITE_CLIENT_IP}:{VITE_CLIENT_PORT}")
+        print(f"Backend: http://localhost:{JS_SERVER_PORT}")
+        print("-"*60)
+        processes.append(start_client())
         processes.append(start_js_server())
-        processes.append(start_middleware())
 
     return processes
 
@@ -333,9 +283,6 @@ match user_configuration:
     case "R":
         print("Doesn't do anything yet")
         pass # TODO Add release mode
-    case "B":
-        get_backend_selection()
-        running_processes = start_debug(START_FROM_NEW_DATABASE)
     case "C":
         print("Process canceled")
         exit(0)
