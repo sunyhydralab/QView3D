@@ -1,18 +1,29 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import ToggleMode from '@/components/ToggleMode.vue';
+import { DEBUG_MODE } from '@/composables/useIPSettings';
 
 // State for mobile menu
 const isOpen = ref(false);
 
-const navigationItems = ref([
+const allNavigationItems = [
     { name: 'Dashboard', route: '/' },
     { name: 'Registration', route: '/register' },
     { name: 'Queues', route: '/queue' },
     { name: 'Job History', route: '/history' },
-    { name: 'Emulator', route: '/emulator' },
-]);
+    { name: 'Issues', route: '/issues' },
+    { name: 'Emulator', route: '/emulator', requiresDebug: true },
+];
+
+const navigationItems = computed(() => {
+    return allNavigationItems.filter(item => {
+        if (item.requiresDebug) {
+            return DEBUG_MODE.value;
+        }
+        return true;
+    });
+});
 
 // Get current route
 const route = useRoute();
@@ -54,7 +65,7 @@ onMounted(() => {
                 <!-- Navigation Links-->
                 <div class="hidden mx-5 my-auto lg:flex lg:items-center">
                     <div class="flex space-x-8">
-                        <router-link v-for="(item, index) in navigationItems" :key="index" :to="item.route" :class="[
+                        <router-link v-for="(item, index) in navigationItems.value" :key="index" :to="item.route" :class="[
                             'inline-flex items-center px-1 pt-1 border-b-2 text-xl font-semibold transition-colors duration-200 ease-in-out',
                             isActive(item.route)
                                 ? 'border-b-2 border-[#7561A9] text-[#7E66B9]'
@@ -100,7 +111,7 @@ onMounted(() => {
         <!-- Mobile menu dropdown -->
         <div v-if="isOpen" class="lg:hidden">
             <div class="pt-2 pb-3 space-y-1">
-                <router-link v-for="(item, index) in navigationItems" :key="index" :to="item.route" :class="[
+                <router-link v-for="(item, index) in navigationItems.value" :key="index" :to="item.route" :class="[
                     'block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors duration-200 ease-in-out',
                     isActive(item.route)
                         ? 'border-[#7561A9] text-[#7E66B9] bg-purple-50 dark:bg-gray-700 dark:hover:bg-gray-700'

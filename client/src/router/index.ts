@@ -27,6 +27,11 @@ const router = createRouter({
       path: '/emulator',
       name: 'emulator',
       component: () => import('../views/EmulatorView.vue')
+    },
+    {
+      path: '/issues',
+      name: 'issues',
+      component: () => import('../views/Issues.vue')
     }
   ],
 })
