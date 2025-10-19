@@ -1,43 +1,30 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { API_IP_ADDRESS, API_PORT, DEBUG_MODE, updateAPIAddress, updateAPIPort, updateDebugMode } from '@/composables/useIPSettings.ts';
+import { API_IP_ADDRESS, DEBUG_MODE, updateAPIAddress, updateDebugMode } from '@/composables/useIPSettings.ts';
 import Button from '@/components/Button.vue'
 
 const serverIP = ref<string>(API_IP_ADDRESS.value);
-const serverPort = ref<string>(API_PORT.value);
 const debugMode = ref<boolean>(DEBUG_MODE.value);
 const isOpen = ref(false);
 
-interface ServerStatus {
-  name: string;
-  port: string;
+interface MiddlewareStatus {
   online: boolean;
   checking: boolean;
-  service?: string;
+  mode?: string;
 }
 
-// Server type options with status tracking
-const serverTypes = ref<ServerStatus[]>([
-  { name: 'Middleware (Hybrid)', port: '3500', online: false, checking: false },
-  { name: 'Python Backend', port: '8000', online: false, checking: false },
-  { name: 'JavaScript Backend', port: '3001', online: false, checking: false }
-]);
-
-const selectedServerType = ref(
-  serverTypes.value.find(s => s.port === serverPort.value) || serverTypes.value[0]
-);
+// Middleware status (always port 3500)
+const middlewareStatus = ref<MiddlewareStatus>({
+  online: false,
+  checking: false
+});
 
 const isDetecting = ref(false);
 
-// Watch for server type changes and update port
-watch(selectedServerType, (newType) => {
-  serverPort.value = newType.port;
-});
-
-// Watch for panel open and auto-detect servers
+// Watch for panel open and check middleware status
 watch(isOpen, (newValue) => {
   if (newValue) {
-    detectServers();
+    checkMiddleware();
   }
 });
 
@@ -45,13 +32,16 @@ const togglePanel = () => {
   isOpen.value = !isOpen.value;
 };
 
-// Check if a server is online by pinging its health endpoint
-async function checkServerHealth(ip: string, port: string): Promise<{ online: boolean; service?: string }> {
+// Check if middleware is online by pinging its health endpoint
+async function checkMiddleware() {
+  isDetecting.value = true;
+  middlewareStatus.value.checking = true;
+
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-    const response = await fetch(`http://${ip}:${port}/health`, {
+    const response = await fetch(`http://${serverIP.value}:3500/health`, {
       method: 'GET',
       signal: controller.signal
     });
@@ -60,57 +50,27 @@ async function checkServerHealth(ip: string, port: string): Promise<{ online: bo
 
     if (response.ok) {
       const data = await response.json();
-      return {
-        online: true,
-        service: data.service || data.middleware || 'unknown'
-      };
+      middlewareStatus.value.online = true;
+      middlewareStatus.value.mode = data.mode || 'unknown';
+    } else {
+      middlewareStatus.value.online = false;
     }
-    return { online: false };
   } catch {
-    return { online: false };
+    middlewareStatus.value.online = false;
   }
-}
 
-// Detect all available servers
-async function detectServers() {
-  isDetecting.value = true;
-
-  // Set all servers to checking state
-  serverTypes.value.forEach(server => {
-    server.checking = true;
-  });
-
-  // Check each server in parallel
-  const checks = serverTypes.value.map(async (server) => {
-    const result = await checkServerHealth(serverIP.value, server.port);
-    server.online = result.online;
-    server.service = result.service;
-    server.checking = false;
-  });
-
-  await Promise.all(checks);
+  middlewareStatus.value.checking = false;
   isDetecting.value = false;
-
-  // Auto-select the first online server if current selection is offline
-  if (!selectedServerType.value.online) {
-    const firstOnline = serverTypes.value.find(s => s.online);
-    if (firstOnline) {
-      selectedServerType.value = firstOnline;
-    }
-  }
 }
 
 const saveSettings = () => {
   if (serverIP.value !== API_IP_ADDRESS.value) {
     updateAPIAddress(serverIP.value);
   }
-  if (serverPort.value !== API_PORT.value) {
-    updateAPIPort(serverPort.value);
-  }
   if (debugMode.value !== DEBUG_MODE.value) {
     updateDebugMode(debugMode.value);
   }
-  console.log(`Server IP: ${serverIP.value}, Server Port: ${serverPort.value}, Debug Mode: ${debugMode.value}`);
+  console.log(`Server IP: ${serverIP.value}, Debug Mode: ${debugMode.value}`);
   isOpen.value = false;
   window.location.reload()
 };
@@ -155,29 +115,30 @@ const saveSettings = () => {
               class="input-style mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <!-- Server Detection Section -->
-          <div v-if="debugMode" class="space-y-3">
+
+          <!-- Middleware Status Section -->
+          <div class="space-y-3">
             <div class="flex items-center justify-between">
-              <label class="block text-sm font-medium dark:text-light-primary-dark">Server Detection:</label>
+              <label class="block text-sm font-medium dark:text-light-primary-dark">Middleware Status:</label>
               <Button
-                @click="detectServers"
+                @click="checkMiddleware"
                 :disabled="isDetecting"
                 class="text-xs px-3 py-1"
               >
                 <i v-if="isDetecting" class="fas fa-spinner fa-spin mr-1"></i>
                 <i v-else class="fas fa-sync mr-1"></i>
-                {{ isDetecting ? 'Detecting...' : 'Detect' }}
+                {{ isDetecting ? 'Checking...' : 'Check' }}
               </Button>
             </div>
 
-            <!-- Server Status Indicators -->
-            <div class="bg-gray-50 dark:bg-dark-primary-light rounded-lg p-3 space-y-2">
-              <div v-for="server in serverTypes" :key="server.port" class="flex items-center justify-between">
+            <!-- Middleware Status Display -->
+            <div class="bg-gray-50 dark:bg-dark-primary-light rounded-lg p-3">
+              <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
                   <!-- Status Indicator -->
                   <div class="relative">
                     <div
-                      v-if="server.checking"
+                      v-if="middlewareStatus.checking"
                       class="w-3 h-3 rounded-full bg-yellow-400 animate-pulse"
                       title="Checking..."
                     ></div>
@@ -185,56 +146,27 @@ const saveSettings = () => {
                       v-else
                       :class="[
                         'w-3 h-3 rounded-full',
-                        server.online ? 'bg-green-500' : 'bg-red-500'
+                        middlewareStatus.online ? 'bg-green-500' : 'bg-red-500'
                       ]"
-                      :title="server.online ? 'Online' : 'Offline'"
+                      :title="middlewareStatus.online ? 'Online' : 'Offline'"
                     ></div>
                   </div>
-                  <span class="text-sm dark:text-light-primary">
-                    {{ server.name }}
-                  </span>
+                  <div>
+                    <span class="text-sm font-medium dark:text-light-primary">
+                      Middleware
+                    </span>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                      Port 3500 {{ middlewareStatus.mode ? `(${middlewareStatus.mode})` : '' }}
+                    </p>
+                  </div>
                 </div>
-                <span class="text-xs text-gray-500 dark:text-gray-400">
-                  :{{ server.port }}
+                <span class="text-xs font-medium" :class="middlewareStatus.online ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+                  {{ middlewareStatus.online ? 'Online' : 'Offline' }}
                 </span>
               </div>
             </div>
-
-            <!-- Server Type Selector -->
-            <div>
-              <label for="serverType" class="block text-sm font-medium dark:text-light-primary-dark mb-2">Select Server:</label>
-              <select
-                id="serverType"
-                v-model="selectedServerType"
-                class="input-style mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-dark-primary-dark dark:text-light-primary"
-              >
-                <option v-for="type in serverTypes" :key="type.port" :value="type">
-                  {{ type.name }} (Port {{ type.port }})
-                  <template v-if="type.online"> - Online</template>
-                </option>
-              </select>
-            </div>
           </div>
 
-          <!-- Manual Port Input - shows when not in debug mode or for custom ports -->
-          <div v-if="!debugMode">
-            <label for="port" class="block text-sm font-medium dark:text-light-primary-dark">Server Port:</label>
-            <input
-              type="number"
-              id="port"
-              v-model="serverPort"
-              required
-              class="input-style mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <!-- Port Display when server type is selected -->
-          <div v-else>
-            <label class="block text-sm font-medium dark:text-light-primary-dark">Current Port:</label>
-            <div class="mt-1 px-3 py-2 bg-gray-100 dark:bg-dark-primary-light rounded-md">
-              <span class="text-sm dark:text-light-primary">{{ serverPort }}</span>
-            </div>
-          </div>
           <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-dark-primary-dark rounded-lg">
             <div>
               <label for="debug" class="block text-sm font-medium dark:text-light-primary-dark">Debug Mode</label>
