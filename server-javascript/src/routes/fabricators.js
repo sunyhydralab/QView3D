@@ -2,20 +2,38 @@ import express from 'express';
 import { SerialPort } from '../serialport.js';
 import database from '../database.js';
 import fabricatorManager from '../fabricatorManager.js';
+import virtualSerialManager from '../virtualSerial.js';
 
 const router = express.Router();
 
 // Get available serial ports
 router.get('/getports', async (req, res) => {
   try {
-    const ports = await SerialPort.list();
-    res.json(ports.map(port => ({
+    // Get real serial ports
+    const realPorts = await SerialPort.list();
+    const realPortsList = realPorts.map(port => ({
       path: port.path,
       manufacturer: port.manufacturer || '',
       serialNumber: port.serialNumber || '',
       hwid: port.hwid || '',
       available: true
-    })));
+    }));
+
+    // Get virtual serial ports
+    const virtualPorts = virtualSerialManager.listPorts();
+    const virtualPortsList = virtualPorts.map(port => ({
+      path: port.path,
+      manufacturer: port.manufacturer,
+      serialNumber: port.serialNumber,
+      hwid: `VIRTUAL-${port.path}`,
+      available: true,
+      isVirtual: true
+    }));
+
+    // Combine both lists
+    const allPorts = [...realPortsList, ...virtualPortsList];
+
+    res.json(allPorts);
   } catch (error) {
     console.error('Error listing ports:', error);
     res.status(500).json({ error: 'Failed to list ports', details: error.message });
