@@ -28,7 +28,6 @@ class Fabricator(db.Model):
         nullable=False,
     )
     devicePort = db.Column(db.String(50), nullable=False)
-    active_job_logger = None
 
     def __init__(self, port: ListPortInfo | SysFS | None, name: str = "", consoleLogger: TextIO | None = None, fileLogger: str | None = None):
         """
@@ -412,15 +411,6 @@ class Fabricator(db.Model):
 
     def getQueue(self):
         return self.queue
-
-    def getActiveJobLogger(self):
-        """
-        gets the active job logger
-        :rtype: JobLogger | None
-        """
-        if self.active_job_logger is None:
-            return None
-        return self.active_job_logger
 
     def checkValidJob(self):
         """checks if the job is valid for the fabricator"""

@@ -291,10 +291,6 @@ def releasejob():
                 fabricator.setStatus("ready") # printer ready to accept new prints
                 if current_app:
                     current_app.socketio.emit("fabricator_status_update", {"id": printerid, "status": "ready"})
-            # nuke logs
-            logger = fabricator.getActiveJobLogger()
-            if logger is not None:
-                logger.nukeLogs()
 
             return rerunjob(printerid, jobpk, "front")
 
@@ -303,10 +299,6 @@ def releasejob():
                 fabricator.setStatus("ready") # printer ready to accept new prints
                 if current_app:
                     current_app.socketio.emit("fabricator_status_update", {"id": printerid, "status": "ready"})
-            # nuke logs
-            logger = fabricator.getActiveJobLogger()
-            if logger is not None:
-                logger.nukeLogs()
                 
         if current_app:
             db.session.commit()
