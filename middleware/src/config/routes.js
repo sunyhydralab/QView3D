@@ -46,13 +46,14 @@ export const routeMap = {
   '/getissuesbycategory': 'either',
   '/resolveissue': 'either',
 
-  // Emulator operations - Python only
-  '/startemulator': 'python',
-  '/disconnectemulator': 'python',
-  '/registeremulator': 'python',
-  '/setemulatortemperature': 'python',
-  '/runemulatortest': 'python',
-  '/resetemulator': 'python',
+  // Emulator operations - JavaScript backend for virtual serial ports
+  '/startemulator': 'javascript',
+  '/disconnectemulator': 'javascript',
+  '/registeremulator': 'javascript',
+  '/setemulatortemperature': 'javascript',
+  '/runemulatortest': 'javascript',
+  '/resetemulator': 'javascript',
+  '/emulatorstatus': 'javascript',
 
   // Python-specific operations
   '/diagnose': 'python',
