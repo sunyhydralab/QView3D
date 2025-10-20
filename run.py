@@ -280,33 +280,28 @@ def start_debug(fresh_database):
     # Build client before starting services
     build_client()
 
-    # Start services based on backend mode
+    # Start ALL services - middleware handles routing
     processes = []
 
-    if BACKEND_MODE == "python":
-        # Python backend mode
-        print("\n" + "="*60)
-        print("Starting QView3D with Python Backend")
-        print("="*60)
-        print(f"Frontend: http://{VITE_CLIENT_IP}:{VITE_CLIENT_PORT}")
-        print(f"Middleware: http://localhost:3500 (Always On)")
-        print(f"Python Backend: http://{FLASK_SERVER_IP}:{FLASK_SERVER_PORT}")
-        print("-"*60)
-        processes.append(start_middleware())  # ALWAYS start middleware first
-        processes.append(start_client())
-        processes.append(start_server(fresh_database))
-    elif BACKEND_MODE == "javascript":
-        # JavaScript backend mode
-        print("\n" + "="*60)
-        print("Starting QView3D with JavaScript Backend")
-        print("="*60)
-        print(f"Frontend: http://{VITE_CLIENT_IP}:{VITE_CLIENT_PORT}")
-        print(f"Middleware: http://localhost:3500 (Always On)")
-        print(f"JavaScript Backend: http://localhost:{JS_SERVER_PORT}")
-        print("-"*60)
-        processes.append(start_middleware())  # ALWAYS start middleware first
-        processes.append(start_client())
-        processes.append(start_js_server())
+    print("\n" + "="*60)
+    print("Starting QView3D with BOTH Backends")
+    print("="*60)
+    print(f"Frontend: http://{VITE_CLIENT_IP}:{VITE_CLIENT_PORT}")
+    print(f"Middleware: http://localhost:3500 (Redundant Fallback)")
+    print(f"Python Backend: http://{FLASK_SERVER_IP}:{FLASK_SERVER_PORT}")
+    print(f"JavaScript Backend: http://localhost:{JS_SERVER_PORT}")
+    print(f"Default Backend: {BACKEND_MODE}")
+    print("-"*60)
+
+    # Start middleware first (handles routing and fallback)
+    processes.append(start_middleware())
+
+    # Start both backends for redundancy
+    processes.append(start_server(fresh_database))
+    processes.append(start_js_server())
+
+    # Start client
+    processes.append(start_client())
 
     return processes
 

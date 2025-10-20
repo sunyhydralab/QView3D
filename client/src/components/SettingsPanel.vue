@@ -5,6 +5,7 @@ import Button from '@/components/Button.vue'
 
 const serverIP = ref<string>(API_IP_ADDRESS.value);
 const debugMode = ref<boolean>(DEBUG_MODE.value);
+const preferredBackend = ref<string>(localStorage.getItem('preferredBackend') || 'python');
 const isOpen = ref(false);
 
 interface MiddlewareStatus {
@@ -63,14 +64,29 @@ async function checkMiddleware() {
   isDetecting.value = false;
 }
 
-const saveSettings = () => {
+const saveSettings = async () => {
   if (serverIP.value !== API_IP_ADDRESS.value) {
     updateAPIAddress(serverIP.value);
   }
   if (debugMode.value !== DEBUG_MODE.value) {
     updateDebugMode(debugMode.value);
   }
-  console.log(`Server IP: ${serverIP.value}, Debug Mode: ${debugMode.value}`);
+
+  // Save preferred backend to localStorage
+  localStorage.setItem('preferredBackend', preferredBackend.value);
+
+  // Update middleware routing preference
+  try {
+    await fetch(`http://${serverIP.value}:3500/api/set-backend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ backend: preferredBackend.value })
+    });
+  } catch (error) {
+    console.error('Failed to update backend preference:', error);
+  }
+
+  console.log(`Server IP: ${serverIP.value}, Debug Mode: ${debugMode.value}, Backend: ${preferredBackend.value}`);
   isOpen.value = false;
   window.location.reload()
 };
@@ -164,6 +180,36 @@ const saveSettings = () => {
                   {{ middlewareStatus.online ? 'Online' : 'Offline' }}
                 </span>
               </div>
+            </div>
+          </div>
+
+          <!-- Backend Selection -->
+          <div class="space-y-2">
+            <label class="block text-sm font-medium dark:text-light-primary-dark">Preferred Backend:</label>
+            <div class="bg-gray-50 dark:bg-dark-primary-light rounded-lg p-3">
+              <div class="space-y-2">
+                <label class="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    v-model="preferredBackend"
+                    value="python"
+                    class="w-4 h-4 text-accent-primary focus:ring-accent-primary"
+                  />
+                  <span class="ml-2 text-sm dark:text-light-primary">Python (Port 8000)</span>
+                </label>
+                <label class="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    v-model="preferredBackend"
+                    value="javascript"
+                    class="w-4 h-4 text-accent-primary focus:ring-accent-primary"
+                  />
+                  <span class="ml-2 text-sm dark:text-light-primary">JavaScript (Port 3000)</span>
+                </label>
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Middleware auto-falls back to other backend if primary fails
+              </p>
             </div>
           </div>
 

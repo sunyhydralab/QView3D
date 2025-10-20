@@ -14,12 +14,33 @@ app.use(cors(config.corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Store current preferred backend (can be changed at runtime)
+let preferredBackend = config.middleware.mode || 'python';
+
 app.get('/health', (req, res) => {
   res.json({
     middleware: 'healthy',
     mode: 'redundant-fallback',
+    preferredBackend: preferredBackend,
     uptime: process.uptime()
   });
+});
+
+// API endpoint to change preferred backend
+app.post('/api/set-backend', express.json(), (req, res) => {
+  const { backend } = req.body;
+
+  if (backend === 'python' || backend === 'javascript') {
+    preferredBackend = backend;
+    logger.info(`Preferred backend changed to: ${backend}`);
+    res.json({ success: true, preferredBackend: backend });
+  } else {
+    res.status(400).json({ success: false, error: 'Invalid backend. Must be "python" or "javascript"' });
+  }
+});
+
+app.get('/api/get-backend', (req, res) => {
+  res.json({ preferredBackend });
 });
 
 function matchRoute(path, pattern) {
@@ -27,17 +48,23 @@ function matchRoute(path, pattern) {
 }
 
 function getPrimaryBackend(path) {
+  // Check if route has a specific backend requirement
   for (const [pattern, backendName] of Object.entries(routeMap)) {
     if (matchRoute(path, pattern)) {
-      if (backendName === 'either' || backendName === 'javascript') {
+      if (backendName === 'javascript') {
         return config.backends.javascript;
       }
       if (backendName === 'python') {
         return config.backends.python;
       }
+      // If 'either', use the preferred backend
+      if (backendName === 'either') {
+        return preferredBackend === 'python' ? config.backends.python : config.backends.javascript;
+      }
     }
   }
-  return config.backends.javascript;
+  // Default to preferred backend
+  return preferredBackend === 'python' ? config.backends.python : config.backends.javascript;
 }
 
 function getFallbackBackend(primary) {
