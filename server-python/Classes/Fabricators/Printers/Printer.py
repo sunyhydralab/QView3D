@@ -255,6 +255,7 @@ class Printer(Device, metaclass=ABCMeta):
         :rtype: bool
         """
         if logger is None: logger = self.logger
+        should_log = logger is not None  # Define should_log based on logger availability
         assert self.serialConnection is not None, "Serial connection is None"
         assert self.serialConnection.is_open, "Serial connection is not open"
         if isinstance(gcode, str):

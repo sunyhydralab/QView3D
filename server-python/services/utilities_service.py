@@ -7,7 +7,7 @@ class UtilitiesService:
     def get_emu_ports(self):
         """Get emulator ports information."""
         fake_device = next(iter(self.app.emulator_connections.values()), None)
-        if fake_device:
+        if fake_device and hasattr(fake_device, 'fake_port'):
             return [fake_device.fake_port, fake_device.fake_name, fake_device.fake_hwid]
         return [None, None, None]
 

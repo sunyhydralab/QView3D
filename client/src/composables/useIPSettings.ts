@@ -5,8 +5,8 @@ import { migratePortSettings, validatePortSettings } from '@/utils/portMigration
 migratePortSettings();
 validatePortSettings();
 
-// MIDDLEWARE_PORT is always 3500 - this is the permanent communication layer
-const MIDDLEWARE_PORT = "3500";
+// MIDDLEWARE_PORT is always 8002 - this is the permanent communication layer
+const MIDDLEWARE_PORT = "8002";
 
 // declare IP settings
 export const API_IP_ADDRESS = computed(() => localStorage.getItem("apiIPAddress") || "localhost")

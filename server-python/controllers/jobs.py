@@ -3,13 +3,14 @@ from flask import Blueprint, jsonify, request, Response
 from Classes.Jobs import Job
 from config.db import db
 import json
-import os 
+import os
 import gzip
 import serial
 import serial.tools.list_ports
 from services.app_service import current_app
 from traceback import format_exc
 from Classes.Fabricators.Fabricator import Fabricator
+from Classes.Fabricators.Printers.Printer import Printer
 
 # get data for jobs 
 jobs_bp = Blueprint("jobs", __name__)

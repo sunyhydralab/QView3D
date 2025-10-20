@@ -67,7 +67,7 @@ class Device(ABC):
             } if self.serialConnection else None,
             "homePosition": self.homePosition.__to_JSON__() if self.homePosition else None,
             "dbID": self.dbID,
-            "serialPort": self.serialPort.name if self.serialPort else None,
+            "serialPort": self.serialPort.device if self.serialPort else None,
             "serialID": self.serialID,
             "status": self.status,
             "verdict": self.verdict

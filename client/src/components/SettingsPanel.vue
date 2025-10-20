@@ -14,7 +14,7 @@ interface MiddlewareStatus {
   mode?: string;
 }
 
-// Middleware status (always port 3500)
+// Middleware status (always port 8002)
 const middlewareStatus = ref<MiddlewareStatus>({
   online: false,
   checking: false
@@ -42,7 +42,7 @@ async function checkMiddleware() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-    const response = await fetch(`http://${serverIP.value}:3500/health`, {
+    const response = await fetch(`http://${serverIP.value}:8002/health`, {
       method: 'GET',
       signal: controller.signal
     });
@@ -52,7 +52,7 @@ async function checkMiddleware() {
     if (response.ok) {
       const data = await response.json();
       middlewareStatus.value.online = true;
-      middlewareStatus.value.mode = data.mode || 'unknown';
+      middlewareStatus.value.mode = data.selectedBackend || 'unknown';
     } else {
       middlewareStatus.value.online = false;
     }
@@ -75,18 +75,11 @@ const saveSettings = async () => {
   // Save preferred backend to localStorage
   localStorage.setItem('preferredBackend', preferredBackend.value);
 
-  // Update middleware routing preference
-  try {
-    await fetch(`http://${serverIP.value}:3500/api/set-backend`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ backend: preferredBackend.value })
-    });
-  } catch (error) {
-    console.error('Failed to update backend preference:', error);
-  }
+  // Note: Backend changes require server restart via run.py
+  // The middleware reads the backend mode from config.json on startup
 
   console.log(`Server IP: ${serverIP.value}, Debug Mode: ${debugMode.value}, Backend: ${preferredBackend.value}`);
+  alert('Settings saved! Note: To change backends, update BACKEND_MODE in run.py and restart the server.');
   isOpen.value = false;
   window.location.reload()
 };
@@ -172,7 +165,7 @@ const saveSettings = async () => {
                       Middleware
                     </span>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                      Port 3500 {{ middlewareStatus.mode ? `(${middlewareStatus.mode})` : '' }}
+                      Port 8002 {{ middlewareStatus.mode ? `(${middlewareStatus.mode})` : '' }}
                     </p>
                   </div>
                 </div>
@@ -185,7 +178,7 @@ const saveSettings = async () => {
 
           <!-- Backend Selection -->
           <div class="space-y-2">
-            <label class="block text-sm font-medium dark:text-light-primary-dark">Preferred Backend:</label>
+            <label class="block text-sm font-medium dark:text-light-primary-dark">Active Backend:</label>
             <div class="bg-gray-50 dark:bg-dark-primary-light rounded-lg p-3">
               <div class="space-y-2">
                 <label class="flex items-center cursor-pointer">
@@ -204,11 +197,11 @@ const saveSettings = async () => {
                     value="javascript"
                     class="w-4 h-4 text-accent-primary focus:ring-accent-primary"
                   />
-                  <span class="ml-2 text-sm dark:text-light-primary">JavaScript (Port 3000)</span>
+                  <span class="ml-2 text-sm dark:text-light-primary">JavaScript (Port 8005)</span>
                 </label>
               </div>
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                Middleware auto-falls back to other backend if primary fails
+                Change BACKEND_MODE in run.py and restart to switch backends
               </p>
             </div>
           </div>

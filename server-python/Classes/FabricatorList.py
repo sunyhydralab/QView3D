@@ -90,6 +90,8 @@ class FabricatorList:
             else: # means that the fabricator is not in the list or the db
                 newFab = Fabricator(serialPort, name=name)
                 self.fabricators.append(newFab)
+                db.session.add(newFab)
+                db.session.commit()
         dbFabricators = Fabricator.queryAll()
         assert(len(self) == len(dbFabricators)), f"len(self)={len(self)}, len(dbFabricators)={len(dbFabricators)}"
         # TODO: figure out how to check if the fabricator is in the db
@@ -149,7 +151,7 @@ class FabricatorList:
         :return: the first fabricator with the given port, or None if no fabricator has that port
         :rtype: Fabricator | None
         """
-        if isinstance(port, ListPortInfo or SysFS): port = port.device
+        if isinstance(port, (ListPortInfo, SysFS)): port = port.device
         assert isinstance(port, str), f"port={port}, type(port)={type(port)}"
         for fabricator in self:
             assert isinstance(fabricator.devicePort, str), f"fabricator.devicePort={fabricator.devicePort}, type(fabricator.devicePort)={type(fabricator.devicePort)}"

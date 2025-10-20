@@ -5,10 +5,20 @@ from datetime import datetime
 class Logger:
     """Logger for all operations - saves to database when needed"""
 
-    def __init__(self, name="QView3D"):
+    # Logging levels (matching Python's logging module)
+    DEBUG = 10
+    INFO = 20
+    WARNING = 30
+    ERROR = 40
+    CRITICAL = 50
+
+    def __init__(self, name="QView3D", port=None, consoleLogger=None, fileLogger=None, loggingLevel=20, consoleLevel=40):
         self.name = name
+        self.port = port
         self.debug = os.getenv("DEBUG", "False").lower() == "true"
         self.logs = []
+        self.loggingLevel = loggingLevel
+        self.consoleLevel = consoleLevel
 
     def log(self, message, level="INFO"):
         """Log message - only saves if debug mode"""

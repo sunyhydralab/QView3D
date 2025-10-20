@@ -178,7 +178,7 @@ def getFabricatorById():
     try:
         data = request.get_json()
         fabricator_id = data['fabricator_id']
-        fabricator = app.fabricator_list.getFabricatorByID(fabricator_id)
+        fabricator = app.fabricator_list.getFabricatorById(fabricator_id)
         if fabricator:
             return jsonify({"success": True, "fabricator": fabricator.__to_JSON__()})
         else:

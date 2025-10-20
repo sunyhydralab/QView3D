@@ -4,7 +4,8 @@
  */
 
 const STORAGE_VERSION_KEY = 'configVersion';
-const CURRENT_VERSION = '2.0'; // Increment when breaking changes occur
+// Bump version to force migration of API port to middleware 8002
+const CURRENT_VERSION = '2.1'; // Increment when breaking changes occur
 
 export function migratePortSettings(): void {
   const storedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
@@ -12,10 +13,10 @@ export function migratePortSettings(): void {
 
   // If no version is stored, this is either a fresh install or pre-migration data
   if (!storedVersion) {
-    // Check if we have old port 8000 stored
-    if (storedPort === '8000') {
-      console.log('[Migration] Updating port from 8000 to 3500 (middleware)');
-      localStorage.setItem('apiPort', '3500');
+    // Check if we have old port 8000 or 3500 stored
+    if (storedPort === '8000' || storedPort === '3500') {
+      console.log('[Migration] Updating port to 8002 (middleware)');
+      localStorage.setItem('apiPort', '8002');
       localStorage.setItem(STORAGE_VERSION_KEY, CURRENT_VERSION);
       console.log('[Migration] Port migration completed');
     } else if (!storedPort) {
@@ -23,7 +24,11 @@ export function migratePortSettings(): void {
       localStorage.setItem(STORAGE_VERSION_KEY, CURRENT_VERSION);
     }
   } else if (storedVersion < CURRENT_VERSION) {
-    // Handle future migrations here
+    // Migrate old ports (3500 or 8000) to new middleware port 8002
+    if (storedPort === '3500' || storedPort === '8000') {
+      console.log('[Migration] Updating legacy port to 8002 (middleware)');
+      localStorage.setItem('apiPort', '8002');
+    }
     localStorage.setItem(STORAGE_VERSION_KEY, CURRENT_VERSION);
   }
 }
@@ -50,7 +55,7 @@ export function clearStoredSettings(): void {
  */
 export function validatePortSettings(): void {
   const port = localStorage.getItem('apiPort');
-  const validPorts = ['3500', '8000', '3001']; // Valid port options
+  const validPorts = ['8002', '8000', '8005']; // Valid port options (middleware, python, js)
 
   if (port && !validPorts.includes(port)) {
     console.warn(`[Validation] Invalid port ${port} detected, resetting to default`);

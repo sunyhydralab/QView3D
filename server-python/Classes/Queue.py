@@ -202,6 +202,7 @@ class Queue(deque):
         """
         if len(self) == 0:
             return None
-        self.popleft()
+        removed_job = self.popleft()
         if current_app:
             current_app.socketio.emit("job_removed", {"queue": self.__list__()})
+        return removed_job

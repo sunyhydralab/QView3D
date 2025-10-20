@@ -252,8 +252,16 @@ class EmuListPortInfo(ListPortInfo):
         self._device = device
         self._description = description
         self._hwid = hwid
-        self.vid = int(hwid.split("PID=")[1].split(":")[0], 16) if hwid else None
-        self.pid = int(hwid.split(":")[2].split(" ")[0], 16) if hwid else None
+        try:
+            if hwid and "PID=" in hwid:
+                self.vid = int(hwid.split("PID=")[1].split(":")[0], 16)
+                self.pid = int(hwid.split(":")[2].split(" ")[0], 16)
+            else:
+                self.vid = None
+                self.pid = None
+        except (IndexError, ValueError):
+            self.vid = None
+            self.pid = None
 
     def __repr__(self):
         return f"EmuListPortInfo(device={self.device}, description={self.description}, hwid={self.hwid})"

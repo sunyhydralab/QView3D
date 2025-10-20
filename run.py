@@ -10,8 +10,8 @@ QView3D Application Launcher
 ============================
 
 Architecture:
-- Middleware (port 3500) is ALWAYS running - it's the permanent communication layer
-- Frontend ALWAYS connects to middleware (port 3500)
+- Middleware (port 8002) is ALWAYS running - it's the permanent communication layer
+- Frontend ALWAYS connects to middleware (port 8002)
 - Middleware routes requests to the appropriate backend (Python or JavaScript)
 - Clear your browser's localStorage if you encounter port issues:
   1. Open browser console (F12)
@@ -20,7 +20,7 @@ Architecture:
 
 Backend Modes:
 - python: Python Flask backend (port 8000) - DEFAULT
-- javascript: Node.js backend (port 3000) - Serial communication focus
+- javascript: Node.js backend (port 8005) - Serial communication focus
 
 The middleware automatically routes requests and provides fallback between backends.
 """
@@ -35,8 +35,8 @@ MIDDLEWARE_LOCAL_PATH = "middleware"
 # The name of the database file
 DATABASE_FILE_NAME="QView.db"
 
-# If the database file should be deleted before running the server, then set this to true
-START_FROM_NEW_DATABASE = True
+# Database is ALWAYS wiped on startup for clean state
+START_FROM_NEW_DATABASE = True  # Always True - ensures fresh database every run
 
 # Server configuration
 FLASK_SERVER_IP = "localhost" # TODO Have this affect the server
@@ -44,13 +44,13 @@ FLASK_SERVER_PORT = 8000 # TODO Have this affect the server
 FLASK_SERVER_WEB_SOCKET_PORT = 8001 # TODO Have this affect the server
 
 # JavaScript Server configuration
-JS_SERVER_PORT = 3000
-JS_SERVER_WS_PORT = 3001
+JS_SERVER_PORT = 8005
+JS_SERVER_WS_PORT = 8006
 
 # Backend selection: "python" or "javascript"
 # - python: Use Python Flask backend only (default)
 # - javascript: Use Node.js backend only
-BACKEND_MODE = "python"  # Default to python backend
+BACKEND_MODE = "python"  # Default to Python backend
 
 # Client configuration
 VITE_CLIENT_IP = "SAME_AS_SERVER"
@@ -64,17 +64,20 @@ if not (os.path.exists(CLIENT_LOCAL_PATH) and os.path.exists(SERVER_LOCAL_PATH))
 # TODO Enforce Python version (Lock to 3.12)
 
 def build_client():
-    # Build the client for production
-    print("Building client...")
+    # Build the client for production (ALWAYS runs for fresh build)
+    print("\n" + "="*60)
+    print("REBUILDING CLIENT...")
+    print("="*60)
     result = subprocess.run(
         "npm run build-only",
         shell=True,
         cwd=CLIENT_LOCAL_PATH
     )
     if result.returncode == 0:
-        print("Client build complete")
+        print("✓ Client build complete")
     else:
-        print("Client build failed, but continuing...")
+        print("✗ Client build failed, but continuing...")
+    print("="*60 + "\n")
 
 def start_client():
     global VITE_CLIENT_IP
@@ -91,16 +94,16 @@ def start_client():
     )
 
 def start_server(fresh_database):
-    # Delete the database file if the developer wants a fresh database for the server
-    if fresh_database == True:
-        # Ensure the database file actually exists
-        database_file_path = os.path.join(SERVER_LOCAL_PATH, DATABASE_FILE_NAME)
-        if (os.path.exists(database_file_path)):
-            try:
-                os.remove(database_file_path)
-                print("Deleted the database file")
-            except OSError as ose:
-                print(ose)
+    # ALWAYS delete the database file for a fresh start
+    database_file_path = os.path.join(SERVER_LOCAL_PATH, DATABASE_FILE_NAME)
+    if (os.path.exists(database_file_path)):
+        try:
+            os.remove(database_file_path)
+            print("✓ Database wiped - starting fresh")
+        except OSError as ose:
+            print(f"✗ Failed to delete database: {ose}")
+    else:
+        print("✓ No existing database found - starting fresh")
 
     # Start the server in the background using virtual environment
     if current_os == "WINDOWS":
@@ -116,8 +119,8 @@ def start_server(fresh_database):
                 cwd=os.path.abspath(SERVER_LOCAL_PATH)
             )
     else:
-        # On Linux/Mac, use .venv (the one we created in WSL)
-        venv_python = os.path.abspath(os.path.join(SERVER_LOCAL_PATH, ".venv", "bin", "python"))
+        # On Linux/Mac, use .python-venv (the one we created in WSL)
+        venv_python = os.path.abspath(os.path.join(SERVER_LOCAL_PATH, ".python-venv", "bin", "python"))
         if os.path.exists(venv_python):
             return subprocess.Popen(
                 [venv_python, "app.py"],
@@ -131,10 +134,13 @@ def start_server(fresh_database):
 
 def start_js_server():
     # Start the JavaScript server in the background
+    env = os.environ.copy()
+    env['PORT'] = str(JS_SERVER_PORT)
     return subprocess.Popen(
         "node src/index.js",
         shell=True,
-        cwd=JS_SERVER_LOCAL_PATH
+        cwd=JS_SERVER_LOCAL_PATH,
+        env=env
     )
 
 def start_middleware():
@@ -159,12 +165,21 @@ def update_config_json():
     config['backends'] = {
         "python": {
             "url": f"http://{FLASK_SERVER_IP}:{FLASK_SERVER_PORT}",
-            "ws_port": FLASK_SERVER_WEB_SOCKET_PORT
+            "ws_port": FLASK_SERVER_WEB_SOCKET_PORT,
+            "emulator_port": 8004
         },
         "javascript": {
             "url": f"http://localhost:{JS_SERVER_PORT}",
-            "ws_port": JS_SERVER_WS_PORT
+            "ws_port": JS_SERVER_WS_PORT,
+            "emulator_port": 8007
         }
+    }
+
+    # Update middleware mode
+    config['middleware'] = {
+        "mode": BACKEND_MODE,
+        "port": 8002,
+        "ws_port": 8003
     }
 
     with open(config_path, 'w') as f:
@@ -259,15 +274,36 @@ def install_software(current_os: str):
 
 
 def get_user_configuration():
+    """
+    Get user configuration for install/run mode
+    Returns: (mode, backend) tuple
+    """
     # .upper() ensures that lower case letters are fine as well
-    user_configuration = input("Would like to: Install Dependencies[I], Run the program in debug mode[D](The default), Run the program in release mode[R], and Cancel[C] ").upper()
+    user_mode = input("Would like to: Install Dependencies[I], Run the program in debug mode[D](The default), Run the program in release mode[R], and Cancel[C] ").upper()
 
     # Ensure the user input is correct
-    match user_configuration:
-        case "I" | "D" | "R" | "C": # Return the configuration
-            return user_configuration
-        case "": # Handle the default case
-            return "D"
+    match user_mode:
+        case "I":
+            return ("I", None)  # No backend needed for install
+        case "C":
+            return ("C", None)  # No backend needed for cancel
+        case "D" | "R" | "":
+            # Ask for backend selection
+            if user_mode == "":
+                user_mode = "D"  # Default to debug mode
+
+            backend_choice = input("Select Backend: [P]ython (default), [J]avaScript ").upper()
+
+            match backend_choice:
+                case "P":
+                    return (user_mode, "python")
+                case "J":
+                    return (user_mode, "javascript")
+                case "":  # Default to Python
+                    return (user_mode, "python")
+                case _:
+                    print("Not a valid backend choice")
+                    return get_user_configuration()
         case _:
             print("Not a valid configuration")
             # Continue the loop if the user puts the wrong input
@@ -277,28 +313,42 @@ def start_debug(fresh_database):
     # Update config.json with current backend mode
     update_config_json()
 
-    # Build client before starting services
+    # ALWAYS rebuild client before starting services
     build_client()
 
-    # Start ALL services - middleware handles routing
+    # Start selected backend only - no redundancy
     processes = []
 
     print("\n" + "="*60)
-    print("Starting QView3D with BOTH Backends")
+    print(f"STARTING QView3D - {BACKEND_MODE.upper()} BACKEND")
     print("="*60)
-    print(f"Frontend: http://{VITE_CLIENT_IP}:{VITE_CLIENT_PORT}")
-    print(f"Middleware: http://localhost:3500 (Redundant Fallback)")
-    print(f"Python Backend: http://{FLASK_SERVER_IP}:{FLASK_SERVER_PORT}")
-    print(f"JavaScript Backend: http://localhost:{JS_SERVER_PORT}")
-    print(f"Default Backend: {BACKEND_MODE}")
+    print(f"Frontend:   http://{VITE_CLIENT_IP}:{VITE_CLIENT_PORT}")
+    print(f"Middleware: http://localhost:8002")
+
+    if BACKEND_MODE == "python":
+        print(f"Backend:    http://{FLASK_SERVER_IP}:{FLASK_SERVER_PORT}")
+        print(f"WebSocket:  ws://{FLASK_SERVER_IP}:{FLASK_SERVER_WEB_SOCKET_PORT}")
+        print(f"Emulator:   Port 8004")
+    elif BACKEND_MODE == "javascript":
+        print(f"Backend:    http://localhost:{JS_SERVER_PORT}")
+        print(f"WebSocket:  ws://localhost:{JS_SERVER_WS_PORT}")
+        print(f"Emulator:   Port 8007")
+
+    print("-"*60)
+    print("NOTE: Database is wiped & client is rebuilt on every startup")
     print("-"*60)
 
-    # Start middleware first (handles routing and fallback)
+    # Start middleware first (handles routing)
     processes.append(start_middleware())
 
-    # Start both backends for redundancy
-    processes.append(start_server(fresh_database))
-    processes.append(start_js_server())
+    # Start ONLY the selected backend
+    if BACKEND_MODE == "python":
+        processes.append(start_server(fresh_database))
+    elif BACKEND_MODE == "javascript":
+        processes.append(start_js_server())
+    else:
+        print(f"Warning: Unknown backend mode '{BACKEND_MODE}', starting Python backend")
+        processes.append(start_server(fresh_database))
 
     # Start client
     processes.append(start_client())
@@ -310,7 +360,11 @@ running_processes = []
 is_installing = False
 
 # Get the user configuration
-user_configuration = get_user_configuration()
+user_mode, selected_backend = get_user_configuration()
+
+# Update BACKEND_MODE based on user selection
+if selected_backend:
+    BACKEND_MODE = selected_backend
 
 # Get the current OS being used
 current_os = platform.system()
@@ -321,7 +375,7 @@ if current_os == "Windows":
 elif current_os in ["Linux", "Darwin"]:
     current_os = "LINUX/MAC"
 
-match user_configuration:
+match user_mode:
     case "I":
         is_installing = True
         install_software(current_os)

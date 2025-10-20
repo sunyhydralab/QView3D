@@ -24,13 +24,15 @@ const defaultBackends = {
     name: 'Python',
     url: 'http://localhost:8000',
     ws_port: 8001,
+    emulator_port: 8004,
     healthEndpoint: '/health',
     capabilities: ['database', 'job_management', 'full_api']
   },
   javascript: {
     name: 'JavaScript',
-    url: 'http://localhost:3000',
-    ws_port: 3001,
+    url: 'http://localhost:8005',
+    ws_port: 8006,
+    emulator_port: 8007,
     healthEndpoint: '/health',
     capabilities: ['serial_communication', 'printer_control', 'gcode_processing']
   }
@@ -38,8 +40,8 @@ const defaultBackends = {
 
 const defaultMiddleware = {
   mode: 'python',
-  port: 3500,
-  ws_port: 3501
+  port: 8002,
+  ws_port: 8003
 };
 
 // Merge config with defaults
