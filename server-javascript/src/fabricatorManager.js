@@ -1,28 +1,17 @@
-/**
- * FabricatorManager - Manages queues and state for all registered fabricators
- */
+// FabricatorManager - Manages queues and state for all registered fabricators
 import { Queue } from './queue.js';
 import database from './database.js';
 import wsManager from './websocket.js';
 
 class FabricatorManager {
   constructor() {
-    // Map of fabricatorId -> Queue
     this.queues = new Map();
-
-    // Map of fabricatorId -> Printer instance
     this.activePrinters = new Map();
-
-    // Job processor interval
     this.processorInterval = null;
-
-    // Processing state
     this.isProcessing = false;
   }
 
-  /**
-   * Initialize the manager by loading all fabricators and their jobs from the database
-   */
+  // Initialize the manager by loading all fabricators and their jobs from the database
   async initialize() {
     try {
       const fabricators = await database.all('SELECT * FROM fabricators ORDER BY position ASC');
@@ -56,19 +45,10 @@ class FabricatorManager {
     }
   }
 
-  /**
-   * Get queue for a fabricator
-   * @param {number} fabricatorId - The fabricator ID
-   * @returns {Queue|null} - The queue or null if not found
-   */
   getQueue(fabricatorId) {
     return this.queues.get(fabricatorId) || null;
   }
 
-  /**
-   * Create queue for a new fabricator
-   * @param {number} fabricatorId - The fabricator ID
-   */
   createQueue(fabricatorId) {
     if (!this.queues.has(fabricatorId)) {
       const queue = new Queue(fabricatorId, wsManager);
@@ -77,10 +57,6 @@ class FabricatorManager {
     }
   }
 
-  /**
-   * Remove queue for a deleted fabricator
-   * @param {number} fabricatorId - The fabricator ID
-   */
   removeQueue(fabricatorId) {
     if (this.queues.has(fabricatorId)) {
       this.queues.delete(fabricatorId);
@@ -88,13 +64,7 @@ class FabricatorManager {
     }
   }
 
-  /**
-   * Add job to fabricator queue
-   * @param {number} fabricatorId - The fabricator ID
-   * @param {Object} job - The job to add
-   * @param {boolean} toFront - Whether to add to front of queue
-   * @returns {boolean} - True if added successfully
-   */
+  // Add job to fabricator queue
   addJobToQueue(fabricatorId, job, toFront = false) {
     const queue = this.getQueue(fabricatorId);
     if (!queue) {
@@ -109,12 +79,6 @@ class FabricatorManager {
     }
   }
 
-  /**
-   * Remove job from queue
-   * @param {number} fabricatorId - The fabricator ID
-   * @param {number} jobId - The job ID
-   * @returns {Object|null} - The removed job or null
-   */
   removeJobFromQueue(fabricatorId, jobId) {
     const queue = this.getQueue(fabricatorId);
     if (!queue) {
@@ -123,9 +87,6 @@ class FabricatorManager {
     return queue.deleteJob(jobId);
   }
 
-  /**
-   * Start the job processor event loop
-   */
   startProcessor() {
     if (this.processorInterval) {
       console.log('Job processor already running');
@@ -133,16 +94,11 @@ class FabricatorManager {
     }
 
     console.log('Starting job processor...');
-
-    // Process jobs every 2 seconds
     this.processorInterval = setInterval(() => {
       this.processJobs();
     }, 2000);
   }
 
-  /**
-   * Stop the job processor
-   */
   stopProcessor() {
     if (this.processorInterval) {
       clearInterval(this.processorInterval);
@@ -151,9 +107,7 @@ class FabricatorManager {
     }
   }
 
-  /**
-   * Process jobs from all fabricator queues
-   */
+  // Process jobs from all fabricator queues
   async processJobs() {
     if (this.isProcessing) {
       return; // Skip if already processing
@@ -206,11 +160,7 @@ class FabricatorManager {
     }
   }
 
-  /**
-   * Start a job on a fabricator
-   * @param {number} fabricatorId - The fabricator ID
-   * @param {Object} job - The job to start
-   */
+  // Start a job on a fabricator
   async startJob(fabricatorId, job) {
     try {
       console.log(`Starting job ${job.id} on fabricator ${fabricatorId}`);
@@ -261,10 +211,6 @@ class FabricatorManager {
     }
   }
 
-  /**
-   * Get all queues as JSON
-   * @returns {Object} - Map of fabricatorId -> queue JSON
-   */
   getAllQueuesJSON() {
     const result = {};
     for (const [fabricatorId, queue] of this.queues.entries()) {
@@ -274,6 +220,5 @@ class FabricatorManager {
   }
 }
 
-// Export singleton instance
 const fabricatorManager = new FabricatorManager();
 export default fabricatorManager;
