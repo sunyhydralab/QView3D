@@ -44,11 +44,10 @@ class Printer(Device, metaclass=ABCMeta):
         self.filamentDiameter = None
         self.nozzleDiameter = None
 
-    def parseGcode(self, job: Job, isVerbose: bool = False):
+    def parseGcode(self, job: Job):
         assert isinstance(job, Job), f"Expected Job, got {type(job)}"
         file = job.file_path
         assert isinstance(file, str), f"Expected file to be a str, got {type(file)}"
-        assert isinstance(isVerbose, bool), f"Expected isVerbose to be a bool, got {type(isVerbose)}"
         assert self.serialConnection.is_open, "Serial connection is not open"
         assert self.status == "printing", f"Printer status is {self.status}, expected printing"
         try:
@@ -62,7 +61,7 @@ class Printer(Device, metaclass=ABCMeta):
                 job.job_logger = logger
                 # Read the file and store the lines in a list
                 if self.status == "cancelled":
-                    self.sendGcode(self.cancelCMD, isVerbose, logger)
+                    self.sendGcode(self.cancelCMD)
                     self.verdict = "cancelled"
                     logger.log("Job cancelled")
                     pass
@@ -109,7 +108,7 @@ class Printer(Device, metaclass=ABCMeta):
                 current_app.socketio.emit("console_update", {"message": "Starting Job", "level": "info", "fabricator_id": self.dbID})
                 for line in lines:
                     if self.status == "cancelled":
-                        self.sendGcode(self.cancelCMD, isVerbose, logger)
+                        self.sendGcode(self.cancelCMD)
                         self.verdict = "cancelled"
                         logger.log("Job cancelled")
                         pass
@@ -248,15 +247,13 @@ class Printer(Device, metaclass=ABCMeta):
             pass
             return e
         
-    def sendGcode(self, gcode: bytes | str, isVerbose: bool = True, logger = None) -> bool:
+    def sendGcode(self, gcode: bytes | str, logger = None) -> bool:
         """
         Method to send gcode to the printer
         :param bytes | str | LiteralString gcode: the line of gcode to send to the printer
-        :param bool isVerbose: whether to log or not
         :param JobLogger logger: the logger to use
         :rtype: bool
         """
-        should_log = isVerbose and logger is not None
         if logger is None: logger = self.logger
         assert self.serialConnection is not None, "Serial connection is None"
         assert self.serialConnection.is_open, "Serial connection is not open"

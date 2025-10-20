@@ -3,12 +3,12 @@ import sys
 from abc import ABC
 from time import sleep
 from services.app_service import current_app
-from utils.formatting import tabs
+# Removed tabs import - no longer needed
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from Classes.Jobs import Job
 from Classes.Vector3 import Vector3
-from services.logger import logger
+from services.logger import logger, Logger
 from Mixins.hasEndingSequence import hasEndingSequence
 from Mixins.hasResponseCodes import checkXYZ
 from Classes.FabricatorConnection import SerialConnection, SocketConnection, FabricatorConnection
@@ -80,12 +80,9 @@ class Device(ABC):
             assert self.serialPort.device is not None, "Serial port device is not set"
             assert self.serialPort.device != "", "Serial port device is empty"
             if self.serialConnection is None or not self.serialConnection.is_open:
-                print(f"{tabs(tab_change=1)}creating connection to {self.serialPort.device}...", end="")
                 self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort.device, baudrate=115200, timeout=60, websocket_connections=self.websocket_connection, fabricator_id=str(self.dbID))
             if self.serialConnection.is_open:
-                print(f"{tabs(tab_change=1)}{self.serialPort.device} is open, resetting input buffer...", end="")
                 self.serialConnection.reset_input_buffer()
-            print(" Done")
             return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self.logger)
@@ -219,7 +216,7 @@ class Device(ABC):
         self.serialConnection.write(gcode)
         if isVerbose:
             if self.logger is not None: self.logger.debug(gcode.decode("utf-8"))
-            else: print(gcode.decode("utf-8"))
+            # Removed verbose print statement
         return True
 
     def getToolHeadLocation(self, isVerbose: bool = False) -> Vector3:

@@ -11,35 +11,26 @@ from Classes.Queue import Queue
 from threading import Thread
 import time
 from services.app_service import current_app as app
-from utils.formatting import tabs
+# Removed tabs import - no longer needed
 from config.db import db
 
 class FabricatorList:
     def __init__(self, passed_app=app):
-        print(f"{tabs(tab_change=1)}setting app...", end="")
         self.app = passed_app
-        print(" Done")
         with self.app.app_context():
-            print(f"{tabs()}initializing fabricator table...", end="")
+            # Initialize fabricator table
             if not inspect(db.engine).has_table('Fabricators') or not Fabricator.metadata.tables:
                 Fabricator.metadata.create_all(db.engine)
-            print(" Done")
-            print(f"{tabs()}querying fabricators...", end="")
+            
+            # Query fabricators
             self.fabricators = Fabricator.queryAll()
-            print(f" Done: {len(self.fabricators)} fabricator{"s" if len(self.fabricators) != 1 else ""} found")
-            print(f"{tabs()}initializing fabricator threads...")
+            
+            # Initialize fabricator threads
             self.fabricator_threads = []
             self.ping_thread = None
             for fabricator in self.fabricators:
-                print(f"{tabs(tab_change=1)}initializing fabricator for {fabricator.getName()}...")
-                print(f"{tabs(tab_change=1)}connecting to {fabricator.devicePort}...")
                 fabricator.device.connect()
-                print(f"{tabs()}connected to {fabricator.devicePort}")
-                print(f"{tabs()}initializing thread for {fabricator.getName()}...", end="")
                 self.fabricator_threads.append(self.start_fabricator_thread(fabricator))
-                print(" Done")
-                print(f"{tabs(tab_change=-1)}fabricator for {fabricator.getName()} initialized")
-            print(f"{tabs(tab_change=-1)}fabricator threads initialized")
 
     def __iter__(self):
         return iter(self.fabricators)

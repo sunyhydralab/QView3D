@@ -200,7 +200,7 @@ class Fabricator(db.Model):
                 return None
         else:
             #TODO: assume generic printer, do stuff
-            print("generic printer")
+            # Using generic printer
             return None
 
     @classmethod
@@ -217,10 +217,9 @@ class Fabricator(db.Model):
                 fabList.append(cls(Ports.getPortByName(fab.devicePort), fab.name))
         return fabList
 
-    def begin(self, isVerbose: bool = False) -> bool:
+    def begin(self) -> bool:
         """
         starts the fabrication process
-        :param bool isVerbose: whether to print verbose output
         :rtype: bool
         """
         try:
@@ -235,10 +234,9 @@ class Fabricator(db.Model):
             # if isinstance(self.device, hasStartupSequence):
             #     self.device.startupSequence()
             assert self.setStatus("printing"), "Failed to set status to printing"
-            self.error = self.device.parseGcode(self.queue[0], isVerbose=isVerbose) # this is the actual command to read the file and fabricate.
+            self.error = self.device.parseGcode(self.queue[0]) # this is the actual command to read the file and fabricate.
             job_logger = self.queue[0].getLogger()
             self.handleVerdict()
-            if isVerbose and self.device.logger is not None: self.device.logger.debug(f"Verdict handled, status: {self.status}")
             return True
         except Exception as e:
             self.error = e
