@@ -15,8 +15,8 @@ config = load_config(configFileLoc)
 environment = config.get('environment', 'development')
 ip = config.get('ip', 'localhost')
 database_uri = config.get('databaseURI', 'QView') + ".db"
-port = os.environ.get('FLASK_RUN_PORT', 8000),
-emulator_port = os.environ.get('EMULATOR_PORT', 8001)
+port = int(os.environ.get('FLASK_RUN_PORT', 8000))
+emulator_port = int(os.environ.get('EMULATOR_PORT', 8001))
 
 Config = {
     'base_url': base_url(),
