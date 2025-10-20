@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
-import axios from 'axios'
+import { api } from '../models/api'
 
 // Props and emits
 const props = defineProps<{
@@ -39,9 +39,8 @@ const statusOptions = computed(() => {
 // Fetch printer models from backend
 const fetchPrinterModels = async () => {
   try {
-    const apiBase = `http://localhost:${localStorage.getItem('apiPort') || '3500'}`
-    const response = await axios.get(`${apiBase}/api/fabricators/models`)
-    printerModels.value = ['All', ...response.data]
+    const response = await api('api/fabricators/models', undefined, 'GET')
+    printerModels.value = ['All', ...(response?.models || [])]
   } catch (error) {
     console.error('Failed to fetch printer models:', error)
     // Fallback models if API fails
@@ -126,7 +125,7 @@ onMounted(() => {
             </option>
           </select>
           <div
-            class="text-dark-primary dark:text-light-primary pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700"
+            class="text-dark-primary dark:text-light-primary pointer-events-none absolute inset-y-0 right-0 flex items-center px-2"
           >
             <i class="fa-solid fa-caret-down pr-1"></i>
           </div>
@@ -167,7 +166,7 @@ onMounted(() => {
           <input
             v-model="searchTerm"
             :placeholder="filterType === 'queue' ? 'Search queue...' : 'Job Name'"
-            class="bg-light-primary-dark dark:bg-dark-primary-light text-dark-primary dark:text-light-primary appearance-none rounded-l sm:rounded-l-none sm:rounded-r-none block px-9 py-2 w-full h-full text-sm placeholder-gray-400 focus:bg-light-primary-light focus:placeholder-dark-primary-light dark:text-light-primary focus:text-gray-700 focus:outline-none"
+            class="bg-light-primary-dark dark:bg-dark-primary-light text-dark-primary dark:text-light-primary appearance-none rounded-l sm:rounded-l-none sm:rounded-r-none block px-9 py-2 w-full h-full text-sm placeholder-dark-primary/50 dark:placeholder-light-primary/50 focus:bg-light-primary-light dark:focus:bg-dark-primary focus:text-dark-primary dark:focus:text-light-primary focus:outline-none"
           />
 
           <!-- Calendar Icon -->
@@ -188,7 +187,7 @@ onMounted(() => {
             class="absolute top-full mt-2 right-0 bg-white dark:bg-dark-primary shadow-lg rounded-lg p-4 z-50"
           >
             <div class="flex flex-col space-y-2">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Date Range</label>
+              <label class="text-sm font-medium text-dark-primary dark:text-light-primary">Date Range</label>
               <div class="flex space-x-2">
                 <input
                   type="date"
@@ -207,7 +206,7 @@ onMounted(() => {
               <div class="flex justify-between">
                 <button
                   @click="clearDateRange"
-                  class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  class="text-sm text-dark-primary hover:text-accent-primary dark:text-light-primary dark:hover:text-accent-primary-light"
                 >
                   Clear
                 </button>
@@ -218,7 +217,7 @@ onMounted(() => {
                   Apply
                 </button>
               </div>
-              <div v-if="dateRangeText" class="text-xs text-gray-600 dark:text-gray-400">
+              <div v-if="dateRangeText" class="text-xs text-dark-primary dark:text-light-primary">
                 {{ dateRangeText }}
               </div>
             </div>

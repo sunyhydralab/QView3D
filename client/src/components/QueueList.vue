@@ -190,9 +190,9 @@ const getStatusColor = (status: string | null) => {
     case 'paused':
       return 'bg-yellow-500'
     case 'pending':
-      return 'bg-gray-500'
+      return 'bg-accent-secondary'
     default:
-      return 'bg-gray-400'
+      return 'bg-dark-primary dark:bg-light-primary'
   }
 }
 </script>
@@ -209,7 +209,7 @@ const getStatusColor = (status: string | null) => {
       </div>
 
       <!-- Queue summary -->
-      <div class="mb-2 text-sm text-gray-600 dark:text-gray-400">
+      <div class="mb-2 text-sm text-dark-primary dark:text-light-primary">
         <span v-if="filteredJobs.length === 0 && allJobs.length > 0">
           No jobs match your filters
         </span>
@@ -357,7 +357,7 @@ const getStatusColor = (status: string | null) => {
                   <!-- Move up button -->
                   <button
                     :disabled="index === 0"
-                    class="w-8 h-8 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded flex items-center justify-center"
+                    class="w-8 h-8 bg-blue-500 hover:bg-blue-600 disabled:bg-light-primary-dark dark:disabled:bg-dark-primary disabled:cursor-not-allowed text-white rounded flex items-center justify-center"
                     @click="moveJobUp(index)"
                     title="Move up"
                   >
@@ -366,7 +366,7 @@ const getStatusColor = (status: string | null) => {
                   <!-- Move down button -->
                   <button
                     :disabled="index === filteredJobs.length - 1"
-                    class="w-8 h-8 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded flex items-center justify-center"
+                    class="w-8 h-8 bg-blue-500 hover:bg-blue-600 disabled:bg-light-primary-dark dark:disabled:bg-dark-primary disabled:cursor-not-allowed text-white rounded flex items-center justify-center"
                     @click="moveJobDown(index)"
                     title="Move down"
                   >
@@ -385,7 +385,7 @@ const getStatusColor = (status: string | null) => {
               <td
                 class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
               >
-                <i class="fa-solid fa-grip-vertical text-gray-400"></i>
+                <i class="fa-solid fa-grip-vertical text-dark-primary dark:text-light-primary"></i>
               </td>
             </tr>
           </tbody>

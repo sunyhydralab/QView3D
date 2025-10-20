@@ -162,7 +162,7 @@ const getStatusColor = (status: string | null) => {
     case 'paused':
       return 'text-yellow-600 dark:text-yellow-400'
     default:
-      return 'text-gray-600 dark:text-gray-400'
+      return 'text-dark-primary dark:text-light-primary'
   }
 }
 </script>
@@ -179,7 +179,7 @@ const getStatusColor = (status: string | null) => {
 
         <!-- Results summary -->
         <div v-if="activeFilters.searchTerm || activeFilters.model || activeFilters.status || activeFilters.dateRange"
-             class="mt-3 mb-2 text-sm text-gray-600 dark:text-gray-400">
+             class="mt-3 mb-2 text-sm text-dark-primary dark:text-light-primary">
           <span v-if="filteredJobs.length === 0" class="text-red-600 dark:text-red-400">
             No jobs found matching your filters
           </span>
@@ -234,7 +234,7 @@ const getStatusColor = (status: string | null) => {
                 <!-- Show message when no jobs -->
                 <tr v-if="paginatedJobs.length === 0">
                   <td colspan="7" class="px-5 py-8 border-b border-light-primary-dark dark:border-dark-primary-light bg-light-primary-light dark:bg-dark-primary-light text-center">
-                    <p class="text-gray-500 dark:text-gray-400">
+                    <p class="text-dark-primary dark:text-light-primary">
                       {{ filteredJobs.length === 0 && (activeFilters.searchTerm || activeFilters.model || activeFilters.status)
                          ? 'No jobs match your search criteria'
                          : 'No jobs in history' }}
