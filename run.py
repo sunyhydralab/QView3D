@@ -63,6 +63,19 @@ if not (os.path.exists(CLIENT_LOCAL_PATH) and os.path.exists(SERVER_LOCAL_PATH))
 
 # TODO Enforce Python version (Lock to 3.12)
 
+def build_client():
+    # Build the client for production
+    print("Building client...")
+    result = subprocess.run(
+        "npm run build-only",
+        shell=True,
+        cwd=CLIENT_LOCAL_PATH
+    )
+    if result.returncode == 0:
+        print("Client build complete")
+    else:
+        print("Client build failed, but continuing...")
+
 def start_client():
     global VITE_CLIENT_IP
     if VITE_CLIENT_IP == "SAME_AS_SERVER":
@@ -89,19 +102,32 @@ def start_server(fresh_database):
             except OSError as ose:
                 print(ose)
 
-    # Start the server in the background
+    # Start the server in the background using virtual environment
     if current_os == "WINDOWS":
-        # Run app.py directly instead of using flask run
-        return subprocess.Popen(
-            ["py", "app.py"],
-            cwd=os.path.abspath(SERVER_LOCAL_PATH)
-        )
+        venv_python = os.path.abspath(os.path.join(SERVER_LOCAL_PATH, ".python-venv", "Scripts", "python.exe"))
+        if os.path.exists(venv_python):
+            return subprocess.Popen(
+                [venv_python, "app.py"],
+                cwd=os.path.abspath(SERVER_LOCAL_PATH)
+            )
+        else:
+            return subprocess.Popen(
+                ["py", "app.py"],
+                cwd=os.path.abspath(SERVER_LOCAL_PATH)
+            )
     else:
-        # On Linux/Mac, run app.py directly
-        return subprocess.Popen(
-            ["python3", "app.py"],
-            cwd=os.path.abspath(SERVER_LOCAL_PATH)
-        )
+        # On Linux/Mac, use .venv (the one we created in WSL)
+        venv_python = os.path.abspath(os.path.join(SERVER_LOCAL_PATH, ".venv", "bin", "python"))
+        if os.path.exists(venv_python):
+            return subprocess.Popen(
+                [venv_python, "app.py"],
+                cwd=os.path.abspath(SERVER_LOCAL_PATH)
+            )
+        else:
+            return subprocess.Popen(
+                ["python3", "app.py"],
+                cwd=os.path.abspath(SERVER_LOCAL_PATH)
+            )
 
 def start_js_server():
     # Start the JavaScript server in the background
@@ -250,6 +276,9 @@ def get_user_configuration():
 def start_debug(fresh_database):
     # Update config.json with current backend mode
     update_config_json()
+
+    # Build client before starting services
+    build_client()
 
     # Start services based on backend mode
     processes = []
