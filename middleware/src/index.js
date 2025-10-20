@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import WebSocket from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
 import config from './config/backends.js';
 import { routeMap } from './config/routes.js';
@@ -74,7 +74,7 @@ async function tryBackend(backend, req, res) {
   });
 }
 
-app.use('*', async (req, res, next) => {
+app.use(async (req, res, next) => {
   const primary = getPrimaryBackend(req.path);
   const fallback = getFallbackBackend(primary);
 
@@ -93,7 +93,7 @@ app.use('*', async (req, res, next) => {
 });
 
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws, req) => {
   logger.info('WebSocket connection established');
