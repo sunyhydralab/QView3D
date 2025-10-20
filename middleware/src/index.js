@@ -11,12 +11,11 @@ const app = express();
 const PORT = config.middleware.port;
 
 app.use(cors(config.corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // Store current preferred backend (can be changed at runtime)
 let preferredBackend = config.middleware.mode || 'python';
 
+// Only parse JSON for specific middleware routes, not for proxy routes
 app.get('/health', (req, res) => {
   res.json({
     middleware: 'healthy',
@@ -75,29 +74,35 @@ function getFallbackBackend(primary) {
 
 async function tryBackend(backend, req, res) {
   return new Promise((resolve) => {
+    let resolved = false;
+
     const proxy = createProxyMiddleware({
       target: backend.url,
       changeOrigin: true,
       timeout: 5000,
-      onError: (err) => {
-        logger.error(`${backend.name} failed: ${err.message}`);
-        resolve(false);
+      onError: (err, req, res) => {
+        if (!resolved) {
+          resolved = true;
+          logger.error(`${backend.name} failed: ${err.message}`);
+          resolve(false);
+        }
       },
-      onProxyRes: (proxyRes, req, res) => {
-        let body = [];
-        proxyRes.on('data', (chunk) => body.push(chunk));
-        proxyRes.on('end', () => {
-          res.status(proxyRes.statusCode);
-          Object.keys(proxyRes.headers).forEach(key => {
-            res.setHeader(key, proxyRes.headers[key]);
-          });
-          res.send(Buffer.concat(body));
+      onProxyRes: (proxyRes) => {
+        if (!resolved) {
+          resolved = true;
+          logger.info(`${backend.name} responded with ${proxyRes.statusCode}`);
           resolve(true);
-        });
-      },
-      selfHandleResponse: true
+        }
+      }
     });
-    proxy(req, res, () => {});
+
+    proxy(req, res, (err) => {
+      if (err && !resolved) {
+        resolved = true;
+        logger.error(`${backend.name} middleware error: ${err.message}`);
+        resolve(false);
+      }
+    });
   });
 }
 
@@ -120,27 +125,66 @@ app.use(async (req, res, next) => {
 });
 
 const server = http.createServer(app);
+server.setMaxListeners(50); // Increase listener limit to avoid warnings
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws, req) => {
   logger.info('WebSocket connection established');
 
   const primary = getPrimaryBackend(req.url);
-  const wsUrl = primary.url.replace('http:', 'ws:').replace('https:', 'wss:');
+  const fallback = getFallbackBackend(primary);
 
-  const backendWs = new WebSocket(wsUrl);
+  // Try to connect to primary backend WebSocket
+  const tryConnect = (backend) => {
+    const wsPort = backend.ws_port || (backend.url.includes(':8000') ? 8001 : 3001);
+    const wsUrl = `ws://localhost:${wsPort}`;
 
-  backendWs.on('open', () => {
-    ws.on('message', (data) => backendWs.send(data));
-    backendWs.on('message', (data) => ws.send(data));
-  });
+    const backendWs = new WebSocket(wsUrl);
+    let connected = false;
 
-  backendWs.on('error', (err) => {
-    logger.error(`WebSocket error: ${err.message}`);
-    ws.close();
-  });
+    backendWs.on('open', () => {
+      connected = true;
+      logger.info(`WebSocket connected to ${backend.name} on port ${wsPort}`);
 
-  ws.on('close', () => backendWs.close());
+      ws.on('message', (data) => {
+        if (backendWs.readyState === WebSocket.OPEN) {
+          backendWs.send(data);
+        }
+      });
+
+      backendWs.on('message', (data) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(data);
+        }
+      });
+    });
+
+    backendWs.on('error', (err) => {
+      if (!connected && backend === primary) {
+        logger.error(`${backend.name} WebSocket failed: ${err.message}, trying fallback`);
+        tryConnect(fallback);
+      } else {
+        logger.error(`WebSocket error: ${err.message}`);
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close();
+        }
+      }
+    });
+
+    ws.on('close', () => {
+      if (backendWs.readyState === WebSocket.OPEN) {
+        backendWs.close();
+      }
+    });
+
+    backendWs.on('close', () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    });
+  };
+
+  tryConnect(primary);
 });
 
 server.listen(PORT, () => {

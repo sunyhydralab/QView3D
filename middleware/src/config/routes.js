@@ -46,14 +46,15 @@ export const routeMap = {
   '/getissuesbycategory': 'either',
   '/resolveissue': 'either',
 
-  // Emulator operations - JavaScript backend for virtual serial ports
-  '/startemulator': 'javascript',
-  '/disconnectemulator': 'javascript',
-  '/registeremulator': 'javascript',
-  '/setemulatortemperature': 'javascript',
-  '/runemulatortest': 'javascript',
-  '/resetemulator': 'javascript',
-  '/emulatorstatus': 'javascript',
+  // Emulator operations - both backends support emulation
+  '/startemulator': 'either',
+  '/disconnectemulator': 'either',
+  '/registeremulator': 'either',
+  '/setemulatortemperature': 'either',
+  '/runemulatortest': 'either',
+  '/resetemulator': 'either',
+  '/emulatorstatus': 'either',
+  '/api/emulator': 'either',
 
   // Python-specific operations
   '/diagnose': 'python',

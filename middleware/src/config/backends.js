@@ -21,12 +21,14 @@ try {
 // Default values if not in config
 const defaultBackends = {
   python: {
+    name: 'Python',
     url: 'http://localhost:8000',
     ws_port: 8001,
     healthEndpoint: '/health',
     capabilities: ['database', 'job_management', 'full_api']
   },
   javascript: {
+    name: 'JavaScript',
     url: 'http://localhost:3000',
     ws_port: 3001,
     healthEndpoint: '/health',
