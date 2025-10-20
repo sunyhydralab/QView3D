@@ -9,15 +9,15 @@ export default {
     extend: {
       // set custom colors for tailwind
       colors: {
-        // Light mode colors - super light gray and white
-        'light-primary-dark': '#F9FAFB',      // Super light gray for borders/dividers
-        'light-primary': '#FAFBFC',           // Almost white for backgrounds
-        'light-primary-light': '#FFFFFF',     // Pure white for cards/surfaces
+        // Light mode colors
+        'light-primary-dark': '#bdbebf',
+        'light-primary': '#E5E7EB',
+        'light-primary-light': '#FFFFFF',
 
-        // Dark mode colors - back to gray instead of blue
-        'dark-primary-dark': '#1F2937',       // Dark gray (darkest)
-        'dark-primary': '#374151',            // Medium gray
-        'dark-primary-light': '#4B5563',      // Lighter gray (lightest dark)
+        // Dark mode colors - darker grays
+        'dark-primary-dark': '#262626',
+        'dark-primary': '#333333',
+        'dark-primary-light': '#3D3D3D',
 
         // Accent colors - vibrant for both modes
         'accent-primary-dark': '#4d3f73',
