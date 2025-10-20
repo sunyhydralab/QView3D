@@ -70,19 +70,34 @@ cd QView3D
 
 #### Linux/macOS
 ```sh
-python run.py
+python3 run.py
 ```
 
+When prompted:
+- Press `I` for first-time installation of dependencies
+- Press `D` (or Enter) to run in debug mode (starts both backends with redundant failover)
+
 #### Windows (using WSL)
-1. Install WSL if not already installed:
+1. Install WSL with Ubuntu if not already installed:
    ```powershell
-   wsl --install
+   wsl --install -d Ubuntu
    ```
 
-2. Open WSL terminal and navigate to project:
-   ```sh
-   cd /mnt/c/path/to/QView3D
-   python run.py
+2. Run from Windows PowerShell or Command Prompt:
+   ```powershell
+   wsl -d Ubuntu -- bash -c "cd /mnt/c/path/to/your/QView3D && echo 'D' | python3 run.py"
+   ```
+
+   Replace `/mnt/c/path/to/your/QView3D` with your actual project path.
+
+   Example: If your project is at `C:\Users\YourName\Projects\QView3D`, use:
+   ```powershell
+   wsl -d Ubuntu -- bash -c "cd /mnt/c/Users/YourName/Projects/QView3D && echo 'D' | python3 run.py"
+   ```
+
+3. For first-time setup (install dependencies):
+   ```powershell
+   wsl -d Ubuntu -- bash -c "cd /mnt/c/path/to/your/QView3D && echo 'I' | python3 run.py"
    ```
 
 #### Windows (native - experimental)
@@ -92,8 +107,17 @@ python run.py
 ```
 
 ### First Run
-1. Select 'I' to install dependencies
-2. Run again and press Enter for hybrid mode (both backends)
+1. Select `I` to install dependencies
+2. Run again and press `D` or Enter for debug mode (starts both Python and JavaScript backends with automatic failover)
+
+### Accessing the Application
+Once started, access the application at:
+- Frontend: http://localhost:8002
+- Python Backend: http://localhost:8000
+- JavaScript Backend: http://localhost:3000
+- Middleware (routing layer): http://localhost:3500
+
+You can change your preferred backend in the Settings panel (gear icon in bottom right)
 
 ## Pull Requests
 
