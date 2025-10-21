@@ -4,32 +4,34 @@
  */
 
 const STORAGE_VERSION_KEY = 'configVersion';
-// Bump version to force migration of API port to middleware 8002
-const CURRENT_VERSION = '2.1'; // Increment when breaking changes occur
+const BACKEND_KEY = 'activeBackend';
+// Version 3.1: Restored middleware on port 8002, frontend connects through middleware
+const CURRENT_VERSION = '3.1'; // Increment when breaking changes occur
 
 export function migratePortSettings(): void {
   const storedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
   const storedPort = localStorage.getItem('apiPort');
+  const storedBackend = localStorage.getItem(BACKEND_KEY);
 
   // If no version is stored, this is either a fresh install or pre-migration data
   if (!storedVersion) {
-    // Check if we have old port 8000 or 3500 stored
-    if (storedPort === '8000' || storedPort === '3500') {
-      console.log('[Migration] Updating port to 8002 (middleware)');
-      localStorage.setItem('apiPort', '8002');
-      localStorage.setItem(STORAGE_VERSION_KEY, CURRENT_VERSION);
-      console.log('[Migration] Port migration completed');
-    } else if (!storedPort) {
-      // Fresh install, just set the version
-      localStorage.setItem(STORAGE_VERSION_KEY, CURRENT_VERSION);
-    }
-  } else if (storedVersion < CURRENT_VERSION) {
-    // Migrate old ports (3500 or 8000) to new middleware port 8002
-    if (storedPort === '3500' || storedPort === '8000') {
-      console.log('[Migration] Updating legacy port to 8002 (middleware)');
-      localStorage.setItem('apiPort', '8002');
-    }
+    // Fresh install or pre-migration data - set defaults
+    console.log('[Migration] Setting up v3.1 configuration (middleware-based)');
+    localStorage.setItem(BACKEND_KEY, 'python'); // Default to Python backend
+    localStorage.removeItem('apiPort'); // Port is now fixed at middleware (8002)
     localStorage.setItem(STORAGE_VERSION_KEY, CURRENT_VERSION);
+    console.log('[Migration] Migration to v3.1 completed');
+  } else if (storedVersion < CURRENT_VERSION) {
+    // Migrate from older versions
+    console.log('[Migration] Updating to v3.1 (middleware on port 8002)');
+    // Set default backend if not set
+    if (!storedBackend) {
+      localStorage.setItem(BACKEND_KEY, 'python');
+    }
+    // Remove old apiPort setting - now always uses middleware port 8002
+    localStorage.removeItem('apiPort');
+    localStorage.setItem(STORAGE_VERSION_KEY, CURRENT_VERSION);
+    console.log('[Migration] Migration to v3.1 completed');
   }
 }
 
@@ -39,7 +41,8 @@ export function migratePortSettings(): void {
 export function clearStoredSettings(): void {
   const debugMode = localStorage.getItem('debugMode'); // Preserve debug mode
   localStorage.removeItem('apiIPAddress');
-  localStorage.removeItem('apiPort');
+  localStorage.removeItem('apiPort'); // Legacy, no longer used
+  localStorage.removeItem(BACKEND_KEY);
   localStorage.removeItem(STORAGE_VERSION_KEY);
 
   // Restore debug mode if it was set
@@ -47,18 +50,27 @@ export function clearStoredSettings(): void {
     localStorage.setItem('debugMode', debugMode);
   }
 
+  // Set default backend
+  localStorage.setItem(BACKEND_KEY, 'python');
+
   console.log('[Settings] Cleared stored API settings');
 }
 
 /**
- * Validate and fix port settings
+ * Validate and fix backend settings
  */
 export function validatePortSettings(): void {
-  const port = localStorage.getItem('apiPort');
-  const validPorts = ['8002', '8000', '8005']; // Valid port options (middleware, python, js)
+  const backend = localStorage.getItem(BACKEND_KEY);
+  const validBackends = ['python', 'javascript'];
 
-  if (port && !validPorts.includes(port)) {
-    console.warn(`[Validation] Invalid port ${port} detected, resetting to default`);
-    localStorage.removeItem('apiPort');
+  if (backend && !validBackends.includes(backend)) {
+    console.warn(`[Validation] Invalid backend ${backend} detected, resetting to default`);
+    localStorage.setItem(BACKEND_KEY, 'python');
+  } else if (!backend) {
+    // No backend set, use default
+    localStorage.setItem(BACKEND_KEY, 'python');
   }
+
+  // Clean up legacy apiPort if it exists
+  localStorage.removeItem('apiPort');
 }

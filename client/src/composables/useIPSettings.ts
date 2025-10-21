@@ -5,12 +5,12 @@ import { migratePortSettings, validatePortSettings } from '@/utils/portMigration
 migratePortSettings();
 validatePortSettings();
 
-// MIDDLEWARE_PORT is always 8002 - this is the permanent communication layer
+// Middleware port - frontend connects to middleware which proxies to backends
 const MIDDLEWARE_PORT = "8002";
 
 // declare IP settings
 export const API_IP_ADDRESS = computed(() => localStorage.getItem("apiIPAddress") || "localhost")
-// API_PORT is always the middleware port - frontend ALWAYS connects through middleware
+// API_PORT points to middleware which handles backend routing
 export const API_PORT = computed(() => MIDDLEWARE_PORT)
 export const API_URL = computed(() => `http://${API_IP_ADDRESS.value}:${API_PORT.value}`)
 

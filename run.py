@@ -10,19 +10,19 @@ QView3D Application Launcher
 ============================
 
 Architecture:
-- Middleware (port 8002) is ALWAYS running - it's the permanent communication layer
-- Frontend ALWAYS connects to middleware (port 8002)
-- Middleware routes requests to the appropriate backend (Python or JavaScript)
+- Browser connects to MIDDLEWARE on port 8002
+- Middleware proxies requests to selected backend (Python 8000 or JavaScript 8005)
+- Python emulator runs on port 8004 (if using Python backend)
 - Clear your browser's localStorage if you encounter port issues:
   1. Open browser console (F12)
   2. Run: localStorage.clear()
   3. Refresh the page
 
 Backend Modes:
-- python: Python Flask backend (port 8000) - DEFAULT
-- javascript: Node.js backend (port 8005) - Serial communication focus
+- python: Python Flask backend (port 8000) + Emulator (port 8004) - DEFAULT
+- javascript: Node.js backend (port 8005) + Emulator (port 8007)
 
-The middleware automatically routes requests and provides fallback between backends.
+User accesses app at: http://localhost:8002 (middleware)
 """
 
 # TODO Allow a .env file to overwrite the below configurations
@@ -38,23 +38,26 @@ DATABASE_FILE_NAME="QView.db"
 # Database is ALWAYS wiped on startup for clean state
 START_FROM_NEW_DATABASE = True  # Always True - ensures fresh database every run
 
-# Server configuration
-FLASK_SERVER_IP = "localhost" # TODO Have this affect the server
-FLASK_SERVER_PORT = 8000 # TODO Have this affect the server
-FLASK_SERVER_WEB_SOCKET_PORT = 8001 # TODO Have this affect the server
+# Middleware configuration
+MIDDLEWARE_PORT = 8002
+
+# Python Server configuration
+FLASK_SERVER_IP = "localhost"
+FLASK_SERVER_PORT = 8000
+PYTHON_EMULATOR_PORT = 8004
 
 # JavaScript Server configuration
 JS_SERVER_PORT = 8005
-JS_SERVER_WS_PORT = 8006
+JS_EMULATOR_PORT = 8007
 
 # Backend selection: "python" or "javascript"
-# - python: Use Python Flask backend only (default)
-# - javascript: Use Node.js backend only
+# - python: Use Python Flask backend + Python emulator (default)
+# - javascript: Use Node.js backend + JavaScript emulator
 BACKEND_MODE = "python"  # Default to Python backend
 
-# Client configuration
+# Client configuration (for development mode)
 VITE_CLIENT_IP = "SAME_AS_SERVER"
-VITE_CLIENT_PORT = 8002
+VITE_CLIENT_PORT = 5173  # Default Vite dev server port
 VITE_LOG_LEVEL = "error"
 
 # Checks to make sure the script is being run in the root directory of the project (it assumes this by default)
@@ -144,14 +147,50 @@ def start_js_server():
     )
 
 def start_middleware():
-    # Start the middleware in the background
-    # Middleware is ALWAYS running - it's the permanent communication layer
+    # Start the middleware server in the background
+    print(f"Starting middleware on port {MIDDLEWARE_PORT}...")
     return subprocess.Popen(
         "node src/index.js",
         shell=True,
         cwd=MIDDLEWARE_LOCAL_PATH
     )
 
+def start_emulator():
+    # Start the Python emulator server in the background
+    emulator_port = PYTHON_EMULATOR_PORT if BACKEND_MODE == "python" else JS_EMULATOR_PORT
+    print(f"Starting {BACKEND_MODE} emulator on port {emulator_port}...")
+
+    if BACKEND_MODE == "python":
+        # Start Python emulator
+        if current_os == "WINDOWS":
+            venv_python = os.path.abspath(os.path.join(SERVER_LOCAL_PATH, ".python-venv", "Scripts", "python.exe"))
+            if os.path.exists(venv_python):
+                return subprocess.Popen(
+                    [venv_python, "-m", "emulator.emulator_server"],
+                    cwd=os.path.abspath(SERVER_LOCAL_PATH)
+                )
+            else:
+                return subprocess.Popen(
+                    ["py", "-m", "emulator.emulator_server"],
+                    cwd=os.path.abspath(SERVER_LOCAL_PATH)
+                )
+        else:
+            # On Linux/Mac, use .python-venv
+            venv_python = os.path.abspath(os.path.join(SERVER_LOCAL_PATH, ".python-venv", "bin", "python"))
+            if os.path.exists(venv_python):
+                return subprocess.Popen(
+                    [venv_python, "-m", "emulator.emulator_server"],
+                    cwd=os.path.abspath(SERVER_LOCAL_PATH)
+                )
+            else:
+                return subprocess.Popen(
+                    ["python3", "-m", "emulator.emulator_server"],
+                    cwd=os.path.abspath(SERVER_LOCAL_PATH)
+                )
+    else:
+        # JavaScript emulator would go here (not implemented yet)
+        print("JavaScript emulator not yet implemented")
+        return None
 
 def update_config_json():
     # Update the config.json file with backend settings
@@ -161,26 +200,30 @@ def update_config_json():
     with open(config_path, 'r') as f:
         config = json.load(f)
 
+    # Add middleware configuration
+    config['middleware'] = {
+        "port": MIDDLEWARE_PORT,
+        "mode": BACKEND_MODE
+    }
+
     # Add backend configuration
     config['backends'] = {
         "python": {
             "url": f"http://{FLASK_SERVER_IP}:{FLASK_SERVER_PORT}",
-            "ws_port": FLASK_SERVER_WEB_SOCKET_PORT,
-            "emulator_port": 8004
+            "port": FLASK_SERVER_PORT,
+            "ws_port": FLASK_SERVER_PORT,  # SocketIO on same port
+            "emulator_port": PYTHON_EMULATOR_PORT
         },
         "javascript": {
             "url": f"http://localhost:{JS_SERVER_PORT}",
-            "ws_port": JS_SERVER_WS_PORT,
-            "emulator_port": 8007
+            "port": JS_SERVER_PORT,
+            "ws_port": JS_SERVER_PORT,  # SocketIO on same port
+            "emulator_port": JS_EMULATOR_PORT
         }
     }
 
-    # Update middleware mode
-    config['middleware'] = {
-        "mode": BACKEND_MODE,
-        "port": 8002,
-        "ws_port": 8003
-    }
+    # Set active backend mode
+    config['active_backend'] = BACKEND_MODE
 
     with open(config_path, 'w') as f:
         json.dump(config, f, indent=4)
@@ -316,32 +359,29 @@ def start_debug(fresh_database):
     # ALWAYS rebuild client before starting services
     build_client()
 
-    # Start selected backend only - no redundancy
+    # Start all services
     processes = []
 
     print("\n" + "="*60)
-    print(f"STARTING QView3D - {BACKEND_MODE.upper()} BACKEND")
+    print(f"STARTING QView3D - {BACKEND_MODE.upper()} BACKEND + MIDDLEWARE")
     print("="*60)
-    print(f"Frontend:   http://{VITE_CLIENT_IP}:{VITE_CLIENT_PORT}")
-    print(f"Middleware: http://localhost:8002")
+    print(f"User Access: http://localhost:{MIDDLEWARE_PORT}")
+    print(f"Middleware:  http://localhost:{MIDDLEWARE_PORT}")
 
     if BACKEND_MODE == "python":
-        print(f"Backend:    http://{FLASK_SERVER_IP}:{FLASK_SERVER_PORT}")
-        print(f"WebSocket:  ws://{FLASK_SERVER_IP}:{FLASK_SERVER_WEB_SOCKET_PORT}")
-        print(f"Emulator:   Port 8004")
+        print(f"Backend:     http://{FLASK_SERVER_IP}:{FLASK_SERVER_PORT}")
+        print(f"Emulator:    http://localhost:{PYTHON_EMULATOR_PORT}")
     elif BACKEND_MODE == "javascript":
-        print(f"Backend:    http://localhost:{JS_SERVER_PORT}")
-        print(f"WebSocket:  ws://localhost:{JS_SERVER_WS_PORT}")
-        print(f"Emulator:   Port 8007")
+        print(f"Backend:     http://localhost:{JS_SERVER_PORT}")
+        print(f"Emulator:    Port {JS_EMULATOR_PORT} (not implemented)")
 
+    print(f"Vite Dev:    http://localhost:{VITE_CLIENT_PORT} (development)")
     print("-"*60)
     print("NOTE: Database is wiped & client is rebuilt on every startup")
+    print("NOTE: Access the app at http://localhost:8002")
     print("-"*60)
 
-    # Start middleware first (handles routing)
-    processes.append(start_middleware())
-
-    # Start ONLY the selected backend
+    # Start the selected backend
     if BACKEND_MODE == "python":
         processes.append(start_server(fresh_database))
     elif BACKEND_MODE == "javascript":
@@ -350,7 +390,15 @@ def start_debug(fresh_database):
         print(f"Warning: Unknown backend mode '{BACKEND_MODE}', starting Python backend")
         processes.append(start_server(fresh_database))
 
-    # Start client
+    # Start emulator
+    emulator_process = start_emulator()
+    if emulator_process:
+        processes.append(emulator_process)
+
+    # Start middleware
+    processes.append(start_middleware())
+
+    # Start client (Vite dev server for development)
     processes.append(start_client())
 
     return processes

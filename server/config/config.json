@@ -2,11 +2,6 @@
     "environment": "development",
     "databaseURI": "QView",
     "emulator_port": 8004,
-    "middleware": {
-        "mode": "python",
-        "port": 8002,
-        "ws_port": 8003
-    },
     "backends": {
         "python": {
             "url": "http://localhost:8000",
@@ -16,5 +11,6 @@
             "url": "http://localhost:8005",
             "ws_port": 8006
         }
-    }
+    },
+    "active_backend": "python"
 }

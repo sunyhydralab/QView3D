@@ -1,17 +1,11 @@
 import os
-import threading
 import certifi
 from QViewApp import QViewApp
-from services.websocket_service import start_websocket
 
 # SSL setup
 os.environ["SSL_CERT_FILE"] = certifi.where()
 
-# Start WebSocket server
-websocket_thread = threading.Thread(target=start_websocket, daemon=True)
-websocket_thread.start()
-
-# Start Flask app
+# Start Flask app (WebSocket now integrated into SocketIO service)
 app = QViewApp()
 
 def run_socketio(app):

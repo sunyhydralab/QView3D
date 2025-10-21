@@ -2,7 +2,7 @@ import os
 from flask import Flask
 from dotenv import load_dotenv
 from config.paths import root_path
-from services.websocket_service import emulator_connections, event_emitter
+from Classes.EventEmitter import EventEmitter
 from config.config import Config
 from Classes.FabricatorList import FabricatorList
 from services.database_service import DatabaseService
@@ -46,8 +46,9 @@ class QViewApp(Flask):
 
         # Setup custom variables
         self._fabricator_list = None
-        self.emulator_connections = emulator_connections
-        self.event_emitter = event_emitter
+        # Emulator connections now managed by socketio_service
+        self.emulator_connections = self.socketio_service.get_emulator_connections()
+        self.event_emitter = EventEmitter()
 
         # Initialize routes and utilities
         self.routes_service = RoutesService(self)
