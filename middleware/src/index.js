@@ -1,149 +1,229 @@
+/**
+ * QView3D Middleware Server
+ *
+ * This middleware server acts as a reverse proxy between the frontend and backend services.
+ * It provides intelligent routing based on the route map configuration.
+ *
+ * Architecture:
+ * Browser (8002) → Middleware (8002) → Backend (8000 Python / 8005 JavaScript)
+ */
+
 import express from 'express';
-import cors from 'cors';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { WebSocketServer, WebSocket } from 'ws';
-import http from 'http';
+import cors from 'cors';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import { io as ioClient } from 'socket.io-client';
 import config from './config/backends.js';
-import logger from './utils/logger.js';
+import { routeMap, defaultBackend } from './config/routes.js';
 
 const app = express();
-const PORT = config.middleware.port;
+const PORT = config.middleware.port || 8002;
 
-app.use(cors(config.corsOptions));
-
-// Current selected backend (loaded from config)
+// Current selected backend (defaults to config)
 let selectedBackend = config.middleware.mode || 'python';
 
-// Get the active backend configuration
+// Middleware setup
+app.use(cors({
+  origin: '*',
+  credentials: true
+}));
+
+app.use(express.json());
+
+/**
+ * Get the active backend configuration
+ */
 function getActiveBackend() {
   return selectedBackend === 'python' ? config.backends.python : config.backends.javascript;
 }
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  const backend = getActiveBackend();
+/**
+ * Get backend for a specific route based on route mapping
+ * @param {string} path - The request path
+ * @returns {Object} Backend configuration object for the route
+ */
+function getBackendForRoute(path) {
+  // Check if route is explicitly mapped
+  const mappedBackend = routeMap[path];
+
+  if (mappedBackend === 'python') {
+    return config.backends.python;
+  } else if (mappedBackend === 'javascript') {
+    return config.backends.javascript;
+  } else if (mappedBackend === 'either') {
+    // For 'either' routes, use the currently selected backend
+    return getActiveBackend();
+  }
+
+  // If no explicit mapping, use default backend
+  return defaultBackend === 'python' ? config.backends.python : config.backends.javascript;
+}
+
+/**
+ * Health check endpoint
+ */
+app.get('/api/middleware/health', (req, res) => {
   res.json({
-    middleware: 'healthy',
-    selectedBackend: selectedBackend,
-    backendUrl: backend.url,
-    uptime: process.uptime()
+    status: 'healthy',
+    middleware_port: PORT,
+    active_backend: selectedBackend,
+    backend_url: getActiveBackend().url
   });
 });
 
-// API endpoint to change backend (requires server restart)
-app.post('/api/set-backend', express.json(), (req, res) => {
+/**
+ * Backend selection endpoint
+ */
+app.post('/api/middleware/select-backend', (req, res) => {
   const { backend } = req.body;
-
   if (backend === 'python' || backend === 'javascript') {
     selectedBackend = backend;
-    logger.info(`Backend changed to: ${backend} (requires server restart to take effect)`);
+    console.log(`✓ Switched to ${backend} backend`);
     res.json({
       success: true,
-      selectedBackend: backend,
-      message: 'Backend preference saved. Restart the server to apply changes.'
+      active_backend: selectedBackend,
+      backend_url: getActiveBackend().url
     });
   } else {
-    res.status(400).json({ success: false, error: 'Invalid backend. Must be "python" or "javascript"' });
+    res.status(400).json({
+      success: false,
+      error: 'Invalid backend. Must be "python" or "javascript"'
+    });
   }
 });
 
-// Get current backend
-app.get('/api/get-backend', (req, res) => {
-  res.json({
-    selectedBackend,
-    backendUrl: getActiveBackend().url
-  });
-});
 
-// Proxy all requests to the selected backend
-app.use((req, res, next) => {
-  const backend = getActiveBackend();
-
-  logger.info(`Request: ${req.method} ${req.path} -> ${backend.name}`);
-
-  const proxy = createProxyMiddleware({
-    target: backend.url,
-    changeOrigin: true,
-    timeout: 10000,
-    onError: (err, req, res) => {
-      logger.error(`${backend.name} failed: ${err.message}`);
-      if (!res.headersSent) {
-        res.status(503).json({
-          error: `${backend.name} backend unavailable`,
-          details: err.message
-        });
-      }
-    },
-    onProxyRes: (proxyRes) => {
-      logger.info(`${backend.name} responded with ${proxyRes.statusCode}`);
-    }
-  });
-
-  proxy(req, res, next);
-});
-
-// Create HTTP server
-const server = http.createServer(app);
-server.setMaxListeners(50);
-
-// WebSocket server
-const wss = new WebSocketServer({ server });
-
-wss.on('connection', (ws, req) => {
-  logger.info('WebSocket connection established');
-
-  const backend = getActiveBackend();
-  const wsPort = backend.ws_port;
-  const wsUrl = `ws://localhost:${wsPort}`;
-
-  const backendWs = new WebSocket(wsUrl);
-
-  backendWs.on('open', () => {
-    logger.info(`WebSocket connected to ${backend.name} on port ${wsPort}`);
-
-    // Forward messages from client to backend
-    ws.on('message', (data) => {
-      if (backendWs.readyState === WebSocket.OPEN) {
-        backendWs.send(data);
-      }
+/**
+ * Proxy all routes to backend
+ * Middleware is ONLY for proxying - backend serves the frontend
+ */
+app.use('/', createProxyMiddleware({
+  target: getActiveBackend().url,
+  changeOrigin: true,
+  ws: false,  // WebSocket handled separately below
+  router: (req) => {
+    // Determine target based on the specific route
+    const backend = getBackendForRoute(req.path);
+    console.log(`[Proxy] ${req.method} ${req.path} → ${backend.url}`);
+    return backend.url;
+  },
+  onError: (err, req, res) => {
+    console.error(`[Proxy Error] ${req.path}:`, err.message);
+    if (res.headersSent) return;
+    res.status(500).json({
+      error: 'Backend connection failed',
+      message: err.message,
+      backend: getActiveBackend().url
     });
+  },
+  onProxyReq: (proxyReq, req, res) => {
+    // Log proxy requests for debugging
+    console.log(`  → Proxying to: ${proxyReq.host}${proxyReq.path}`);
+  }
+}));
 
-    // Forward messages from backend to client
-    backendWs.on('message', (data) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(data);
-      }
-    });
+/**
+ * Create HTTP server and Socket.IO server
+ */
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  },
+  transports: ['websocket', 'polling']
+});
+
+// Socket.IO proxy to backend
+let backendSocket = null;
+
+function connectToBackend() {
+  const backend = getActiveBackend();
+  const backendUrl = backend.url;
+
+  console.log(`[SocketIO] Connecting to backend at ${backendUrl}`);
+
+  // Disconnect existing connection if any
+  if (backendSocket) {
+    backendSocket.disconnect();
+  }
+
+  // Connect to backend SocketIO
+  backendSocket = ioClient(backendUrl, {
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionAttempts: 10
   });
 
-  backendWs.on('error', (err) => {
-    logger.error(`WebSocket error connecting to ${backend.name}: ${err.message}`);
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.close(1011, `Backend ${backend.name} unavailable`);
+  backendSocket.on('connect', () => {
+    console.log(`✓ Connected to backend SocketIO at ${backendUrl}`);
+  });
+
+  backendSocket.on('disconnect', () => {
+    console.log(`✗ Disconnected from backend SocketIO`);
+  });
+
+  backendSocket.on('connect_error', (error) => {
+    console.error(`[SocketIO Error] Failed to connect to backend:`, error.message);
+  });
+
+  // Forward all backend events to frontend clients
+  backendSocket.onAny((event, ...args) => {
+    console.log(`[SocketIO] Backend → Clients: ${event}`);
+    io.emit(event, ...args);
+  });
+}
+
+// Handle frontend client connections
+io.on('connection', (socket) => {
+  console.log(`[SocketIO] Client connected: ${socket.id}`);
+
+  // Connect to backend if not already connected
+  if (!backendSocket || !backendSocket.connected) {
+    connectToBackend();
+  }
+
+  // Forward all client events to backend
+  socket.onAny((event, ...args) => {
+    console.log(`[SocketIO] Client → Backend: ${event}`);
+    if (backendSocket && backendSocket.connected) {
+      backendSocket.emit(event, ...args);
+    } else {
+      console.warn(`[SocketIO] Backend not connected, cannot forward event: ${event}`);
+      socket.emit('error', { message: 'Backend connection not available' });
     }
   });
 
-  // Clean up on client disconnect
-  ws.on('close', () => {
-    if (backendWs.readyState === WebSocket.OPEN || backendWs.readyState === WebSocket.CONNECTING) {
-      backendWs.close();
-    }
-  });
-
-  // Clean up on backend disconnect
-  backendWs.on('close', () => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.close();
-    }
+  socket.on('disconnect', () => {
+    console.log(`[SocketIO] Client disconnected: ${socket.id}`);
   });
 });
 
+// Start server
 server.listen(PORT, () => {
-  const backend = getActiveBackend();
-  logger.info(`Middleware running on port ${PORT}`);
-  logger.info(`Active Backend: ${backend.name} (${backend.url})`);
-  logger.info(`WebSocket Port: ${backend.ws_port}`);
+  console.log('\n' + '='.repeat(60));
+  console.log('QView3D Middleware Server');
+  console.log('='.repeat(60));
+  console.log(`Middleware:     http://localhost:${PORT}`);
+  console.log(`Active Backend: ${selectedBackend} (${getActiveBackend().url})`);
+  console.log('='.repeat(60));
+  console.log('Ready to proxy requests to backend\n');
+
+  // Connect to backend SocketIO
+  connectToBackend();
 });
 
-process.on('SIGTERM', () => server.close(() => process.exit(0)));
-process.on('SIGINT', () => server.close(() => process.exit(0)));
+// Handle backend switching
+export function switchBackend(backend) {
+  if (backend === 'python' || backend === 'javascript') {
+    selectedBackend = backend;
+    connectToBackend();
+    return true;
+  }
+  return false;
+}
+
+// Export for external use
+export { getActiveBackend, getBackendForRoute, selectedBackend };
