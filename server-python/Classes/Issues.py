@@ -37,17 +37,37 @@ class Issue(db.Model):
 
     # Columns in the database
     id = db.Column(db.Integer, primary_key=True) #Primary key for the issue
-    issue = db.Column(db.String(200), nullable=False) # Description of the issue
+    issue = db.Column(db.String(200), nullable=True) # Legacy: Description of the issue (kept for backward compatibility)
+    title = db.Column(db.String(200), nullable=True) # Title of the issue
+    description = db.Column(db.Text, nullable=True) # Detailed description
+    severity = db.Column(db.String(20), nullable=True) # low, medium, high, critical
+    category = db.Column(db.String(50), nullable=True) # printer, job, software
+    fabricator_id = db.Column(db.Integer, nullable=True) # Optional fabricator/printer ID
     job_id = db.Column(db.Integer, nullable=True) # Optional job ID associated with the issue
+    resolved = db.Column(db.Boolean, default=False) # Whether issue is resolved
+    created_at = db.Column(db.DateTime, default=datetime.utcnow) # When issue was created
 
-    def __init__(self, issue, job_id = None):
+    def __init__(self, issue=None, job_id=None, title=None, description=None, severity=None, category=None, fabricator_id=None):
 
         """
         Creates a new Issue object and immediately commits it to the database.
         If job_id is provided, it updates the associated Job to link to this issue.
         """
-        self.issue = issue
+        # Handle new format (title, description, etc.)
+        self.title = title
+        self.description = description
+        self.severity = severity or 'medium'
+        self.category = category
+        self.fabricator_id = fabricator_id
         self.job_id = job_id
+        self.resolved = False
+
+        # For backward compatibility, if 'issue' is provided (old format), use it
+        if issue is not None:
+            self.issue = issue
+            # If no title provided, use issue as title
+            if not self.title:
+                self.title = issue[:200] if len(issue) > 200 else issue
 
         # Automatically save the issue to the database
         if current_app:
@@ -58,8 +78,9 @@ class Issue(db.Model):
         if job_id is not None:
             from Classes.Jobs import Job
             job = Job.query.get(job_id)
-            job.error_id = self.id
-            db.session.commit()
+            if job:
+                job.error_id = self.id
+                db.session.commit()
 
     @classmethod
     def get_issues(cls):
@@ -73,12 +94,23 @@ class Issue(db.Model):
             issues = cls.query.all()
             if issues:
                 issues = [
-                    {"id": issue.id, "issue": issue.issue} for issue in issues
+                    {
+                        "id": issue.id,
+                        "title": issue.title or issue.issue,  # Fallback to legacy field
+                        "description": issue.description or issue.issue,
+                        "severity": issue.severity or 'medium',
+                        "category": issue.category or 'software',
+                        "fabricator_id": issue.fabricator_id,
+                        "job_id": issue.job_id,
+                        "resolved": issue.resolved or False,
+                        "created_at": issue.created_at.isoformat() if issue.created_at else None,
+                        # Legacy field for backward compatibility
+                        "issue": issue.issue
+                    } for issue in issues
                 ]
                 return {"success": True, "issues": issues}
-            else: 
+            else:
                 return {"success": True, "issues": []}
-            # return issues
         except SQLAlchemyError as e:
             if current_app:
                 current_app.handle_errors_and_logging(e)
@@ -108,14 +140,23 @@ class Issue(db.Model):
             )
 
     @staticmethod
-    def create_issue(issue, exception=None, job_id: int = None):
+    def create_issue(issue=None, exception=None, job_id: int = None, title=None, description=None, severity=None, category=None, fabricator_id=None):
         """
         Creates a new issue and stores it in the database.
+        Supports both old format (issue string) and new format (title, description, severity, etc.)
         If `exception` is provided, it is logged for debugging.
         """
 
         try:
-            Issue(issue, job_id)
+            new_issue = Issue(
+                issue=issue,
+                job_id=job_id,
+                title=title,
+                description=description,
+                severity=severity,
+                category=category,
+                fabricator_id=fabricator_id
+            )
 
             # Log exception if provided
             if exception:
@@ -123,19 +164,19 @@ class Issue(db.Model):
                 exception_details = "".join(traceback.format_exception(None, exception, exception.__traceback__))
                 print(f"Issue created with exception: {exception_details}")
 
-            return {"success": True, "message": "Issue successfully created"}
+            return {"success": True, "message": "Issue successfully created", "issue_id": new_issue.id}
         except SQLAlchemyError as e:
             if current_app:
                 current_app.handle_errors_and_logging(e)
             return (
-                jsonify({"error": "Failed to add job. Database error"}),
+                jsonify({"error": "Failed to create issue. Database error"}),
                 500,
             )
         except Exception as e:
             if current_app:
                 current_app.handle_errors_and_logging(e)
             return (
-                jsonify({"error": "Failed to add job. Unknown error"}),
+                jsonify({"error": "Failed to create issue. Unknown error"}),
                 500,
             )
 
@@ -165,11 +206,13 @@ class Issue(db.Model):
     @classmethod
     def edit_issue(cls, issue_id, issueNew):
         """
-        Updates the description of an existing issue.
+        Updates the description of an existing issue (legacy method).
         """
-        
+
         try:
             issueToEdit = cls.query.get(issue_id)
+            if not issueToEdit:
+                return {"success": False, "error": "Issue not found"}
             issueToEdit.issue = issueNew
             db.session.commit()
             return {"success": True, "message": "Issue successfully edited"}
@@ -178,5 +221,62 @@ class Issue(db.Model):
                 current_app.handle_errors_and_logging(e)
             return (
                 jsonify({"error": "Failed to edit issue. Database error"}),
+                500,
+            )
+
+    @classmethod
+    def update_issue(cls, issue_id, title=None, description=None, severity=None, category=None, fabricator_id=None, job_id=None):
+        """
+        Updates an existing issue with new field values.
+        """
+
+        try:
+            issue_to_update = cls.query.get(issue_id)
+            if not issue_to_update:
+                return {"success": False, "error": "Issue not found"}
+
+            # Update fields if provided
+            if title is not None:
+                issue_to_update.title = title
+            if description is not None:
+                issue_to_update.description = description
+            if severity is not None:
+                issue_to_update.severity = severity
+            if category is not None:
+                issue_to_update.category = category
+            if fabricator_id is not None:
+                issue_to_update.fabricator_id = fabricator_id
+            if job_id is not None:
+                issue_to_update.job_id = job_id
+
+            db.session.commit()
+            return {"success": True, "message": "Issue successfully updated"}
+        except SQLAlchemyError as e:
+            if current_app:
+                current_app.handle_errors_and_logging(e)
+            return (
+                jsonify({"error": "Failed to update issue. Database error"}),
+                500,
+            )
+
+    @classmethod
+    def resolve_issue(cls, issue_id):
+        """
+        Marks an issue as resolved.
+        """
+
+        try:
+            issue = cls.query.get(issue_id)
+            if not issue:
+                return {"success": False, "error": "Issue not found"}
+
+            issue.resolved = True
+            db.session.commit()
+            return {"success": True, "message": "Issue successfully resolved"}
+        except SQLAlchemyError as e:
+            if current_app:
+                current_app.handle_errors_and_logging(e)
+            return (
+                jsonify({"error": "Failed to resolve issue. Database error"}),
                 500,
             )
