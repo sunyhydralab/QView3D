@@ -29,14 +29,30 @@ class Fabricator(db.Model):
     )
     devicePort = db.Column(db.String(50), nullable=False)
 
-    def __init__(self, port: ListPortInfo | SysFS | None, name: str = "", consoleLogger: TextIO | None = None, fileLogger: str | None = None):
+    def __init__(self, port: ListPortInfo | SysFS | None = None, name: str = "", consoleLogger: TextIO | None = None, fileLogger: str | None = None, devicePort: str | None = None):
         """
         Initialize a new Fabricator instance.
-        :param ListPortInfo | SysFS | None port: the serial port to connect to
+        :param ListPortInfo | SysFS | None port: the serial port to connect to (for real printers)
         :param str name: the name to show the frontend
         :param TextIO | None consoleLogger: the console to log to
         :param str | None fileLogger: the file path to log to
+        :param str | None devicePort: the device port name (for emulated printers with EMU_ prefix)
         """
+        # Handle emulated printers (devicePort provided directly, no port object)
+        if devicePort is not None and devicePort.startswith('EMU_'):
+            from Classes.Queue import Queue
+            self.dbID = None
+            self.queue: Queue = Queue()
+            self.status: str = "ready"
+            self.hwid = devicePort  # Use EMU_ port as hwid for emulated printers
+            self.description = "Emulated Printer"
+            self.name: str = name if name else "Emulated Printer"
+            self.devicePort = devicePort
+            self.device = None  # Emulated printers don't have real devices
+            self.error = None
+            return
+
+        # Handle real printers with port objects
         if port is None:
             return
         assert isinstance(port, ListPortInfo) or isinstance(port, SysFS), f"Invalid port type: {type(port)}"

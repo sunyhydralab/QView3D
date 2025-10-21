@@ -70,7 +70,27 @@ class FabricatorList:
         :param str serialPortName: the name of the serial port to add
         :param str name: the name of the fabricator to add
         """
+        # Handle emulated printers (EMU_ prefix)
+        if serialPortName.startswith('EMU_'):
+            # Check if emulator already exists in database
+            dbFab = Fabricator.query.filter_by(devicePort=serialPortName).first()
+            if dbFab:
+                raise Exception(f"Emulated printer already exists with port {serialPortName}")
+
+            # Create emulated printer directly in database (no real serial port)
+            newFab = Fabricator(devicePort=serialPortName, name=name)
+            newFab.status = "ready"
+            self.fabricators.append(newFab)
+            db.session.add(newFab)
+            db.session.commit()
+            # Note: Emulated printers don't get a thread (no real device to monitor)
+            return
+
+        # Handle real printers with actual serial ports
         serialPort: ListPortInfo | SysFS | None = Ports.getPortByName(serialPortName)
+        if serialPort is None:
+            raise Exception(f"Serial port {serialPortName} not found")
+
         dbFab: Fabricator | None = next((fabricator for fabricator in Fabricator.queryAll() if fabricator.getHwid() == serialPort.hwid.split(' LOCATION=')[0]), None)
         listFab: Fabricator | None = next((fabricator for fabricator in self if fabricator.getHwid() == serialPort.hwid.split(' LOCATION=')[0]), None)
         newFab: Fabricator | None = None
