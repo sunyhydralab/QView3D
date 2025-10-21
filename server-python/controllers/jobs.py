@@ -354,6 +354,28 @@ def moveJob():
         current_app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
 
+@jobs_bp.route('/reorderqueue', methods=["POST"])
+def reorderQueue():
+    """Reorder jobs in a fabricator's queue (frontend-friendly alias for moveJob)."""
+    try:
+        data = request.get_json()
+        # Frontend sends 'fabricator_id' and 'job_ids', convert to backend format
+        fabricator_id = data.get('fabricator_id')
+        job_ids = data.get('job_ids')
+
+        if not fabricator_id or not job_ids:
+            return jsonify({"error": "fabricator_id and job_ids are required"}), 400
+
+        printerobject = findPrinterObject(fabricator_id)
+        if printerobject is None:
+            return jsonify({"error": "Fabricator not found"}), 404
+
+        printerobject.queue.reorder(job_ids)
+        return jsonify({"success": True, "message": "Queue reordered successfully."}), 200
+    except Exception as e:
+        current_app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
+
 @jobs_bp.route('/updatejobstatus', methods=["POST"])
 def updateJobStatus():
     try:
@@ -648,21 +670,50 @@ def refetch_time():
 def findPrinterObject(fabricator_id: int) -> Fabricator | None:
     """
     Find the printer object by its ID.
+    Searches both threaded fabricators (real printers) and non-threaded fabricators (emulated printers).
     :param int fabricator_id: The ID of the printer.
     :rtype: Fabricator | None
     """
+    # First, check fabricator_threads for real printers
     threads = current_app.fabricator_list.fabricator_threads
     fabricatorThread = list(filter(lambda thread: thread.fabricator.dbID == fabricator_id, threads))
-    return fabricatorThread[0].fabricator if len(fabricatorThread) > 0 else None
+    if len(fabricatorThread) > 0:
+        return fabricatorThread[0].fabricator
+
+    # If not found in threads, check the fabricators list (includes emulated printers without threads)
+    fabricators = current_app.fabricator_list.fabricators
+    for fabricator in fabricators:
+        if fabricator.dbID == fabricator_id:
+            return fabricator
+
+    return None
 
 def getSmallestQueue() -> int:
     """
     Get the printer with the smallest queue.
+    Searches both real printers (with threads) and emulated printers (without threads).
     :rtype: int
     """
+    # Collect all fabricators (both with and without threads)
+    all_fabricators = []
+
+    # Add real printers from threads
     threads = current_app.fabricator_list.fabricator_threads
-    smallest_queue_thread = min(threads, key=lambda thread: len(thread.fabricator.queue))
-    return smallest_queue_thread.fabricator.dbID
+    for thread in threads:
+        all_fabricators.append(thread.fabricator)
+
+    # Add emulated printers (those without threads)
+    for fabricator in current_app.fabricator_list.fabricators:
+        # Check if this fabricator is already in the list (from threads)
+        if not any(f.dbID == fabricator.dbID for f in all_fabricators):
+            all_fabricators.append(fabricator)
+
+    if len(all_fabricators) == 0:
+        raise Exception("No fabricators available")
+
+    # Find the one with smallest queue
+    smallest_queue_fabricator = min(all_fabricators, key=lambda fab: len(fab.queue))
+    return smallest_queue_fabricator.dbID
 
 def rerunjob(printerpk: int, jobpk: int, position: str) -> tuple[Response, int]:
     """
