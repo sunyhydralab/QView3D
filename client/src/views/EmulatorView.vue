@@ -63,9 +63,9 @@ const stopEmulator = async () => {
   loading.value = true;
 
   try {
-    await api('disconnectemulator', 'POST', {
+    await api('disconnectemulator', {
       printerConfig: {}
-    });
+    }, 'POST');
 
     isActive.value = false;
     addToast('Emulator stopped successfully', 'info');
