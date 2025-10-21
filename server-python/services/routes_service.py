@@ -41,12 +41,23 @@ class RoutesService:
     def setup_static_routes(self):
         """Setup static file serving routes."""
         @self.app.route('/')
-        def serve_static(path='index.html'):
-            return send_from_directory(self.app.static_folder, path)
+        def serve_index():
+            return send_from_directory(self.app.static_folder, 'index.html')
 
         @self.app.route('/assets/<path:filename>')
         def serve_assets(filename):
             return send_from_directory(os.path.join(self.app.static_folder, 'assets'), filename)
+
+        # Catch-all route for SPA routing - must be last
+        @self.app.route('/<path:path>')
+        def serve_spa(path):
+            """Serve index.html for all non-API routes to support Vue Router."""
+            # If it's an API route, let Flask return 404
+            if path.startswith('api/') or path.startswith('socket.io/'):
+                return {'error': 'Not found'}, 404
+
+            # For all other routes (Vue Router paths), serve index.html
+            return send_from_directory(self.app.static_folder, 'index.html')
     
     def setup_cors(self):
         """Setup CORS handling for preflight requests."""
