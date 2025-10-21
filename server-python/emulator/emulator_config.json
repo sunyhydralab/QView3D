@@ -1,0 +1,25 @@
+{
+  "emulator": {
+    "port": 8004,
+    "backend_url": "http://localhost:8000",
+    "auto_register": true,
+    "default_printers": [
+      {
+        "name": "Emulated Prusa MK4",
+        "model": "Prusa MK4",
+        "hwid": "EMU_PRUSA001",
+        "build_volume": [250, 210, 220],
+        "max_temp_extruder": 300,
+        "max_temp_bed": 120,
+        "max_feedrate": 200
+      }
+    ]
+  },
+  "simulation": {
+    "heating_rate_extruder": 2.5,
+    "heating_rate_bed": 1.5,
+    "cooling_rate": 0.8,
+    "position_update_interval": 0.1,
+    "realistic_delays": true
+  }
+}
