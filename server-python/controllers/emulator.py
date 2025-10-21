@@ -50,7 +50,9 @@ def createMockPrinter():
             created_fab = Fabricator.query.filter_by(devicePort=mock_port).first()
 
             return jsonify({
+                "success": True,
                 "message": "Mock printer created successfully",
+                "port": mock_port,  # Frontend expects 'port' at root level
                 "printer": {
                     "id": created_fab.dbID,
                     "name": created_fab.name,
@@ -177,4 +179,4 @@ def registerEmulator():
 @emulator_bp.route('/disconnectemulator', methods=["POST"])
 def disconnectEmulator():
     """Legacy endpoint - returns success for compatibility."""
-    return jsonify({"message": "Emulator disconnected (no-op for mock printers)"}), 200
+    return jsonify({"success": True, "message": "Emulator disconnected (no-op for mock printers)"}), 200
