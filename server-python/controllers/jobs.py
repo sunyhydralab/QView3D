@@ -624,6 +624,8 @@ def removeCSV():
 def repair_ports():
     try:
         ports = serial.tools.list_ports.comports()
+        repaired_fabricators = []
+
         for port in ports:
             hwid = port.hwid # get hwid
             hwid_without_location = hwid.split(' LOCATION=')[0]
@@ -633,6 +635,16 @@ def repair_ports():
                     printer.editPort(printer.getId(), port.device)
                     printerthread = findPrinterObject(printer.getId())
                     printerthread.setDevice(port.device)
+                    repaired_fabricators.append({
+                        'fabricator_id': printer.getId(),
+                        'Fabricator': printer.__to_JSON__()
+                    })
+
+        # Notify all connected clients about repaired printer ports
+        if current_app.socketio and repaired_fabricators:
+            for fabricator_info in repaired_fabricators:
+                current_app.socketio.emit('port_repair', fabricator_info)
+
         return {"success": True, "message": "Printer port(s) successfully updated."}
     except Exception as e:
         current_app.handle_errors_and_logging(e)

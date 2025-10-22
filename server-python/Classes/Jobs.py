@@ -557,7 +557,9 @@ class Job(db.Model):
 
     def setSentLines(self, sent_lines: int):
         self.sent_lines = sent_lines
-        # current_app.socketio.emit('gcode_viewer', {'job_id': self.id, 'gcode_num': self.sent_lines})
+        # Emit gcode viewer updates, throttled to every 10 lines to reduce WebSocket traffic
+        if current_app.socketio and self.sent_lines % 10 == 0:
+            current_app.socketio.emit('gcode_viewer', {'job_id': self.id, 'gcode_num': self.sent_lines})
 
     def getSentLines(self) -> int:
         return self.sent_lines
@@ -682,11 +684,6 @@ class Job(db.Model):
             current_app.socketio.emit('set_time_started', {'job_id': self.id, 'started': time_started})
 
     def setTime(self, timeData, index):
-        # timeData = datetime(y, m, d, h, min, s)
-        # print("TimeData: ", timeData, " Index: ", index)
+        # Store job timing data for internal use
+        # Frontend does not listen for set_time events, so we skip emission
         self.job_time[index] = timeData
-        if current_app:
-            if index == 0:
-                current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData, 'index': index})
-            else:
-                current_app.socketio.emit('set_time', {'job_id': self.id, 'new_time': timeData.isoformat(), 'index': index})

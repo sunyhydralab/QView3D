@@ -203,6 +203,6 @@ class Queue(deque):
         if len(self) == 0:
             return None
         removed_job = self.popleft()
-        if current_app:
-            current_app.socketio.emit("job_removed", {"queue": self.__list__()})
+        # Note: Frontend uses queue_update event which is emitted elsewhere
+        # No need for separate job_removed event
         return removed_job
