@@ -168,13 +168,98 @@ def updateMockPrinterStatus(printer_id):
 # Keep simplified versions of old endpoints for backward compatibility
 @emulator_bp.route('/startemulator', methods=["POST"])
 def startEmulator():
-    """Legacy endpoint - redirects to create mock printer."""
-    return createMockPrinter()
+    """
+    Legacy endpoint for starting emulator.
+    Frontend sends: {model, config: {name, description, hwid}}
+    Returns: {success, port, printer}
+    """
+    try:
+        data = request.get_json()
+        model = data.get('model', 'Prusa MK4')
+        config = data.get('config', {})
+        name = config.get('name', f'Virtual Printer')
+
+        # Generate a unique mock port
+        mock_serial = generate_mock_serial()
+        mock_port = f"EMU_{mock_serial}"
+
+        # Check if this port already exists
+        existing = Fabricator.query.filter_by(devicePort=mock_port).first()
+        if existing:
+            return jsonify({"error": "Mock printer with this port already exists"}), 400
+
+        # Create mock printer in database
+        try:
+            # Add to fabricator list
+            app = current_app
+            if hasattr(app, 'fabricator_list'):
+                app.fabricator_list.addFabricator(mock_port, name)
+            else:
+                # Direct database insert if fabricator_list not available
+                new_fabricator = Fabricator(devicePort=mock_port, name=name)
+                new_fabricator.model = model
+                new_fabricator.status = "ready"
+                db.session.add(new_fabricator)
+                db.session.commit()
+
+            # Get the created fabricator
+            created_fab = Fabricator.query.filter_by(devicePort=mock_port).first()
+
+            # Emit registration event
+            if hasattr(current_app, 'socketio') and created_fab:
+                current_app.socketio.emit('fabricator_registered', created_fab.__to_JSON__())
+
+            return jsonify({
+                "success": True,
+                "message": "Emulator started successfully",
+                "port": mock_port,
+                "printer": {
+                    "id": created_fab.dbID if created_fab else None,
+                    "name": name,
+                    "model": model,
+                    "port": mock_port,
+                    "status": "ready"
+                }
+            }), 200
+
+        except Exception as e:
+            print(f"Error creating emulator: {e}")
+            return jsonify({"success": False, "error": f"Failed to create emulator: {str(e)}"}), 500
+
+    except Exception as e:
+        print(f"Unexpected error in startEmulator: {e}")
+        return jsonify({"success": False, "error": f"Unexpected error: {str(e)}"}), 500
 
 @emulator_bp.route('/registeremulator', methods=["POST"])
 def registerEmulator():
-    """Legacy endpoint - redirects to create mock printer."""
-    return createMockPrinter()
+    """
+    Legacy endpoint for registering emulator.
+    Since startEmulator already registers, this just returns success.
+    """
+    try:
+        data = request.get_json()
+        config = data.get('config', {})
+        port = config.get('port', '')
+
+        # Check if emulator with this port exists
+        if port:
+            fabricator = Fabricator.query.filter_by(devicePort=port).first()
+            if fabricator:
+                return jsonify({
+                    "success": True,
+                    "message": "Emulator already registered",
+                    "printer": {
+                        "id": fabricator.dbID,
+                        "name": fabricator.name,
+                        "port": fabricator.devicePort,
+                        "status": fabricator.status
+                    }
+                }), 200
+
+        return jsonify({"success": True, "message": "Emulator registration acknowledged"}), 200
+    except Exception as e:
+        print(f"Error in registerEmulator: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @emulator_bp.route('/disconnectemulator', methods=["POST"])
 def disconnectEmulator():
