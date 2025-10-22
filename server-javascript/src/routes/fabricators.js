@@ -193,7 +193,7 @@ router.post('/getfabricatorbyid', async (req, res) => {
 });
 
 // Get all unique printer models from database
-router.get('/models', async (req, res) => {
+router.get('/api/fabricators/models', async (req, res) => {
   try {
     // Get unique model names from fabricators
     const models = await database.all('SELECT DISTINCT model FROM fabricators WHERE model IS NOT NULL ORDER BY model ASC');

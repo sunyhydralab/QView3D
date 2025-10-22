@@ -54,6 +54,85 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Server version endpoint - returns version from package.json or environment variable
+app.get('/serverVersion', (req, res) => {
+  try {
+    // Check environment variable first (matches Python behavior)
+    const version = process.env.SERVER_VERSION || process.env.VERSION || '0.0.1';
+
+    // Return simple string response to match Python endpoint behavior
+    res.json(version);
+  } catch (error) {
+    console.error('Error getting server version:', error);
+    res.status(500).json({ error: 'Failed to get server version' });
+  }
+});
+
+// Get printer info endpoint - returns all fabricators with full status information
+// Matches Python's /getprinterinfo endpoint which returns fabricator.__to_JSON__() for all fabricators
+app.get('/getprinterinfo', async (req, res) => {
+  try {
+    // Get all fabricators from database
+    const fabricators = await database.all('SELECT * FROM fabricators ORDER BY position ASC');
+
+    // Build full fabricator info with queue and job details
+    const printerInfo = await Promise.all(
+      fabricators.map(async (fabricator) => {
+        // Get the queue for this fabricator
+        const queue = fabricatorManager.getQueue(fabricator.id);
+        const queueData = queue ? queue.toJSON() : [];
+
+        // Get current job (first item in queue)
+        const currentJob = queueData.length > 0 ? queueData[0] : null;
+
+        // Get full job details if there's a current job
+        let jobDetails = null;
+        if (currentJob) {
+          jobDetails = await database.get('SELECT * FROM jobs WHERE id = ?', [currentJob.id]);
+        }
+
+        // Build fabricator JSON response matching Python's Fabricator.__to_JSON__() format
+        return {
+          id: fabricator.id,
+          name: fabricator.name,
+          description: fabricator.model || 'Unknown Model',
+          hwid: fabricator.hwid || '',
+          status: fabricator.status || 'offline',
+          date: fabricator.created_at || new Date().toISOString(),
+          queue: queueData,
+          job: jobDetails,
+          device: {
+            // Basic device info - extended device details would come from serial connection
+            serialPort: fabricator.devicePort,
+            model: fabricator.model,
+            status: fabricator.status,
+            // Additional device properties can be added as needed
+            homePosition: null,
+            temperatures: {
+              bed: 0,
+              extruder: 0
+            },
+            position: {
+              x: 0,
+              y: 0,
+              z: 0
+            }
+          },
+          consoles: [[], [], [], [], []] // Match Python's console structure
+        };
+      })
+    );
+
+    res.json(printerInfo);
+  } catch (error) {
+    console.error('Error getting printer info:', error);
+    res.status(500).json({
+      error: 'Failed to get printer info',
+      details: error.message
+    });
+  }
+});
+
 // Register route handlers
 app.use('/', jobsRouter);
 app.use('/', fabricatorsRouter);

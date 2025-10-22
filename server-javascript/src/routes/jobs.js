@@ -383,4 +383,68 @@ router.post('/startprint', async (req, res) => {
   }
 });
 
+/**
+ * Reorder jobs in a fabricator's queue
+ * This endpoint accepts an array of job IDs and reorders the queue to match
+ * the order specified in the array. This is a frontend-friendly endpoint that
+ * provides the same functionality as the Python backend's /reorderqueue.
+ *
+ * Request body:
+ * - fabricator_id: ID of the fabricator whose queue should be reordered
+ * - job_ids: Array of job IDs in the desired order
+ *
+ * Example:
+ * {
+ *   "fabricator_id": 1,
+ *   "job_ids": [5, 3, 7, 2]
+ * }
+ */
+router.post('/reorderqueue', async (req, res) => {
+  try {
+    const { fabricator_id, job_ids } = req.body;
+
+    // Validate required fields
+    if (!fabricator_id || !job_ids) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        details: 'Both fabricator_id and job_ids are required'
+      });
+    }
+
+    // Validate job_ids is an array
+    if (!Array.isArray(job_ids)) {
+      return res.status(400).json({
+        error: 'Invalid job_ids format',
+        details: 'job_ids must be an array'
+      });
+    }
+
+    // Get the queue for the specified fabricator
+    const queue = fabricatorManager.getQueue(fabricator_id);
+
+    if (!queue) {
+      return res.status(404).json({
+        error: 'Fabricator not found',
+        details: `No queue found for fabricator ID ${fabricator_id}`
+      });
+    }
+
+    // Reorder the queue using the provided job IDs
+    queue.reorder(job_ids);
+
+    console.log(`Queue reordered for fabricator ${fabricator_id}. New order: [${job_ids.join(', ')}]`);
+
+    res.json({
+      success: true,
+      message: 'Queue reordered successfully'
+    });
+  } catch (error) {
+    console.error('Error reordering queue:', error);
+    res.status(500).json({
+      error: 'Failed to reorder queue',
+      details: error.message
+    });
+  }
+});
+
 export default router;
