@@ -267,7 +267,8 @@ class Printer(Device, metaclass=ABCMeta):
         # Print command being sent
         print(f">>> SENDING GCODE: {gcode.decode().strip()}")
 
-        current_app.socketio.emit("gcode_line", {"line": (gcode.decode() if isinstance(gcode, bytes) else gcode).strip(), "fabricator_id": self.dbID})
+        # Write GCode command to serial connection
+        # Note: Frontend does not listen for gcode_line events
         self.serialConnection.write(gcode)
         line = b''
 
