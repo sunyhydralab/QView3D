@@ -2,10 +2,12 @@
  * QView3D Middleware Server
  *
  * This middleware server acts as a reverse proxy between the frontend and backend services.
- * It provides intelligent routing based on the route map configuration.
+ * It serves the Vue.js frontend and provides intelligent routing based on the route map configuration.
  *
  * Architecture:
  * Browser (8002) → Middleware (8002) → Backend (8000 Python / 8005 JavaScript)
+ * - Frontend: Served from client/dist
+ * - API Routes: Proxied to backend based on route mapping
  */
 
 import express from 'express';
@@ -14,8 +16,17 @@ import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { io as ioClient } from 'socket.io-client';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import config from './config/backends.js';
 import { routeMap, defaultBackend } from './config/routes.js';
+
+// Get __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Define path to Vue.js frontend build
+const DIST_PATH = path.join(__dirname, '../../client/dist');
 
 const app = express();
 const PORT = config.middleware.port || 8002;
@@ -62,66 +73,135 @@ function getBackendForRoute(path) {
 
 /**
  * Health check endpoint
+ * Shows server backend status only when debug mode is enabled
  */
-app.get('/api/middleware/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    middleware_port: PORT,
-    active_backend: selectedBackend,
-    backend_url: getActiveBackend().url
-  });
-});
+app.get('/api/middleware/health', async (req, res) => {
+  const { debug } = req.query;
 
-/**
- * Backend selection endpoint
- */
-app.post('/api/middleware/select-backend', (req, res) => {
-  const { backend } = req.body;
-  if (backend === 'python' || backend === 'javascript') {
-    selectedBackend = backend;
-    console.log(`✓ Switched to ${backend} backend`);
-    res.json({
-      success: true,
-      active_backend: selectedBackend,
-      backend_url: getActiveBackend().url
-    });
+  if (debug === 'true') {
+    // Debug mode: show server backend status
+    const backend = getActiveBackend();
+    try {
+      // Fetch backend health status
+      const fetch = (await import('node-fetch')).default;
+      const backendHealth = await fetch(`${backend.url}${backend.healthEndpoint}`);
+      const backendData = await backendHealth.json();
+
+      res.json({
+        status: 'healthy',
+        server_backend: selectedBackend,
+        server_url: backend.url,
+        server_status: backendData
+      });
+    } catch (error) {
+      res.json({
+        status: 'healthy',
+        server_backend: selectedBackend,
+        server_url: backend.url,
+        server_status: { error: 'Backend not reachable', message: error.message }
+      });
+    }
   } else {
-    res.status(400).json({
-      success: false,
-      error: 'Invalid backend. Must be "python" or "javascript"'
+    // No debug mode: minimal response
+    res.json({
+      status: 'healthy'
     });
   }
 });
 
+/**
+ * API routes that should be proxied to the backend
+ */
+const apiRoutes = [
+  '/api',
+  '/socket.io',
+  '/getfabricators',
+  '/registerfabricator',
+  '/deletefabricator',
+  '/pauseprinter',
+  '/resumeprinter',
+  '/cancelprinter',
+  '/getqueue',
+  '/reorderqueue',
+  '/clearqueue',
+  '/uploadfiles',
+  '/getfiles',
+  '/deletefile',
+  '/addjob',
+  '/canceljob',
+  '/getjobhistory',
+  '/getjobs',  // Added - frontend calls this
+  '/getports',  // Added - frontend calls this
+  '/register',  // Added - frontend calls this
+  '/setstatus',  // Added - frontend calls this
+  '/startprint',  // Added - frontend calls this
+  '/releasejob',  // Added - frontend calls this
+  '/autoqueue',  // Added - frontend calls this
+  '/cancelfromqueue',  // Added - frontend calls this
+  '/addjobtoqueue',  // Added - frontend calls this
+  '/startemulator',
+  '/registeremulator',
+  '/disconnectemulator',
+  '/getissues',
+  '/createissue',
+  '/updateissue',
+  '/deleteissue',
+  '/resolveissue',
+  '/health',
+  '/getprinterinfo',
+  '/serverVersion'
+];
 
 /**
- * Proxy all routes to backend
- * Middleware is ONLY for proxying - backend serves the frontend
+ * Apply proxy middleware ONLY to specific API routes
  */
-app.use('/', createProxyMiddleware({
-  target: getActiveBackend().url,
-  changeOrigin: true,
-  ws: false,  // WebSocket handled separately below
-  router: (req) => {
-    // Determine target based on the specific route
-    const backend = getBackendForRoute(req.path);
-    console.log(`[Proxy] ${req.method} ${req.path} → ${backend.url}`);
-    return backend.url;
-  },
-  onError: (err, req, res) => {
-    console.error(`[Proxy Error] ${req.path}:`, err.message);
-    if (res.headersSent) return;
-    res.status(500).json({
-      error: 'Backend connection failed',
-      message: err.message,
-      backend: getActiveBackend().url
-    });
-  },
-  onProxyReq: (proxyReq, req, res) => {
-    // Log proxy requests for debugging
-    console.log(`  → Proxying to: ${proxyReq.host}${proxyReq.path}`);
+apiRoutes.forEach(route => {
+  app.use(route, createProxyMiddleware({
+    target: 'http://localhost:8000',
+    changeOrigin: true,
+    ws: route === '/socket.io',  // Enable WebSocket for Socket.IO
+    // Preserve the route prefix by rewriting the path
+    pathRewrite: (path, req) => {
+      // The original route is in req.baseUrl, and the remaining path is in req.url
+      // If req.url is just '/', we want just the baseUrl without the trailing slash
+      let fullPath = req.baseUrl;
+      if (req.url !== '/') {
+        fullPath += req.url;
+      }
+      console.log(`[Proxy] ${req.method} ${fullPath} → ${getActiveBackend().url}${fullPath}`);
+      return fullPath;
+    },
+    onError: (err, req, res) => {
+      console.error(`[Proxy Error] ${req.path}:`, err.message);
+      if (res.headersSent) return;
+      res.status(500).json({
+        error: 'Backend connection failed',
+        message: err.message,
+        backend: getActiveBackend().url
+      });
+    }
+  }));
+});
+
+/**
+ * Serve static files from Vue.js build
+ * IMPORTANT: This must come AFTER API proxies to avoid intercepting API routes
+ */
+app.use(express.static(DIST_PATH));
+
+/**
+ * SPA fallback - serve index.html for GET requests only
+ * This enables Vue Router to handle client-side routing
+ * while properly rejecting non-GET requests to non-existent API routes
+ */
+app.use((req, res, next) => {
+  if (req.method === 'GET') {
+    res.sendFile(path.join(DIST_PATH, 'index.html'));
+  } else {
+    // Non-GET requests that reach here are 404s
+    res.status(404).json({ error: 'Not found' });
   }
-}));
+});
 
 /**
  * Create HTTP server and Socket.IO server
@@ -203,27 +283,26 @@ io.on('connection', (socket) => {
 
 // Start server
 server.listen(PORT, () => {
-  console.log('\n' + '='.repeat(60));
-  console.log('QView3D Middleware Server');
-  console.log('='.repeat(60));
-  console.log(`Middleware:     http://localhost:${PORT}`);
-  console.log(`Active Backend: ${selectedBackend} (${getActiveBackend().url})`);
-  console.log('='.repeat(60));
-  console.log('Ready to proxy requests to backend\n');
+  console.log('\n' + '='.repeat(80));
+  console.log('QView3D - MIDDLEWARE SERVER READY');
+  console.log('='.repeat(80));
+  console.log('');
+  console.log(`  🌐 ACCESS APPLICATION AT:  http://localhost:${PORT}`);
+  console.log('');
+  console.log(`  Architecture:`);
+  console.log(`    Browser → Middleware (${PORT}) → Backend (${getActiveBackend().url})`);
+  console.log('');
+  console.log(`  Middleware Functions:`);
+  console.log(`    - Serving Frontend: client/dist`);
+  console.log(`    - Proxying ${apiRoutes.length} API routes to backend`);
+  console.log(`    - Handling WebSocket connections`);
+  console.log('');
+  console.log(`  Active Backend:  ${selectedBackend}`);
+  console.log(`  Backend URL:     ${getActiveBackend().url}`);
+  console.log('');
+  console.log('='.repeat(80));
+  console.log('');
 
   // Connect to backend SocketIO
   connectToBackend();
 });
-
-// Handle backend switching
-export function switchBackend(backend) {
-  if (backend === 'python' || backend === 'javascript') {
-    selectedBackend = backend;
-    connectToBackend();
-    return true;
-  }
-  return false;
-}
-
-// Export for external use
-export { getActiveBackend, getBackendForRoute, selectedBackend };

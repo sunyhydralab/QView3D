@@ -97,7 +97,7 @@ class Fabricator(db.Model):
             "hwid": self.hwid,
             "status": self.status,
             "id": self.dbID,
-            "date": self.date.strftime("%a, %d %b %Y %H:%M:%S"),
+            "date": self.date.strftime("%a, %d %b %Y %H:%M:%S") if self.date else None,
             "queue": self.queue.convertQueueToJson(),
             "job": self.queue[0].__to_JSON__() if len(self.queue) > 0 and self.queue[0] is not None else None,
             "device": self.device.__to_JSON__(),
@@ -338,9 +338,17 @@ class Fabricator(db.Model):
                     self.queue[0].status = newStatus
                     db.session.commit()
             if current_app:
+                # Notify all connected clients that this printer's status has changed
                 current_app.socketio.emit(
                     "status_update", {"fabricator_id": self.dbID, "status": newStatus}
                 )
+
+                # Emit pause capability status - printer can only be paused when actively printing
+                can_pause = newStatus == "printing"
+                current_app.socketio.emit(
+                    "can_pause", {"fabricator_id": self.dbID, "canPause": can_pause}
+                )
+
                 if len(self.queue) > 0 and self.queue[0] is not None:
                     Job.update_job_status(self.queue[0].id, newStatus)
             else:

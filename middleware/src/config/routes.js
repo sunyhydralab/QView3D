@@ -1,72 +1,22 @@
-// Route-to-backend mapping for hybrid mode
-export const routeMap = {
-  // Serial operations - prefer JavaScript backend
-  '/api/serial': 'javascript',
-  '/api/gcode': 'javascript',
-  '/api/printers': 'javascript',
+/**
+ * Simple proxy configuration
+ *
+ * The middleware acts as a pure reverse proxy, forwarding all requests to
+ * whichever backend the user selected at startup (Python or JavaScript).
+ *
+ * No route-specific mapping - all routes go to the selected backend.
+ * This allows the user to choose their preferred backend implementation
+ * without the middleware making routing decisions.
+ */
 
-  // Database operations - both backends support now
-  '/getjobs': 'either',
-  '/getfabricators': 'either',
-  '/getissues': 'either',
-  '/getfavoritejobs': 'either',
-
-  // Fabricator/Printer operations - both backends
-  '/getports': 'either',
-  '/register': 'either',
-  '/deletefabricator': 'either',
-  '/editname': 'either',
-  '/setstatus': 'either',
-  '/movefabricatorlist': 'either',
-  '/getfabricatorbyid': 'either',
-
-  // Job management - both backends
-  '/addjobtoqueue': 'either',
-  '/autoqueue': 'either',
-  '/canceljob': 'either',
-  '/cancelfromqueue': 'either',
-  '/updatejobstatus': 'either',
-  '/deletejob': 'either',
-  '/startprint': 'either',
-  '/releasejob': 'python',
-  '/rerunjob': 'python',
-  '/bumpjob': 'python',
-  '/movejob': 'python',
-  '/getfile': 'either',
-  '/favoritejob': 'either',
-  '/assignissue': 'either',
-  '/removeissue': 'either',
-  '/savecomment': 'either',
-
-  // Issue operations - both backends
-  '/createissue': 'either',
-  '/updateissue': 'either',
-  '/deleteissue': 'either',
-  '/getissue': 'either',
-  '/getissuesbycategory': 'either',
-  '/resolveissue': 'either',
-
-  // Emulator operations - both backends support emulation
-  '/startemulator': 'either',
-  '/disconnectemulator': 'either',
-  '/registeremulator': 'either',
-  '/setemulatortemperature': 'either',
-  '/runemulatortest': 'either',
-  '/resetemulator': 'either',
-  '/emulatorstatus': 'either',
-  '/api/emulator': 'either',
-
-  // Python-specific operations
-  '/diagnose': 'python',
-  '/repair': 'python',
-  '/movehead': 'python',
-  '/downloadcsv': 'python',
-  '/removeCSV': 'python',
-  '/repairports': 'python',
-  '/refetchtimedata': 'python',
-  '/clearspace': 'python',
-  '/nullifyjobs': 'python',
-  '/jobdbinsert': 'python'
-};
-
+/**
+ * Default backend for startup
+ * User can change this via the /api/middleware/select-backend endpoint
+ */
 export const defaultBackend = 'python';
+
+/**
+ * Empty route map - all routes proxy to selected backend
+ * Keeping this for backward compatibility with middleware code
+ */
+export const routeMap = {};

@@ -204,6 +204,11 @@ const loadIssues = async () => {
 };
 
 const showCreateModal = () => {
+  // Redirect to GitHub for software issues instead of showing modal
+  if (activeTab.value === 'software') {
+    window.open('https://github.com/sunyhydralab/QView3D/issues/new', '_blank');
+    return;
+  }
   selectedIssue.value = null;
   showModal.value = true;
 };
@@ -221,9 +226,9 @@ const closeModal = () => {
 const saveIssue = async (issueData) => {
   try {
     if (selectedIssue.value) {
-      await api('updateissue', 'POST', { ...issueData, id: selectedIssue.value.id });
+      await api('updateissue', { ...issueData, id: selectedIssue.value.id }, 'POST');
     } else {
-      await api('createissue', 'POST', { ...issueData, category: activeTab.value });
+      await api('createissue', { ...issueData, category: activeTab.value }, 'POST');
     }
     await loadIssues();
     closeModal();
@@ -236,7 +241,7 @@ const deleteIssue = async (issueId) => {
   if (!confirm('Are you sure you want to delete this issue?')) return;
 
   try {
-    await api('deleteissue', 'POST', { id: issueId });
+    await api('deleteissue', { id: issueId }, 'POST');
     await loadIssues();
   } catch (error) {
     console.error('Failed to delete issue:', error);
@@ -245,7 +250,7 @@ const deleteIssue = async (issueId) => {
 
 const resolveIssue = async (issueId) => {
   try {
-    await api('resolveissue', 'POST', { id: issueId });
+    await api('resolveissue', { id: issueId }, 'POST');
     await loadIssues();
   } catch (error) {
     console.error('Failed to resolve issue:', error);
