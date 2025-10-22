@@ -46,6 +46,10 @@ def registerFabricator():
             return jsonify({"error": f"Failed to add fabricator: {ae}"}), 500
         new_fabricator = Fabricator.query.filter_by(devicePort=device).first()
 
+        # Notify all connected clients that a new printer has been registered
+        if app.socketio:
+            app.socketio.emit('fabricator_registered', new_fabricator.__to_JSON__())
+
         return jsonify({"success": True, "message": "Fabricator registered successfully", "fabricator_id": new_fabricator.dbID})
     except SQLAlchemyError as db_err:
         print(f"Database error during registration: {db_err}")
@@ -63,7 +67,13 @@ def deleteFabricator():
         res = app.fabricator_list.deleteFabricator(fabricator_id)
         if isinstance(res, ValueError):
             return jsonify({"error": "Fabricator not found"}), 404
-        if res: return jsonify({"success": True, "message": "Fabricator deleted successfully"})
+
+        if res:
+            # Notify all connected clients that a printer has been disconnected
+            if app.socketio:
+                app.socketio.emit('fabricator_disconnected', {'id': fabricator_id})
+            return jsonify({"success": True, "message": "Fabricator deleted successfully"})
+
         return jsonify({"error": "Failed to delete fabricator"}), 500
     except Exception as e:
         app.handle_errors_and_logging(e)
