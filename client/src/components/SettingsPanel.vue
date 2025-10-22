@@ -5,27 +5,28 @@ import Button from '@/components/Button.vue'
 
 const serverIP = ref<string>(API_IP_ADDRESS.value);
 const debugMode = ref<boolean>(DEBUG_MODE.value);
-const preferredBackend = ref<string>(localStorage.getItem('preferredBackend') || 'python');
 const isOpen = ref(false);
 
-interface MiddlewareStatus {
+interface ServerStatus {
   online: boolean;
   checking: boolean;
-  mode?: string;
+  backend?: string;
+  url?: string;
+  server_status?: any;
 }
 
-// Middleware status (always port 8002)
-const middlewareStatus = ref<MiddlewareStatus>({
+// Server status
+const serverStatus = ref<ServerStatus>({
   online: false,
   checking: false
 });
 
 const isDetecting = ref(false);
 
-// Watch for panel open and check middleware status
+// Watch for panel open and check server status if debug mode is enabled
 watch(isOpen, (newValue) => {
-  if (newValue) {
-    checkMiddleware();
+  if (newValue && debugMode.value) {
+    checkServerStatus();
   }
 });
 
@@ -33,16 +34,18 @@ const togglePanel = () => {
   isOpen.value = !isOpen.value;
 };
 
-// Check if middleware is online by pinging its health endpoint
-async function checkMiddleware() {
+// Check server status (only available in debug mode)
+async function checkServerStatus() {
+  if (!debugMode.value) return;
+
   isDetecting.value = true;
-  middlewareStatus.value.checking = true;
+  serverStatus.value.checking = true;
 
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-    const response = await fetch(`http://${serverIP.value}:8002/health`, {
+    const response = await fetch(`http://${serverIP.value}:8002/api/middleware/health?debug=true`, {
       method: 'GET',
       signal: controller.signal
     });
@@ -51,16 +54,18 @@ async function checkMiddleware() {
 
     if (response.ok) {
       const data = await response.json();
-      middlewareStatus.value.online = true;
-      middlewareStatus.value.mode = data.selectedBackend || 'unknown';
+      serverStatus.value.online = true;
+      serverStatus.value.backend = data.server_backend;
+      serverStatus.value.url = data.server_url;
+      serverStatus.value.server_status = data.server_status;
     } else {
-      middlewareStatus.value.online = false;
+      serverStatus.value.online = false;
     }
   } catch {
-    middlewareStatus.value.online = false;
+    serverStatus.value.online = false;
   }
 
-  middlewareStatus.value.checking = false;
+  serverStatus.value.checking = false;
   isDetecting.value = false;
 }
 
@@ -72,14 +77,8 @@ const saveSettings = async () => {
     updateDebugMode(debugMode.value);
   }
 
-  // Save preferred backend to localStorage
-  localStorage.setItem('preferredBackend', preferredBackend.value);
-
-  // Note: Backend changes require server restart via run.py
-  // The middleware reads the backend mode from config.json on startup
-
-  console.log(`Server IP: ${serverIP.value}, Debug Mode: ${debugMode.value}, Backend: ${preferredBackend.value}`);
-  alert('Settings saved! Note: To change backends, update BACKEND_MODE in run.py and restart the server.');
+  console.log(`Server IP: ${serverIP.value}, Debug Mode: ${debugMode.value}`);
+  alert('Settings saved!');
   isOpen.value = false;
   window.location.reload()
 };
@@ -125,12 +124,12 @@ const saveSettings = async () => {
             />
           </div>
 
-          <!-- Middleware Status Section -->
-          <div class="space-y-3">
+          <!-- Server Status Section (Debug Mode Only) -->
+          <div v-if="debugMode" class="space-y-3">
             <div class="flex items-center justify-between">
-              <label class="block text-sm font-medium dark:text-light-primary-dark">Middleware Status:</label>
+              <label class="block text-sm font-medium dark:text-light-primary-dark">Server Status:</label>
               <Button
-                @click="checkMiddleware"
+                @click="checkServerStatus"
                 :disabled="isDetecting"
                 class="text-xs px-3 py-1"
               >
@@ -140,14 +139,14 @@ const saveSettings = async () => {
               </Button>
             </div>
 
-            <!-- Middleware Status Display -->
+            <!-- Server Status Display -->
             <div class="bg-gray-50 dark:bg-dark-primary-light rounded-lg p-3">
               <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
                   <!-- Status Indicator -->
                   <div class="relative">
                     <div
-                      v-if="middlewareStatus.checking"
+                      v-if="serverStatus.checking"
                       class="w-3 h-3 rounded-full bg-yellow-400 animate-pulse"
                       title="Checking..."
                     ></div>
@@ -155,54 +154,24 @@ const saveSettings = async () => {
                       v-else
                       :class="[
                         'w-3 h-3 rounded-full',
-                        middlewareStatus.online ? 'bg-green-500' : 'bg-red-500'
+                        serverStatus.online ? 'bg-green-500' : 'bg-red-500'
                       ]"
-                      :title="middlewareStatus.online ? 'Online' : 'Offline'"
+                      :title="serverStatus.online ? 'Online' : 'Offline'"
                     ></div>
                   </div>
                   <div>
                     <span class="text-sm font-medium dark:text-light-primary">
-                      Middleware
+                      {{ serverStatus.backend || 'Server' }}
                     </span>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                      Port 8002 {{ middlewareStatus.mode ? `(${middlewareStatus.mode})` : '' }}
+                      {{ serverStatus.url || 'Unknown' }}
                     </p>
                   </div>
                 </div>
-                <span class="text-xs font-medium" :class="middlewareStatus.online ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                  {{ middlewareStatus.online ? 'Online' : 'Offline' }}
+                <span class="text-xs font-medium" :class="serverStatus.online ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+                  {{ serverStatus.online ? 'Online' : 'Offline' }}
                 </span>
               </div>
-            </div>
-          </div>
-
-          <!-- Backend Selection -->
-          <div class="space-y-2">
-            <label class="block text-sm font-medium dark:text-light-primary-dark">Active Backend:</label>
-            <div class="bg-gray-50 dark:bg-dark-primary-light rounded-lg p-3">
-              <div class="space-y-2">
-                <label class="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    v-model="preferredBackend"
-                    value="python"
-                    class="w-4 h-4 text-accent-primary focus:ring-accent-primary"
-                  />
-                  <span class="ml-2 text-sm dark:text-light-primary">Python (Port 8000)</span>
-                </label>
-                <label class="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    v-model="preferredBackend"
-                    value="javascript"
-                    class="w-4 h-4 text-accent-primary focus:ring-accent-primary"
-                  />
-                  <span class="ml-2 text-sm dark:text-light-primary">JavaScript (Port 8005)</span>
-                </label>
-              </div>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                Change BACKEND_MODE in run.py and restart to switch backends
-              </p>
             </div>
           </div>
 
