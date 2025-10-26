@@ -500,4 +500,53 @@ router.post('/bumpjob', async (req, res) => {
   }
 });
 
+// Move job between fabricators
+router.post('/movejob', async (req, res) => {
+  try {
+    const { printerid, arr } = req.body;
+
+    // Validate required fields
+    if (!printerid || !arr) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        details: 'Both printerid and arr are required'
+      });
+    }
+
+    // Validate arr is an array
+    if (!Array.isArray(arr)) {
+      return res.status(400).json({
+        error: 'Invalid arr format',
+        details: 'arr must be an array of job IDs'
+      });
+    }
+
+    // Get the queue for the specified fabricator
+    const queue = fabricatorManager.getQueue(printerid);
+
+    if (!queue) {
+      return res.status(404).json({
+        error: 'Fabricator not found',
+        details: `No queue found for fabricator ID ${printerid}`
+      });
+    }
+
+    // Reorder the queue using the provided job IDs
+    queue.reorder(arr);
+
+    console.log(`Queue reordered for fabricator ${printerid}. New order: [${arr.join(', ')}]`);
+
+    res.json({
+      success: true,
+      message: 'Queue updated successfully'
+    });
+  } catch (error) {
+    console.error('Error moving job:', error);
+    res.status(500).json({
+      error: 'Failed to move job',
+      details: error.message
+    });
+  }
+});
+
 export default router;
