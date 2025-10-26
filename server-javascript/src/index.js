@@ -10,6 +10,7 @@ import jobsRouter from './routes/jobs.js';
 import fabricatorsRouter from './routes/fabricators.js';
 import issuesRouter from './routes/issues.js';
 import emulatorRouter from './routes/emulator.js';
+import hardwareRouter from './routes/hardware.js';
 import fabricatorManager from './fabricatorManager.js';
 
 const app = express();
@@ -138,6 +139,7 @@ app.use('/', jobsRouter);
 app.use('/', fabricatorsRouter);
 app.use('/', issuesRouter);
 app.use('/', emulatorRouter);
+app.use('/', hardwareRouter);
 
 // Serial port direct access routes
 app.get('/api/serial/ports', async (req, res) => {
