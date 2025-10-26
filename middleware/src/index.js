@@ -2,11 +2,12 @@
  * QView3D Middleware Server
  *
  * This middleware server acts as a reverse proxy between the frontend and backend services.
- * It serves the Vue.js frontend and provides intelligent routing based on the route map configuration.
+ * It proxies to the Vite dev server for dynamic frontend development and provides
+ * intelligent routing based on the route map configuration.
  *
  * Architecture:
- * Browser (8002) → Middleware (8002) → Backend (8000 Python / 8005 JavaScript)
- * - Frontend: Served from client/dist
+ * Browser (8002) → Middleware (8002) → Vite Dev Server (5173) / Backend (8000 Python / 8005 JavaScript)
+ * - Frontend: Proxied to Vite dev server on port 5173
  * - API Routes: Proxied to backend based on route mapping
  */
 
@@ -25,9 +26,6 @@ import { HealthChecker } from './healthCheck.js';
 // Get __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Define path to Vue.js frontend build
-const DIST_PATH = path.join(__dirname, '../../client/dist');
 
 const app = express();
 const PORT = config.middleware.port || 8002;
@@ -212,24 +210,31 @@ apiRoutes.forEach(route => {
 });
 
 /**
- * Serve static files from Vue.js build
+ * Proxy to Vite dev server for dynamic frontend development
  * IMPORTANT: This must come AFTER API proxies to avoid intercepting API routes
  */
-app.use(express.static(DIST_PATH));
+const VITE_DEV_SERVER = 'http://localhost:5173';
 
-/**
- * SPA fallback - serve index.html for GET requests only
- * This enables Vue Router to handle client-side routing
- * while properly rejecting non-GET requests to non-existent API routes
- */
-app.use((req, res, next) => {
-  if (req.method === 'GET') {
-    res.sendFile(path.join(DIST_PATH, 'index.html'));
-  } else {
-    // Non-GET requests that reach here are 404s
-    res.status(404).json({ error: 'Not found' });
+app.use('/', createProxyMiddleware({
+  target: VITE_DEV_SERVER,
+  changeOrigin: true,
+  ws: true,  // Enable WebSocket for Vite HMR
+  onError: (err, req, res) => {
+    console.error(`[Vite Proxy Error] ${req.path}:`, err.message);
+    if (res.headersSent) return;
+    res.status(502).json({
+      error: 'Vite dev server connection failed',
+      message: err.message,
+      hint: 'Make sure Vite dev server is running on port 5173'
+    });
+  },
+  onProxyReq: (proxyReq, req, res) => {
+    // Log proxied requests to Vite (only non-asset requests to reduce noise)
+    if (!req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
+      console.log(`[Vite Proxy] ${req.method} ${req.path} → ${VITE_DEV_SERVER}${req.path}`);
+    }
   }
-});
+}));
 
 /**
  * Create HTTP server and Socket.IO server
@@ -321,7 +326,7 @@ server.listen(PORT, () => {
   console.log(`    Browser → Middleware (${PORT}) → Backend (${getActiveBackend().url})`);
   console.log('');
   console.log(`  Middleware Functions:`);
-  console.log(`    - Serving Frontend: client/dist`);
+  console.log(`    - Proxying Frontend: Vite dev server (http://localhost:5173)`);
   console.log(`    - Proxying ${apiRoutes.length} API routes to backend`);
   console.log(`    - Handling WebSocket connections`);
   console.log(`    - Monitoring backend health every 10s`);
