@@ -447,4 +447,57 @@ router.post('/reorderqueue', async (req, res) => {
   }
 });
 
+// Bump job in queue
+router.post('/bumpjob', async (req, res) => {
+  try {
+    const { printerid, jobid, choice } = req.body;
+
+    // Validate required fields
+    if (!printerid || !jobid || choice === undefined) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        details: 'printerid, jobid, and choice are required'
+      });
+    }
+
+    // Get the queue for the specified fabricator
+    const queue = fabricatorManager.getQueue(printerid);
+
+    if (!queue) {
+      return res.status(404).json({
+        error: 'Fabricator not found',
+        details: `No queue found for fabricator ID ${printerid}`
+      });
+    }
+
+    // Bump the job based on choice
+    // 1 = bump up, 2 = bump down, 3 = bump to front, 4 = bump to back
+    if (choice === 1) {
+      queue.bump(true, jobid);
+    } else if (choice === 2) {
+      queue.bump(false, jobid);
+    } else if (choice === 3) {
+      queue.bumpExtreme(true, jobid);
+    } else if (choice === 4) {
+      queue.bumpExtreme(false, jobid);
+    } else {
+      return res.status(400).json({
+        error: 'Invalid choice',
+        details: 'Choice must be 1 (up), 2 (down), 3 (front), or 4 (back)'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Job bumped in printer queue'
+    });
+  } catch (error) {
+    console.error('Error bumping job:', error);
+    res.status(500).json({
+      error: 'Failed to bump job',
+      details: error.message
+    });
+  }
+});
+
 export default router;
