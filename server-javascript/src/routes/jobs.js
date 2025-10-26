@@ -666,4 +666,79 @@ router.post('/releasejob', async (req, res) => {
   }
 });
 
+// Rerun job
+router.post('/rerunjob', async (req, res) => {
+  try {
+    const { printerpk, jobpk } = req.body;
+
+    // Validate required fields
+    if (!printerpk || !jobpk) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        details: 'Both printerpk and jobpk are required'
+      });
+    }
+
+    // Get the job from database
+    const job = await database.get('SELECT * FROM jobs WHERE id = ?', [jobpk]);
+
+    if (!job) {
+      return res.status(404).json({
+        error: 'Job not found',
+        details: `No job found with ID ${jobpk}`
+      });
+    }
+
+    // Check if the fabricator exists
+    const queue = fabricatorManager.getQueue(printerpk);
+    if (!queue) {
+      return res.status(404).json({
+        error: 'Fabricator not found',
+        details: `No queue found for fabricator ID ${printerpk}`
+      });
+    }
+
+    // Create a new job for rerun
+    const result = await database.run(
+      `INSERT INTO jobs (name, fabricator_id, status, file_name_original, file_blob, favorite, td_id, filament)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        job.name,
+        printerpk,
+        'inqueue',
+        job.file_name_original,
+        job.file_blob,
+        job.favorite,
+        job.td_id,
+        job.filament
+      ]
+    );
+
+    const newJobId = result.id;
+
+    // Update file name with new ID
+    const baseName = job.file_name_original.split('.').slice(0, -1).join('.');
+    const extension = job.file_name_original.split('.').pop();
+    const fileName = `${baseName}_${newJobId}.${extension}`;
+
+    await database.run('UPDATE jobs SET file_name = ? WHERE id = ?', [fileName, newJobId]);
+
+    // Get the new job and add to back of queue
+    const newJob = await database.get('SELECT * FROM jobs WHERE id = ?', [newJobId]);
+    fabricatorManager.addJobToQueue(printerpk, newJob, false);
+
+    res.json({
+      success: true,
+      message: 'Job added to printer queue',
+      id: newJobId
+    });
+  } catch (error) {
+    console.error('Error rerunning job:', error);
+    res.status(500).json({
+      error: 'Failed to rerun job',
+      details: error.message
+    });
+  }
+});
+
 export default router;
