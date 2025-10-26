@@ -20,6 +20,60 @@ const PORT = process.env.PORT || 3000;
 // Store active printers
 const activePrinters = new Map();
 
+// Generate random string for mock serial
+function generateMockSerial() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+// Create default emulator if none exist
+async function createDefaultEmulator() {
+  try {
+    // Check if any EMU_ printers exist in database
+    const existingEmulators = await database.all('SELECT id FROM fabricators WHERE devicePort LIKE "EMU_%"');
+
+    if (existingEmulators && existingEmulators.length > 0) {
+      console.log(`Found ${existingEmulators.length} existing emulator(s), skipping default creation`);
+      return;
+    }
+
+    // No emulators exist, create default one
+    const printerName = 'Test Printer';
+    const mockSerial = generateMockSerial();
+    const portPath = `EMU_${mockSerial}`;
+
+    // Get max position for ordering
+    const maxPos = await database.get('SELECT MAX(position) as max_pos FROM fabricators');
+    const position = (maxPos?.max_pos || 0) + 1;
+
+    // Create mock printer in database
+    const result = await database.run(
+      'INSERT INTO fabricators (name, devicePort, position, status) VALUES (?, ?, ?, ?)',
+      [printerName, portPath, position, 'ready']
+    );
+
+    console.log(`Default emulator created: ${printerName} on ${portPath} (ID: ${result.id})`);
+
+    // Broadcast to frontend
+    wsManager.broadcast({
+      event: 'fabricator_added',
+      data: {
+        id: result.id,
+        name: printerName,
+        devicePort: portPath,
+        status: 'ready'
+      }
+    });
+  } catch (error) {
+    // Don't crash if creation fails, just log the error
+    console.error('Failed to create default emulator (non-fatal):', error.message);
+  }
+}
+
 // Initialize database and fabricator manager
 database.init()
   .then(() => {
@@ -28,6 +82,7 @@ database.init()
   })
   .then(() => {
     console.log('FabricatorManager initialized');
+    return createDefaultEmulator();
   })
   .catch(err => {
     console.error('Failed to initialize:', err);
