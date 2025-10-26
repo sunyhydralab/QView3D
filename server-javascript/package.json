@@ -7,7 +7,10 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "node --test test/**/*.test.js"
+    "test": "node --test test/**/*.test.js",
+    "test:database": "node --test test/database.test.js",
+    "test:jobs": "node --test test/jobs.test.js",
+    "test:fabricators": "node --test test/fabricators.test.js"
   },
   "repository": {
     "type": "git",
