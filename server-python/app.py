@@ -5,8 +5,23 @@ from QViewApp import QViewApp
 # SSL setup
 os.environ["SSL_CERT_FILE"] = certifi.where()
 
-# Start Flask app (WebSocket now integrated into SocketIO service)
-app = QViewApp()
+def create_app(config_override=None):
+    """
+    Application factory function that creates and configures a QViewApp instance.
+
+    Args:
+        config_override (dict, optional): Dictionary of configuration values to override.
+
+    Returns:
+        QViewApp: Configured application instance.
+    """
+    app = QViewApp()
+
+    # Apply configuration overrides if provided
+    if config_override:
+        app.config.update(config_override)
+
+    return app
 
 def run_socketio(app):
     try:
@@ -15,4 +30,5 @@ def run_socketio(app):
         app.handle_errors_and_logging(e)
 
 if __name__ == "__main__":
+    app = create_app()
     run_socketio(app)
