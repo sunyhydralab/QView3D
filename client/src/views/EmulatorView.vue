@@ -18,7 +18,7 @@ onMounted(() => {
   }
 });
 
-// Start and register emulator in one action
+// Start emulator
 const startEmulator = async () => {
   loading.value = true;
 
@@ -37,19 +37,8 @@ const startEmulator = async () => {
       throw new Error('Failed to start emulator');
     }
 
-    // Register the emulator as a fabricator
-    const registerResponse = await api('registeremulator', {
-      model: 'Prusa MK4',
-      config: {
-        name: emulatorName.value,
-        port: startResponse.port
-      }
-    }, 'POST');
-
-    if (registerResponse.success) {
-      isActive.value = true;
-      addToast(`${emulatorName.value} started and registered successfully`, 'success');
-    }
+    isActive.value = true;
+    addToast(`${emulatorName.value} started successfully`, 'success');
   } catch (error) {
     console.error('Error starting emulator:', error);
     addToast('Failed to start emulator', 'error');
@@ -170,7 +159,7 @@ const stopEmulator = async () => {
                 <div class="relative flex items-center justify-center space-x-2">
                   <i v-if="loading" class="fas fa-spinner fa-spin"></i>
                   <i v-else class="fas fa-play"></i>
-                  <span>{{ loading ? 'Starting...' : 'Start & Register' }}</span>
+                  <span>{{ loading ? 'Starting...' : 'Start Emulator' }}</span>
                 </div>
               </button>
 
