@@ -356,8 +356,8 @@ def start_debug(fresh_database):
     # Update config.json with current backend mode
     update_config_json()
 
-    # ALWAYS rebuild client before starting services
-    build_client()
+    # Skip client build - using Vite dev server for hot reload development
+    # build_client()
 
     # Start all services
     processes = []
@@ -375,9 +375,10 @@ def start_debug(fresh_database):
         print(f"Backend:     http://localhost:{JS_SERVER_PORT}")
         print(f"Emulator:    Port {JS_EMULATOR_PORT} (not implemented)")
 
-    print(f"Vite Dev:    http://localhost:{VITE_CLIENT_PORT} (development)")
+    print(f"Vite Dev:    http://localhost:{VITE_CLIENT_PORT} (hot reload enabled)")
     print("-"*60)
-    print("NOTE: Database is wiped & client is rebuilt on every startup")
+    print("NOTE: Database is wiped on every startup")
+    print("NOTE: Using Vite dev server for dynamic development (no build step)")
     print("NOTE: Access the app at http://localhost:8002")
     print("-"*60)
 
