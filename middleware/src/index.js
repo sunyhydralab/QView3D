@@ -20,6 +20,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import config from './config/backends.js';
 import { routeMap, defaultBackend } from './config/routes.js';
+import { HealthChecker } from './healthCheck.js';
 
 // Get __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -33,6 +34,9 @@ const PORT = config.middleware.port || 8002;
 
 // Current selected backend (defaults to config)
 let selectedBackend = config.middleware.mode || 'python';
+
+// Initialize health checker
+const healthChecker = new HealthChecker(config.backends, 10000);
 
 // Middleware setup
 app.use(cors({
@@ -73,38 +77,37 @@ function getBackendForRoute(path) {
 
 /**
  * Health check endpoint
- * Shows server backend status only when debug mode is enabled
+ * Shows middleware and backend health status
  */
 app.get('/api/middleware/health', async (req, res) => {
   const { debug } = req.query;
 
   if (debug === 'true') {
-    // Debug mode: show server backend status
-    const backend = getActiveBackend();
-    try {
-      // Fetch backend health status
-      const fetch = (await import('node-fetch')).default;
-      const backendHealth = await fetch(`${backend.url}${backend.healthEndpoint}`);
-      const backendData = await backendHealth.json();
+    // Debug mode: show full backend status
+    const backendStatus = healthChecker.getAllStatus();
 
-      res.json({
-        status: 'healthy',
-        server_backend: selectedBackend,
-        server_url: backend.url,
-        server_status: backendData
-      });
-    } catch (error) {
-      res.json({
-        status: 'healthy',
-        server_backend: selectedBackend,
-        server_url: backend.url,
-        server_status: { error: 'Backend not reachable', message: error.message }
-      });
-    }
-  } else {
-    // No debug mode: minimal response
     res.json({
-      status: 'healthy'
+      status: 'healthy',
+      middleware: {
+        uptime: process.uptime(),
+        selectedBackend: selectedBackend,
+        monitoringInterval: healthChecker.interval
+      },
+      backends: backendStatus
+    });
+  } else {
+    // No debug mode: minimal response with backend status
+    const backendStatus = healthChecker.getAllStatus();
+
+    res.json({
+      status: 'healthy',
+      backends: Object.keys(backendStatus).reduce((acc, name) => {
+        acc[name] = {
+          status: backendStatus[name].status,
+          responseTime: backendStatus[name].responseTime
+        };
+        return acc;
+      }, {})
     });
   }
 });
@@ -157,7 +160,16 @@ const apiRoutes = [
  */
 apiRoutes.forEach(route => {
   app.use(route, createProxyMiddleware({
-    target: 'http://localhost:8000',
+    router: (req) => {
+      // Build full path for route determination
+      let fullPath = req.baseUrl;
+      if (req.url !== '/') {
+        fullPath += req.url;
+      }
+      // Use getBackendForRoute to determine the appropriate backend
+      const backend = getBackendForRoute(fullPath);
+      return backend.url;
+    },
     changeOrigin: true,
     ws: route === '/socket.io',  // Enable WebSocket for Socket.IO
     // Preserve the route prefix by rewriting the path
@@ -168,16 +180,32 @@ apiRoutes.forEach(route => {
       if (req.url !== '/') {
         fullPath += req.url;
       }
-      console.log(`[Proxy] ${req.method} ${fullPath} → ${getActiveBackend().url}${fullPath}`);
+      const backend = getBackendForRoute(fullPath);
+
+      // Check backend health and warn if unhealthy
+      const backendName = backend.url.includes(':8000') ? 'python' : 'javascript';
+      const backendHealth = healthChecker.getStatus(backendName);
+
+      if (backendHealth && backendHealth.status !== 'healthy') {
+        console.warn(`[Proxy] WARNING: Routing to ${backendHealth.status} backend (${backendName}): ${fullPath}`);
+      }
+
+      console.log(`[Proxy] ${req.method} ${fullPath} → ${backend.url}${fullPath}`);
       return fullPath;
     },
     onError: (err, req, res) => {
       console.error(`[Proxy Error] ${req.path}:`, err.message);
       if (res.headersSent) return;
+      // Build full path for error handling
+      let fullPath = req.baseUrl;
+      if (req.url !== '/') {
+        fullPath += req.url;
+      }
+      const backend = getBackendForRoute(fullPath);
       res.status(500).json({
         error: 'Backend connection failed',
         message: err.message,
-        backend: getActiveBackend().url
+        backend: backend.url
       });
     }
   }));
@@ -296,12 +324,16 @@ server.listen(PORT, () => {
   console.log(`    - Serving Frontend: client/dist`);
   console.log(`    - Proxying ${apiRoutes.length} API routes to backend`);
   console.log(`    - Handling WebSocket connections`);
+  console.log(`    - Monitoring backend health every 10s`);
   console.log('');
   console.log(`  Active Backend:  ${selectedBackend}`);
   console.log(`  Backend URL:     ${getActiveBackend().url}`);
   console.log('');
   console.log('='.repeat(80));
   console.log('');
+
+  // Start health monitoring
+  healthChecker.start();
 
   // Connect to backend SocketIO
   connectToBackend();
