@@ -549,4 +549,121 @@ router.post('/movejob', async (req, res) => {
   }
 });
 
+// Release job back to pool
+router.post('/releasejob', async (req, res) => {
+  try {
+    const { jobpk, key, printerid } = req.body;
+
+    // Validate required fields
+    if (!jobpk || key === undefined || !printerid) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        details: 'jobpk, key, and printerid are required'
+      });
+    }
+
+    // Get the job from database
+    const job = await database.get('SELECT * FROM jobs WHERE id = ?', [jobpk]);
+
+    if (!job) {
+      return res.status(404).json({
+        error: 'Job not found',
+        details: `No job found with ID ${jobpk}`
+      });
+    }
+
+    // Get the fabricator
+    const fabricatorId = job.fabricator_id;
+    const queue = fabricatorManager.getQueue(fabricatorId);
+
+    if (!queue) {
+      return res.status(404).json({
+        error: 'Fabricator not found',
+        details: `No queue found for fabricator ID ${fabricatorId}`
+      });
+    }
+
+    // Remove job from queue if it's at the front
+    if (queue.length > 0 && queue[0].id === jobpk) {
+      queue.removeJob();
+    }
+
+    // Get current fabricator status
+    const fabricator = await database.get('SELECT * FROM fabricators WHERE id = ?', [printerid]);
+
+    // Handle different release scenarios
+    // key 3 = mark as error and set fabricator to ready
+    // key 2 = rerun job at front of queue
+    // key 1 = just set fabricator to ready
+    if (key === 3) {
+      // Mark job as error
+      await database.run('UPDATE jobs SET status = ? WHERE id = ?', ['error', jobpk]);
+
+      // Set fabricator to ready
+      if (fabricator && fabricator.status !== 'offline') {
+        await database.run('UPDATE fabricators SET status = ? WHERE id = ?', ['ready', printerid]);
+      }
+    } else if (key === 2) {
+      // Rerun job at front of queue
+      if (fabricator && fabricator.status !== 'offline') {
+        await database.run('UPDATE fabricators SET status = ? WHERE id = ?', ['ready', printerid]);
+      }
+
+      // Create a new job for rerun
+      const newResult = await database.run(
+        `INSERT INTO jobs (name, fabricator_id, status, file_name_original, file_blob, favorite, td_id, filament)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          job.name,
+          printerid,
+          'inqueue',
+          job.file_name_original,
+          job.file_blob,
+          job.favorite,
+          job.td_id,
+          job.filament
+        ]
+      );
+
+      const newJobId = newResult.id;
+
+      // Update file name with new ID
+      const baseName = job.file_name_original.split('.').slice(0, -1).join('.');
+      const extension = job.file_name_original.split('.').pop();
+      const fileName = `${baseName}_${newJobId}.${extension}`;
+
+      await database.run('UPDATE jobs SET file_name = ? WHERE id = ?', [fileName, newJobId]);
+
+      // Get the new job and add to front of queue
+      const newJob = await database.get('SELECT * FROM jobs WHERE id = ?', [newJobId]);
+      const newQueue = fabricatorManager.getQueue(printerid);
+      if (newQueue) {
+        newQueue.addToFront(newJob);
+      }
+
+      return res.json({
+        success: true,
+        message: 'Job requeued at front',
+        id: newJobId
+      });
+    } else if (key === 1) {
+      // Just set fabricator to ready
+      if (fabricator && fabricator.status !== 'offline') {
+        await database.run('UPDATE fabricators SET status = ? WHERE id = ?', ['ready', printerid]);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Job released successfully'
+    });
+  } catch (error) {
+    console.error('Error releasing job:', error);
+    res.status(500).json({
+      error: 'Failed to release job',
+      details: error.message
+    });
+  }
+});
+
 export default router;
