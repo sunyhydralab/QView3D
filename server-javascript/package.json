@@ -10,7 +10,8 @@
     "test": "node --test test/**/*.test.js",
     "test:database": "node --test test/database.test.js",
     "test:jobs": "node --test test/jobs.test.js",
-    "test:fabricators": "node --test test/fabricators.test.js"
+    "test:fabricators": "node --test test/fabricators.test.js",
+    "test:emulator": "node --test test/emulator.integration.test.js"
   },
   "repository": {
     "type": "git",
