@@ -741,4 +741,364 @@ router.post('/rerunjob', async (req, res) => {
   }
 });
 
+/**
+ * GET/POST /downloadcsv - Export job history to CSV format
+ *
+ * Request body:
+ * - allJobs: 1 to export all jobs, 0 to export specific jobs
+ * - jobIds: Array of job IDs to export (required if allJobs is 0)
+ *
+ * Returns CSV file data as string
+ */
+router.post('/downloadcsv', async (req, res) => {
+  try {
+    const { allJobs, jobIds } = req.body;
+
+    let jobs;
+    if (allJobs === 1) {
+      // Get all jobs with issue information
+      jobs = await database.all(`
+        SELECT
+          j.*,
+          i.name as issue_name,
+          f.name as fabricator_name
+        FROM jobs j
+        LEFT JOIN issues i ON j.issue_id = i.id
+        LEFT JOIN fabricators f ON j.fabricator_id = f.id
+        ORDER BY j.created_at DESC
+      `);
+    } else {
+      // Get specific jobs
+      if (!jobIds || !Array.isArray(jobIds) || jobIds.length === 0) {
+        return res.status(400).json({
+          error: 'Missing required field',
+          details: 'jobIds array is required when allJobs is not 1'
+        });
+      }
+
+      const placeholders = jobIds.map(() => '?').join(',');
+      jobs = await database.all(`
+        SELECT
+          j.*,
+          i.name as issue_name,
+          f.name as fabricator_name
+        FROM jobs j
+        LEFT JOIN issues i ON j.issue_id = i.id
+        LEFT JOIN fabricators f ON j.fabricator_id = f.id
+        WHERE j.id IN (${placeholders})
+        ORDER BY j.created_at DESC
+      `, jobIds);
+    }
+
+    // Create CSV header
+    const csvHeaders = ['td_id', 'printer', 'name', 'file_name_original', 'status', 'date', 'issue', 'comments'];
+    let csvContent = csvHeaders.join(',') + '\n';
+
+    // Add data rows
+    for (const job of jobs) {
+      const row = [
+        job.td_id || '',
+        job.fabricator_name || '',
+        `"${(job.name || '').replace(/"/g, '""')}"`,
+        `"${(job.file_name_original || '').replace(/"/g, '""')}"`,
+        job.status || '',
+        job.created_at || '',
+        job.issue_name || '',
+        `"${(job.comments || '').replace(/"/g, '""')}"`
+      ];
+      csvContent += row.join(',') + '\n';
+    }
+
+    // Return CSV content
+    res.json({
+      success: true,
+      csv: csvContent,
+      filename: `jobs_${new Date().toISOString().split('T')[0].replace(/-/g, '')}.csv`
+    });
+
+  } catch (error) {
+    console.error('Error generating CSV:', error);
+    res.status(500).json({
+      error: 'Failed to generate CSV',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * GET/POST /removeCSV - Clean up generated CSV files
+ * This endpoint is for compatibility with Python backend
+ * In the JavaScript version, CSVs are generated in-memory and returned directly,
+ * so this endpoint simply returns success
+ */
+router.post('/removeCSV', async (req, res) => {
+  try {
+    // In the JavaScript backend, we don't store CSV files on disk
+    // They are generated in-memory and sent directly to the client
+    // This endpoint exists for API compatibility
+    res.json({
+      success: true,
+      message: 'CSV file removed successfully.'
+    });
+  } catch (error) {
+    console.error('Error removing CSV:', error);
+    res.status(500).json({
+      error: 'Failed to remove CSV',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * POST /refetchtimedata - Recalculate job timing data from files
+ *
+ * Request body:
+ * - jobid: ID of the job
+ * - printerid: ID of the printer/fabricator
+ *
+ * Returns current timing information for the job
+ */
+router.post('/refetchtimedata', async (req, res) => {
+  try {
+    const { jobid, printerid } = req.body;
+
+    if (!jobid || !printerid) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        details: 'Both jobid and printerid are required'
+      });
+    }
+
+    // Get the queue for this fabricator
+    const queue = fabricatorManager.getQueue(printerid);
+    if (!queue) {
+      return res.status(404).json({
+        error: 'Fabricator not found',
+        details: `No queue found for fabricator ID ${printerid}`
+      });
+    }
+
+    // Get the current job from the queue
+    const queueData = queue.toJSON();
+    if (queueData.length === 0) {
+      return res.status(404).json({
+        error: 'No job found',
+        details: 'No job currently in queue'
+      });
+    }
+
+    const currentJob = queueData[0];
+
+    // Get job details from database
+    const job = await database.get('SELECT * FROM jobs WHERE id = ?', [jobid]);
+    if (!job) {
+      return res.status(404).json({
+        error: 'Job not found',
+        details: `No job found with ID ${jobid}`
+      });
+    }
+
+    // Calculate timing data
+    const now = new Date();
+    const timeStart = job.time_start ? new Date(job.time_start) : now;
+    const totalSeconds = job.time_total || 0;
+    const eta = new Date(timeStart.getTime() + (totalSeconds * 1000));
+    const pauseTime = job.time_paused ? new Date(job.time_paused) : now;
+
+    res.json({
+      total: totalSeconds,
+      eta: eta.toISOString(),
+      timestart: timeStart.toISOString(),
+      pause: pauseTime.toISOString()
+    });
+
+  } catch (error) {
+    console.error('Error refetching time data:', error);
+    res.status(500).json({
+      error: 'Failed to refetch time data',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * POST /clearspace - Storage cleanup (delete old completed jobs)
+ * Removes file blobs from jobs older than 6 months that are not marked as favorites
+ */
+router.post('/clearspace', async (req, res) => {
+  try {
+    // Calculate date 6 months ago
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const sixMonthsAgoISO = sixMonthsAgo.toISOString();
+
+    // Find old jobs that are not favorites
+    const oldJobs = await database.all(
+      'SELECT id, file_name_original FROM jobs WHERE created_at < ? AND favorite = 0 AND file_blob IS NOT NULL',
+      [sixMonthsAgoISO]
+    );
+
+    // Update jobs to remove file blobs and mark as removed
+    for (const job of oldJobs) {
+      const newFileName = job.file_name_original.includes('Removed after 6 months')
+        ? job.file_name_original
+        : `${job.file_name_original}: Removed after 6 months`;
+
+      await database.run(
+        'UPDATE jobs SET file_blob = NULL, file_name_original = ? WHERE id = ?',
+        [newFileName, job.id]
+      );
+    }
+
+    console.log(`Cleared ${oldJobs.length} old job files`);
+
+    res.json({
+      success: true,
+      message: 'Space cleared successfully.',
+      cleaned: oldJobs.length
+    });
+
+  } catch (error) {
+    console.error('Error clearing space:', error);
+    res.status(500).json({
+      error: 'Failed to clear space',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * POST /jobdbinsert - Direct database insert for bulk operations
+ * Allows direct insertion of job data into the database
+ *
+ * Request body:
+ * - jobdata: JSON string or object containing job information
+ *   - name: Job name
+ *   - printer_id: Fabricator ID
+ *   - status: Job status
+ *   - file_name: File name
+ *   - file_path: Path to file (optional)
+ *
+ * Returns success message
+ */
+router.post('/jobdbinsert', async (req, res) => {
+  try {
+    let jobdata = req.body.jobdata || req.body;
+
+    // Parse JSON string if needed
+    if (typeof jobdata === 'string') {
+      jobdata = JSON.parse(jobdata);
+    }
+
+    // Extract fields from jobdata
+    const {
+      name,
+      printer_id,
+      status,
+      file_name,
+      file_path
+    } = jobdata;
+
+    // Validate required fields
+    if (!name || !printer_id || !status) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        details: 'name, printer_id, and status are required'
+      });
+    }
+
+    // Read file if path is provided
+    let fileBlob = null;
+    if (file_path) {
+      try {
+        const fs = await import('fs/promises');
+        const fileContent = await fs.readFile(file_path);
+        const zlib = await import('zlib');
+        fileBlob = zlib.gzipSync(fileContent);
+      } catch (err) {
+        console.error('Error reading file:', err);
+      }
+    }
+
+    // Insert job into database
+    const result = await database.run(
+      `INSERT INTO jobs (name, fabricator_id, status, file_name_original, file_name, file_blob)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        name,
+        printer_id,
+        status,
+        file_name || 'unknown',
+        file_name || 'unknown',
+        fileBlob
+      ]
+    );
+
+    console.log(`Job inserted via jobdbinsert: ID ${result.id}`);
+
+    res.json({
+      success: true,
+      message: 'Job inserted successfully',
+      id: result.id
+    });
+
+  } catch (error) {
+    console.error('Error inserting job:', error);
+    res.status(500).json({
+      error: 'Failed to insert job',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * POST /nullifyjobs - Bulk nullify jobs operation
+ * Sets the fabricator_id to 0 for all jobs associated with a specific printer
+ * Used when removing a fabricator to preserve job history
+ *
+ * Request body:
+ * - printerid: ID of the printer/fabricator to nullify jobs for
+ *
+ * Returns success message
+ */
+router.post('/nullifyjobs', async (req, res) => {
+  try {
+    const { printerid } = req.body;
+
+    if (!printerid) {
+      return res.status(400).json({
+        error: 'Missing required field',
+        details: 'printerid is required'
+      });
+    }
+
+    // Get count of jobs to be nullified
+    const countResult = await database.get(
+      'SELECT COUNT(*) as count FROM jobs WHERE fabricator_id = ?',
+      [printerid]
+    );
+
+    // Nullify fabricator_id for all jobs associated with this printer
+    await database.run(
+      'UPDATE jobs SET fabricator_id = 0 WHERE fabricator_id = ?',
+      [printerid]
+    );
+
+    console.log(`Nullified ${countResult.count} jobs for fabricator ${printerid}`);
+
+    res.json({
+      success: true,
+      message: 'Printer ID nullified successfully.',
+      count: countResult.count
+    });
+
+  } catch (error) {
+    console.error('Error nullifying jobs:', error);
+    res.status(500).json({
+      error: 'Failed to nullify jobs',
+      details: error.message
+    });
+  }
+});
+
 export default router;
