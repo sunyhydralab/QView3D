@@ -1,0 +1,369 @@
+{
+  "device": "Prusa MK4",
+  "session_start": "2025-10-27T17:36:45.780877",
+  "session_end": "2025-10-27T17:37:40.490811",
+  "port": "/dev/cu.usbmodem101",
+  "baudrate": 115200,
+  "total_commands": 21,
+  "capture_log": [
+    {
+      "timestamp": "2025-10-27T17:37:22.943481",
+      "command": "M115",
+      "responses": [
+        "FIRMWARE_NAME:Prusa-Firmware-Buddy 6.1.3+7898 (Github) SOURCE_CODE_URL:https://github.com/prusa3d/Prusa-Firmware-Buddy PROTOCOL_VERSION:1.0 MACHINE_TYPE:Prusa-MK4 EXTRUDER_COUNT:1 UUID:cede2a2f-41a2-4748-9b12-c55c62f367ff",
+        "Cap:SERIAL_XON_XOFF:0",
+        "Cap:BINARY_FILE_TRANSFER:0",
+        "Cap:EEPROM:0",
+        "Cap:VOLUMETRIC:1",
+        "Cap:AUTOREPORT_TEMP:1",
+        "Cap:PROGRESS:0",
+        "Cap:PRINT_JOB:1",
+        "Cap:AUTOLEVEL:1",
+        "Cap:Z_PROBE:1",
+        "Cap:LEVELING_DATA:1",
+        "Cap:BUILD_PERCENT:0",
+        "Cap:SOFTWARE_POWER:1",
+        "Cap:TOGGLE_LIGHTS:0",
+        "Cap:CASE_LIGHT_BRIGHTNESS:0",
+        "Cap:EMERGENCY_PARSER:0",
+        "Cap:PROMPT_SUPPORT:0",
+        "Cap:AUTOREPORT_SD_STATUS:0",
+        "Cap:THERMAL_PROTECTION:1",
+        "Cap:MOTION_MODES:0",
+        "Cap:CHAMBER_TEMPERATURE:0",
+        "ok"
+      ],
+      "duration_seconds": 0.529,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:23.669047",
+      "command": "M105",
+      "responses": [
+        "ok T:25.00/0.00 B:23.12/0.00 X:23.77/36.00 A:35.64/0.00 @:0 B@:0 HBR@:0"
+      ],
+      "duration_seconds": 0.22,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:24.184718",
+      "command": "M104 S0",
+      "responses": [
+        "ok"
+      ],
+      "duration_seconds": 0.013,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:24.700319",
+      "command": "M140 S0",
+      "responses": [
+        "ok"
+      ],
+      "duration_seconds": 0.011,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:25.735218",
+      "command": "M114",
+      "responses": [
+        "X:-1.00 Y:-4.00 Z:0.00 E:0.00 Count X:-100 Y:-400 Z:0",
+        "ok"
+      ],
+      "duration_seconds": 0.53,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:26.764890",
+      "command": "M119",
+      "responses": [
+        "Reporting endstop status",
+        "x_min: open",
+        "x_max: open",
+        "y_min: open",
+        "y_max: open",
+        "z_min: open",
+        "z_max: open",
+        "ok"
+      ],
+      "duration_seconds": 0.525,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:27.281438",
+      "command": "G91",
+      "responses": [
+        "ok"
+      ],
+      "duration_seconds": 0.012,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:27.800317",
+      "command": "G1 Z5 F100",
+      "responses": [
+        "ok"
+      ],
+      "duration_seconds": 0.014,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:28.318326",
+      "command": "G1 Z-5 F100",
+      "responses": [
+        "ok"
+      ],
+      "duration_seconds": 0.013,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:28.832035",
+      "command": "G90",
+      "responses": [
+        "ok"
+      ],
+      "duration_seconds": 0.012,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:32.516798",
+      "command": "M503",
+      "responses": [
+        "echo:  G21    ; Units in mm (mm)",
+        "echo:Filament settings: Disabled",
+        "echo:  M200 D1.75",
+        "echo:  M200 T1 D1.75",
+        "echo:  M200 T2 D1.75",
+        "echo:  M200 T3 D1.75",
+        "echo:  M200 T4 D1.75",
+        "echo:  M200 D0",
+        "echo:Steps per unit:",
+        "echo: M92 X100.00 Y100.00 Z400.00 E380.00",
+        "echo:Maximum feedrates (units/s):",
+        "echo:  M203 X300.00 Y300.00 Z40.00 E50.00",
+        "echo:Maximum Acceleration (units/s2):",
+        "echo:  M201 X1250.00 Y1250.00 Z200.00 E1500.00",
+        "echo:Acceleration (units/s2): P<print_accel> R<retract_accel> T<travel_accel>",
+        "echo:  M204 P1250.00 R800.00 T1250.00",
+        "echo:Advanced: B<min_segment_time_us> S<min_feedrate> T<min_travel_feedrate> X<max_x_jerk> Y<max_y_jerk> Z<max_z_jerk> E<max_e_jerk>",
+        "echo:  M205 B20000.00 S0.00 T0.00 X8.00 Y8.00 Z2.00 E5.00",
+        "echo:Home offset:",
+        "echo:  M206 X0.00 Y0.00 Z0.00",
+        "echo:Unified Bed Leveling:",
+        "echo:  M420 S0 Z0.00",
+        "Unified Bed Leveling System v1.01 inactive",
+        "echo:PID settings:",
+        "echo:  M301 P14.00 I1.00 D100.00",
+        "echo:  M304 P126.13 I4.30 D924.76",
+        "echo:Z-Probe Offset (mm):",
+        "echo:  M851 X0.00 Y0.00 Z0.00",
+        "echo:Stepper driver current:",
+        "echo:  M906 X550 Y700 Z600",
+        "echo:  M906 T0 E450",
+        "echo:Hybrid Threshold:",
+        "echo:  M913 X1000 Y1000 Z1",
+        "echo:  M913 T0 E7",
+        "echo:StallGuard threshold:",
+        "echo:  M914 X-2 Y-3 Z3",
+        "echo:Driver stepping mode:",
+        "echo:  M569 S1 Z",
+        "echo:Filament load/unload lengths:",
+        "echo:  M603 T0 L50.00 U105.00",
+        "echo:  M603 T1 L50.00 U105.00",
+        "echo:  M603 T2 L50.00 U105.00",
+        "echo:  M603 T3 L50.00 U105.00",
+        "echo:  M603 T4 L50.00 U105.00",
+        "echo:Tool-changing:",
+        "echo: Z2.00",
+        "ok"
+      ],
+      "duration_seconds": 3.183,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:33.139321",
+      "command": "M220",
+      "responses": [
+        "ok"
+      ],
+      "duration_seconds": 0.118,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:33.759524",
+      "command": "M221",
+      "responses": [
+        "echo:E0 Flow: 100%",
+        "ok"
+      ],
+      "duration_seconds": 0.118,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:34.277419",
+      "command": "M106 S0",
+      "responses": [
+        "ok"
+      ],
+      "duration_seconds": 0.013,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:34.793767",
+      "command": "M107",
+      "responses": [
+        "ok"
+      ],
+      "duration_seconds": 0.013,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:35.412051",
+      "command": "M21",
+      "responses": [
+        "ok"
+      ],
+      "duration_seconds": 0.115,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:36.982383",
+      "command": "M20",
+      "responses": [
+        "Begin file list",
+        "DUALCO~1.GCO",
+        "FILAME~1.GCO",
+        "ATRIUM~1.BGC",
+        "KEYCHA~1.GCO",
+        "MCHALE~1.GCO",
+        "MINI13~1",
+        "DUMP_B~1.BIN",
+        "MINISA~1",
+        "MK4MOD~1.TXT",
+        "ATRIUM~2.BGC",
+        "CHILD_~1.GCO",
+        "ROBO_A~1.GCO",
+        "NV0619~1.BGC",
+        "ROCKET~1.GCO",
+        "TAKAMI~2.BGC",
+        "SPATUL~1.GCO",
+        "SPOOLF~1.BGC",
+        "DIGITA~1.BGC",
+        "DIGITA~2.BGC",
+        "JK_BOU~1.BGC",
+        "DIGITA~3.BGC",
+        "SEALIN~2.BGC",
+        "TIPHOL~1.BGC",
+        "HEARTK~1.GCO",
+        "MK4_MK~2.BBF",
+        "TIPHOL~2.BGC",
+        "LANGUA~1.ZIP",
+        "SEALIN~1.BGC",
+        "SCREEN~1.BGC",
+        "BALLMO~1.GCO",
+        "XYZ-CA~1.GCO",
+        "UTF-8P~1.GCO",
+        "CALICA~1.GCO",
+        "CONTR~37.BGC",
+        "KEYCHA~1.BGC",
+        "KEYCHA~2.BGC",
+        "LOUBIE~1.BGC",
+        "PRUSA3~1.BBF",
+        "43MM_S~1.BGC",
+        "X-CARR~1.BGC",
+        "FAN-SH~1.BGC",
+        "DRYE~178.GCO",
+        "X-CARR~2.BGC",
+        "FAN-CA~1.BGC",
+        "45MMBA~1.BGC",
+        "XYZ-CA~2.GCO",
+        "BATARA~1.GCO",
+        "CADHW~1.BGC",
+        "CADHW_~1.BGC",
+        "DOCUME~1",
+        "End file list",
+        "ok"
+      ],
+      "duration_seconds": 1.07,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:37.599474",
+      "command": "M862.1 P\"MK4\"",
+      "responses": [
+        "ok"
+      ],
+      "duration_seconds": 0.116,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:38.221340",
+      "command": "M862.3 P\"[printer model name]\"",
+      "responses": [
+        "ok"
+      ],
+      "duration_seconds": 0.117,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:39.266235",
+      "command": "M115 U3.13.2",
+      "responses": [
+        "FIRMWARE_NAME:Prusa-Firmware-Buddy 6.1.3+7898 (Github) SOURCE_CODE_URL:https://github.com/prusa3d/Prusa-Firmware-Buddy PROTOCOL_VERSION:1.0 MACHINE_TYPE:Prusa-MK4 EXTRUDER_COUNT:1 UUID:cede2a2f-41a2-4748-9b12-c55c62f367ff",
+        "Cap:SERIAL_XON_XOFF:0",
+        "Cap:BINARY_FILE_TRANSFER:0",
+        "Cap:EEPROM:0",
+        "Cap:VOLUMETRIC:1",
+        "Cap:AUTOREPORT_TEMP:1",
+        "Cap:PROGRESS:0",
+        "Cap:PRINT_JOB:1",
+        "Cap:AUTOLEVEL:1",
+        "Cap:Z_PROBE:1",
+        "Cap:LEVELING_DATA:1",
+        "Cap:BUILD_PERCENT:0",
+        "Cap:SOFTWARE_POWER:1",
+        "Cap:TOGGLE_LIGHTS:0",
+        "Cap:CASE_LIGHT_BRIGHTNESS:0",
+        "Cap:EMERGENCY_PARSER:0",
+        "Cap:PROMPT_SUPPORT:0",
+        "Cap:AUTOREPORT_SD_STATUS:0",
+        "Cap:THERMAL_PROTECTION:1",
+        "Cap:MOTION_MODES:0",
+        "Cap:CHAMBER_TEMPERATURE:0",
+        "ok"
+      ],
+      "duration_seconds": 0.542,
+      "wait_for_ok": true,
+      "completed": true
+    },
+    {
+      "timestamp": "2025-10-27T17:37:39.985643",
+      "command": "M105",
+      "responses": [
+        "ok T:25.00/0.00 B:23.24/0.00 X:23.77/36.00 A:35.63/0.00 @:0 B@:0 HBR@:0"
+      ],
+      "duration_seconds": 0.217,
+      "wait_for_ok": true,
+      "completed": true
+    }
+  ]
+}
