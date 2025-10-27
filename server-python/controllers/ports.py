@@ -197,7 +197,7 @@ def getFabricatorById():
         app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
 
-@ports_bp.route("/api/fabricators/models", methods=["GET"])
+@ports_bp.route("/fabricators/models", methods=["GET"])
 def getFabricatorModels():
     """Get unique printer models from the database."""
     try:

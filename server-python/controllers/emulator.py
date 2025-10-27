@@ -12,7 +12,7 @@ def generate_mock_serial():
     """Generate a mock serial number for emulated printer."""
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
-@emulator_bp.route('/api/emulator/create', methods=["POST"])
+@emulator_bp.route('/emulator/create', methods=["POST"])
 def createMockPrinter():
     """
     Create a mock printer in the database for frontend testing.
@@ -38,6 +38,11 @@ def createMockPrinter():
             app = current_app
             if hasattr(app, 'fabricator_list'):
                 app.fabricator_list.addFabricator(mock_port, name)
+                # Get the created fabricator and set model
+                created_fab = Fabricator.query.filter_by(devicePort=mock_port).first()
+                if created_fab:
+                    created_fab.model = model
+                    db.session.commit()
             else:
                 # Direct database insert if fabricator_list not available
                 new_fabricator = Fabricator(devicePort=mock_port, name=name)
@@ -45,9 +50,7 @@ def createMockPrinter():
                 new_fabricator.status = "ready"
                 db.session.add(new_fabricator)
                 db.session.commit()
-
-            # Get the created fabricator
-            created_fab = Fabricator.query.filter_by(devicePort=mock_port).first()
+                created_fab = new_fabricator
 
             return jsonify({
                 "success": True,
@@ -70,7 +73,7 @@ def createMockPrinter():
         print(f"Unexpected error: {e}")
         return jsonify({"error": f"Unexpected error occurred: {str(e)}"}), 500
 
-@emulator_bp.route('/api/emulator/list', methods=["GET"])
+@emulator_bp.route('/emulator/list', methods=["GET"])
 def listMockPrinters():
     """List all mock printers (those with EMU_ prefix)."""
     try:
@@ -93,7 +96,7 @@ def listMockPrinters():
         print(f"Error listing mock printers: {e}")
         return jsonify({"error": "Failed to list mock printers"}), 500
 
-@emulator_bp.route('/api/emulator/delete/<int:printer_id>', methods=["DELETE"])
+@emulator_bp.route('/emulator/delete/<int:printer_id>', methods=["DELETE"])
 def deleteMockPrinter(printer_id):
     """Delete a mock printer from the database."""
     try:
@@ -122,7 +125,7 @@ def deleteMockPrinter(printer_id):
         print(f"Error deleting mock printer: {e}")
         return jsonify({"error": f"Failed to delete mock printer: {str(e)}"}), 500
 
-@emulator_bp.route('/api/emulator/update_status/<int:printer_id>', methods=["POST"])
+@emulator_bp.route('/emulator/update_status/<int:printer_id>', methods=["POST"])
 def updateMockPrinterStatus(printer_id):
     """Update the status of a mock printer for testing."""
     try:
@@ -194,6 +197,11 @@ def startEmulator():
             app = current_app
             if hasattr(app, 'fabricator_list'):
                 app.fabricator_list.addFabricator(mock_port, name)
+                # Get the created fabricator and set model
+                created_fab = Fabricator.query.filter_by(devicePort=mock_port).first()
+                if created_fab:
+                    created_fab.model = model
+                    db.session.commit()
             else:
                 # Direct database insert if fabricator_list not available
                 new_fabricator = Fabricator(devicePort=mock_port, name=name)
@@ -201,9 +209,7 @@ def startEmulator():
                 new_fabricator.status = "ready"
                 db.session.add(new_fabricator)
                 db.session.commit()
-
-            # Get the created fabricator
-            created_fab = Fabricator.query.filter_by(devicePort=mock_port).first()
+                created_fab = new_fabricator
 
             # Emit registration event
             if hasattr(current_app, 'socketio') and created_fab:

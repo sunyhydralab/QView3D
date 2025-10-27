@@ -42,7 +42,9 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json());
+// REMOVED: app.use(express.json());
+// Let the proxy forward raw request bodies to the backend
+// The backend will parse the JSON, not the middleware
 
 /**
  * Get the active backend configuration
@@ -170,7 +172,7 @@ apiRoutes.forEach(route => {
     },
     changeOrigin: true,
     ws: route === '/socket.io',  // Enable WebSocket for Socket.IO
-    // Preserve the route prefix by rewriting the path
+    // Strip /api prefix when forwarding to backend (backend routes don't have /api prefix)
     pathRewrite: (path, req) => {
       // The original route is in req.baseUrl, and the remaining path is in req.url
       // If req.url is just '/', we want just the baseUrl without the trailing slash
@@ -188,8 +190,15 @@ apiRoutes.forEach(route => {
         console.warn(`[Proxy] WARNING: Routing to ${backendHealth.status} backend (${backendName}): ${fullPath}`);
       }
 
-      console.log(`[Proxy] ${req.method} ${fullPath} → ${backend.url}${fullPath}`);
-      return fullPath;
+      // Strip /api prefix for backend routes
+      // Backend routes are defined without /api prefix (e.g., /createissue, /emulator/list)
+      let rewrittenPath = fullPath;
+      if (fullPath.startsWith('/api/')) {
+        rewrittenPath = fullPath.substring(4); // Remove '/api' prefix
+      }
+
+      console.log(`[Proxy] ${req.method} ${fullPath} → ${backend.url}${rewrittenPath}`);
+      return rewrittenPath;
     },
     onError: (err, req, res) => {
       console.error(`[Proxy Error] ${req.path}:`, err.message);

@@ -28,6 +28,7 @@ class Fabricator(db.Model):
         nullable=False,
     )
     devicePort = db.Column(db.String(50), nullable=False)
+    model = db.Column(db.String(100), nullable=True)  # Printer model (e.g., "Prusa MK4", "Ender 3")
 
     def __init__(self, port: ListPortInfo | SysFS | None = None, name: str = "", consoleLogger: TextIO | None = None, fileLogger: str | None = None, devicePort: str | None = None):
         """
@@ -95,13 +96,14 @@ class Fabricator(db.Model):
             "name": self.name,
             "description": self.description,
             "hwid": self.hwid,
-            "status": self.status,
+            "status": getattr(self, 'status', 'unknown'),
             "id": self.dbID,
             "date": self.date.strftime("%a, %d %b %Y %H:%M:%S") if self.date else None,
-            "queue": self.queue.convertQueueToJson(),
-            "job": self.queue[0].__to_JSON__() if len(self.queue) > 0 and self.queue[0] is not None else None,
-            "device": self.device.__to_JSON__() if self.device is not None else None,
+            "queue": getattr(self, 'queue', None).convertQueueToJson() if hasattr(self, 'queue') and self.queue else [],
+            "job": self.queue[0].__to_JSON__() if hasattr(self, 'queue') and len(self.queue) > 0 and self.queue[0] is not None else None,
+            "device": getattr(self, 'device', None).__to_JSON__() if hasattr(self, 'device') and self.device is not None else None,
             "consoles": [[],[],[],[],[]],
+            "model": getattr(self, 'model', 'Unknown'),
         }
 
     @staticmethod
