@@ -84,7 +84,7 @@ def listMockPrinters():
                 "name": printer.name,
                 "model": getattr(printer, 'model', 'Unknown'),
                 "port": printer.devicePort,
-                "status": printer.status
+                "status": getattr(printer, 'status', 'unknown')
             })
 
         return jsonify(printers_list), 200
@@ -252,7 +252,7 @@ def registerEmulator():
                         "id": fabricator.dbID,
                         "name": fabricator.name,
                         "port": fabricator.devicePort,
-                        "status": fabricator.status
+                        "status": getattr(fabricator, 'status', 'unknown')
                     }
                 }), 200
 
