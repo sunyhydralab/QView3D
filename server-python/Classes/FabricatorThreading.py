@@ -221,7 +221,9 @@ class PrintWorkerThread(Thread):
                     print(f"[PrintWorkerThread] Print completed: Job {self.job.id}")
                 else:
                     final_status = 'error'
+                    error_msg = getattr(self.fabricator, 'error', 'Unknown error')
                     print(f"[PrintWorkerThread] Print failed: Job {self.job.id}")
+                    print(f"[PrintWorkerThread] Error detail: {error_msg}")
 
                 # Update job status
                 self.job.status = final_status
