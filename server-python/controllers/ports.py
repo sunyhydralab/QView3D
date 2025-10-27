@@ -44,7 +44,16 @@ def registerFabricator():
             app.fabricator_list.addFabricator(device, name)
         except AssertionError as ae:
             return jsonify({"error": f"Failed to add fabricator: {ae}"}), 500
-        new_fabricator = Fabricator.query.filter_by(devicePort=device).first()
+        except Exception as e:
+            print(f"Error adding fabricator: {e}")
+            return jsonify({"error": str(e)}), 500
+
+        # Extract just the device port name (e.g., 'ttyACM0' from '/dev/ttyACM0')
+        device_port_name = device.strip("/").split("/")[-1]
+        new_fabricator = Fabricator.query.filter_by(devicePort=device_port_name).first()
+
+        if not new_fabricator:
+            return jsonify({"error": "Fabricator was not created in database"}), 500
 
         # Notify all connected clients that a new printer has been registered
         if app.socketio:
@@ -56,7 +65,7 @@ def registerFabricator():
         return jsonify({"error": "Database error occurred"}), 500
     except Exception as e:
         app.handle_errors_and_logging(e)
-        return jsonify({"error": e.args}), 500
+        return jsonify({"error": str(e)}), 500
 
 @ports_bp.route("/deletefabricator", methods=["POST"])
 def deleteFabricator():
