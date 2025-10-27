@@ -75,3 +75,5 @@ nul
 client/playwright-report/
 client/test-results/
 server-python/.coverage
+.pytest_cache/
+**/__pycache__/
