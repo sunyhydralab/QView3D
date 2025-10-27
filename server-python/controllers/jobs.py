@@ -552,19 +552,37 @@ def removeIssue():
 
 @jobs_bp.route('/startprint', methods=["POST"])
 def startPrint():
+    """
+    Start printing a job immediately.
+
+    New threading architecture: Directly spawns PrintWorkerThread instead of
+    setting a 'released' flag for polling. This eliminates up to 500ms delay.
+    """
     try:
         data = request.get_json()
         printerid = data['printerid']
         jobid = data['jobid']
         printerobject = findPrinterObject(printerid)
+
+        if printerobject is None:
+            return jsonify({"error": "Fabricator not found."}), 404
+
         queue = printerobject.getQueue()
         assert queue is not None, "Queue not found."
+        assert len(queue) > 0, f"Queue is empty for printer {printerid}"
         assert printerobject.queue[0] is not None, f"Job not found: jobid: {jobid}"
-        if printerobject.queue[0].getStatus() == "inqueue": printerobject.queue[0].setStatus("ready")
-        assert printerobject.queue[0].getStatus() == "ready", f"Job not ready to print. Status: {printerobject.queue[0].getStatus()}"
-        printerobject.queue[0].setReleased(1)
-        printerobject.setStatus("printing")
 
+        job = printerobject.queue[0]
+
+        # Update job status if needed
+        if job.getStatus() == "inqueue":
+            job.setStatus("ready")
+
+        assert job.getStatus() == "ready", f"Job not ready to print. Status: {job.getStatus()}"
+
+        # NEW: Directly spawn PrintWorkerThread to start the print immediately
+        # This replaces the old 'released' flag polling mechanism
+        current_app.fabricator_list.start_print_job(printerobject, job)
 
         return jsonify({"success": True, "message": "Job started successfully."}), 200
     except Exception as e:
@@ -687,17 +705,13 @@ def refetch_time():
 def findPrinterObject(fabricator_id: int) -> Fabricator | None:
     """
     Find the printer object by its ID.
-    Searches both threaded fabricators (real printers) and non-threaded fabricators (emulated printers).
+
+    New threading architecture: All fabricators (real and emulated) are stored
+    in the fabricators list. No need to check separate thread lists.
+
     :param int fabricator_id: The ID of the printer.
     :rtype: Fabricator | None
     """
-    # First, check fabricator_threads for real printers
-    threads = current_app.fabricator_list.fabricator_threads
-    fabricatorThread = list(filter(lambda thread: thread.fabricator.dbID == fabricator_id, threads))
-    if len(fabricatorThread) > 0:
-        return fabricatorThread[0].fabricator
-
-    # If not found in threads, check the fabricators list (includes emulated printers without threads)
     fabricators = current_app.fabricator_list.fabricators
     for fabricator in fabricators:
         if fabricator.dbID == fabricator_id:
@@ -708,22 +722,13 @@ def findPrinterObject(fabricator_id: int) -> Fabricator | None:
 def getSmallestQueue() -> int:
     """
     Get the printer with the smallest queue.
-    Searches both real printers (with threads) and emulated printers (without threads).
+
+    New threading architecture: All fabricators are in the fabricators list,
+    no need to merge from multiple sources.
+
     :rtype: int
     """
-    # Collect all fabricators (both with and without threads)
-    all_fabricators = []
-
-    # Add real printers from threads
-    threads = current_app.fabricator_list.fabricator_threads
-    for thread in threads:
-        all_fabricators.append(thread.fabricator)
-
-    # Add emulated printers (those without threads)
-    for fabricator in current_app.fabricator_list.fabricators:
-        # Check if this fabricator is already in the list (from threads)
-        if not any(f.dbID == fabricator.dbID for f in all_fabricators):
-            all_fabricators.append(fabricator)
+    all_fabricators = current_app.fabricator_list.fabricators
 
     if len(all_fabricators) == 0:
         raise Exception("No fabricators available")

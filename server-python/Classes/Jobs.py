@@ -29,6 +29,9 @@ class Job(db.Model):
 
     fabricator_name = db.Column(db.String(50), nullable=True)
 
+    # Queue position for explicit ordering (persists across restarts)
+    queue_position = db.Column(db.Integer, nullable=True)
+
     # TeamDynamics ID
     td_id = db.Column(db.Integer, nullable=True)
 

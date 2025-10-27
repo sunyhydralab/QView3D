@@ -8,7 +8,7 @@ from Classes.Ports import Ports
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.Jobs import Job
 from Classes.Queue import Queue
-from threading import Thread
+from Classes.FabricatorThreading import IdleMonitorThread, PrintWorkerThread
 import time
 from services.app_service import current_app as app
 # Removed tabs import - no longer needed
@@ -16,21 +16,48 @@ from config.db import db
 
 class FabricatorList:
     def __init__(self, passed_app=app):
+        """
+        Initialize FabricatorList with new threading architecture.
+
+        New Architecture:
+        - Single IdleMonitorThread monitors all idle printers
+        - PrintWorkerThread spawned per active print job
+        - No permanent per-fabricator threads
+
+        Old Architecture (REMOVED):
+        - One FabricatorThread per fabricator (always running)
+        """
         self.app = passed_app
         with self.app.app_context():
             # Initialize fabricator table
             if not inspect(db.engine).has_table('Fabricators') or not Fabricator.metadata.tables:
                 Fabricator.metadata.create_all(db.engine)
-            
+
             # Query fabricators
             self.fabricators = Fabricator.queryAll()
-            
-            # Initialize fabricator threads
-            self.fabricator_threads = []
-            self.ping_thread = None
+
+            # NEW: Single idle monitor thread for all fabricators
+            self.idle_monitor = IdleMonitorThread(self, self.app)
+
+            # NEW: Dict of active print threads {fabricator_id: PrintWorkerThread}
+            self.active_print_threads = {}
+
+            # Restore queues from database
+            self.restore_queues_from_database()
+
+            # Connect devices for fabricators that have real hardware
             for fabricator in self.fabricators:
-                fabricator.device.connect()
-                self.fabricator_threads.append(self.start_fabricator_thread(fabricator))
+                if hasattr(fabricator, 'device') and fabricator.device is not None:
+                    try:
+                        fabricator.device.connect()
+                    except Exception as e:
+                        print(f"Error connecting fabricator {fabricator.name}: {e}")
+                        fabricator.status = 'offline'
+
+            # Start the idle monitor thread
+            self.idle_monitor.start()
+            print(f"[FabricatorList] Initialized with {len(self.fabricators)} fabricators")
+            print(f"[FabricatorList] Using new threading architecture: 1 idle monitor thread")
 
     def __iter__(self):
         return iter(self.fabricators)
@@ -60,9 +87,28 @@ class FabricatorList:
         }
 
     def teardown(self):
-        """stop all fabricator threads"""
-        [thread.stop() for thread in self.fabricator_threads]
-        self.fabricator_threads = []
+        """
+        Stop all threads gracefully.
+
+        NEW: Stop idle monitor and all active print threads
+        OLD: Stopped per-fabricator threads
+        """
+        print("[FabricatorList] Tearing down threading...")
+
+        # Stop idle monitor
+        if hasattr(self, 'idle_monitor') and self.idle_monitor:
+            self.idle_monitor.stop()
+            self.idle_monitor.join(timeout=5)
+
+        # Stop all active print threads
+        if hasattr(self, 'active_print_threads'):
+            for fabricator_id, thread in list(self.active_print_threads.items()):
+                print(f"[FabricatorList] Stopping print thread for fabricator {fabricator_id}")
+                thread.stop()
+                thread.join(timeout=5)
+            self.active_print_threads.clear()
+
+        print("[FabricatorList] Teardown complete")
 
     def addFabricator(self, serialPortName: str, name: str = ""):
         """
@@ -116,8 +162,10 @@ class FabricatorList:
         assert(len(self) == len(dbFabricators)), f"len(self)={len(self)}, len(dbFabricators)={len(dbFabricators)}"
         # TODO: figure out how to check if the fabricator is in the db
         # assert all(fabricator in self.fabricators for fabricator in dbFabricators), f"self={self.fabricators}, dbFabricators={dbFabricators}"
+
+        # NEW: No thread creation - idle monitor automatically monitors this fabricator
         if newFab:
-            self.fabricator_threads.append(self.start_fabricator_thread(newFab))
+            print(f"[FabricatorList] Added fabricator: {newFab.name} (will be monitored by idle thread)")
 
     def deleteFabricator(self, fabricator_id):
         """
@@ -179,40 +227,81 @@ class FabricatorList:
                 return fabricator
         return next((fabricator for fabricator in self.fabricators if fabricator.devicePort == port), None)
 
-    def start_fabricator_thread(self, fabricator: Fabricator):
+    def start_print_job(self, fabricator: Fabricator, job: Job):
         """
-        Start a thread for the given fabricator
-        :param Fabricator fabricator: the given fabricator
-        :return:
-        :rtype: FabricatorThread
-        """
-        thread = FabricatorThread(fabricator, passed_app=self.app, **{"daemon": True})
-        thread.start()
-        return thread
+        Start a print job by spawning a dedicated PrintWorkerThread.
 
+        NEW METHOD (replaces old per-fabricator thread model)
 
-    def create_fabricator_threads(self):
-        """Create a thread for each fabricator in the list and start it"""
-        for fabricator in self:
-            fabricator.queue = Queue()  # Ensure each fabricator has its own queue
-            fabricator_thread = self.start_fabricator_thread(fabricator)
-            self.fabricator_threads.append(fabricator_thread)
-        self.ping_thread = Thread(target=self.pingForStatus)
+        :param fabricator: Fabricator to execute the print
+        :param job: Job to print
+        """
+        # Check if there's already a print thread for this fabricator
+        if fabricator.dbID in self.active_print_threads:
+            print(f"[FabricatorList] WARNING: Fabricator {fabricator.name} already has an active print thread")
+            return
 
-    def get_fabricator_thread(self, fabricator):
+        # Create and start print worker thread
+        print_thread = PrintWorkerThread(fabricator, job, self, self.app)
+        self.active_print_threads[fabricator.dbID] = print_thread
+        print_thread.start()
+
+        print(f"[FabricatorList] Started print thread for {fabricator.name}, Job {job.id}")
+
+    def print_completed(self, fabricator: Fabricator, success: bool):
         """
-        Get the thread for the given fabricator
-        :param fabricator: the given fabricator
-        :return: that fabricator's thread
+        Callback invoked when a print job completes or fails.
+        Cleans up the print worker thread.
+
+        NEW METHOD
+
+        :param fabricator: Fabricator that completed the print
+        :param success: True if print succeeded, False if failed/cancelled
         """
-        assert fabricator in self, f"fabricator {fabricator} not in self"
-        thread = next((thread for thread in self.fabricator_threads if thread.fabricator == fabricator), None)
-        if thread is None:
-            raise ValueError(f"Fabricator {fabricator} has no thread")
-        assert isinstance(thread, FabricatorThread), f"thread={thread}, type(thread)={type(thread)}"
-        assert thread.is_alive(), f"thread {thread} is not alive"
-        assert thread.daemon, f"thread {thread} is not daemon"
-        return thread
+        # Remove print thread from active list
+        if fabricator.dbID in self.active_print_threads:
+            del self.active_print_threads[fabricator.dbID]
+            print(f"[FabricatorList] Print completed for {fabricator.name}, success={success}")
+
+        # Fabricator is now idle again - idle monitor will pick it up
+        # No need to explicitly notify - idle monitor checks periodically
+
+    def restore_queues_from_database(self):
+        """
+        Load all jobs with status='inqueue' from database and populate fabricator queues.
+        Called during initialization to restore queue state after server restart.
+
+        NEW METHOD
+        """
+        try:
+            # Query all jobs that should be in queues
+            pending_jobs = Job.query.filter_by(status='inqueue').order_by(Job.queue_position).all()
+
+            if not pending_jobs:
+                print("[FabricatorList] No pending jobs to restore")
+                return
+
+            # Group jobs by fabricator
+            from collections import defaultdict
+            jobs_by_fabricator = defaultdict(list)
+            for job in pending_jobs:
+                if job.fabricator_id:
+                    jobs_by_fabricator[job.fabricator_id].append(job)
+
+            # Add jobs to appropriate fabricator queues
+            restored_count = 0
+            for fabricator in self.fabricators:
+                if fabricator.dbID in jobs_by_fabricator:
+                    jobs = jobs_by_fabricator[fabricator.dbID]
+                    for job in jobs:
+                        fabricator.queue.addToBack(job)
+                        restored_count += 1
+
+            print(f"[FabricatorList] Restored {restored_count} jobs to {len(jobs_by_fabricator)} fabricator queues")
+
+        except Exception as e:
+            print(f"[FabricatorList] Error restoring queues: {e}")
+            self.app.handle_errors_and_logging(e)
 
     def queue_restore(self, status: str, queue: Queue):
         """
@@ -347,53 +436,8 @@ class FabricatorList:
             return jsonify({"success": True, "message": "Fabricator name updated successfully"}), 200
         else:
             return jsonify({"error": "Fabricator not found"}), 404
-
-class FabricatorThread(Thread):
-    terminated = False
-    def __init__(self, fabricator: Fabricator, passed_app=app, *args, **kwargs):
-        """
-        create a new FabricatorThread for the given fabricator
-        :param Fabricator fabricator: the fabricator to create a thread for
-        :param QViewApp passed_app: the app for context actions
-        """
-        super().__init__(*args, **kwargs)
-        self.fabricator: Fabricator = fabricator
-        self.app = passed_app
-        self.daemon = kwargs.get('daemon', False)
-
-    def __repr__(self):
-        return f"FabricatorThread(fabricator={self.fabricator}, daemon={self.daemon}, running={self.is_alive()})"
-
-    def __to_JSON__(self):
-        """
-        Convert the FabricatorThread to a JSON object that can be sent to the frontend
-        :rtype: dict
-        """
-        return {
-            "fabricator": self.fabricator,
-            "app": self.app,
-            "running": self.is_alive(),
-            "daemon": self.daemon,
-        }
-
-    def run(self):
-        with self.app.app_context():
-            self.fabricator.responseCount = 0
-            while not self.terminated:
-                time.sleep(.5)
-                queueSize = len(self.fabricator.queue)
-                if self.fabricator.getStatus() == "printing" and queueSize > 0:
-                    assert isinstance(self.fabricator.queue[0], Job), f"self.fabricator.queue[0]={self.fabricator.queue[0]}, type(self.fabricator.queue[0])={type(self.fabricator.queue[0])}, self.fabricator.queue={self.fabricator.queue}, type(self.fabricator.queue)={type(self.fabricator.queue)}"
-                    if self.fabricator.queue[0].released == 1:
-                        if not self.fabricator.begin():
-                            self.app.handle_errors_and_logging(Exception(f"Fabricator {self.fabricator.getName()} failed to begin") if not self.fabricator.error else self.fabricator.error, level=50)
-                elif self.fabricator.device.status == "homing":
-                    while self.fabricator.device.status == "homing":
-                        time.sleep(.5)
-                elif isinstance(self.fabricator.device, Printer) and self.fabricator.getStatus() == "ready":
-                    self.fabricator.device.handleTempLine(self.fabricator.device.serialConnection.read())
-                else:
-                    time.sleep(.5)
-
-    def stop(self):
-        self.terminated = True
+# NOTE: Old FabricatorThread class has been REMOVED
+# Replaced by:
+# - IdleMonitorThread: Shared thread for monitoring all idle printers
+# - PrintWorkerThread: Dedicated thread spawned per active print job
+# See Classes/FabricatorThreading.py for new implementation
