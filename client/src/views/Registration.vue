@@ -52,7 +52,11 @@ async function refreshFabricatorList() {
   // filter out fabricators that have already been registered
   connectedFabricatorList.value = updatedList.filter((fabricator: Fabricator) => {
     // checks if the fabricator is registered and already has a name by it's serialPort id
-    const isRegisteredFabricator = searchFabricatorById(fabricator.device.serialPort) // TODO Change how we uniquely identify printers
+    // Null check: device can be null for offline/database-loaded fabricators
+    const serialPort = fabricator.device?.serialPort
+    if (!serialPort) return true // Include if no serial port (can't check if registered)
+
+    const isRegisteredFabricator = searchFabricatorById(serialPort) // TODO Change how we uniquely identify printers
 
     // returns true if the fabricator is not registered
     return !isRegisteredFabricator
@@ -72,7 +76,8 @@ function triggerRotation() {
 // helper function to search by fabricatorList.value serialPort id
 function searchFabricatorById(id: string) {
   return fabricatorList.value.find((fabricator: Fabricator) => {
-    return fabricator.device.serialPort === id // TODO Change how we uniquely identify printers
+    // Null check: device can be null for offline/database-loaded fabricators
+    return fabricator.device?.serialPort === id // TODO Change how we uniquely identify printers
   })
 }
 
