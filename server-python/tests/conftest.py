@@ -43,24 +43,31 @@ def db(app):
 
 
 @pytest.fixture(scope='function')
-def session(db):
+def session(app, db):
     """Create a clean database session for each test."""
+    from sqlalchemy.orm import scoped_session
+
     connection = db.engine.connect()
     transaction = connection.begin()
 
-    # Configure session
-    Session = sessionmaker(bind=connection)
-    session = Session()
+    # Create scoped session for proper cleanup
+    Session = scoped_session(sessionmaker(bind=connection))
 
-    # Make session available to app
-    db.session = session
+    # Store original session and teardown functions
+    original_session = db.session
 
-    yield session
+    # Replace with our test session
+    db.session = Session
 
-    # Rollback transaction and close
-    session.close()
+    yield Session
+
+    # Cleanup
+    Session.remove()
     transaction.rollback()
     connection.close()
+
+    # Restore original session
+    db.session = original_session
 
 
 @pytest.fixture(scope='function')
