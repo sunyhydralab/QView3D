@@ -100,7 +100,7 @@ class Fabricator(db.Model):
             "date": self.date.strftime("%a, %d %b %Y %H:%M:%S") if self.date else None,
             "queue": self.queue.convertQueueToJson(),
             "job": self.queue[0].__to_JSON__() if len(self.queue) > 0 and self.queue[0] is not None else None,
-            "device": self.device.__to_JSON__(),
+            "device": self.device.__to_JSON__() if self.device is not None else None,
             "consoles": [[],[],[],[],[]],
         }
 
