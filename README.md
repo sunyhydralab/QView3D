@@ -60,18 +60,23 @@ flowchart TB
     subgraph Middleware Layer
         Middleware[Middleware Server<br/>Express.js]
         Middleware -->|Frontend Requests| Vite[Vite Dev Server<br/>Port 5173]
-        Middleware -->|API Requests| Backend
+        Middleware -->|All API Requests| Target[Static Target<br/>Set at Startup]
     end
 
     subgraph Backend Services
-        Backend[Python Backend<br/>Port 8000]
-        Backend --> DB[(SQLite Database<br/>QView.db)]
-        Backend --> Serial[Serial Communication<br/>PySerial]
+        Target -.->|mode: python| Python[Python Backend<br/>Port 8000]
+        Target -.->|mode: javascript| JS[JavaScript Backend<br/>Port 8005]
+        Python --> DB[(SQLite Database<br/>QView.db)]
+        JS --> DB
+        Python --> Serial[Serial Communication<br/>PySerial]
+        JS --> Serial2[Serial Communication<br/>serialport]
     end
 
     subgraph Hardware Layer
         Serial --> Printers[3D Printers<br/>USB/Serial]
+        Serial2 --> Printers
         Serial --> Emulator[Virtual Printer<br/>Port 8004]
+        Serial2 --> Emulator
     end
 
     subgraph Frontend Development
@@ -80,8 +85,10 @@ flowchart TB
 
     style User fill:#e1f5ff
     style Middleware fill:#90ee90
+    style Target fill:#ffeb3b
     style Vite fill:#ffd700
-    style Backend fill:#4169e1
+    style Python fill:#4169e1
+    style JS fill:#32cd32
     style DB fill:#ff6347
     style Printers fill:#ffa500
     style Vue fill:#42b883
@@ -94,8 +101,12 @@ sequenceDiagram
     participant B as Browser
     participant M as Middleware<br/>(Port 8002)
     participant V as Vite Dev Server<br/>(Port 5173)
-    participant P as Python Backend<br/>(Port 8000)
+    participant BE as Selected Backend<br/>(Port 8000/8005)
     participant DB as SQLite Database
+
+    Note over B,DB: Startup: Backend Selected from config.json
+    M->>M: Read config.middleware.mode
+    M->>M: Set BACKEND_TARGET_URL
 
     Note over B,DB: Frontend Asset Request
     B->>M: GET /
@@ -103,16 +114,16 @@ sequenceDiagram
     V->>V: Compile Vue App + HMR
     V-->>B: Serve App + WebSocket
 
-    Note over B,DB: API Request Flow
+    Note over B,DB: API Request Flow (Static Routing)
     B->>M: GET /getfabricators
-    M->>P: Proxy to Backend
-    P->>DB: Query Fabricators
-    DB-->>P: Return Data
-    P-->>M: JSON Response
+    M->>BE: Proxy to BACKEND_TARGET_URL
+    BE->>DB: Query Fabricators
+    DB-->>BE: Return Data
+    BE-->>M: JSON Response
     M-->>B: Forward Response
 
     Note over B,DB: Real-time Updates
-    P->>M: WebSocket Event
+    BE->>M: WebSocket Event
     M->>B: Broadcast Update
 ```
 

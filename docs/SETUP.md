@@ -53,14 +53,16 @@ flowchart TB
     PyDeps --> NodeDeps[Install Node.js<br/>Dependencies]
     NodeDeps --> Done([Setup Complete])
 
-    Debug --> StartVite[Start Vite Dev Server<br/>Port 5173]
+    Debug --> ConfigDefault[Write config.json<br/>mode: python]
+    ConfigDefault --> StartVite[Start Vite Dev Server<br/>Port 5173]
     StartVite --> StartMiddleware[Start Middleware<br/>Port 8002]
-    StartMiddleware --> StartPython[Start Python Backend<br/>Port 8000]
+    StartMiddleware --> ReadConfig[Middleware reads config<br/>Sets BACKEND_TARGET_URL]
+    ReadConfig --> StartPython[Start Python Backend<br/>Port 8000]
     StartPython --> Ready([Application Ready])
 
     Backend --> Choice{Choose Backend}
-    Choice -->|Python| PythonMode[Python Mode]
-    Choice -->|JavaScript| JSMode[JavaScript Mode]
+    Choice -->|Python| PythonMode[Write config.json<br/>mode: python]
+    Choice -->|JavaScript| JSMode[Write config.json<br/>mode: javascript]
 
     PythonMode --> StartVite
     JSMode --> StartVite
@@ -68,6 +70,10 @@ flowchart TB
     Ready --> Access[Access via<br/>http://localhost:8002]
 
     style Start fill:#e1f5ff
+    style ConfigDefault fill:#ffeb3b
+    style PythonMode fill:#ffeb3b
+    style JSMode fill:#ffeb3b
+    style ReadConfig fill:#ffeb3b
     style Ready fill:#90ee90
     style Access fill:#ffd700
 ```
@@ -120,9 +126,10 @@ flowchart LR
     User[User Browser] -->|Port 8002| MW[Middleware]
 
     subgraph Services
-        MW -->|5173| Vite[Vite Dev]
-        MW -->|8000| Py[Python API]
-        MW -->|3000| JS[JS API]
+        MW -->|Frontend<br/>5173| Vite[Vite Dev]
+        MW -->|API<br/>Static Target| Target[Selected Backend]
+        Target -.->|mode: python<br/>8000| Py[Python API]
+        Target -.->|mode: javascript<br/>8005| JS[JS API]
     end
 
     Py --> DB[(SQLite<br/>QView.db)]
@@ -130,6 +137,7 @@ flowchart LR
 
     style User fill:#e1f5ff
     style MW fill:#90ee90
+    style Target fill:#ffeb3b
     style DB fill:#ff6347
 ```
 

@@ -4,31 +4,35 @@ API gateway middleware for routing between Python and JavaScript backends.
 
 ## Overview
 
-The middleware acts as a transparent proxy that routes requests to the selected backend based on the configured mode:
+The middleware acts as a static proxy that routes all requests to a single backend selected at startup:
 
+- **Backend Selection**: Determined once at startup from `config.middleware.mode`
 - **Python Mode**: All requests go to Python backend (default)
 - **JavaScript Mode**: All requests go to JavaScript backend
+- **Static Routing**: No per-request routing decisions - simple pass-through proxy
 
 ## Architecture
 
 ```
-Client <-> Middleware (Port 3500) <-> Python Backend (Port 8000)
-                                  <-> JavaScript Backend (Port 3000)
+Client <-> Middleware (Port 8002) <-> Selected Backend (Set at Startup)
+                                       ├── Python Backend (Port 8000)
+                                       └── JavaScript Backend (Port 8005)
 ```
 
 ### Architecture Diagram
 
 ```mermaid
 flowchart LR
-    Client[Client Browser] <-->|HTTP/WS<br/>Port 3500| MW[Middleware<br/>Express.js]
+    Client[Client Browser] <-->|HTTP/WS<br/>Port 8002| MW[Middleware<br/>Express.js]
 
     subgraph Backends[Backend Services]
         Python[Python Backend<br/>Port 8000<br/>Flask + Socket.IO]
-        JS[JavaScript Backend<br/>Port 3000<br/>Express + WebSocket]
+        JS[JavaScript Backend<br/>Port 8005<br/>Express + WebSocket]
     end
 
-    MW <-->|Route Based| Python
-    MW <-.->|Route Based| JS
+    MW -->|Static Target<br/>Set at Startup| Selected[Selected Backend]
+    Selected -.->|mode: python| Python
+    Selected -.->|mode: javascript| JS
 
     Python --> DB[(SQLite<br/>qview.db)]
     JS --> DB
@@ -46,6 +50,7 @@ flowchart LR
 
     style Client fill:#e1f5ff
     style MW fill:#90ee90
+    style Selected fill:#ffeb3b
     style Python fill:#4169e1
     style JS fill:#32cd32
     style DB fill:#ff6347
@@ -83,26 +88,31 @@ Configuration is loaded from `server/config/config.json`:
 }
 ```
 
-## Route Mapping
+## Static Routing Architecture
 
-All requests are routed to the configured backend (Python or JavaScript) based on the mode setting in `config.json`. The middleware acts as a simple proxy to the selected backend.
+All API requests are routed to a single backend selected at startup. The middleware reads `config.middleware.mode` and sets a static target URL that is used for all subsequent requests.
 
 ### Route Flow
 
 ```mermaid
 flowchart TD
-    Request[Incoming Request] --> Middleware{Middleware<br/>Mode Check}
+    Startup[Middleware Startup] --> ReadConfig[Read config.json]
+    ReadConfig --> SetTarget[Set Static Target URL]
 
-    Middleware -->|Python Mode| PyBackend[Python Backend<br/>Port 8000]
-    Middleware -->|JavaScript Mode| JSBackend[JavaScript Backend<br/>Port 3000]
+    SetTarget -->|mode: python| PyTarget[BACKEND_TARGET_URL =<br/>http://localhost:8000]
+    SetTarget -->|mode: javascript| JSTarget[BACKEND_TARGET_URL =<br/>http://localhost:8005]
 
-    JSBackend --> Response[Return Response]
-    PyBackend --> Response
+    PyTarget --> Ready[Middleware Ready]
+    JSTarget --> Ready
 
-    style Request fill:#e1f5ff
-    style Middleware fill:#90ee90
-    style JSBackend fill:#32cd32
-    style PyBackend fill:#4169e1
+    Ready --> Request[Incoming Request]
+    Request --> Proxy[Proxy to<br/>BACKEND_TARGET_URL]
+
+    Proxy --> Response[Return Response]
+
+    style Startup fill:#e1f5ff
+    style SetTarget fill:#ffeb3b
+    style Proxy fill:#90ee90
     style Response fill:#90ee90
 ```
 

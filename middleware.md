@@ -102,7 +102,7 @@ flowchart TB
         ProxyMW["http-proxy-middleware 3.x"]
         SocketIOSrv["Socket.IO Server 4.x"]
         HealthChk["Health Checker"]
-        RouteMap["Route Mapping"]
+        StaticTarget["Static Target<br/>Set at Startup"]
     end
 
     subgraph vite["Vite Dev Server - Port 5173"]
@@ -141,8 +141,9 @@ flowchart TB
 
     Browser -->|"HTTP/WS"| Express
     Express -->|"Frontend"| ViteCore
-    Express -->|"API"| Flask
-    Express -->|"API"| ExpressJS
+    Express -->|"All API Routes"| StaticTarget
+    StaticTarget -.->|"mode: python"| Flask
+    StaticTarget -.->|"mode: javascript"| ExpressJS
 
     ViteCore --> VueApp
     ViteCore -->|"HMR"| Browser
@@ -168,10 +169,10 @@ flowchart TB
 
     HealthChk -.-> Flask
     HealthChk -.-> ExpressJS
-    RouteMap -.-> ProxyMW
 
     style Browser fill:#e1f5ff
     style Express fill:#90ee90
+    style StaticTarget fill:#ffeb3b
     style ViteCore fill:#ffd700
     style Flask fill:#4169e1
     style ExpressJS fill:#32cd32
@@ -300,23 +301,29 @@ app.use('/', createProxyMiddleware({
 - ✅ **Source Maps**: Better debugging with original source code
 - ✅ **Fast Startup**: Vite's on-demand compilation is faster than bundling
 
-### 2. API Proxying
+### 2. API Proxying (Static Routing)
 
-API requests are proxied to the backend using `http-proxy-middleware`:
+API requests are proxied to a single backend selected at startup:
 
 ```javascript
+// Backend selection - determined ONCE at startup from config
+const SELECTED_BACKEND = config.middleware.mode || 'python';
+const BACKEND_CONFIG = SELECTED_BACKEND === 'python' ? config.backends.python : config.backends.javascript;
+const BACKEND_TARGET_URL = BACKEND_CONFIG.url;
+
 const apiRoutes = [
   '/api',
   '/getfabricators',
   '/getjobs',
   '/getports',
   '/register',
-  // ... 20+ more routes
+  // ... 30+ more routes
 ];
 
+// All routes are statically proxied to the same backend
 apiRoutes.forEach(route => {
   app.use(route, createProxyMiddleware({
-    target: 'http://localhost:8000',  // Currently hardcoded to Python
+    target: BACKEND_TARGET_URL,  // Static target set at startup
     changeOrigin: true,
     ws: route === '/socket.io'
   }));
@@ -326,9 +333,11 @@ apiRoutes.forEach(route => {
 **Flow:**
 1. Frontend makes API call: `fetch('/getjobs')`
 2. Middleware intercepts the request
-3. Proxies to backend: `http://localhost:8000/getjobs`
+3. Proxies to selected backend: `${BACKEND_TARGET_URL}/getjobs`
 4. Backend processes and returns response
 5. Middleware forwards response to frontend
+
+**Key Point:** The backend target is determined once at startup based on `config.middleware.mode`, not per-request.
 
 ### 3. Socket.IO Proxying
 
@@ -358,61 +367,53 @@ io.on('connection', (socket) => {
 3. Events flow: Frontend → Middleware → Backend
 4. Broadcasts: Backend → Middleware → All Frontends
 
-### 4. Route Mapping System
+### 4. Static Backend Selection
 
-The middleware includes intelligent routing configuration (currently not fully utilized):
+The middleware uses a **static routing architecture** where the backend is selected once at startup:
 
-**File:** `middleware/src/config/routes.js`
+**Backend Selection Process:**
+1. Middleware reads `config.json` at startup
+2. `config.middleware.mode` determines which backend to use (`'python'` or `'javascript'`)
+3. All API routes are statically proxied to the selected backend
+4. No per-request routing decisions - simple pass-through proxy
 
-```javascript
-export const routeMap = {
-  // JavaScript backend specialized routes
-  '/api/serial': 'javascript',
-  '/api/gcode': 'javascript',
-
-  // Both backends support these ('either' = use active backend)
-  '/getjobs': 'either',
-  '/getfabricators': 'either',
-  '/register': 'either',
-
-  // Python-only advanced features
-  '/diagnose': 'python',
-  '/repair': 'python',
-  '/bumpjob': 'python',
-  '/movejob': 'python'
-};
+**Example Configuration** (`server-python/config/config.json`):
+```json
+{
+  "middleware": {
+    "mode": "python",
+    "port": 8002
+  },
+  "backends": {
+    "python": {
+      "url": "http://localhost:8000"
+    },
+    "javascript": {
+      "url": "http://localhost:8005"
+    }
+  }
+}
 ```
 
-**Routing Modes:**
-- `'python'` - Always route to Python backend
-- `'javascript'` - Always route to JavaScript backend
-- `'either'` - Route to currently selected backend
-
-#### Intelligent Routing Decision Flow
+#### Static Routing Flow
 
 ```mermaid
 flowchart TD
     Start[Incoming Request] --> Check{Request Type?}
 
     Check -->|Frontend Asset<br/>.js, .css, /| Vite[Route to Vite<br/>Port 5173]
-    Check -->|API Request| RouteMap{Check<br/>Route Map}
+    Check -->|API Request| Backend[Selected Backend<br/>Set at Startup]
 
-    RouteMap -->|/api/serial<br/>/api/gcode| JS[JavaScript Backend<br/>Port 8005]
-    RouteMap -->|/diagnose<br/>/repair<br/>/bumpjob| Py[Python Backend<br/>Port 8000]
-    RouteMap -->|/getjobs<br/>/getfabricators<br/>/register| Either{Active<br/>Backend?}
-
-    Either -->|Python Selected| Py
-    Either -->|JavaScript Selected| JS
-
-    RouteMap -->|Not in Map| Default[Default Backend<br/>Python 8000]
+    Backend -->|mode: python| Py[Python Backend<br/>Port 8000]
+    Backend -->|mode: javascript| JS[JavaScript Backend<br/>Port 8005]
 
     Vite --> Response[Return Response]
     JS --> Response
     Py --> Response
-    Default --> Response
 
     style Start fill:#e1f5ff
     style Vite fill:#ffd700
+    style Backend fill:#90ee90
     style JS fill:#32cd32
     style Py fill:#4169e1
     style Response fill:#90ee90
@@ -664,26 +665,9 @@ const apiRoutes = [
    - Python: `server-python/routes/`
    - JavaScript: `server-javascript/src/routes/`
 
-3. **Add to route map** (optional) in `middleware/src/config/routes.js`:
+3. **Restart middleware** - The route will automatically be proxied to the selected backend
 
-```javascript
-export const routeMap = {
-  '/mynewroute': 'either'  // or 'python' / 'javascript'
-};
-```
-
-### Implementing Intelligent Routing
-
-To use the route mapping system, modify the proxy configuration:
-
-```javascript
-app.use('/', createProxyMiddleware({
-  router: (req) => {
-    const backend = getBackendForRoute(req.path);
-    return backend.url;
-  }
-}));
-```
+**Note:** All routes are proxied to the same backend selected at startup. There is no per-route backend selection in the current architecture.
 
 ### Testing
 
@@ -691,7 +675,7 @@ app.use('/', createProxyMiddleware({
 
 **Planned Tests:**
 ```bash
-# Unit tests for route mapping
+# Unit tests for health checking and proxy logic
 npm test
 
 # Integration tests
@@ -724,9 +708,9 @@ curl http://localhost:8002/api/middleware/health?debug=true
 
 ### ✅ Recently Completed
 
-1. **Dynamic Routing** ✅
-   - ✅ Route-based backend selection implemented
-   - ✅ Route mapping system fully functional
+1. **Static Backend Routing** ✅
+   - ✅ Backend selected at startup from config
+   - ✅ Simple pass-through proxy architecture
    - ✅ Configuration validation in place
 
 2. **Backend Health Monitoring** ✅
@@ -880,7 +864,7 @@ When modifying the middleware:
 2. **Update documentation** - Keep this file current
 3. **Add tests** - Write tests for new functionality
 4. **Check performance** - Profile proxy overhead
-5. **Update route maps** - Document new routes in `routes.js`
+5. **Update route list** - Add new routes to apiRoutes array in `index.js`
 
 ---
 
@@ -890,10 +874,10 @@ When modifying the middleware:
 - ✅ Proxies to Vite dev server for dynamic development with HMR
 - ✅ Proxies 30+ API routes to backend
 - ✅ Socket.IO bidirectional proxying
-- ✅ Dynamic backend selection via route mapping
+- ✅ Static backend selection at startup from config
 - ✅ Backend health monitoring every 10s
 - ✅ Comprehensive test suite (141 tests)
-- ✅ Intelligent route-based proxying
+- ✅ Simple pass-through proxy architecture
 - ✅ Auto-created emulator for testing
 
 **v1.0.0** (Legacy)
