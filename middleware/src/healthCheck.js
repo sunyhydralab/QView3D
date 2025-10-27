@@ -117,7 +117,7 @@ export class HealthChecker {
 
         // Log recovery if backend was previously down
         if (previousStatus !== HealthStatus.HEALTHY) {
-          console.log(`[HealthChecker] ✓ ${name} backend recovered (${responseTime}ms)`);
+          console.log(`[HealthChecker] ${name} backend recovered (${responseTime}ms)`);
         }
       } else {
         // Backend responded but not healthy
@@ -149,7 +149,7 @@ export class HealthChecker {
     };
 
     if (previousStatus !== newStatus) {
-      console.warn(`[HealthChecker] ✗ ${name} backend ${newStatus}: ${reason}`);
+      console.warn(`[HealthChecker] ${name} backend ${newStatus}: ${reason}`);
     }
   }
 
@@ -177,7 +177,7 @@ export class HealthChecker {
     };
 
     if (previousStatus !== newStatus) {
-      console.warn(`[HealthChecker] ✗ ${name} backend ${newStatus}: ${errorMessage}`);
+      console.warn(`[HealthChecker] ${name} backend ${newStatus}: ${errorMessage}`);
     }
   }
 

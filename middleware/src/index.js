@@ -2,13 +2,13 @@
  * QView3D Middleware Server
  *
  * This middleware server acts as a reverse proxy between the frontend and backend services.
- * It proxies to the Vite dev server for dynamic frontend development and provides
- * intelligent routing based on the route map configuration.
+ * It proxies to the Vite dev server for dynamic frontend development and routes all API
+ * requests to a single backend selected at startup.
  *
  * Architecture:
  * Browser (8002) → Middleware (8002) → Vite Dev Server (5173) / Backend (8000 Python / 8005 JavaScript)
  * - Frontend: Proxied to Vite dev server on port 5173
- * - API Routes: Proxied to backend based on route mapping
+ * - API Routes: Statically routed to backend selected at startup
  */
 
 import express from 'express';
@@ -20,7 +20,6 @@ import { io as ioClient } from 'socket.io-client';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import config from './config/backends.js';
-import { routeMap, defaultBackend } from './config/routes.js';
 import { HealthChecker } from './healthCheck.js';
 
 // Get __dirname in ES modules
@@ -30,8 +29,11 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = config.middleware.port || 8002;
 
-// Current selected backend (defaults to config)
-let selectedBackend = config.middleware.mode || 'python';
+// Backend selection - determined once at startup from config
+const SELECTED_BACKEND = config.middleware.mode || 'python';
+const BACKEND_CONFIG = SELECTED_BACKEND === 'python' ? config.backends.python : config.backends.javascript;
+const BACKEND_TARGET_URL = BACKEND_CONFIG.url;
+const BACKEND_NAME = SELECTED_BACKEND;
 
 // Initialize health checker
 const healthChecker = new HealthChecker(config.backends, 10000);
@@ -45,35 +47,6 @@ app.use(cors({
 // REMOVED: app.use(express.json());
 // Let the proxy forward raw request bodies to the backend
 // The backend will parse the JSON, not the middleware
-
-/**
- * Get the active backend configuration
- */
-function getActiveBackend() {
-  return selectedBackend === 'python' ? config.backends.python : config.backends.javascript;
-}
-
-/**
- * Get backend for a specific route based on route mapping
- * @param {string} path - The request path
- * @returns {Object} Backend configuration object for the route
- */
-function getBackendForRoute(path) {
-  // Check if route is explicitly mapped
-  const mappedBackend = routeMap[path];
-
-  if (mappedBackend === 'python') {
-    return config.backends.python;
-  } else if (mappedBackend === 'javascript') {
-    return config.backends.javascript;
-  } else if (mappedBackend === 'either') {
-    // For 'either' routes, use the currently selected backend
-    return getActiveBackend();
-  }
-
-  // If no explicit mapping, use default backend
-  return defaultBackend === 'python' ? config.backends.python : config.backends.javascript;
-}
 
 /**
  * Health check endpoint
@@ -90,7 +63,8 @@ app.get('/api/middleware/health', async (req, res) => {
       status: 'healthy',
       middleware: {
         uptime: process.uptime(),
-        selectedBackend: selectedBackend,
+        selectedBackend: SELECTED_BACKEND,
+        targetUrl: BACKEND_TARGET_URL,
         monitoringInterval: healthChecker.interval
       },
       backends: backendStatus
@@ -157,19 +131,11 @@ const apiRoutes = [
 
 /**
  * Apply proxy middleware ONLY to specific API routes
+ * All routes are statically proxied to the backend selected at startup
  */
 apiRoutes.forEach(route => {
   app.use(route, createProxyMiddleware({
-    router: (req) => {
-      // Build full path for route determination
-      let fullPath = req.baseUrl;
-      if (req.url !== '/') {
-        fullPath += req.url;
-      }
-      // Use getBackendForRoute to determine the appropriate backend
-      const backend = getBackendForRoute(fullPath);
-      return backend.url;
-    },
+    target: BACKEND_TARGET_URL,  // Static target set at startup
     changeOrigin: true,
     ws: route === '/socket.io',  // Enable WebSocket for Socket.IO
     // Strip /api prefix when forwarding to backend (backend routes don't have /api prefix)
@@ -180,14 +146,12 @@ apiRoutes.forEach(route => {
       if (req.url !== '/') {
         fullPath += req.url;
       }
-      const backend = getBackendForRoute(fullPath);
 
       // Check backend health and warn if unhealthy
-      const backendName = backend.url.includes(':8000') ? 'python' : 'javascript';
-      const backendHealth = healthChecker.getStatus(backendName);
+      const backendHealth = healthChecker.getStatus(BACKEND_NAME);
 
       if (backendHealth && backendHealth.status !== 'healthy') {
-        console.warn(`[Proxy] WARNING: Routing to ${backendHealth.status} backend (${backendName}): ${fullPath}`);
+        console.warn(`[Proxy] WARNING: Routing to ${backendHealth.status} backend (${BACKEND_NAME}): ${fullPath}`);
       }
 
       // Strip /api prefix for backend routes
@@ -197,22 +161,16 @@ apiRoutes.forEach(route => {
         rewrittenPath = fullPath.substring(4); // Remove '/api' prefix
       }
 
-      console.log(`[Proxy] ${req.method} ${fullPath} → ${backend.url}${rewrittenPath}`);
+      console.log(`[Proxy] ${req.method} ${fullPath} → ${BACKEND_TARGET_URL}${rewrittenPath}`);
       return rewrittenPath;
     },
     onError: (err, req, res) => {
       console.error(`[Proxy Error] ${req.path}:`, err.message);
       if (res.headersSent) return;
-      // Build full path for error handling
-      let fullPath = req.baseUrl;
-      if (req.url !== '/') {
-        fullPath += req.url;
-      }
-      const backend = getBackendForRoute(fullPath);
       res.status(500).json({
         error: 'Backend connection failed',
         message: err.message,
-        backend: backend.url
+        backend: BACKEND_TARGET_URL
       });
     }
   }));
@@ -261,10 +219,7 @@ const io = new Server(server, {
 let backendSocket = null;
 
 function connectToBackend() {
-  const backend = getActiveBackend();
-  const backendUrl = backend.url;
-
-  console.log(`[SocketIO] Connecting to backend at ${backendUrl}`);
+  console.log(`[SocketIO] Connecting to backend at ${BACKEND_TARGET_URL}`);
 
   // Disconnect existing connection if any
   if (backendSocket) {
@@ -272,7 +227,7 @@ function connectToBackend() {
   }
 
   // Connect to backend SocketIO
-  backendSocket = ioClient(backendUrl, {
+  backendSocket = ioClient(BACKEND_TARGET_URL, {
     transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionDelay: 1000,
@@ -280,11 +235,11 @@ function connectToBackend() {
   });
 
   backendSocket.on('connect', () => {
-    console.log(`✓ Connected to backend SocketIO at ${backendUrl}`);
+    console.log(`Connected to backend SocketIO at ${BACKEND_TARGET_URL}`);
   });
 
   backendSocket.on('disconnect', () => {
-    console.log(`✗ Disconnected from backend SocketIO`);
+    console.log(`Disconnected from backend SocketIO`);
   });
 
   backendSocket.on('connect_error', (error) => {
@@ -332,16 +287,16 @@ server.listen(PORT, () => {
   console.log(`  🌐 ACCESS APPLICATION AT:  http://localhost:${PORT}`);
   console.log('');
   console.log(`  Architecture:`);
-  console.log(`    Browser → Middleware (${PORT}) → Backend (${getActiveBackend().url})`);
+  console.log(`    Browser → Middleware (${PORT}) → Backend (${BACKEND_TARGET_URL})`);
   console.log('');
   console.log(`  Middleware Functions:`);
   console.log(`    - Proxying Frontend: Vite dev server (http://localhost:5173)`);
-  console.log(`    - Proxying ${apiRoutes.length} API routes to backend`);
+  console.log(`    - Proxying ${apiRoutes.length} API routes to backend (static routing)`);
   console.log(`    - Handling WebSocket connections`);
   console.log(`    - Monitoring backend health every 10s`);
   console.log('');
-  console.log(`  Active Backend:  ${selectedBackend}`);
-  console.log(`  Backend URL:     ${getActiveBackend().url}`);
+  console.log(`  Active Backend:  ${SELECTED_BACKEND}`);
+  console.log(`  Backend URL:     ${BACKEND_TARGET_URL}`);
   console.log('');
   console.log('='.repeat(80));
   console.log('');

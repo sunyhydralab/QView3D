@@ -85,7 +85,7 @@ class PrusaMK4Capture:
                     "messages": startup_messages
                 })
 
-            print(f"✓ Connected successfully to {self.port}\n")
+            print(f"Connected successfully to {self.port}\n")
             return True
 
         except serial.SerialException as e:
@@ -278,7 +278,7 @@ class PrusaMK4Capture:
         with open(filename, 'w') as f:
             json.dump(capture_data, f, indent=2)
 
-        print(f"\n✓ Capture saved to: {filename}")
+        print(f"\nCapture saved to: {filename}")
         print(f"  Total commands captured: {capture_data['total_commands']}")
         print(f"  Total log entries: {len(self.capture_log)}")
 
@@ -288,7 +288,7 @@ class PrusaMK4Capture:
         """Disconnect from printer"""
         if self.serial_connection and self.serial_connection.is_open:
             self.serial_connection.close()
-            print("✓ Disconnected from printer")
+            print("Disconnected from printer")
 
     def __enter__(self):
         """Context manager entry"""
@@ -302,10 +302,10 @@ class PrusaMK4Capture:
 def main():
     """Main execution"""
     print("""
-╔══════════════════════════════════════════════════════════╗
-║         Prusa MK4 Device Capture Tool                    ║
-║  Captures gcode commands and responses for emulation     ║
-╚══════════════════════════════════════════════════════════╝
+==============================================================
+         Prusa MK4 Device Capture Tool
+  Captures gcode commands and responses for emulation
+==============================================================
     """)
 
     # Parse command line arguments

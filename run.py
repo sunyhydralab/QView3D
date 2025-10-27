@@ -77,9 +77,9 @@ def build_client():
         cwd=CLIENT_LOCAL_PATH
     )
     if result.returncode == 0:
-        print("✓ Client build complete")
+        print("Client build complete")
     else:
-        print("✗ Client build failed, but continuing...")
+        print("Client build failed, but continuing...")
     print("="*60 + "\n")
 
 def start_client():
@@ -102,11 +102,11 @@ def start_server(fresh_database):
     if (os.path.exists(database_file_path)):
         try:
             os.remove(database_file_path)
-            print("✓ Database wiped - starting fresh")
+            print("Database wiped - starting fresh")
         except OSError as ose:
-            print(f"✗ Failed to delete database: {ose}")
+            print(f"Failed to delete database: {ose}")
     else:
-        print("✓ No existing database found - starting fresh")
+        print("No existing database found - starting fresh")
 
     # Start the server in the background using virtual environment
     if current_os == "WINDOWS":
