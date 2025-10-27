@@ -114,10 +114,7 @@ class Issue(db.Model):
         except SQLAlchemyError as e:
             if current_app:
                 current_app.handle_errors_and_logging(e)
-            return (
-                jsonify({"error": "Failed to get issues. Database error"}),
-                500,
-            )
+            raise  # Re-raise the exception so the controller can handle it
 
     @classmethod
     def get_issue_by_job(cls, job_id):
@@ -134,10 +131,7 @@ class Issue(db.Model):
         except SQLAlchemyError as e:
             if current_app:
                 current_app.handle_errors_and_logging(e)
-            return (
-                jsonify({"error": "Failed to get issue. Database error"}),
-                500,
-            )
+            raise  # Re-raise the exception so the controller can handle it
 
     @staticmethod
     def create_issue(issue=None, exception=None, job_id: int = None, title=None, description=None, severity=None, category=None, fabricator_id=None):
@@ -168,17 +162,11 @@ class Issue(db.Model):
         except SQLAlchemyError as e:
             if current_app:
                 current_app.handle_errors_and_logging(e)
-            return (
-                jsonify({"error": "Failed to create issue. Database error"}),
-                500,
-            )
+            raise  # Re-raise the exception so the controller can handle it
         except Exception as e:
             if current_app:
                 current_app.handle_errors_and_logging(e)
-            return (
-                jsonify({"error": "Failed to create issue. Unknown error"}),
-                500,
-            )
+            raise  # Re-raise the exception so the controller can handle it
 
     @classmethod
     def delete_issue(cls, issue_id):
@@ -198,10 +186,7 @@ class Issue(db.Model):
         except SQLAlchemyError as e:
             if current_app:
                 current_app.handle_errors_and_logging(e)
-            return (
-                jsonify({"error": "Failed to delete issue. Database error"}),
-                500,
-            )
+            raise  # Re-raise the exception so the controller can handle it
     
     @classmethod
     def edit_issue(cls, issue_id, issueNew):
@@ -219,10 +204,7 @@ class Issue(db.Model):
         except SQLAlchemyError as e:
             if current_app:
                 current_app.handle_errors_and_logging(e)
-            return (
-                jsonify({"error": "Failed to edit issue. Database error"}),
-                500,
-            )
+            raise  # Re-raise the exception so the controller can handle it
 
     @classmethod
     def update_issue(cls, issue_id, title=None, description=None, severity=None, category=None, fabricator_id=None, job_id=None):
@@ -254,10 +236,7 @@ class Issue(db.Model):
         except SQLAlchemyError as e:
             if current_app:
                 current_app.handle_errors_and_logging(e)
-            return (
-                jsonify({"error": "Failed to update issue. Database error"}),
-                500,
-            )
+            raise  # Re-raise the exception so the controller can handle it
 
     @classmethod
     def resolve_issue(cls, issue_id):
@@ -276,7 +255,4 @@ class Issue(db.Model):
         except SQLAlchemyError as e:
             if current_app:
                 current_app.handle_errors_and_logging(e)
-            return (
-                jsonify({"error": "Failed to resolve issue. Database error"}),
-                500,
-            )
+            raise  # Re-raise the exception so the controller can handle it

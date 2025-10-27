@@ -194,7 +194,7 @@ class Job(db.Model):
                 current_app.handle_errors_and_logging(e)
             else:
                 print(f"Database error: {e}")
-            return jsonify({"error": format_exc()}), 500
+            raise  # Re-raise the exception so the controller can handle it
 
     @classmethod
     def jobHistoryInsert(cls, name: str, fabricator_id: int, status: str, file, file_name_original: str, favorite: bool = False, td_id: int = 0):
@@ -244,7 +244,7 @@ class Job(db.Model):
                 current_app.handle_errors_and_logging(e)
             else:
                 print(f"Database error: {e}")
-            return jsonify({"error": format_exc()}), 500
+            raise  # Re-raise the exception so the controller can handle it
 
     @classmethod
     def update_job_status(cls, job_id: int, new_status: str):
@@ -268,7 +268,7 @@ class Job(db.Model):
                 current_app.handle_errors_and_logging(e)
             else:
                 print(f"Database error: {e}")
-            return jsonify({"error": format_exc()}), 500
+            raise  # Re-raise the exception so the controller can handle it
 
     @classmethod
     def delete_job(cls, job_id: int):
@@ -289,7 +289,7 @@ class Job(db.Model):
                 current_app.handle_errors_and_logging(e)
             else:
                 print(f"Unexpected error: {e}")
-            return jsonify({"error": format_exc()}), 500
+            raise  # Re-raise the exception so the controller can handle it
 
     @classmethod
     def findJob(cls, job_id: int):
@@ -301,7 +301,7 @@ class Job(db.Model):
                 current_app.handle_errors_and_logging(e)
             else:
                 print(f"Database error: {e}")
-            return jsonify({"error": format_exc()}), 500
+            raise  # Re-raise the exception so the controller can handle it
 
     @classmethod
     def removeFileFromPath(cls, file_path: str):
@@ -330,7 +330,7 @@ class Job(db.Model):
                 current_app.handle_errors_and_logging(e)
             else:
                 print(f"Database error: {e}")
-            return jsonify({"error": format_exc()}), 500
+            raise  # Re-raise the exception so the controller can handle it
 
     @classmethod
     def clearSpace(cls):
@@ -353,7 +353,7 @@ class Job(db.Model):
                 current_app.handle_errors_and_logging(e)
             else:
                 print(f"Database error: {e}")
-            return jsonify({"error": format_exc()}), 500
+            raise  # Re-raise the exception so the controller can handle it
 
     @classmethod
     def getFavoriteJobs(cls):
@@ -365,7 +365,7 @@ class Job(db.Model):
                 current_app.handle_errors_and_logging(e)
             else:
                 print(f"Database error: {e}")
-            return jsonify({"error": format_exc()}), 500
+            raise  # Re-raise the exception so the controller can handle it
 
     @classmethod
     def setIssue(cls, job_id: int, issue_id: int):
@@ -387,7 +387,7 @@ class Job(db.Model):
                 current_app.handle_errors_and_logging(e)
             else:
                 print(f"Database error: {e}")
-            return jsonify({"error": format_exc()}), 500
+            raise  # Re-raise the exception so the controller can handle it
 
     @classmethod
     def unsetIssue(cls, job_id: int):
@@ -409,7 +409,7 @@ class Job(db.Model):
                 current_app.handle_errors_and_logging(e)
             else:
                 print(f"Database error: {e}")
-            return jsonify({"error": format_exc()}), 500
+            raise  # Re-raise the exception so the controller can handle it
 
     @classmethod
     def setComment(cls, job_id: int, comments: str):
@@ -431,7 +431,7 @@ class Job(db.Model):
                 current_app.handle_errors_and_logging(e)
             else:
                 print(f"Database error: {e}")
-            return jsonify({"error": format_exc()}), 500
+            raise  # Re-raise the exception so the controller can handle it
 
     @classmethod
     def downloadCSV(cls, alljobs, jobids=None):
@@ -472,7 +472,7 @@ class Job(db.Model):
                 current_app.handle_errors_and_logging(e)
             else:
                 print(f"Error downloading CSV: {e}")
-            return jsonify({"error": format_exc()}), 500
+            raise  # Re-raise the exception so the controller can handle it
 
     def saveToFolder(self):
         file_data = self.file

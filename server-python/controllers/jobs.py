@@ -43,7 +43,12 @@ def getJobs():
 
     try:
         res = Job.get_job_history(page, pageSize, printerIds, oldestFirst, searchJob, searchCriteria, searchTicketId, favoriteOnly, issueIds, startdate, enddate, fromError, countOnly)
-        return jsonify(res)
+        # get_job_history returns (jobs_data, total) or just total if countOnly
+        if countOnly == 0:
+            jobs_data, total = res
+            return jsonify({"jobs": jobs_data, "total": total})
+        else:
+            return jsonify({"total": res})
     except Exception as e:
         current_app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
