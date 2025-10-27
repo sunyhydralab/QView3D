@@ -61,11 +61,6 @@ class IdleMonitorThread(Thread):
                         if not self._is_printing(fab)
                     ]
 
-                    # Debug: Show which fabricators are being monitored
-                    if idle_fabricators:
-                        idle_names = [f"{fab.name}(status={fab.status})" for fab in idle_fabricators]
-                        print(f"[IdleMonitorThread] Monitoring {len(idle_fabricators)} idle fabricators: {', '.join(idle_names)}")
-
                     # Periodic temperature monitoring for idle printers
                     if current_time - self._last_temp_check >= self._temp_check_interval:
                         self._monitor_temperatures(idle_fabricators)
@@ -125,14 +120,11 @@ class IdleMonitorThread(Thread):
                     continue
 
                 # Double-check fabricator is not printing (safety check)
-                fab_status = getattr(fabricator, 'status', '')
-                if fab_status == 'printing':
-                    print(f"[IdleMonitorThread] Skipping {fabricator.name} - status is 'printing'")
+                if getattr(fabricator, 'status', '') == 'printing':
                     continue
 
                 # Read temperature (non-blocking with timeout)
                 try:
-                    print(f"[IdleMonitorThread] Reading temp from {fabricator.name} (status={fab_status})")
                     fabricator.device.handleTempLine(fabricator.device.serialConnection.read())
                 except Exception as e:
                     # Temperature read failed, printer may be disconnected

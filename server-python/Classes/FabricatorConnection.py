@@ -34,7 +34,7 @@ class SerialConnection(FabricatorConnection, serial.Serial):
         try:
             # Set inter_byte_timeout to prevent readline() from returning partial lines
             # This ensures readline() waits for complete lines instead of timing out mid-transmission
-            super().__init__(port, baudrate, timeout=timeout, inter_byte_timeout=0.1)
+            super().__init__(port, baudrate, timeout=timeout, inter_byte_timeout=1.0)
         except serial.SerialException as e:
             if not "Access is denied" in str(e):
                 print(f"Failed to open serial connection: {e}")
