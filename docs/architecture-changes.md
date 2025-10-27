@@ -25,11 +25,11 @@ QView3D has evolved from a monolithic architecture where the frontend directly c
 
 - **Development Velocity**: Hot Module Replacement (HMR) via Vite dramatically reduces development iteration time
 - **Separation of Concerns**: Clear boundaries between frontend serving, API routing, and backend services
-- **Backend Flexibility**: Support for both Python and JavaScript backend implementations with intelligent routing
+- **Backend Flexibility**: Support for both Python and JavaScript backend implementations with simple static routing
 - **Scalability**: Middleware enables load balancing, health monitoring, and failover capabilities
 - **Enhanced Developer Experience**: Unified access point (port 8002) simplifies local development and deployment
 
-The middleware acts as an intelligent reverse proxy, routing frontend asset requests to the Vite development server while directing API calls to the appropriate backend service. This architectural change required no modifications to the core backend services or database structure, ensuring backward compatibility while enabling future enhancements.
+The middleware acts as a simple reverse proxy, routing frontend asset requests to the Vite development server while directing all API calls to a single backend service selected at startup. This architectural change required no modifications to the core backend services or database structure, ensuring backward compatibility while enabling future enhancements.
 
 ---
 
@@ -110,7 +110,7 @@ Middleware Server (Port 8002) - SINGLE ACCESS POINT
     ├── http-proxy-middleware 3.x
     ├── Health Monitoring System
     ├── WebSocket Proxy (Socket.IO)
-    └── Intelligent Route Mapping
+    └── Static Backend Target (Set at Startup)
     ↓
 Frontend Path              API Path
     ↓                         ↓
@@ -143,28 +143,27 @@ External Systems
 #### Layer 1: Middleware (Port 8002)
 **File**: `middleware/src/index.js`
 
-The middleware server is the central orchestration point:
+The middleware server uses static routing configured at startup:
 
 ```javascript
-// Request routing logic
-function getBackendForRoute(path) {
-  const mappedBackend = routeMap[path];
+// Backend selection - determined ONCE at startup from config
+const SELECTED_BACKEND = config.middleware.mode || 'python';
+const BACKEND_CONFIG = SELECTED_BACKEND === 'python' ? config.backends.python : config.backends.javascript;
+const BACKEND_TARGET_URL = BACKEND_CONFIG.url;
 
-  if (mappedBackend === 'python') {
-    return config.backends.python;
-  } else if (mappedBackend === 'javascript') {
-    return config.backends.javascript;
-  } else if (mappedBackend === 'either') {
-    return getActiveBackend();
-  }
-
-  return defaultBackend;
-}
+// All API routes proxy to this static target
+apiRoutes.forEach(route => {
+  app.use(route, createProxyMiddleware({
+    target: BACKEND_TARGET_URL,  // Static target set at startup
+    changeOrigin: true,
+    ws: route === '/socket.io'
+  }));
+});
 ```
 
 **Responsibilities**:
 - Route frontend requests to Vite dev server (port 5173)
-- Route API requests to appropriate backend (Python 8000 / JavaScript 8005)
+- Route ALL API requests to single backend selected at startup
 - Health monitoring of backend services (10-second intervals)
 - WebSocket connection proxying
 - CORS handling
@@ -236,16 +235,13 @@ export class HealthChecker {
 - Automatic recovery detection
 - Consecutive failure counting (3 failures = DOWN status)
 
-**Route Mapping Configuration** (`middleware/src/config/routes.js`):
-```javascript
-// Default backend for all routes
-export const defaultBackend = 'python';
+**Static Routing Configuration**:
 
-// Route map for future fine-grained routing
-export const routeMap = {};
-```
-
-Currently configured for simple proxy mode (all routes to selected backend), but infrastructure supports route-specific backend selection.
+The middleware uses a simple static routing model:
+1. Backend is selected at startup from `config.middleware.mode`
+2. A single `BACKEND_TARGET_URL` is set
+3. All API routes proxy to this URL
+4. No per-request routing decisions
 
 **Backend Configuration** (`middleware/src/config/backends.js`):
 ```javascript
@@ -271,51 +267,34 @@ const defaultBackends = {
 
 **API Route Proxying**:
 
-The middleware proxies 30+ API routes:
+The middleware proxies 30+ API routes to a single backend:
 ```javascript
+// Backend selection - determined ONCE at startup
+const SELECTED_BACKEND = config.middleware.mode || 'python';
+const BACKEND_TARGET_URL = SELECTED_BACKEND === 'python'
+  ? config.backends.python.url
+  : config.backends.javascript.url;
+
 const apiRoutes = [
   '/api',
   '/socket.io',
   '/getfabricators',
   '/registerfabricator',
-  '/deletefabricator',
-  '/pauseprinter',
-  '/resumeprinter',
-  '/cancelprinter',
-  '/getqueue',
-  '/reorderqueue',
-  '/clearqueue',
-  '/uploadfiles',
-  '/getfiles',
-  '/deletefile',
-  '/addjob',
-  '/canceljob',
-  '/getjobhistory',
-  '/getjobs',
-  '/getports',
-  '/register',
-  '/setstatus',
-  '/startprint',
-  '/releasejob',
-  '/autoqueue',
-  '/cancelfromqueue',
-  '/addjobtoqueue',
-  '/startemulator',
-  '/registeremulator',
-  '/disconnectemulator',
-  '/getissues',
-  '/createissue',
-  '/updateissue',
-  '/deleteissue',
-  '/resolveissue',
-  '/health',
-  '/getprinterinfo',
-  '/serverVersion'
+  // ... 30+ routes total
 ];
+
+// All routes proxy to the same static target
+apiRoutes.forEach(route => {
+  app.use(route, createProxyMiddleware({
+    target: BACKEND_TARGET_URL,  // Static - set once at startup
+    changeOrigin: true,
+    ws: route === '/socket.io'
+  }));
+});
 ```
 
 Each route is proxied with:
-- Dynamic backend selection based on route mapping
+- Static target URL set at startup
 - Health status warnings for unhealthy backends
 - Path preservation (no rewriting)
 - WebSocket support for `/socket.io`
@@ -323,7 +302,7 @@ Each route is proxied with:
 
 **Benefits**:
 - Single entry point for all application traffic
-- Transparent backend switching
+- Simple, predictable routing behavior
 - Health monitoring and alerting
 - Request/response logging
 - Error recovery mechanisms
@@ -413,33 +392,25 @@ app.use('/', createProxyMiddleware({
 
 ---
 
-### 3. Dual Backend Support
+### 3. Backend Selection (Static at Startup)
 
-The middleware architecture enables running multiple backend implementations simultaneously, allowing gradual migration from Python to JavaScript or performance comparisons.
+The middleware uses a simple static backend selection model configured at startup.
 
 **Backend Selection**:
 ```javascript
-// Current selected backend (defaults to config)
-let selectedBackend = config.middleware.mode || 'python';
-
-function getActiveBackend() {
-  return selectedBackend === 'python'
-    ? config.backends.python
-    : config.backends.javascript;
-}
+// Backend selection - determined ONCE at startup from config
+const SELECTED_BACKEND = config.middleware.mode || 'python';
+const BACKEND_CONFIG = SELECTED_BACKEND === 'python'
+  ? config.backends.python
+  : config.backends.javascript;
+const BACKEND_TARGET_URL = BACKEND_CONFIG.url;
 ```
 
-**Route-Based Backend Selection**:
-
-Future capability for fine-grained routing:
-```javascript
-// Example: Route specific endpoints to specific backends
-const routeMap = {
-  '/api/serial': 'javascript',      // Serial communication
-  '/api/database': 'python',        // Database operations
-  '/api/fabricators': 'either'      // Available in both
-};
-```
+**Key Design Principles**:
+- Backend is selected once at startup based on `config.middleware.mode`
+- All API routes proxy to the same `BACKEND_TARGET_URL`
+- No dynamic routing or per-request backend selection
+- To switch backends, update config.json and restart middleware
 
 **Backend Capabilities**:
 
@@ -452,8 +423,8 @@ Python Backend (Port 8000):
 JavaScript Backend (Port 8005):
 - **Strengths**: Serial communication, async operations, node ecosystem
 - **Capabilities**: Printer control, GCode processing
-- **Services**: Planned migration of serial communication layer
-- **Status**: Future implementation
+- **Services**: Alternative implementation
+- **Status**: Available for selection via config
 
 **WebSocket Proxy**:
 ```javascript
@@ -619,8 +590,8 @@ sequenceDiagram
     participant FS as File System
 
     U->>M: GET / (http://localhost:8002/)
-    M->>M: Check route mapping
-    M->>M: Identify as frontend request
+    M->>M: Check if request matches API routes
+    M->>M: Not an API route - frontend request
     M->>V: Proxy to Vite Dev Server
     V->>FS: Read source files
     V->>V: Compile on-demand
@@ -1111,7 +1082,7 @@ Hint: Make sure Vite dev server is running on port 5173
 ```
 [Proxy] GET /getfabricators → http://localhost:8000/getfabricators
 [SocketIO] Backend → Clients: printer_status_update
-[HealthChecker] ✓ python backend recovered (23ms)
+[HealthChecker] python backend recovered (23ms)
 ```
 
 **Development Tools**:
@@ -1320,7 +1291,7 @@ flowchart TB
 
     subgraph MiddlewareLayer[Middleware Layer - Port 8002]
         Middleware[Express.js 5.x<br/>SINGLE ACCESS POINT]
-        RouteMap[Route Mapping]
+        StaticTarget[Static Backend Target<br/>Set at Startup]
         Health[Health Monitor<br/>10s interval]
         WSProxy[WebSocket Proxy]
     end

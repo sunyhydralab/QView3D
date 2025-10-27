@@ -88,11 +88,11 @@ Flask application started
 
 When QView3D starts successfully, you'll have:
 
-- ✅ **Flask Server** on port 8000 (backend API)
-- ✅ **Vue.js Frontend** on port 8002 (main UI)
-- ✅ **WebSocket Server** for real-time communication
-- ✅ **SQLite Database** initialized
-- ✅ **Fabricator Management System** ready
+- **Flask Server** on port 8000 (backend API)
+- **Vue.js Frontend** on port 8002 (main UI)
+- **WebSocket Server** for real-time communication
+- **SQLite Database** initialized
+- **Fabricator Management System** ready
 
 ### Application Startup Sequence
 
@@ -118,7 +118,8 @@ sequenceDiagram
 
     S->>M: Start Middleware
     M->>M: Load configuration
-    M->>M: Setup route mapping
+    M->>M: Read config.middleware.mode
+    M->>M: Set static backend target URL
     M->>M: Initialize Socket.IO
     M-->>S: ✓ Running on 8002
 
