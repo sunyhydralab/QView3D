@@ -58,8 +58,10 @@ const deleteJob = async (jobId: number) => {
   }
 
   try {
-    await removeJob([jobId])
+    // Wait for backend confirmation before updating UI
+    const response = await removeJob([jobId])
 
+    // Only update UI after successful backend deletion
     if (allJobs.value) {
       const jobIndex = allJobs.value.findIndex((job) => job.id === jobId)
       if (jobIndex !== -1) {
@@ -68,7 +70,8 @@ const deleteJob = async (jobId: number) => {
     }
   } catch (error) {
     console.error('Failed to remove job:', error)
-    alert('Failed to remove job from queue')
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    alert(`Failed to remove job from queue: ${errorMessage}`)
   }
 }
 
@@ -100,28 +103,32 @@ const handleDrop = async (event: DragEvent, dropIndex: number) => {
   event.preventDefault()
   dragOverIndex.value = null
 
-  if (!draggedJob.value) return
+  if (!draggedJob.value || !allJobs.value || !currentFabricator) return
 
   const { job, index: dragIndex } = draggedJob.value
 
-  if (dragIndex !== dropIndex) {
-    // Remove from old position
-    allJobs.value.splice(dragIndex, 1)
+  // Validate job and indices
+  if (!job || dragIndex === dropIndex || dragIndex < 0 || dropIndex < 0) {
+    draggedJob.value = null
+    return
+  }
 
-    // Insert at new position
-    allJobs.value.splice(dropIndex, 0, job)
+  // Remove from old position
+  allJobs.value.splice(dragIndex, 1)
 
-    // Update backend
-    try {
-      const jobIds = allJobs.value.map(j => j.id)
-      await moveJobInQueue(currentFabricator.id, jobIds)
-    } catch (error) {
-      console.error('Failed to update queue order:', error)
-      // Revert on failure
-      allJobs.value.splice(dropIndex, 1)
-      allJobs.value.splice(dragIndex, 0, job)
-      alert('Failed to update queue order')
-    }
+  // Insert at new position
+  allJobs.value.splice(dropIndex, 0, job)
+
+  // Update backend
+  try {
+    const jobIds = allJobs.value.map(j => j.id)
+    await moveJobInQueue(currentFabricator.id, jobIds)
+  } catch (error) {
+    console.error('Failed to update queue order:', error)
+    // Revert on failure
+    allJobs.value.splice(dropIndex, 1)
+    allJobs.value.splice(dragIndex, 0, job)
+    alert('Failed to update queue order')
   }
 
   draggedJob.value = null
@@ -134,51 +141,61 @@ const handleDragEnd = () => {
 
 // Move job up in queue
 const moveJobUp = async (index: number) => {
-  if (index === 0) return
+  if (index === 0 || !allJobs.value || !currentFabricator) return
 
   const job = filteredJobs.value[index]
+  if (!job || !job.id) return
+
+  // Find actual position in unfiltered queue
   const actualIndex = allJobs.value.findIndex(j => j.id === job.id)
+  if (actualIndex <= 0) return  // Can't move up if not found or already at top
 
-  if (actualIndex > 0) {
-    // Swap positions
-    [allJobs.value[actualIndex - 1], allJobs.value[actualIndex]] =
-    [allJobs.value[actualIndex], allJobs.value[actualIndex - 1]]
+  // Store original order for rollback
+  const originalOrder = [...allJobs.value]
 
-    // Update backend
-    try {
-      const jobIds = allJobs.value.map(j => j.id)
-      await moveJobInQueue(currentFabricator.id, jobIds)
-    } catch (error) {
-      console.error('Failed to move job up:', error)
-      // Revert on failure
-      [allJobs.value[actualIndex - 1], allJobs.value[actualIndex]] =
-      [allJobs.value[actualIndex], allJobs.value[actualIndex - 1]]
-    }
+  // Swap positions
+  [allJobs.value[actualIndex - 1], allJobs.value[actualIndex]] =
+  [allJobs.value[actualIndex], allJobs.value[actualIndex - 1]]
+
+  // Update backend
+  try {
+    const jobIds = allJobs.value.map(j => j.id)
+    await moveJobInQueue(currentFabricator.id, jobIds)
+  } catch (error) {
+    console.error('Failed to move job up:', error)
+    // Revert to original order on failure
+    allJobs.value = originalOrder
+    alert('Failed to move job up in queue')
   }
 }
 
 // Move job down in queue
 const moveJobDown = async (index: number) => {
-  if (index === filteredJobs.value.length - 1) return
+  if (index === filteredJobs.value.length - 1 || !allJobs.value || !currentFabricator) return
 
   const job = filteredJobs.value[index]
+  if (!job || !job.id) return
+
+  // Find actual position in unfiltered queue
   const actualIndex = allJobs.value.findIndex(j => j.id === job.id)
+  if (actualIndex === -1 || actualIndex >= allJobs.value.length - 1) return  // Can't move down if not found or at bottom
 
-  if (actualIndex < allJobs.value.length - 1) {
-    // Swap positions
-    [allJobs.value[actualIndex], allJobs.value[actualIndex + 1]] =
-    [allJobs.value[actualIndex + 1], allJobs.value[actualIndex]]
+  // Store original order for rollback
+  const originalOrder = [...allJobs.value]
 
-    // Update backend
-    try {
-      const jobIds = allJobs.value.map(j => j.id)
-      await moveJobInQueue(currentFabricator.id, jobIds)
-    } catch (error) {
-      console.error('Failed to move job down:', error)
-      // Revert on failure
-      [allJobs.value[actualIndex], allJobs.value[actualIndex + 1]] =
-      [allJobs.value[actualIndex + 1], allJobs.value[actualIndex]]
-    }
+  // Swap positions
+  [allJobs.value[actualIndex], allJobs.value[actualIndex + 1]] =
+  [allJobs.value[actualIndex + 1], allJobs.value[actualIndex]]
+
+  // Update backend
+  try {
+    const jobIds = allJobs.value.map(j => j.id)
+    await moveJobInQueue(currentFabricator.id, jobIds)
+  } catch (error) {
+    console.error('Failed to move job down:', error)
+    // Revert to original order on failure
+    allJobs.value = originalOrder
+    alert('Failed to move job down in queue')
   }
 }
 
@@ -392,21 +409,7 @@ const getStatusColor = (status: string | null) => {
         </transition>
       </table>
 
-      <!-- Queue action buttons -->
-      <div v-if="showDetails && filteredJobs.length > 0" class="mt-3 flex justify-end space-x-2">
-        <button
-          class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded"
-          @click="() => console.log('Pause all jobs')"
-        >
-          <i class="fa-solid fa-pause mr-2"></i>Pause Queue
-        </button>
-        <button
-          class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded"
-          @click="() => console.log('Start processing')"
-        >
-          <i class="fa-solid fa-play mr-2"></i>Start Processing
-        </button>
-      </div>
+      <!-- Queue action buttons removed - pause/resume functionality not implemented -->
     </div>
   </transition>
 </template>

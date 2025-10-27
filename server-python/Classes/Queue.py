@@ -43,10 +43,13 @@ class Queue(deque):
             self._version += 1
             self._condition.notify_all()  # Wake up threads waiting for jobs
 
-            if current_app:
-                current_app.socketio.emit(
-                     "queue_update", {"queue": self.convertQueueToJson_unsafe(), "fabricator_id": job.fabricator_id}
-                )
+            if current_app and hasattr(current_app, 'socketio') and current_app.socketio:
+                try:
+                    current_app.socketio.emit(
+                         "queue_update", {"queue": self.convertQueueToJson_unsafe(), "fabricator_id": job.fabricator_id}
+                    )
+                except Exception as e:
+                    print(f"Warning: Failed to emit queue_update via socketio: {e}")
             return True
 
     def addToFront(self, job: Job) -> bool:
@@ -71,10 +74,13 @@ class Queue(deque):
             self._version += 1
             self._condition.notify_all()  # Wake up threads waiting for jobs
 
-            if current_app:
-                current_app.socketio.emit(
-                    "queue_update", {"queue": self.convertQueueToJson_unsafe(), "fabricator_id": job.fabricator_id}
-                )
+            if current_app and hasattr(current_app, 'socketio') and current_app.socketio:
+                try:
+                    current_app.socketio.emit(
+                        "queue_update", {"queue": self.convertQueueToJson_unsafe(), "fabricator_id": job.fabricator_id}
+                    )
+                except Exception as e:
+                    print(f"Warning: Failed to emit queue_update via socketio: {e}")
             return True
 
     def bump(self, up, jobid):
@@ -106,10 +112,13 @@ class Queue(deque):
             self._version += 1
             self._update_queue_positions_unsafe()
 
-            if current_app:
-                current_app.socketio.emit(
-                    "queue_update", {"queue": self.convertQueueToJson_unsafe(), "fabricator_id": job_to_move.fabricator_id}
-                )
+            if current_app and hasattr(current_app, 'socketio') and current_app.socketio:
+                try:
+                    current_app.socketio.emit(
+                        "queue_update", {"queue": self.convertQueueToJson_unsafe(), "fabricator_id": job_to_move.fabricator_id}
+                    )
+                except Exception as e:
+                    print(f"Warning: Failed to emit queue_update via socketio: {e}")
 
     def reorder(self, arr):
         """
@@ -129,10 +138,13 @@ class Queue(deque):
             self._version += 1
             self._update_queue_positions_unsafe()
 
-            if current_app:
-                current_app.socketio.emit(
-                    "queue_update", {"queue": self.convertQueueToJson_unsafe(), "fabricator_id": self[0].fabricator_id if len(self) > 0 else None}
-                )
+            if current_app and hasattr(current_app, 'socketio') and current_app.socketio:
+                try:
+                    current_app.socketio.emit(
+                        "queue_update", {"queue": self.convertQueueToJson_unsafe(), "fabricator_id": self[0].fabricator_id if len(self) > 0 else None}
+                    )
+                except Exception as e:
+                    print(f"Warning: Failed to emit queue_update via socketio: {e}")
     
     def deleteJob(self, jobid: int, fabricator_id: int) -> Job | str:
         """
@@ -208,10 +220,13 @@ class Queue(deque):
             self._version += 1
             self._update_queue_positions_unsafe()
 
-            if current_app:
-                current_app.socketio.emit(
-                    "queue_update", {"queue": self.convertQueueToJson_unsafe(), "fabricator_id": fabricator_id}
-                )
+            if current_app and hasattr(current_app, 'socketio') and current_app.socketio:
+                try:
+                    current_app.socketio.emit(
+                        "queue_update", {"queue": self.convertQueueToJson_unsafe(), "fabricator_id": fabricator_id}
+                    )
+                except Exception as e:
+                    print(f"Warning: Failed to emit queue_update via socketio: {e}")
 
     def getJob(self, job_to_find) -> Job | None:
         """
@@ -309,3 +324,4 @@ class Queue(deque):
         except Exception as e:
             print(f"Error updating queue positions: {e}")
             db.session.rollback()
+            raise  # Re-raise to propagate error to caller

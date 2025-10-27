@@ -235,28 +235,51 @@ def remove_job_from_queue():
         data = request.get_json()
         jobarr = data['jobarr']
 
+        errors = []
+        success_count = 0
+
         for jobpk in jobarr:
-            # Retrieve job to delete & printer id
-            job = Job.findJob(jobpk)
-            printerid = job.getPrinterId()
+            try:
+                # Retrieve job to delete & printer id
+                job = Job.findJob(jobpk)
+                if not job:
+                    errors.append(f"Job {jobpk} not found")
+                    continue
 
-            jobstatus = job.getStatus()
-            # retrieve printer object & corresponding queue
-            printerobject = findPrinterObject(printerid)
-            if printerobject is None:
-                return jsonify({"error": "Fabricator not found."}), 404
-            # printerobject.setStatus("complete")
-            queue = printerobject.getQueue()
-            inmemjob = queue.getJob(job)
-            if jobstatus == 'printing': # only change statuses, dont remove from queue
-                printerobject.setStatus("complete")
-            else:
-                queue.deleteJob(jobpk, printerid)
+                printerid = job.getPrinterId()
+                jobstatus = job.getStatus()
 
-            inmemjob.setStatus("cancelled")
-            Job.update_job_status(jobpk, "cancelled")
+                # retrieve printer object & corresponding queue
+                printerobject = findPrinterObject(printerid)
+                if printerobject is None:
+                    errors.append(f"Fabricator not found for job {jobpk}")
+                    continue
 
-        return jsonify({"success": True, "message": "Job removed from printer queue."}), 200
+                # printerobject.setStatus("complete")
+                queue = printerobject.getQueue()
+                inmemjob = queue.getJob(job)
+
+                if jobstatus == 'printing': # only change statuses, dont remove from queue
+                    printerobject.setStatus("complete")
+                else:
+                    queue.deleteJob(jobpk, printerid)
+
+                if inmemjob:
+                    inmemjob.setStatus("cancelled")
+                Job.update_job_status(jobpk, "cancelled")
+                success_count += 1
+
+            except Exception as e:
+                errors.append(f"Failed to cancel job {jobpk}: {str(e)}")
+                continue
+
+        if errors and success_count == 0:
+            return jsonify({"error": "All jobs failed to cancel", "details": errors}), 500
+        elif errors:
+            return jsonify({"success": True, "message": f"{success_count} job(s) cancelled", "warnings": errors}), 200
+        else:
+            return jsonify({"success": True, "message": "Job(s) removed from printer queue."}), 200
+
     except Exception as e:
         current_app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500

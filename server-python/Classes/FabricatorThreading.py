@@ -87,11 +87,16 @@ class IdleMonitorThread(Thread):
         :param fabricator: Fabricator instance
         :return: True if printing, False otherwise
         """
-        # Check if there's an active print thread for this fabricator
+        # Check status first - this is the most reliable indicator
+        status = getattr(fabricator, 'status', 'unknown')
+        if status == 'printing':
+            return True
+
+        # Also check if there's an active print thread for this fabricator
         if hasattr(self.fabricator_list, 'active_print_threads'):
             return fabricator.dbID in self.fabricator_list.active_print_threads
-        # Fallback to status check
-        return getattr(fabricator, 'status', 'unknown') == 'printing'
+
+        return False
 
     def _monitor_temperatures(self, idle_fabricators):
         """
@@ -112,6 +117,10 @@ class IdleMonitorThread(Thread):
                     continue
 
                 if not fabricator.device.serialConnection or not fabricator.device.serialConnection.is_open:
+                    continue
+
+                # Double-check fabricator is not printing (safety check)
+                if getattr(fabricator, 'status', '') == 'printing':
                     continue
 
                 # Read temperature (non-blocking with timeout)
