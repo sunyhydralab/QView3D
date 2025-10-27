@@ -63,8 +63,13 @@ class RoutesService:
         """Setup CORS handling for preflight requests."""
         @self.app.before_request
         def handle_preflight():
+            # Skip CORS preflight for Socket.IO requests to avoid WSGI errors
+            if request.path.startswith('/socket.io/'):
+                return None
+
             if request.method == "OPTIONS":
                 res = Response()
+                res.status_code = 200  # Explicit status code
                 res.headers['X-Content-Type-Options'] = '*'
                 res.headers['Access-Control-Allow-Origin'] = '*'
                 res.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
