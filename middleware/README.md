@@ -1,14 +1,13 @@
 # QView3D Middleware
 
-API gateway middleware for intelligent routing between Python and JavaScript backends.
+API gateway middleware for routing between Python and JavaScript backends.
 
 ## Overview
 
-The middleware acts as a transparent proxy that routes requests to the appropriate backend based on the configured mode:
+The middleware acts as a transparent proxy that routes requests to the selected backend based on the configured mode:
 
 - **Python Mode**: All requests go to Python backend (default)
 - **JavaScript Mode**: All requests go to JavaScript backend
-- **Hybrid Mode**: Intelligent routing based on request path and backend capabilities
 
 ## Architecture
 
@@ -55,10 +54,9 @@ flowchart LR
 ## Features
 
 - Automatic backend health monitoring
-- Intelligent request routing in hybrid mode
+- Request proxying to the selected backend
 - Response normalization between backends
 - WebSocket proxy support
-- Automatic failover when backends are unavailable
 - Request/response logging
 
 ## Configuration
@@ -85,48 +83,24 @@ Configuration is loaded from `server/config/config.json`:
 }
 ```
 
-## Route Mapping (Hybrid Mode)
+## Route Mapping
 
-| Route Pattern | Backend | Notes |
-|--------------|---------|-------|
-| `/api/serial/*` | JavaScript | Serial port operations |
-| `/api/gcode/*` | JavaScript | G-code parsing |
-| `/api/printers` | JavaScript | Active printer status |
-| `/getjobs` | Either | Load balanced - both backends support |
-| `/getfabricators` | Either | Load balanced |
-| `/register` | Either | Load balanced |
-| `/addjobtoqueue` | Either | Load balanced |
-| `/getissues` | Either | Load balanced |
-| `/diagnose` | Python | Python-specific diagnostics |
-| `/releasejob` | Python | Advanced job control |
-| All others | Python | Default fallback |
+All requests are routed to the configured backend (Python or JavaScript) based on the mode setting in `config.json`. The middleware acts as a simple proxy to the selected backend.
 
-**Note**: Routes marked "Either" use round-robin load balancing when both backends are healthy, with automatic failover if one becomes unavailable.
-
-### Route Selection Flow
+### Route Flow
 
 ```mermaid
 flowchart TD
-    Request[Incoming Request] --> CheckPath{Check Path}
+    Request[Incoming Request] --> Middleware{Middleware<br/>Mode Check}
 
-    CheckPath -->|/api/serial/*<br/>/api/gcode/*<br/>/api/printers| JSBackend[JavaScript Backend<br/>Port 3000]
-    CheckPath -->|/diagnose<br/>/releasejob| PyBackend[Python Backend<br/>Port 8000]
-    CheckPath -->|/getjobs<br/>/getfabricators<br/>/register<br/>/addjobtoqueue| LoadBalance{Load Balance}
-
-    LoadBalance -->|Both Healthy| RoundRobin[Round-Robin Selection]
-    LoadBalance -->|One Down| Available[Use Available Backend]
-
-    RoundRobin --> JSBackend
-    RoundRobin --> PyBackend
-    Available --> JSBackend
-    Available --> PyBackend
-
-    CheckPath -->|Other Routes| PyBackend
+    Middleware -->|Python Mode| PyBackend[Python Backend<br/>Port 8000]
+    Middleware -->|JavaScript Mode| JSBackend[JavaScript Backend<br/>Port 3000]
 
     JSBackend --> Response[Return Response]
     PyBackend --> Response
 
     style Request fill:#e1f5ff
+    style Middleware fill:#90ee90
     style JSBackend fill:#32cd32
     style PyBackend fill:#4169e1
     style Response fill:#90ee90
@@ -141,7 +115,7 @@ The middleware is automatically started when you select backend mode via `run.py
 ```bash
 python run.py
 # Select [B] for Backend Selection
-# Choose mode 3 for Hybrid Mode
+# Choose mode 1 for Python or mode 2 for JavaScript
 ```
 
 ### Manual Start
@@ -195,12 +169,11 @@ Returns middleware and backend status.
 
 ## Backend Health Monitoring
 
-The middleware performs health checks every 30 seconds on all configured backends:
+The middleware performs health checks every 30 seconds on the configured backend:
 
-- Marks backends as healthy/unhealthy
-- Provides automatic failover in hybrid mode
+- Marks backend as healthy/unhealthy
 - Exposes status via `/health` endpoint
-- Load balances across healthy backends
+- Reports backend availability
 
 ## Response Normalization
 
@@ -215,4 +188,4 @@ The middleware normalizes responses between backends to ensure consistent API:
 - Returns proper HTTP status codes
 - Includes error details in development mode
 - Logs all errors with context
-- Attempts failover before returning 502 errors
+- Returns 502 errors when backend is unavailable

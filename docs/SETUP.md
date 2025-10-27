@@ -23,10 +23,10 @@ python run.py
 
 ## Running the Application
 
-### Quick Start (Hybrid Mode)
+### Quick Start
 ```bash
 python run.py
-# Select 'D' for debug mode
+# Select 'D' for debug mode (Python backend by default)
 ```
 
 ### Backend Selection
@@ -36,9 +36,8 @@ python run.py
 ```
 
 Options:
-- **Python Backend**: Traditional Flask server
-- **JavaScript Backend**: Node.js with serial support
-- **Hybrid Mode** (recommended): Both backends with fallback
+- **Python Backend**: Traditional Flask server (mode 1)
+- **JavaScript Backend**: Node.js with serial support (mode 2)
 
 ### Startup Sequence Diagram
 
@@ -62,11 +61,9 @@ flowchart TB
     Backend --> Choice{Choose Backend}
     Choice -->|Python| PythonMode[Python Mode]
     Choice -->|JavaScript| JSMode[JavaScript Mode]
-    Choice -->|Hybrid| HybridMode[Hybrid Mode]
 
     PythonMode --> StartVite
     JSMode --> StartVite
-    HybridMode --> StartVite
 
     Ready --> Access[Access via<br/>http://localhost:8002]
 

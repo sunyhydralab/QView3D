@@ -4,8 +4,8 @@ Welcome to the documentation for the QView3D project.
 
 ## Overview
 
-QView3D is a web-based platform for managing 3D printer arrays with intelligent backend routing.
-The system uses a hybrid architecture with dual backends and automatic fallback capabilities.
+QView3D is a web-based platform for managing 3D printer arrays with flexible backend routing.
+The system uses a multi-backend architecture with middleware-based proxy routing.
 
 ## Architecture
 
@@ -17,10 +17,11 @@ The system uses a hybrid architecture with dual backends and automatic fallback 
 
 ## Backend Modes
 
-The system can run in three modes:
-- **Python**: Traditional Flask backend only
+The system can run in two modes:
+- **Python**: Traditional Flask backend
 - **JavaScript**: Node.js backend for serial communication
-- **Hybrid** (default): Both backends with intelligent middleware routing
+
+The middleware proxies all requests to the configured backend based on the selected mode.
 
 ## Contents
 

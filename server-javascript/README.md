@@ -267,10 +267,9 @@ All endpoints include try-catch blocks with:
 
 ## Integration
 
-Works standalone or with middleware for hybrid mode:
+Works standalone or with middleware:
 - Standalone: Client connects directly to port 3000
-- Hybrid: Middleware routes requests based on capabilities
-- Load balanced: Shares load with Python backend
+- With Middleware: Middleware proxies all requests to this backend when JavaScript mode is selected
 
 ## Testing
 

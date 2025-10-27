@@ -2,7 +2,7 @@
 
 ## System Overview
 
-QView3D uses a hybrid multi-backend architecture with intelligent routing and automatic fallback.
+QView3D uses a multi-backend architecture with middleware-based routing.
 
 ## Components
 
@@ -13,9 +13,9 @@ QView3D uses a hybrid multi-backend architecture with intelligent routing and au
 - GCode preview and 3D model visualization
 
 ### Middleware (Port 3500)
-Express.js router that:
-- Routes requests to appropriate backend based on endpoint patterns
-- Provides automatic fallback if primary backend fails
+Express.js proxy that:
+- Routes all requests to the configured backend (Python or JavaScript)
+- Acts as a transparent proxy layer
 - Handles WebSocket proxy connections
 
 ### Python Backend (Port 8000)
@@ -41,30 +41,30 @@ flowchart LR
     Client[Client Request] --> Middleware
     Middleware --> Decision{Route Decision}
     Decision -->|Frontend Assets| Vite[Vite Server<br/>5173]
-    Decision -->|API Request| Backend[Python Backend<br/>8000]
+    Decision -->|API Request| Backend[Selected Backend<br/>Python or JavaScript]
     Backend --> Response[JSON Response]
     Vite --> Response
     Response --> Client
-    Backend -.->|If Fails| Fallback[Fallback Backend]
-    Fallback -.-> Response
 
     style Client fill:#e1f5ff
     style Middleware fill:#90ee90
     style Backend fill:#4169e1
-    style Fallback fill:#ff6347
+    style Response fill:#90ee90
 ```
 
-## Endpoint Routing
+## Backend Capabilities
 
-### JavaScript Priority
-- `/api/fabricators/*` - Printer management
-- `/api/emulator/*` - Virtual printer
-- Serial communication endpoints
+### Python Backend
+- Job management and queuing
+- Issue tracking
+- File uploads and storage
+- Database operations (SQLite)
 
-### Python Priority
-- `/api/jobs/*` - Job management
-- `/api/issues/*` - Issue tracking
-- File upload endpoints
+### JavaScript Backend
+- Serial port communication
+- Real-time printer control
+- Virtual printer emulator
+- Hardware detection
 
 ## WebSocket Architecture
 
