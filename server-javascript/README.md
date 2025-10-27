@@ -12,6 +12,43 @@ Node.js/Express backend implementation for QView3D with SQLite database support 
 - **WebSocket Support**: Real-time bidirectional communication
 - **REST API**: Full REST API matching Python backend endpoints
 
+### Backend Architecture
+
+```mermaid
+flowchart TB
+    Client[Client Request] -->|HTTP/WS<br/>Port 3000| Express[Express.js Server]
+
+    subgraph Routes[API Routes]
+        Jobs[Jobs Routes<br/>/getjobs, /addjobtoqueue]
+        Fabs[Fabricator Routes<br/>/getfabricators, /register]
+        Issues[Issue Routes<br/>/getissues, /createissue]
+        Serial[Serial Routes<br/>/api/serial/*]
+    end
+
+    Express --> Routes
+
+    subgraph Services[Core Services]
+        DB[Database Service<br/>SQLite Wrapper]
+        WS[WebSocket Service<br/>Real-time Updates]
+        Printer[Printer Service<br/>Serial Communication]
+        FileManager[File Manager<br/>GCode Storage]
+    end
+
+    Routes --> Services
+
+    DB --> SQLite[(SQLite Database<br/>qview.db)]
+    Printer --> SerialPorts[Serial Ports<br/>USB Communication]
+    FileManager --> Files[(File System<br/>Compressed GCode)]
+
+    SerialPorts --> Hardware[3D Printers<br/>Emulators]
+
+    style Client fill:#e1f5ff
+    style Express fill:#32cd32
+    style DB fill:#90ee90
+    style SQLite fill:#ff6347
+    style Hardware fill:#ffa500
+```
+
 ## Installation
 
 ```bash
@@ -119,6 +156,50 @@ GET /health
 - `description` - Detailed description
 - `severity` - Severity level
 - `created_at` - Creation timestamp
+
+### Database Entity Relationships
+
+```mermaid
+erDiagram
+    FABRICATORS ||--o{ JOBS : "executes"
+    JOBS }o--|| ISSUES : "has"
+
+    FABRICATORS {
+        int id PK
+        string name
+        string devicePort
+        string hwid
+        string status
+        int position
+        datetime created_at
+    }
+
+    JOBS {
+        int id PK
+        string name
+        int fabricator_id FK
+        string status
+        string file_name_original
+        string file_name
+        blob file_blob
+        boolean favorite
+        string td_id
+        string filament
+        int issue_id FK
+        text comments
+        datetime time_start
+        datetime time_end
+        datetime created_at
+    }
+
+    ISSUES {
+        int id PK
+        string title
+        text description
+        string severity
+        datetime created_at
+    }
+```
 
 ## File Upload
 

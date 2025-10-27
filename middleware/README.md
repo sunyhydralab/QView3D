@@ -17,6 +17,41 @@ Client <-> Middleware (Port 3500) <-> Python Backend (Port 8000)
                                   <-> JavaScript Backend (Port 3000)
 ```
 
+### Architecture Diagram
+
+```mermaid
+flowchart LR
+    Client[Client Browser] <-->|HTTP/WS<br/>Port 3500| MW[Middleware<br/>Express.js]
+
+    subgraph Backends[Backend Services]
+        Python[Python Backend<br/>Port 8000<br/>Flask + Socket.IO]
+        JS[JavaScript Backend<br/>Port 3000<br/>Express + WebSocket]
+    end
+
+    MW <-->|Route Based| Python
+    MW <-.->|Route Based| JS
+
+    Python --> DB[(SQLite<br/>qview.db)]
+    JS --> DB
+
+    subgraph Hardware[Hardware Layer]
+        Serial[Serial Ports]
+        Printers[3D Printers]
+        Emulators[Virtual Printers]
+    end
+
+    Python --> Serial
+    JS --> Serial
+    Serial --> Printers
+    Serial --> Emulators
+
+    style Client fill:#e1f5ff
+    style MW fill:#90ee90
+    style Python fill:#4169e1
+    style JS fill:#32cd32
+    style DB fill:#ff6347
+```
+
 ## Features
 
 - Automatic backend health monitoring
@@ -67,6 +102,35 @@ Configuration is loaded from `server/config/config.json`:
 | All others | Python | Default fallback |
 
 **Note**: Routes marked "Either" use round-robin load balancing when both backends are healthy, with automatic failover if one becomes unavailable.
+
+### Route Selection Flow
+
+```mermaid
+flowchart TD
+    Request[Incoming Request] --> CheckPath{Check Path}
+
+    CheckPath -->|/api/serial/*<br/>/api/gcode/*<br/>/api/printers| JSBackend[JavaScript Backend<br/>Port 3000]
+    CheckPath -->|/diagnose<br/>/releasejob| PyBackend[Python Backend<br/>Port 8000]
+    CheckPath -->|/getjobs<br/>/getfabricators<br/>/register<br/>/addjobtoqueue| LoadBalance{Load Balance}
+
+    LoadBalance -->|Both Healthy| RoundRobin[Round-Robin Selection]
+    LoadBalance -->|One Down| Available[Use Available Backend]
+
+    RoundRobin --> JSBackend
+    RoundRobin --> PyBackend
+    Available --> JSBackend
+    Available --> PyBackend
+
+    CheckPath -->|Other Routes| PyBackend
+
+    JSBackend --> Response[Return Response]
+    PyBackend --> Response
+
+    style Request fill:#e1f5ff
+    style JSBackend fill:#32cd32
+    style PyBackend fill:#4169e1
+    style Response fill:#90ee90
+```
 
 ## Usage
 

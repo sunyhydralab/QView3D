@@ -51,6 +51,71 @@ The project is maintained by computer science students at SUNY New Paltz, under 
 
 ![QView3D Diagram](assets/QViewDiagram.png)
 
+### Interactive System Architecture
+
+```mermaid
+flowchart TB
+    User[User Browser] -->|Port 8002| Middleware
+
+    subgraph Middleware Layer
+        Middleware[Middleware Server<br/>Express.js]
+        Middleware -->|Frontend Requests| Vite[Vite Dev Server<br/>Port 5173]
+        Middleware -->|API Requests| Backend
+    end
+
+    subgraph Backend Services
+        Backend[Python Backend<br/>Port 8000]
+        Backend --> DB[(SQLite Database<br/>QView.db)]
+        Backend --> Serial[Serial Communication<br/>PySerial]
+    end
+
+    subgraph Hardware Layer
+        Serial --> Printers[3D Printers<br/>USB/Serial]
+        Serial --> Emulator[Virtual Printer<br/>Port 8004]
+    end
+
+    subgraph Frontend Development
+        Vite --> Vue[Vue.js 3 App<br/>with HMR]
+    end
+
+    style User fill:#e1f5ff
+    style Middleware fill:#90ee90
+    style Vite fill:#ffd700
+    style Backend fill:#4169e1
+    style DB fill:#ff6347
+    style Printers fill:#ffa500
+    style Vue fill:#42b883
+```
+
+### Request Flow Overview
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant M as Middleware<br/>(Port 8002)
+    participant V as Vite Dev Server<br/>(Port 5173)
+    participant P as Python Backend<br/>(Port 8000)
+    participant DB as SQLite Database
+
+    Note over B,DB: Frontend Asset Request
+    B->>M: GET /
+    M->>V: Proxy to Vite
+    V->>V: Compile Vue App + HMR
+    V-->>B: Serve App + WebSocket
+
+    Note over B,DB: API Request Flow
+    B->>M: GET /getfabricators
+    M->>P: Proxy to Backend
+    P->>DB: Query Fabricators
+    DB-->>P: Return Data
+    P-->>M: JSON Response
+    M-->>B: Forward Response
+
+    Note over B,DB: Real-time Updates
+    P->>M: WebSocket Event
+    M->>B: Broadcast Update
+```
+
 ## Setup and Installation
 
 ### System Requirements

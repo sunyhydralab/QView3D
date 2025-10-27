@@ -40,6 +40,41 @@ Options:
 - **JavaScript Backend**: Node.js with serial support
 - **Hybrid Mode** (recommended): Both backends with fallback
 
+### Startup Sequence Diagram
+
+```mermaid
+flowchart TB
+    Start([Run python run.py]) --> Menu{Select Option}
+
+    Menu -->|I - Install| Install[Install Dependencies]
+    Menu -->|D - Debug| Debug[Debug Mode]
+    Menu -->|B - Backend| Backend[Backend Selection]
+
+    Install --> PyDeps[Install Python<br/>Dependencies]
+    PyDeps --> NodeDeps[Install Node.js<br/>Dependencies]
+    NodeDeps --> Done([Setup Complete])
+
+    Debug --> StartVite[Start Vite Dev Server<br/>Port 5173]
+    StartVite --> StartMiddleware[Start Middleware<br/>Port 8002]
+    StartMiddleware --> StartPython[Start Python Backend<br/>Port 8000]
+    StartPython --> Ready([Application Ready])
+
+    Backend --> Choice{Choose Backend}
+    Choice -->|Python| PythonMode[Python Mode]
+    Choice -->|JavaScript| JSMode[JavaScript Mode]
+    Choice -->|Hybrid| HybridMode[Hybrid Mode]
+
+    PythonMode --> StartVite
+    JSMode --> StartVite
+    HybridMode --> StartVite
+
+    Ready --> Access[Access via<br/>http://localhost:8002]
+
+    style Start fill:#e1f5ff
+    style Ready fill:#90ee90
+    style Access fill:#ffd700
+```
+
 ## Manual Setup
 
 ### Frontend
@@ -80,6 +115,26 @@ node src/index.js
 - Python API: 8000
 - JavaScript API: 3000
 - Middleware: 3500
+
+### Port Configuration Diagram
+
+```mermaid
+flowchart LR
+    User[User Browser] -->|Port 8002| MW[Middleware]
+
+    subgraph Services
+        MW -->|5173| Vite[Vite Dev]
+        MW -->|8000| Py[Python API]
+        MW -->|3000| JS[JS API]
+    end
+
+    Py --> DB[(SQLite<br/>QView.db)]
+    JS --> DB
+
+    style User fill:#e1f5ff
+    style MW fill:#90ee90
+    style DB fill:#ff6347
+```
 
 ### Database
 - Location: `server-python/QView.db`
