@@ -481,6 +481,11 @@ class Job(db.Model):
         file_data = self.file
         decompressed_data = gzip.decompress(file_data)
         self.file_path = self.generatePath()
+
+        # Create uploads directory if it doesn't exist
+        upload_dir = os.path.dirname(self.file_path)
+        os.makedirs(upload_dir, exist_ok=True)
+
         with open(self.file_path, 'wb') as f:
             f.write(decompressed_data)
 
