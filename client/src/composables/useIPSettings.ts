@@ -17,13 +17,18 @@ export const API_URL = computed(() => `http://${API_IP_ADDRESS.value}:${API_PORT
 // Debug mode setting
 export const DEBUG_MODE = computed(() => localStorage.getItem("debugMode") === "true")
 
-const ipAddressRegex = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$|localhost$/;
+// Updated regex to properly validate IP addresses and localhost
+// Supports: 0-255 for each octet, localhost, and 127.0.0.1
+const ipAddressRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^localhost$/;
 
 // update IP Address
 export function updateAPIAddress(ipAddress: string): void {
+    // Trim whitespace
+    ipAddress = ipAddress.trim();
+
     // check if the ip address is valid
     if (!ipAddressRegex.test(ipAddress)) {
-        throw new Error("Invalid IP address");
+        throw new Error(`Invalid IP address: "${ipAddress}". Please enter a valid IP address (e.g., 192.168.1.1) or "localhost"`);
     }
     localStorage.setItem("apiIPAddress", ipAddress)
 }

@@ -226,14 +226,21 @@ const closeModal = () => {
 const saveIssue = async (issueData) => {
   try {
     if (selectedIssue.value) {
-      await api('updateissue', { ...issueData, id: selectedIssue.value.id }, 'POST');
+      const response = await api('updateissue', { ...issueData, id: selectedIssue.value.id }, 'POST');
+      if (!response || response.error) {
+        throw new Error(response?.error || 'Failed to update issue');
+      }
     } else {
-      await api('createissue', { ...issueData, category: activeTab.value }, 'POST');
+      const response = await api('createissue', { ...issueData, category: activeTab.value }, 'POST');
+      if (!response || response.error) {
+        throw new Error(response?.error || 'Failed to create issue');
+      }
     }
     await loadIssues();
     closeModal();
   } catch (error) {
     console.error('Failed to save issue:', error);
+    alert(`Error: ${error.message || 'Failed to save issue. Please try again.'}`);
   }
 };
 
