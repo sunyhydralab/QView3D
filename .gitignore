@@ -71,3 +71,7 @@ nul
 *.bak
 *.old
 *~
+# Test outputs
+client/playwright-report/
+client/test-results/
+server-python/.coverage
