@@ -4,6 +4,7 @@ from flask import jsonify, Response
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import reconstructor
 from Classes.FabricatorConnection import FabricatorConnection
 from Classes.Fabricators.Device import Device
 from typing_extensions import TextIO
@@ -30,6 +31,25 @@ class Fabricator(db.Model):
     devicePort = db.Column(db.String(50), nullable=False)
     model = db.Column(db.String(100), nullable=True)  # Printer model (e.g., "Prusa MK4", "Ender 3")
 
+    @reconstructor
+    def init_on_load(self):
+        """
+        SQLAlchemy reconstructor - called after loading an object from the database.
+        Initializes runtime attributes that aren't persisted in the database.
+        This ensures that attributes like queue, status, device, and error are always
+        initialized, regardless of how the object is loaded from the database.
+        """
+        from Classes.Queue import Queue
+        # Initialize runtime attributes that aren't stored in the database
+        if not hasattr(self, 'queue') or self.queue is None:
+            self.queue = Queue()
+        if not hasattr(self, 'status'):
+            self.status = 'offline'  # Default to offline since we don't have port connection yet
+        if not hasattr(self, 'device'):
+            self.device = None  # Will be None until port is reconnected
+        if not hasattr(self, 'error'):
+            self.error = None
+
     def __init__(self, port: ListPortInfo | SysFS | None = None, name: str = "", consoleLogger: TextIO | None = None, fileLogger: str | None = None, devicePort: str | None = None):
         """
         Initialize a new Fabricator instance.
@@ -50,6 +70,7 @@ class Fabricator(db.Model):
             self.name: str = name if name else "Emulated Printer"
             self.devicePort = devicePort
             self.device = None  # Emulated printers don't have real devices
+            self.date = datetime.now(timezone.utc).astimezone()  # Initialize date for emulated printers
             self.error = None
             return
 
@@ -92,16 +113,44 @@ class Fabricator(db.Model):
         :return: JSON object
         :rtype: dict
         """
+        # Safely get queue data
+        queue_data = []
+        if hasattr(self, 'queue') and self.queue is not None:
+            try:
+                if hasattr(self.queue, 'convertQueueToJson'):
+                    queue_data = self.queue.convertQueueToJson()
+                elif isinstance(self.queue, list):
+                    queue_data = [job.__to_JSON__() if hasattr(job, '__to_JSON__') else {} for job in self.queue]
+            except Exception:
+                queue_data = []
+
+        # Safely get current job
+        current_job = None
+        if hasattr(self, 'queue') and self.queue is not None:
+            try:
+                if len(self.queue) > 0 and self.queue[0] is not None:
+                    current_job = self.queue[0].__to_JSON__() if hasattr(self.queue[0], '__to_JSON__') else None
+            except Exception:
+                current_job = None
+
+        # Safely get device data
+        device_data = None
+        if hasattr(self, 'device') and self.device is not None:
+            try:
+                device_data = self.device.__to_JSON__() if hasattr(self.device, '__to_JSON__') else None
+            except Exception:
+                device_data = None
+
         return {
-            "name": self.name,
-            "description": self.description,
-            "hwid": self.hwid,
-            "status": getattr(self, 'status', 'unknown'),
-            "id": self.dbID,
-            "date": self.date.strftime("%a, %d %b %Y %H:%M:%S") if self.date else None,
-            "queue": getattr(self, 'queue', None).convertQueueToJson() if hasattr(self, 'queue') and self.queue else [],
-            "job": self.queue[0].__to_JSON__() if hasattr(self, 'queue') and len(self.queue) > 0 and self.queue[0] is not None else None,
-            "device": getattr(self, 'device', None).__to_JSON__() if hasattr(self, 'device') and self.device is not None else None,
+            "name": getattr(self, 'name', 'Unknown'),
+            "description": getattr(self, 'description', 'Unknown'),
+            "hwid": getattr(self, 'hwid', 'Unknown'),
+            "status": getattr(self, 'status', 'offline'),
+            "id": getattr(self, 'dbID', None),
+            "date": self.date.strftime("%a, %d %b %Y %H:%M:%S") if hasattr(self, 'date') and self.date else None,
+            "queue": queue_data,
+            "job": current_job,
+            "device": device_data,
             "consoles": [[],[],[],[],[]],
             "model": getattr(self, 'model', 'Unknown'),
         }
@@ -224,16 +273,13 @@ class Fabricator(db.Model):
     @classmethod
     def queryAll(cls) -> list["Fabricator"]:
         """
-        Returns all fabricators in the database as a list of the Fabricator objects
+        Returns all fabricators in the database as a list of the Fabricator objects.
+        Runtime attributes (queue, status, device, error) are automatically initialized
+        by the @reconstructor method when loading from the database.
         :return: list of Fabricator objects in the DB.
         :rtype: list[Fabricator]
         """
-        fabList = []
-        from Classes.Ports import Ports
-        for fab in cls.query.all():
-            if Ports.getPortByName(fab.devicePort) is not None:
-                fabList.append(cls(Ports.getPortByName(fab.devicePort), fab.name))
-        return fabList
+        return cls.query.all()
 
     def begin(self) -> bool:
         """
