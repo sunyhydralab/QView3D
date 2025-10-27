@@ -201,8 +201,9 @@ class PrintWorkerThread(Thread):
         """Execute the print job."""
         print(f"[PrintWorkerThread] Starting print: Job {self.job.id} on {self.fabricator.name}")
 
-        try:
-            with self.app.app_context():
+        # CRITICAL FIX: Wrap entire operation in app context, including finally block
+        with self.app.app_context():
+            try:
                 # Update job status to printing
                 self.job.status = 'printing'
                 from config.db import db
@@ -229,32 +230,32 @@ class PrintWorkerThread(Thread):
                 # Notify fabricator list of completion
                 self.fabricator_list.print_completed(self.fabricator, success)
 
-        except Exception as e:
-            print(f"[PrintWorkerThread] Error during print: {e}")
-            self.app.handle_errors_and_logging(e)
-
-            # Mark job as error
-            try:
-                self.job.status = 'error'
-                from config.db import db
-                db.session.commit()
-            except Exception:
-                pass
-
-            # Notify of failure
-            self.fabricator_list.print_completed(self.fabricator, False)
-
-        finally:
-            # Remove job from queue
-            try:
-                self.fabricator.queue.removeJob()
             except Exception as e:
-                print(f"[PrintWorkerThread] Error removing job from queue: {e}")
+                print(f"[PrintWorkerThread] Error during print: {e}")
+                self.app.handle_errors_and_logging(e)
 
-            # Reset fabricator status to ready
-            self.fabricator.status = 'ready'
+                # Mark job as error
+                try:
+                    self.job.status = 'error'
+                    from config.db import db
+                    db.session.commit()
+                except Exception:
+                    pass
 
-            print(f"[PrintWorkerThread] Thread terminating: Job {self.job.id}")
+                # Notify of failure
+                self.fabricator_list.print_completed(self.fabricator, False)
+
+            finally:
+                # Remove job from queue (NOW INSIDE APP CONTEXT)
+                try:
+                    self.fabricator.queue.removeJob()
+                except Exception as e:
+                    print(f"[PrintWorkerThread] Error removing job from queue: {e}")
+
+                # Reset fabricator status to ready
+                self.fabricator.status = 'ready'
+
+                print(f"[PrintWorkerThread] Thread terminating: Job {self.job.id}")
 
     def stop(self):
         """
