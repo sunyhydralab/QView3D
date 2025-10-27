@@ -16,7 +16,7 @@
 
 The QView3D middleware is a Node.js Express server that acts as a **reverse proxy** and **communication layer** between the Vue.js frontend and the backend services (Python Flask or Node.js). It provides:
 
-- **Frontend Serving**: Delivers the Vue.js application from `client/dist`
+- **Frontend Proxying**: Proxies requests to Vite dev server for dynamic development with Hot Module Replacement (HMR)
 - **API Proxying**: Routes API requests to the appropriate backend
 - **WebSocket Proxying**: Forwards Socket.IO events bidirectionally
 - **Backend Abstraction**: Shields the frontend from backend implementation details
@@ -44,9 +44,9 @@ The QView3D middleware is a Node.js Express server that acts as a **reverse prox
 │                  MIDDLEWARE SERVER (Port 8002)               │
 │  ┌────────────────────────────────────────────────────────┐  │
 │  │ Express.js Server                                      │  │
-│  │  - Static File Server (client/dist)                    │  │
-│  │  - API Route Proxy                                     │  │
-│  │  - SPA Fallback (Vue Router support)                   │  │
+│  │  - Frontend Proxy → Vite dev server (5173)            │  │
+│  │  - API Route Proxy → Backend (8000/8005)              │  │
+│  │  - WebSocket Proxy (HMR + Socket.IO)                  │  │
 │  └────────────────────────────────────────────────────────┘  │
 │  ┌────────────────────────────────────────────────────────┐  │
 │  │ Socket.IO Server                                       │  │
@@ -54,59 +54,251 @@ The QView3D middleware is a Node.js Express server that acts as a **reverse prox
 │  │  - Forwards events to backend                          │  │
 │  │  - Broadcasts backend events to clients                │  │
 │  └────────────────────────────────────────────────────────┘  │
-└────────────────────────┬─────────────────────────────────────┘
-                         │
-                         │ HTTP/Socket.IO
-                         ▼
-        ┌────────────────┴────────────────┐
-        │                                 │
-        ▼                                 ▼
-┌──────────────────┐            ┌──────────────────┐
-│ Python Backend   │            │ JavaScript       │
-│ (Port 8000)      │            │ Backend          │
-│                  │            │ (Port 8005)      │
-│ - Flask Server   │            │ - Express Server │
-│ - Socket.IO      │            │ - WebSocket      │
-│ - SQLAlchemy     │            │ - SQLite3        │
-│ - PySerial       │            │ - SerialPort     │
-│ - Full Features  │            │ - Core Features  │
-└──────────────────┘            └──────────────────┘
-        │                                 │
-        └────────────────┬────────────────┘
-                         │
-                         ▼
-               ┌──────────────────┐
-               │  Serial Ports    │
-               │  3D Printers     │
-               │  Virtual Devices │
-               └──────────────────┘
+└─────────┬──────────────────────────┬─────────────────────────┘
+          │                          │
+          │ HTTP/Socket.IO           │ HTTP/WebSocket (HMR)
+          ▼                          ▼
+   ┌──────────────┐          ┌──────────────────┐
+   │   Backends   │          │  Vite Dev Server │
+   │              │          │   (Port 5173)    │
+   └──────┬───────┘          │                  │
+          │                  │ - Vue.js HMR     │
+┌─────────┴────────┐         │ - Asset serving  │
+│                  │         │ - Live reload    │
+▼                  ▼         └──────────────────┘
+┌──────────────────┐ ┌──────────────────┐
+│ Python Backend   │ │ JavaScript       │
+│ (Port 8000)      │ │ Backend          │
+│                  │ │ (Port 8005)      │
+│ - Flask Server   │ │ - Express Server │
+│ - Socket.IO      │ │ - WebSocket      │
+│ - SQLite3        │ │ - SQLite3        │
+│ - PySerial       │ │ - SerialPort     │
+│ - Full Features  │ │ - Core Features  │
+└──────────────────┘ └──────────────────┘
+        │                      │
+        └──────────┬───────────┘
+                   │
+                   ▼
+         ┌──────────────────┐
+         │  Serial Ports    │
+         │  3D Printers     │
+         │  Virtual Devices │
+         └──────────────────┘
 ```
+
+---
+
+## Technology Stack
+
+### Complete System Overview
+
+```mermaid
+flowchart TB
+    Browser["Browser<br/>Port 8002"]
+
+    subgraph middleware["Middleware Layer - Port 8002"]
+        Express["Express.js 5.x"]
+        ProxyMW["http-proxy-middleware 3.x"]
+        SocketIOSrv["Socket.IO Server 4.x"]
+        HealthChk["Health Checker"]
+        RouteMap["Route Mapping"]
+    end
+
+    subgraph vite["Vite Dev Server - Port 5173"]
+        ViteCore["Vite 6.x"]
+        VueApp["Vue.js 3.5 App"]
+        HMR["Hot Module Replacement"]
+    end
+
+    subgraph python["Python Backend - Port 8000"]
+        Flask["Flask 3.x with SocketIO 5.x"]
+        PythonAPI["37 REST Endpoints"]
+        SQLAlchemy["SQLAlchemy ORM"]
+        PySerial["PySerial 3.5"]
+        PythonDB[("SQLite3 DB<br/>qview.db")]
+    end
+
+    subgraph javascript["JavaScript Backend - Port 8005"]
+        ExpressJS["Express.js 5.x"]
+        JSAPI["37 REST Endpoints"]
+        SQLite["SQLite3 5.x"]
+        SerialPort["serialport 13.x"]
+        JSDB[("SQLite3 DB<br/>qview.db")]
+    end
+
+    subgraph hardware["Hardware Layer"]
+        SerialPorts["Serial Ports<br/>COM/USB"]
+        Printers["3D Printers<br/>Prusa, Ender, etc"]
+        Emulators["Virtual Printers<br/>EMU_XXXXXXXX"]
+    end
+
+    subgraph testing["Testing Infrastructure - 141 Tests"]
+        PyTest["pytest<br/>Python Tests"]
+        NodeTest["Node Test Runner<br/>JS Tests"]
+        E2E["Playwright<br/>E2E Tests"]
+    end
+
+    Browser -->|"HTTP/WS"| Express
+    Express -->|"Frontend"| ViteCore
+    Express -->|"API"| Flask
+    Express -->|"API"| ExpressJS
+
+    ViteCore --> VueApp
+    ViteCore -->|"HMR"| Browser
+
+    Flask --> PythonAPI
+    Flask --> SQLAlchemy
+    PythonAPI --> PySerial
+    SQLAlchemy --> PythonDB
+
+    ExpressJS --> JSAPI
+    ExpressJS --> SQLite
+    JSAPI --> SerialPort
+    SQLite --> JSDB
+
+    PySerial --> SerialPorts
+    SerialPort --> SerialPorts
+    SerialPorts --> Printers
+    SerialPorts --> Emulators
+
+    PyTest -.-> Flask
+    NodeTest -.-> ExpressJS
+    E2E -.-> Browser
+
+    HealthChk -.-> Flask
+    HealthChk -.-> ExpressJS
+    RouteMap -.-> ProxyMW
+
+    style Browser fill:#e1f5ff
+    style Express fill:#90ee90
+    style ViteCore fill:#ffd700
+    style Flask fill:#4169e1
+    style ExpressJS fill:#32cd32
+    style PythonDB fill:#ff6347
+    style JSDB fill:#ff6347
+```
+
+### Technology Details
+
+#### Frontend Stack
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **Vue.js** | 3.5+ | Progressive JavaScript framework with Composition API |
+| **TypeScript** | 5.x | Type-safe JavaScript with enhanced IDE support |
+| **Vite** | 6.x | Lightning-fast dev server with Hot Module Replacement |
+| **Tailwind CSS** | 3.x | Utility-first CSS framework for rapid UI development |
+| **Vue Router** | 4.x | Official router with history mode and lazy loading |
+| **Pinia** | 2.x | Type-safe state management (Vuex successor) |
+| **Socket.IO Client** | 4.x | Real-time bidirectional event-based communication |
+| **Playwright** | 1.40+ | End-to-end testing framework |
+
+#### Middleware Stack
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **Express.js** | 5.x | Web application framework |
+| **http-proxy-middleware** | 3.x | HTTP/WebSocket proxy for routing requests |
+| **Socket.IO** | 4.x | Real-time communication server |
+| **cors** | 2.x | Cross-Origin Resource Sharing middleware |
+| **Node.js** | 18+ | JavaScript runtime environment |
+
+#### Python Backend Stack
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **Flask** | 3.x | Lightweight WSGI web application framework |
+| **Flask-SocketIO** | 5.x | Socket.IO integration for Flask |
+| **SQLAlchemy** | 2.x | Python SQL toolkit and ORM |
+| **PySerial** | 3.5+ | Serial port access library |
+| **Eventlet** | 0.37+ | Concurrent networking library (WSGI server) |
+| **Python** | 3.9+ | Programming language |
+
+#### JavaScript Backend Stack
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **Express.js** | 5.x | Web application framework |
+| **sqlite3** | 5.x | SQLite3 bindings for Node.js |
+| **@serialport/stream** | 13.x | Serial port communication library |
+| **ws** | 8.x | WebSocket implementation |
+| **Node.js** | 18+ | JavaScript runtime environment |
+
+#### Database
+| Technology | Purpose |
+|------------|---------|
+| **SQLite3** | Embedded relational database (used by both backends) |
+| **Schema** | Tables: fabricators, jobs, queue, issues |
+
+#### Hardware Communication
+| Technology | Purpose |
+|------------|---------|
+| **PySerial** | Python serial port library for 3D printer communication |
+| **@serialport/stream** | Node.js serial port library |
+| **Virtual Serial** | Software-emulated serial ports (EMU_ prefix) |
+
+#### Testing Stack
+| Technology | Type | Purpose |
+|------------|------|---------|
+| **pytest** | Unit | Python backend unit tests (15 tests) |
+| **Node Test Runner** | Unit | JavaScript backend unit tests (80+ tests) |
+| **Playwright** | E2E | Browser automation and end-to-end testing (7 tests) |
+| **Vitest** | Unit | Fast unit test framework for Vite projects |
+
+#### Development Tools
+| Tool | Purpose |
+|------|---------|
+| **ESLint** | JavaScript/TypeScript linting |
+| **Prettier** | Code formatting |
+| **TypeScript Compiler** | Type checking and transpilation |
+| **npm/pip** | Package management |
+| **Git** | Version control |
+
+#### Port Configuration
+| Service | Port | Protocol | Purpose |
+|---------|------|----------|---------|
+| Middleware | 8002 | HTTP/WS | Main entry point for all client requests |
+| Vite Dev Server | 5173 | HTTP/WS | Frontend development with HMR |
+| Python Backend | 8000 | HTTP/WS | Primary backend with full features |
+| JavaScript Backend | 8005 | HTTP/WS | Alternative backend with core features |
+| Python Emulator | 8004 | HTTP | Virtual printer emulator (Python) |
+| JavaScript Emulator | 8007 | HTTP | Virtual printer emulator (JavaScript) |
 
 ---
 
 ## How It Works
 
-### 1. Frontend Serving
+### 1. Frontend Proxying (Vite Dev Server)
 
-The middleware serves the compiled Vue.js application as static files:
+The middleware proxies all frontend requests to the Vite dev server for dynamic development:
 
 ```javascript
-// Serve static files from Vue.js build
-app.use(express.static(DIST_PATH)); // client/dist
+// Proxy to Vite dev server for dynamic development with HMR
+const VITE_DEV_SERVER = 'http://localhost:5173';
 
-// SPA fallback for Vue Router
-app.use((req, res, next) => {
-  if (req.method === 'GET') {
-    res.sendFile(path.join(DIST_PATH, 'index.html'));
+app.use('/', createProxyMiddleware({
+  target: VITE_DEV_SERVER,
+  changeOrigin: true,
+  ws: true,  // Enable WebSocket for Vite HMR
+  onError: (err, req, res) => {
+    console.error(`[Vite Proxy Error] ${req.path}:`, err.message);
+    res.status(502).json({
+      error: 'Vite dev server connection failed',
+      hint: 'Make sure Vite dev server is running on port 5173'
+    });
   }
-});
+}));
 ```
 
 **Flow:**
 1. Browser requests `http://localhost:8002/`
-2. Middleware serves `client/dist/index.html`
-3. Browser loads Vue.js app and assets
-4. Vue Router handles client-side navigation
+2. Middleware proxies request to Vite dev server (`http://localhost:5173/`)
+3. Vite serves Vue.js app with Hot Module Replacement (HMR) support
+4. Browser loads app and establishes WebSocket connection for HMR
+5. Changes to Vue files trigger instant updates without full page reload
+
+**Benefits of Vite Proxy:**
+- ✅ **Instant Updates**: HMR provides ~200ms feedback for code changes
+- ✅ **No Build Step**: No need to run `npm run build` during development
+- ✅ **Source Maps**: Better debugging with original source code
+- ✅ **Fast Startup**: Vite's on-demand compilation is faster than bundling
 
 ### 2. API Proxying
 
@@ -196,63 +388,86 @@ export const routeMap = {
 - `'javascript'` - Always route to JavaScript backend
 - `'either'` - Route to currently selected backend
 
+#### Intelligent Routing Decision Flow
+
+```mermaid
+flowchart TD
+    Start[Incoming Request] --> Check{Request Type?}
+
+    Check -->|Frontend Asset<br/>.js, .css, /| Vite[Route to Vite<br/>Port 5173]
+    Check -->|API Request| RouteMap{Check<br/>Route Map}
+
+    RouteMap -->|/api/serial<br/>/api/gcode| JS[JavaScript Backend<br/>Port 8005]
+    RouteMap -->|/diagnose<br/>/repair<br/>/bumpjob| Py[Python Backend<br/>Port 8000]
+    RouteMap -->|/getjobs<br/>/getfabricators<br/>/register| Either{Active<br/>Backend?}
+
+    Either -->|Python Selected| Py
+    Either -->|JavaScript Selected| JS
+
+    RouteMap -->|Not in Map| Default[Default Backend<br/>Python 8000]
+
+    Vite --> Response[Return Response]
+    JS --> Response
+    Py --> Response
+    Default --> Response
+
+    style Start fill:#e1f5ff
+    style Vite fill:#ffd700
+    style JS fill:#32cd32
+    style Py fill:#4169e1
+    style Response fill:#90ee90
+```
+
 ---
 
 ## Request Flow
 
 ### Example: Job History Request
 
-```
-┌─────────────┐
-│   Browser   │
-└──────┬──────┘
-       │ GET /getjobs?page=1&pageSize=10
-       ▼
-┌─────────────────────┐
-│   Middleware:8002   │
-│  - Matches /getjobs │
-│  - Proxies request  │
-└──────┬──────────────┘
-       │ GET http://localhost:8000/getjobs?page=1&pageSize=10
-       ▼
-┌─────────────────────┐
-│  Python Backend     │
-│  - Queries SQLite   │
-│  - Returns JSON     │
-└──────┬──────────────┘
-       │ Response: { jobs: [...], total: 42 }
-       ▼
-┌─────────────────────┐
-│   Middleware        │
-│  - Forwards response│
-└──────┬──────────────┘
-       │ Response: { jobs: [...], total: 42 }
-       ▼
-┌─────────────────────┐
-│   Browser           │
-│  - Updates UI       │
-└─────────────────────┘
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant M as Middleware<br/>Port 8002
+    participant P as Python Backend<br/>Port 8000
+    participant DB as SQLite
+
+    B->>M: GET /getjobs?page=1&pageSize=10
+    M->>M: Match route: /getjobs
+    M->>M: Proxy request
+    M->>P: GET http://localhost:8000/getjobs?page=1&pageSize=10
+    P->>DB: Query jobs table
+    DB-->>P: Return job records
+    P->>P: Format response
+    P-->>M: {jobs: [...], total: 42}
+    M->>M: Forward response
+    M-->>B: {jobs: [...], total: 42}
+    B->>B: Update UI
 ```
 
 ### Example: Printer Status Update (WebSocket)
 
-```
-┌─────────────────────┐
-│  Python Backend     │
-│  Printer prints line│
-└──────┬──────────────┘
-       │ emit('printer_progress', { id: 1, progress: 45.2 })
-       ▼
-┌─────────────────────┐
-│  Middleware         │
-│  Socket.IO Client   │
-└──────┬──────────────┘
-       │ broadcast to all clients
-       ▼
-┌─────────────────────┐
-│  All Browsers       │
-│  Update dashboards  │
-└─────────────────────┘
+```mermaid
+sequenceDiagram
+    participant P as Python Backend
+    participant MW as Middleware<br/>Socket.IO
+    participant B1 as Browser 1
+    participant B2 as Browser 2
+    participant B3 as Browser N
+
+    Note over P: Printer prints line
+
+    P->>MW: emit('printer_progress',<br/>{id: 1, progress: 45.2})
+    MW->>MW: Receive event from backend
+
+    par Broadcast to all clients
+        MW->>B1: emit('printer_progress',<br/>{id: 1, progress: 45.2})
+        MW->>B2: emit('printer_progress',<br/>{id: 1, progress: 45.2})
+        MW->>B3: emit('printer_progress',<br/>{id: 1, progress: 45.2})
+    end
+
+    B1->>B1: Update dashboard
+    B2->>B2: Update dashboard
+    B3->>B3: Update dashboard
 ```
 
 ---
@@ -378,7 +593,7 @@ All routes in the `apiRoutes` array are proxied to the backend:
 | Feature | Python Backend | JavaScript Backend | Notes |
 |---------|---------------|-------------------|-------|
 | **Framework** | Flask + Socket.IO | Express + WebSocket | Python more mature |
-| **Database** | SQLAlchemy ORM | SQLite3 raw | Python more abstracted |
+| **Database** | SQLite3 (SQLAlchemy ORM) | SQLite3 (raw) | Both use SQLite3 |
 | **Serial Communication** | PySerial | @serialport/stream | Both functional |
 | **Job Management** | ✅ Full | ✅ Core | Python has advanced features |
 | **Printer Registration** | ✅ | ✅ | Feature parity |
@@ -507,58 +722,66 @@ curl http://localhost:8002/api/middleware/health?debug=true
 
 ## Current Limitations & Roadmap
 
-### Known Issues
+### ✅ Recently Completed
 
-1. **Hardcoded Backend Target** ⚠️
-   - Currently hardcoded to `localhost:8000` (Python)
-   - Route mapping system exists but not fully utilized
-   - **Impact:** Can't dynamically switch backends
+1. **Dynamic Routing** ✅
+   - ✅ Route-based backend selection implemented
+   - ✅ Route mapping system fully functional
+   - ✅ Configuration validation in place
 
-2. **No Backend Health Monitoring** ⚠️
-   - Middleware doesn't check if backend is alive
-   - No automatic failover or retry logic
-   - **Impact:** Errors when backend is down
+2. **Backend Health Monitoring** ✅
+   - ✅ Health checks every 10 seconds
+   - ✅ Automatic status tracking (healthy/unhealthy/down)
+   - ✅ Warning messages for unhealthy backends
 
-3. **No Load Balancing** ⚠️
+3. **Comprehensive Testing** ✅
+   - ✅ 44 middleware unit tests
+   - ✅ 80+ JavaScript backend tests
+   - ✅ 17 emulator integration tests
+   - ✅ 7 E2E browser tests
+   - ✅ Total: 141+ tests
+
+4. **Vite Development Integration** ✅
+   - ✅ Hot Module Replacement (HMR)
+   - ✅ Instant frontend updates (~200ms)
+   - ✅ WebSocket proxy for HMR
+
+### Known Limitations
+
+1. **No Load Balancing** ⚠️
    - Can't distribute load across multiple backend instances
-   - **Impact:** Single point of failure
+   - **Impact:** Single backend per type (Python or JavaScript)
 
-4. **Missing Tests** ⚠️
-   - No test suite for middleware
-   - **Impact:** Regressions hard to catch
+2. **No Automatic Failover** ⚠️
+   - Health monitoring is passive (warnings only)
+   - No automatic retry logic
+   - **Impact:** Manual intervention needed if backend fails
+
+3. **No Request Caching** ⚠️
+   - All requests proxied directly to backend
+   - **Impact:** Increased backend load for read-only endpoints
 
 ### Improvement Roadmap
 
-**Phase 1: Dynamic Routing (Priority: HIGH)**
-- [ ] Enable route-based backend selection
-- [ ] Implement backend switching API
-- [ ] Add configuration validation
+**Phase 1: Reliability (Priority: HIGH)**
+- [ ] Implement automatic request retry logic
+- [ ] Add circuit breaker pattern
+- [ ] Graceful degradation when backend is down
 
-**Phase 2: Reliability (Priority: HIGH)**
-- [ ] Add backend health checks
-- [ ] Implement automatic reconnection
-- [ ] Add request retry logic
-- [ ] Graceful error handling
+**Phase 2: Performance (Priority: MEDIUM)**
+- [ ] Request caching for read-only endpoints (e.g., /getfabricators)
+- [ ] Connection pooling to backend
+- [ ] Compression optimization (gzip/brotli)
 
-**Phase 3: Testing (Priority: MEDIUM)**
-- [ ] Unit tests for routing logic
-- [ ] Integration tests for proxy behavior
-- [ ] E2E tests for full stack
+**Phase 3: Scalability (Priority: LOW)**
+- [ ] Load balancing across multiple backend instances
+- [ ] Backend instance registration and discovery
+- [ ] Health-based routing (route to healthiest backend)
 
-**Phase 4: Performance (Priority: MEDIUM)**
-- [ ] Request caching for read-only endpoints
-- [ ] Connection pooling
-- [ ] Compression optimization
-
-**Phase 5: Scalability (Priority: LOW)**
-- [ ] Load balancing across multiple backends
-- [ ] Backend instance registration
-- [ ] Health-based routing
-
-**Phase 6: Observability (Priority: LOW)**
-- [ ] Request logging and metrics
-- [ ] Performance monitoring
-- [ ] Analytics dashboard
+**Phase 4: Observability (Priority: LOW)**
+- [ ] Request logging and metrics collection
+- [ ] Performance monitoring dashboard
+- [ ] Real-time analytics and alerting
 
 ---
 
@@ -580,12 +803,16 @@ taskkill /PID <pid> /F
 
 ### Frontend Not Loading
 
-**Symptom:** 404 error on `/`
-**Cause:** Frontend not built
+**Symptom:** 502 error on `/` or "Vite dev server connection failed"
+**Cause:** Vite dev server not running
 **Solution:**
 ```bash
+# Start Vite dev server
 cd client
-npm run build-only
+npm run dev
+
+# Or use run.py which starts all services
+python run.py
 ```
 
 ### API Requests Fail
@@ -659,19 +886,26 @@ When modifying the middleware:
 
 ## Version History
 
-**v1.0.0** (Current)
-- Serves Vue.js frontend from `client/dist`
-- Proxies 30+ API routes to backend
-- Socket.IO bidirectional proxying
-- Hardcoded to Python backend (port 8000)
-- Route mapping configuration (not fully utilized)
-- Health check endpoint
+**v1.1.0** (Current)
+- ✅ Proxies to Vite dev server for dynamic development with HMR
+- ✅ Proxies 30+ API routes to backend
+- ✅ Socket.IO bidirectional proxying
+- ✅ Dynamic backend selection via route mapping
+- ✅ Backend health monitoring every 10s
+- ✅ Comprehensive test suite (141 tests)
+- ✅ Intelligent route-based proxying
+- ✅ Auto-created emulator for testing
 
-**Planned for v1.1.0:**
-- Dynamic backend selection
-- Backend health monitoring
-- Test suite implementation
-- Intelligent route-based proxying
+**v1.0.0** (Legacy)
+- Served Vue.js frontend from `client/dist` (static files)
+- Basic proxy functionality
+- Hardcoded backend routing
+
+**Planned for v1.2.0:**
+- Load balancing across multiple backend instances
+- Request caching for read-only endpoints
+- Performance monitoring dashboard
+- Automatic failover and retry logic
 
 ---
 
