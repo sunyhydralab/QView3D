@@ -32,7 +32,9 @@ class SerialConnection(FabricatorConnection, serial.Serial):
     def __init__(self, port: str, baudrate: int, timeout: float):
         # TODO: undo temp fix and make sure that queryAll doesnt try to re-instantiate the serial connection.
         try:
-            super().__init__(port, baudrate, timeout=timeout)
+            # Set inter_byte_timeout to prevent readline() from returning partial lines
+            # This ensures readline() waits for complete lines instead of timing out mid-transmission
+            super().__init__(port, baudrate, timeout=timeout, inter_byte_timeout=0.1)
         except serial.SerialException as e:
             if not "Access is denied" in str(e):
                 print(f"Failed to open serial connection: {e}")
