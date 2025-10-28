@@ -18,6 +18,11 @@ def checkOK(line, dev):
     line = (line.decode() if isinstance(line, bytes) else line).strip().lower()
     return "ok" in line
 
+def checkFirmware(line, dev):
+    """Check for firmware info response (M115 command)"""
+    line = (line.decode() if isinstance(line, bytes) else line).strip().lower()
+    return "firmware" in line or "cap:" in line or "ok" in line
+
 def checkXYZ(line, dev):
     line = (line.decode() if isinstance(line, bytes) else line).strip().lower()
     return ("x:" in line) and ("y:" in line) and ("z:" in line)

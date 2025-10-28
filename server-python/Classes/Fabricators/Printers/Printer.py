@@ -8,7 +8,7 @@ from time import sleep, time
 from services.app_service import current_app
 from Classes.Fabricators.Device import Device
 from Classes.Jobs import Job
-from Mixins.hasResponseCodes import checkTime, checkExtruderTemp, checkXYZ, checkBedTemp, checkOK
+from Mixins.hasResponseCodes import checkTime, checkExtruderTemp, checkXYZ, checkBedTemp, checkOK, checkFirmware
 from serial.serialutil import SerialException, SerialTimeoutException
 
 
@@ -28,6 +28,7 @@ class Printer(Device, metaclass=ABCMeta):
         "M104": [],  # Set hotend temp
         "M109": [checkExtruderTemp],  # Wait for hotend to reach target temp
         "M114": [checkXYZ],  # Get current position
+        "M115": [checkFirmware],  # Get firmware info
         "M140": [],  # Set bed temp
         "M190": [checkBedTemp],  # Wait for bed to reach target temp
     }
