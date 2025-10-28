@@ -299,6 +299,9 @@ def install_software(current_os: str):
         cwd=CLIENT_LOCAL_PATH
     )
 
+    # Build client after installing dependencies
+    build_client()
+
     # Install JavaScript server dependencies
     subprocess.run(
         "npm i",

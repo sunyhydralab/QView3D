@@ -69,46 +69,47 @@ class Printer(Device, metaclass=ABCMeta):
                     pass
                     return True
 
-                lines = g.readlines()
-
-                #  Time handling
-                comment_lines = [line for line in lines if line.strip() and line.startswith(";")]
-
+                # First pass: Quick metadata scan (streaming, no full load)
+                total_lines = 0
                 max_layer_height = 0
-                for i in reversed(range(len(comment_lines))):
-                    # Check if the line contains ";LAYER_CHANGE"
-                    if ";LAYER_CHANGE" in comment_lines[i]:
-                        # Check if the next line exists
-                        if i < len(comment_lines) - 1:
-                            # Save the next line
-                            line = comment_lines[i + 1]
-                            # Use regex to find the numerical value after ";Z:"
-                            match = re.search(r";Z:(\d+\.?\d*)", line)
-                            if match:
-                                max_layer_height = float(match.group(1))
-                                break
+                max_layer_height_candidate = None
+                comment_lines = []
+
+                # Stream through file once to gather metadata
+                for line in g:
+                    line_stripped = line.strip()
+                    if not line_stripped or line_stripped.startswith(";"):
+                        if line_stripped.startswith(";"):
+                            comment_lines.append(line_stripped)
+                            # Check for layer height on the fly
+                            if ";LAYER_CHANGE" in line_stripped:
+                                max_layer_height_candidate = line_stripped
+                            elif max_layer_height_candidate and ";Z:" in line_stripped:
+                                match = re.search(r";Z:(\d+\.?\d*)", line_stripped)
+                                if match:
+                                    max_layer_height = max(max_layer_height, float(match.group(1)))
+                                max_layer_height_candidate = None
+                        continue
+                    total_lines += 1
+
                 if max_layer_height != 0:
                     job.setMaxLayerHeight(max_layer_height)
 
+                # Estimate time from comments
                 total_time = job.getTimeFromFile(comment_lines)
                 job.setTime(total_time, 0)
-                # job.setTime(total_time, 0)
 
-                # Only send the lines that are not empty and don't start with ";"
-                # so we can correctly get the progress
-                command_lines = [
-                    line for line in lines if line.strip() and not line.startswith(";")
-                ]
-                # store the total to find the percentage later on
-                total_lines = len(command_lines)
-                # set the sent lines to 0
+                # Reset file pointer for second pass (actual printing)
+                g.seek(0)
+
+                # Now stream line-by-line for printing (no memory overhead)
                 sent_lines = 0
-                # previous line to check for layer height
+                # Stream G-code line by line (memory efficient for large files)
                 prev_line = ""
-                # Replace file with the path to the file. "r" means read mode. 
-                # now instead of reading from 'g', we are reading line by line
                 current_app.socketio.emit("console_update", {"message": "Starting Job", "level": "info", "fabricator_id": self.dbID})
-                for line in lines:
+
+                # Second pass: Stream and execute commands
+                for line in g:
                     if self.status == "cancelled":
                         self.sendGcode(self.cancelCMD)
                         self.verdict = "cancelled"

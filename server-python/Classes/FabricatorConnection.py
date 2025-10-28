@@ -30,7 +30,8 @@ class SocketConnection(FabricatorConnection):
     def __init__(self, port, baudrate, websocket_connection, fabricator_id, timeout=10.0):
         self._fabricator_id = fabricator_id
         self._timeout = timeout
-        self._receive_queue = Queue(maxsize=100)
+        # Large buffer for streaming thousands of G-code commands
+        self._receive_queue = Queue(maxsize=10000)
         self._last_response = None
         self._is_open = True
         self._response_event = threading.Event()
