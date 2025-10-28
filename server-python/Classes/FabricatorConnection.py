@@ -117,16 +117,17 @@ class SocketConnection(FabricatorConnection):
         if not self._is_open:
             raise ConnectionError("WebSocket connection is not open")
 
-        # Use a local event and queue for this specific read operation
+        # Generate unique listener ID for this read operation
+        listener_id = f"message_received_{self._fabricator_id}_{uuid.uuid4()}"
 
         def on_message_received(client_id, message):
             try:
                 data = json.loads(message)
 
-                
+
                 event_type = data.get("event", "unknown")
                 info = data.get("data", {})
-                
+
                 # Handle different data formats
                 if isinstance(info, str):
                     try:
@@ -138,21 +139,22 @@ class SocketConnection(FabricatorConnection):
                     response = info.get("response", str(info))
                 else:
                     response = str(info)
-                    
+
                 # Log ALL events and process ALL of them
                 print(f"Received event: {event_type}, response: {response}")
                 self._receive_queue.put(response)
                 self._response_event.set()
-                
+
             except json.JSONDecodeError as e:
                 print(f"Failed to decode message: {message} - {e}")
             except Exception as e:
                 print(f"Error in message handling: {e}")
-                
+
 
         try:
             from services.app_service import current_app
-            current_app.event_emitter.on("message_received", on_message_received)
+            # Register with unique ID
+            current_app.event_emitter.on(listener_id, on_message_received)
 
             response = self._receive_queue.get(timeout=1.0)
             self._last_response = response.encode('utf-8') if isinstance(response, str) else response
@@ -166,9 +168,9 @@ class SocketConnection(FabricatorConnection):
                 print("No responses received yet, returning default 'ok'")
                 return b"ok\n"
         finally:
-            # Unregister the listener to prevent memory leaks
+            # Remove only this specific listener
             from services.app_service import current_app
-            current_app.event_emitter.remove_event("message_received")
+            current_app.event_emitter.off(listener_id, on_message_received)
 
     def close(self):
         """
