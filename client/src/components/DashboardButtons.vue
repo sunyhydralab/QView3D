@@ -40,27 +40,40 @@ if (currentFabricator.queue != undefined) {
 // debouncer for the release job button
 const releaseJobDebouncer: Ref<boolean> = ref(false)
 async function release(key?: number) {
-  if (!releaseJobDebouncer.value) {
-    releaseJobDebouncer.value = true
-    if (currentFabricator.queue == undefined) {addToast("The Queue is undefined.", "error")}
-    if (currentFabricator.queue![0] == undefined) {addToast("The Queue is empty.", "error")}
-    if (currentFabricator.id == undefined) {addToast("The fabricator ID is undefined.", "error")}
-    else{
-      console.debug("release job api call")
-      await releaseJob(currentFabricator.queue![0], currentFabricator.id!, key ?? 3)
-        .then(response => {
-          console.debug(response)
-          if (key != 2) {
-            currentFabricator.queue!.shift()
-          }
-          addToast('Released job', 'success')
-        })
-        .catch(error => {
-          console.error(error)
-          addToast('Error releasing job', 'error')
+  if (releaseJobDebouncer.value) return
+  releaseJobDebouncer.value = true
 
-        })
+  try {
+    if (currentFabricator.queue == undefined) {
+      addToast("The Queue is undefined.", "error")
+      return
     }
+    if (currentFabricator.queue![0] == undefined) {
+      addToast("The Queue is empty.", "error")
+      return
+    }
+    if (currentFabricator.id == undefined) {
+      addToast("The fabricator ID is undefined.", "error")
+      return
+    }
+
+    console.debug("release job api call")
+    await releaseJob(currentFabricator.queue![0], currentFabricator.id!, key ?? 3)
+      .then(response => {
+        console.debug(response)
+        if (key != 2) {
+          currentFabricator.queue!.shift()
+        }
+        addToast('Released job', 'success')
+      })
+      .catch(error => {
+        console.error(error)
+        addToast('Error releasing job', 'error')
+      })
+  } catch (error) {
+    console.error('Failed to release job:', error)
+    addToast('Error releasing job', 'error')
+  } finally {
     releaseJobDebouncer.value = false
   }
 }
@@ -84,6 +97,18 @@ function turnOnline() {
           isOnline.value = true
           updatingFabricatorStatus.value = false
         })
+        .catch(error => {
+          console.error('Failed to turn fabricator online:', error)
+          addToast('Error turning fabricator online', 'error')
+        })
+        .finally(() => {
+          turningOnline.value = false
+          updatingFabricatorStatus.value = false
+        })
+    } else {
+      turningOnline.value = false
+      updatingFabricatorStatus.value = false
+      addToast('Fabricator ID is undefined', 'error')
     }
   }
 
@@ -105,6 +130,18 @@ function turnOffline() {
           isPrinting.value = false
           isPaused.value = false
         })
+        .catch(error => {
+          console.error('Failed to turn fabricator offline:', error)
+          addToast('Error turning fabricator offline', 'error')
+        })
+        .finally(() => {
+          turningOffline.value = false
+          updatingFabricatorStatus.value = false
+        })
+    } else {
+      turningOffline.value = false
+      updatingFabricatorStatus.value = false
+      addToast('Fabricator ID is undefined', 'error')
     }
   }
 }
@@ -119,15 +156,18 @@ function startPrint() {
     if (jobQueue == undefined) {
       startingPrint.value = false
       addToast("The fabricator is currently doing something, please wait", "info")
+      return
     }
     if (jobQueue!.length == 0) {
       startingPrint.value = false
       addToast("This fabricator has no queue", "error")
+      return
     }
     const latestJob: Job = jobQueue![0]
     if (currentFabricator.id == undefined) {
       startingPrint.value = false
       addToast("This fabricator has no ID", "error")
+      return
     }
     addToast('Preparing print', 'info')
     startPrintAPI(latestJob.id, currentFabricator.id!)
@@ -136,6 +176,11 @@ function startPrint() {
         startingPrint.value = false
         isPrinting.value = true
         isPaused.value = false
+      })
+      .catch(error => {
+        console.error('Failed to start print:', error)
+        addToast('Error starting print', 'error')
+        startingPrint.value = false
       })
   }
 }
@@ -154,6 +199,18 @@ function stopPrint() {
           isPrinting.value = false
           isPaused.value = false
         })
+        .catch(error => {
+          console.error('Failed to stop print:', error)
+          addToast('Error stopping print', 'error')
+        })
+        .finally(() => {
+          stoppingPrint.value = false
+          updatingFabricatorStatus.value = false
+        })
+    } else {
+      stoppingPrint.value = false
+      updatingFabricatorStatus.value = false
+      addToast('Fabricator ID is undefined', 'error')
     }
   }
 }
@@ -174,6 +231,18 @@ function pausePrint() {
           updatingFabricatorStatus.value = false
           isPaused.value = true
         })
+        .catch(error => {
+          console.error('Failed to pause print:', error)
+          addToast('Error pausing print', 'error')
+        })
+        .finally(() => {
+          isPausingPrinter.value = false
+          updatingFabricatorStatus.value = false
+        })
+    } else {
+      isPausingPrinter.value = false
+      updatingFabricatorStatus.value = false
+      addToast('Fabricator ID is undefined', 'error')
     }
   }
 
@@ -196,6 +265,18 @@ function unpausePrint() {
           updatingFabricatorStatus.value = false
           isPaused.value = false
         })
+        .catch(error => {
+          console.error('Failed to unpause print:', error)
+          addToast('Error unpausing print', 'error')
+        })
+        .finally(() => {
+          isUnPausingPrinter.value = false
+          updatingFabricatorStatus.value = false
+        })
+    } else {
+      isUnPausingPrinter.value = false
+      updatingFabricatorStatus.value = false
+      addToast('Fabricator ID is undefined', 'error')
     }
   }
 }
