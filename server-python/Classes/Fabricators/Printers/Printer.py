@@ -30,6 +30,7 @@ class Printer(Device, metaclass=ABCMeta):
         "M114": [checkXYZ],  # Get current position
         "M115": [checkFirmware],  # Get firmware info
         "M140": [],  # Set bed temp
+        "M155": [checkFirmware],  # Temperature auto-report (can return Cap: responses)
         "M190": [checkBedTemp],  # Wait for bed to reach target temp
     }
     callablesHashtable = {**Device.callablesHashtable, **callablesHashtable}
