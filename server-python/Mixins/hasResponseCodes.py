@@ -19,9 +19,10 @@ def checkOK(line, dev):
     return "ok" in line
 
 def checkFirmware(line, dev):
-    """Check for firmware info response (M115 command)"""
+    """Check for firmware info response (M115 command) - must read until 'ok'"""
     line = (line.decode() if isinstance(line, bytes) else line).strip().lower()
-    return "firmware" in line or "cap:" in line or "ok" in line
+    # Only accept 'ok' to ensure we read through all Cap: lines
+    return "ok" in line
 
 def checkXYZ(line, dev):
     line = (line.decode() if isinstance(line, bytes) else line).strip().lower()
