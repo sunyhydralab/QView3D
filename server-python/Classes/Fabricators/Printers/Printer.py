@@ -144,7 +144,13 @@ class Printer(Device, metaclass=ABCMeta):
                         if current_app:
                             current_app.socketio.emit("console_update", {"message": "Fabricating...", "level": "info", "fabricator_id": self.dbID})
 
-                    assert self.sendGcode(line, logger=logger), f"Failed to send {line}"
+                    # Send G-code command and check for errors
+                    if not self.sendGcode(line, logger=logger):
+                        error_msg = f"Failed to send G-code: {line.strip()}"
+                        print(f"[Printer] {error_msg}")
+                        logger.error(error_msg)
+                        self.verdict = "error"
+                        return False
 
                     if job.getFilePause() == 1:
                         # self.setStatus("printing")
