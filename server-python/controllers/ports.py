@@ -1,45 +1,37 @@
 from sqlalchemy.exc import SQLAlchemyError
 from flask import Blueprint, jsonify, request
-
 from services.app_service import current_app as app
 from Classes.Fabricators.Device import Device
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.Ports import Ports
 from traceback import format_exc
 
-# Blueprint for ports routes
 ports_bp = Blueprint("ports", __name__)
 
 @ports_bp.route("/getports", methods=["GET"])
 def getPorts():
-    """Get a list of all connected ports."""
     try:
-        ports = Ports.getPorts()
-        return jsonify([port for port in ports])
+        return jsonify([port for port in Ports.getPorts()])
     except Exception as e:
         app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/getfabricators", methods=["GET"])
 def getRegisteredFabricators():
-    """Get a list of all registered fabricators."""
     try:
-        fabricators = Fabricator.queryAll()
-        return jsonify([fab.__to_JSON__() for fab in fabricators])
+        return jsonify([fab.__to_JSON__() for fab in Fabricator.queryAll()])
     except Exception as e:
         app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
 
 @ports_bp.route("/register", methods=["POST"])
 def registerFabricator():
-    """Register a new fabricator with the system."""
     try:
         data = request.get_json()
         printer = data['printer']
         device = printer['device']['serialPort']
         name = printer['name']
 
-        # Create a new fabricator instance using the Fabricator class
         try:
             app.fabricator_list.addFabricator(device, name)
         except AssertionError as ae:
@@ -48,14 +40,12 @@ def registerFabricator():
             print(f"Error adding fabricator: {e}")
             return jsonify({"error": str(e)}), 500
 
-        # Extract just the device port name (e.g., 'ttyACM0' from '/dev/ttyACM0')
         device_port_name = device.strip("/").split("/")[-1]
         new_fabricator = Fabricator.query.filter_by(devicePort=device_port_name).first()
 
         if not new_fabricator:
             return jsonify({"error": "Fabricator was not created in database"}), 500
 
-        # Notify all connected clients that a new printer has been registered
         if app.socketio:
             app.socketio.emit('fabricator_registered', new_fabricator.__to_JSON__())
 
@@ -69,7 +59,6 @@ def registerFabricator():
 
 @ports_bp.route("/deletefabricator", methods=["POST"])
 def deleteFabricator():
-    """Delete a fabricator from the system."""
     try:
         data = request.get_json()
         fabricator_id = data['fabricator_id']
@@ -78,7 +67,6 @@ def deleteFabricator():
             return jsonify({"error": "Fabricator not found"}), 404
 
         if res:
-            # Notify all connected clients that a printer has been disconnected
             if app.socketio:
                 app.socketio.emit('fabricator_disconnected', {'id': fabricator_id})
             return jsonify({"success": True, "message": "Fabricator deleted successfully"})
@@ -90,15 +78,11 @@ def deleteFabricator():
 
 @ports_bp.route("/editname", methods=["POST"])
 def editName():
-    """Edit the name of a registered fabricator."""
     try:
         data = request.get_json()
-        fabricator_id = data['fabricator_id']
-        new_name = data['name']
-
-        fabricator = Fabricator.query.filter_by(dbID=fabricator_id).first()
+        fabricator = Fabricator.query.filter_by(dbID=data['fabricator_id']).first()
         if fabricator:
-            fabricator.setName(new_name)
+            fabricator.setName(data['name'])
             return jsonify({"success": True, "message": "Fabricator name updated successfully"})
         else:
             return jsonify({"error": "Fabricator not found"}), 404
@@ -108,16 +92,12 @@ def editName():
 
 @ports_bp.route("/diagnose", methods=["POST"])
 def diagnoseFabricator():
-    """Diagnose a fabricator based on its port."""
     try:
         data = request.get_json()
-        device_name = data['device']
-        port = Ports.getPortByName(device_name)
+        port = Ports.getPortByName(data['device'])
         fabricator = app.fabricator_list.getFabricatorByPort(port)
         if fabricator:
-            device = fabricator.device
-            if device is None:
-                device = Fabricator.staticCreateDevice(port)  # Ensure the Fabricator has this method
+            device = fabricator.device if fabricator.device else Fabricator.staticCreateDevice(port)
             if device is not None:
                 assert isinstance(device, Device), f"Device must be an instance of Device: {device} : {type(device)}"
                 diagnosis_result = device.diagnose()
@@ -132,17 +112,13 @@ def diagnoseFabricator():
 
 @ports_bp.route("/repair", methods=["POST"])
 def repairFabricator():
-    """Repair a fabricator based on its port."""
     try:
         data = request.get_json()
-        device_name = data['device']
-        port = Ports.getPortByName(device_name)
-
+        port = Ports.getPortByName(data['device'])
         if port:
-            fabricator = Fabricator.staticCreateDevice(port)  # Ensure the Fabricator has this method
+            fabricator = Fabricator.staticCreateDevice(port)
             if fabricator:
-                repair_result = fabricator.repair()
-                return jsonify({"success": True, "message": repair_result})
+                return jsonify({"success": True, "message": fabricator.repair()})
             else:
                 return jsonify({"error": "Failed to create fabricator for repair"}), 500
         else:
@@ -153,24 +129,22 @@ def repairFabricator():
 
 @ports_bp.route("/movehead", methods=["POST"])
 def moveHead():
-    """Move the head of a fabricator. Deprecated if no longer needed."""
     try:
         data = request.get_json()
         port = data['port']
         if port:
             if app:
                 fab = app.fabricator_list.getFabricatorByPort(port)
-                # print(fab if fab else f"No fabricator found in fabricator list, fabricator_list: {app.fabricator_list.fabricators}, threads: {app.fabricator_list.fabricator_threads}")
-                if fab: 
+                if fab:
                     device = fab.device
                 elif port.startswith("EMU"):
                     device = Fabricator.staticCreateDevice(Ports.getPortByName(port), websocket_connection=next(iter(app.emulator_connections.values())))
                 else:
-                    device = Fabricator.staticCreateDevice(Ports.getPortByName(port)) 
-            else: 
+                    device = Fabricator.staticCreateDevice(Ports.getPortByName(port))
+            else:
                 device = Fabricator(port).device
             device.connect()
-            result = device.home(isVerbose=False)  # Use home() method from Device
+            result = device.home(isVerbose=False)
             device.disconnect()
             return jsonify({"success": True, "message": "Head move successful"}) if result else jsonify({"success": False, "message": "Head move unsuccessful"})
         else:
@@ -181,11 +155,9 @@ def moveHead():
 
 @ports_bp.route("/movefabricatorlist", methods=["POST"])
 def moveFabricatorList():
-    """Change the order of fabricators."""
     try:
         data = request.get_json()
-        fabricator_ids = data['fabricator_ids']
-        result = app.fabricator_list.moveFabricatorList(fabricator_ids)
+        result = app.fabricator_list.moveFabricatorList(data['fabricator_ids'])
         return jsonify({"success": True, "message": "Fabricator list successfully updated"}) if result != "none" else jsonify({"success": False, "message": "Fabricator list not updated"})
     except Exception as e:
         app.handle_errors_and_logging(e)
@@ -193,11 +165,9 @@ def moveFabricatorList():
 
 @ports_bp.route("/getfabricatorbyid", methods=["POST"])
 def getFabricatorById():
-    """Get a fabricator by its ID."""
     try:
         data = request.get_json()
-        fabricator_id = data['fabricator_id']
-        fabricator = app.fabricator_list.getFabricatorById(fabricator_id)
+        fabricator = app.fabricator_list.getFabricatorById(data['fabricator_id'])
         if fabricator:
             return jsonify({"success": True, "fabricator": fabricator.__to_JSON__()})
         else:
@@ -208,25 +178,12 @@ def getFabricatorById():
 
 @ports_bp.route("/fabricators/models", methods=["GET"])
 def getFabricatorModels():
-    """Get unique printer models from the database."""
     try:
-        # Get all fabricators
         fabricators = Fabricator.queryAll()
-
-        # Extract unique models
-        models = set()
-        for fab in fabricators:
-            # Check if fabricator has a model attribute
-            if hasattr(fab, 'model') and fab.model:
-                models.add(fab.model)
-
-        # If no models found, return default list
+        models = {fab.model for fab in fabricators if hasattr(fab, 'model') and fab.model}
         if not models:
             return jsonify(['Prusa MK3', 'Prusa MK4', 'Ender 3', 'MakerBot Replicator'])
-
-        # Return sorted list of unique models
         return jsonify(sorted(list(models)))
     except Exception as e:
         app.handle_errors_and_logging(e)
-        # Return default models on error
         return jsonify(['Prusa MK3', 'Prusa MK4', 'Ender 3', 'MakerBot Replicator'])

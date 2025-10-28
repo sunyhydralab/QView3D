@@ -1,7 +1,5 @@
 import serial
 import serial.tools.list_ports
-from serial.tools.list_ports_common import ListPortInfo
-from serial.tools.list_ports_linux import SysFS
 from Classes.Fabricators.Fabricator import Fabricator
 from Classes.serialCommunication import sendGcode
 from services.app_service import current_app as app
@@ -9,11 +7,7 @@ from Classes.FabricatorConnection import EmuListPortInfo
 
 class Ports:
     @staticmethod
-    def getPorts() -> list[dict]:
-        """
-        Get a list of all connected serial ports in JSON format
-        :rtype: list[dict]
-        """
+    def getPorts():
         ports = serial.tools.list_ports.comports()
         emu_port, emu_name, emu_hwid = app.get_emu_ports()
         if emu_port and emu_name and emu_hwid:
@@ -40,21 +34,10 @@ class Ports:
 
     @staticmethod
     def getListPorts():
-        """
-        Get a list of all connected serial ports.
-        :rtype: list[ListPortInfo | SysFS]
-        """
         return serial.tools.list_ports.comports()
 
     @staticmethod
-    def getPortByName(name: str):
-        """
-        Get a specific port by its device name.
-        :param name: The name of the device.
-        :type name: str
-        :return: The port object
-        :rtype: ListPortInfo | SysFS
-        """
+    def getPortByName(name):
         assert isinstance(name, str), f"Name must be a string: {name} : {type(name)}"
         ports = Ports.getListPorts()
         if len(app.emulator_connections) > 0:
@@ -68,12 +51,7 @@ class Ports:
         return None
 
     @staticmethod
-    def getPortByHwid(hwid: str):
-        """
-        Get a specific port by its hardware ID.
-        :param str hwid: The hardware ID of the device.
-        :rtype: ListPortInfo | SysFS | None
-        """
+    def getPortByHwid(hwid):
         assert isinstance(hwid, str), f"HWID must be a string: {hwid} : {type(hwid)}"
         ports = Ports.getListPorts()
         for port in ports:
@@ -83,10 +61,6 @@ class Ports:
 
     @staticmethod
     def getRegisteredFabricators():
-        """
-        Get a list of all registered fabricators.
-        :rtype: list[Fabricator]
-        """
         fabricators = Fabricator.queryAll()
         registered_fabricators = []
         for fab in fabricators:
@@ -96,12 +70,7 @@ class Ports:
         return registered_fabricators
 
     @staticmethod
-    def diagnosePort(port: ListPortInfo | SysFS) -> str:
-        """
-        Diagnose a port to check if it is functional by sending basic G-code commands.
-        :param ListPortInfo | SysFS port: The port to diagnose
-        :rtype: str
-        """
+    def diagnosePort(port):
         try:
             if app:
                 device = app.fabricator_list.getFabricatorByPort(port).device

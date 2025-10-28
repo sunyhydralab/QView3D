@@ -1,17 +1,16 @@
-from operator import or_
+import csv
+import gzip
 import os
 import re
-from config.db import db
-from Classes.Issues import Issue  # assuming the Issue model is defined in the issue.py file in the models directory
-from datetime import timezone, timedelta
-from flask import jsonify
-from services.app_service import current_app
-from traceback import format_exc
+from datetime import datetime, timedelta, timezone
+from operator import or_
+
+from flask import jsonify, send_file
 from sqlalchemy.exc import SQLAlchemyError
-from datetime import datetime
-import gzip
-import csv
-from flask import send_file
+
+from config.db import db
+from Classes.Issues import Issue
+from services.app_service import current_app
 
 class Job(db.Model):
     __tablename__ = 'Jobs'
@@ -20,26 +19,14 @@ class Job(db.Model):
     file = db.Column(db.LargeBinary(16777215), nullable=True)
     name = db.Column(db.String(50), nullable=False)
     status = db.Column(db.String(50), nullable=False)
-    date = db.Column(db.DateTime, default=lambda: datetime.now(
-        timezone.utc).astimezone(), nullable=False)
-    # foreign key relationship to match jobs to the printer printed on
+    date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).astimezone(), nullable=False)
     fabricator_id = db.Column(db.Integer, db.ForeignKey('Fabricators.dbID'), nullable=True)
-
     fabricator = db.relationship('Fabricator', backref='Job')
-
     fabricator_name = db.Column(db.String(50), nullable=True)
-
-    # Queue position for explicit ordering (persists across restarts)
     queue_position = db.Column(db.Integer, nullable=True)
-
-    # TeamDynamics ID
     td_id = db.Column(db.Integer, nullable=True)
-
-    # FK to issue
     error_id = db.Column(db.Integer, db.ForeignKey('Issues.id'), nullable=True)
     error = db.relationship('Issue', backref='Issue')
-
-    # comments
     comments = db.Column(db.String(500), nullable=True)
 
     file_name_original = db.Column(db.String(50), nullable=False)
@@ -49,12 +36,11 @@ class Job(db.Model):
     current_layer_height = 0.0
     filament = ''
     released = False
-    filePause = False
+    file_pause = False
     progress = 0.0
     sent_lines = 0
     time_started = 0
     extruded = 0
-    # total, eta, timestart, pause time
     job_time = [0, datetime.min, datetime.min, datetime.min]
     job_logger = None
 
@@ -70,7 +56,7 @@ class Job(db.Model):
         self.file_path = None
         self.favorite = favorite
         self.released = 0
-        self.filePause = 0
+        self.file_pause = 0
         self.progress = 0.0
         self.sent_lines = 0
         self.time_started = 0
@@ -98,7 +84,7 @@ class Job(db.Model):
             "sent_lines": self.sent_lines,
             "favorite": self.favorite,
             "released": self.released,
-            "file_pause": self.filePause,
+            "file_pause": self.file_pause,
             "comments": self.comments,
             "extruded": self.extruded,
             "td_id": self.td_id,
@@ -526,13 +512,12 @@ class Job(db.Model):
         return self.id
 
     def getFilePause(self):
-        return self.filePause
+        return self.file_pause
 
     def setFilePause(self, pause: bool):
-        self.filePause = pause
+        self.file_pause = pause
         if current_app:
-            current_app.socketio.emit('file_pause_update', {
-                'job_id': self.id, 'file_pause': self.filePause})
+            current_app.socketio.emit('file_pause_update', {'job_id': self.id, 'file_pause': self.file_pause})
 
     def getExtruded(self) -> int:
         return self.extruded

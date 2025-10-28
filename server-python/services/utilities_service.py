@@ -3,16 +3,14 @@ import subprocess
 class UtilitiesService:
     def __init__(self, app):
         self.app = app
-    
+
     def get_emu_ports(self):
-        """Get emulator ports information."""
         fake_device = next(iter(self.app.emulator_connections.values()), None)
         if fake_device and hasattr(fake_device, 'fake_port'):
             return [fake_device.fake_port, fake_device.fake_name, fake_device.fake_hwid]
         return [None, None, None]
 
     def run_go_command(self, command):
-        """Run Go command and return output."""
         try:
             result = subprocess.run(
                 command,

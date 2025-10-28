@@ -1,6 +1,4 @@
-import os
 import threading
-
 from flask import jsonify, Response
 from serial.tools.list_ports_common import ListPortInfo
 from serial.tools.list_ports_linux import SysFS
@@ -11,91 +9,66 @@ from Classes.Fabricators.Device import Device
 from typing_extensions import TextIO
 from Classes.Jobs import Job
 from Mixins.hasEndingSequence import hasEndingSequence
-from config.config import Config
 from config.db import db
 from datetime import datetime, timezone
 from services.app_service import current_app
-from config.paths import root_path
 
 class Fabricator(db.Model):
     __tablename__ = "Fabricators"
-    """Fabricator class for the database. This is used for all io operations with the database, the hardware, and the front end."""
     dbID = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(50), nullable=False)
     hwid = db.Column(db.String(150), nullable=False)
     name = db.Column(db.String(50), nullable=False)
-    date = db.Column(
-        db.DateTime,
-        default=lambda: datetime.now(timezone.utc).astimezone(),
-        nullable=False,
-    )
+    date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).astimezone(), nullable=False)
     devicePort = db.Column(db.String(50), nullable=False)
-    model = db.Column(db.String(100), nullable=True)  # Printer model (e.g., "Prusa MK4", "Ender 3")
+    model = db.Column(db.String(100), nullable=True)
 
     @reconstructor
     def init_on_load(self):
-        """
-        SQLAlchemy reconstructor - called after loading an object from the database.
-        Initializes runtime attributes that aren't persisted in the database.
-        This ensures that attributes like queue, status, device, and error are always
-        initialized, regardless of how the object is loaded from the database.
-        """
         from Classes.Queue import Queue
-        # Initialize thread safety lock for status
         self._status_lock = threading.RLock()
-        self._status = 'offline'  # Default to offline since we don't have port connection yet
-        # Initialize runtime attributes that aren't stored in the database
+        self._status = 'offline'
         if not hasattr(self, 'queue') or self.queue is None:
             self.queue = Queue()
         if not hasattr(self, 'device'):
-            self.device = None  # Will be None until port is reconnected
+            self.device = None
         if not hasattr(self, 'error'):
             self.error = None
 
-    def __init__(self, port: ListPortInfo | SysFS | None = None, name: str = "", consoleLogger: TextIO | None = None, fileLogger: str | None = None, devicePort: str | None = None):
-        """
-        Initialize a new Fabricator instance.
-        :param ListPortInfo | SysFS | None port: the serial port to connect to (for real printers)
-        :param str name: the name to show the frontend
-        :param TextIO | None consoleLogger: the console to log to
-        :param str | None fileLogger: the file path to log to
-        :param str | None devicePort: the device port name (for emulated printers with EMU_ prefix)
-        """
-        # Handle emulated printers (devicePort provided directly, no port object)
+    def __init__(self, port=None, name="", consoleLogger=None, fileLogger=None, devicePort=None):
         if devicePort is not None and devicePort.startswith('EMU_'):
             from Classes.Queue import Queue
             self.dbID = None
-            self.queue: Queue = Queue()
+            self.queue = Queue()
             self._status_lock = threading.RLock()
-            self._status: str = "ready"
-            self.hwid = devicePort  # Use EMU_ port as hwid for emulated printers
+            self._status = "ready"
+            self.hwid = devicePort
             self.description = "Emulated Printer"
-            self.name: str = name if name else "Emulated Printer"
+            self.name = name if name else "Emulated Printer"
             self.devicePort = devicePort
-            self.device = None  # Emulated printers don't have real devices
-            self.date = datetime.now(timezone.utc).astimezone()  # Initialize date for emulated printers
+            self.device = None
+            self.date = datetime.now(timezone.utc).astimezone()
             self.error = None
             return
 
-        # Handle real printers with port objects
         if port is None:
             return
         assert isinstance(port, ListPortInfo) or isinstance(port, SysFS), f"Invalid port type: {type(port)}"
         assert isinstance(name, str), f"Invalid name type: {type(name)}"
         from Classes.Queue import Queue
-        self.dbID = None  # Initialize dbID
-        self.queue: Queue = Queue()
+        self.dbID = None
+        self.queue = Queue()
         self._status_lock = threading.RLock()
-        self._status: str = "configuring"
+        self._status = "configuring"
         self.hwid = port.hwid.split(" LOCATION=")[0]
         self.description = "New Fabricator"
-        self.name: str = name
+        self.name = name
         self.devicePort = port.device.strip("/").split("/")[-1]
         dbFab = Fabricator.query.filter_by(hwid=self.hwid).first()
         if dbFab is None:
             db.session.add(self)
             db.session.commit()
-            self.dbID = self.dbID  # Set dbID after committing to the database
+            self.dbID = self.dbID
         else:
             self.name = dbFab.name
             self.description = dbFab.description
@@ -113,23 +86,15 @@ class Fabricator(db.Model):
 
     @property
     def status(self):
-        """Thread-safe getter for status attribute."""
         with self._status_lock:
             return self._status
 
     @status.setter
     def status(self, value):
-        """Thread-safe setter for status attribute."""
         with self._status_lock:
             self._status = value
 
-    def __to_JSON__(self) -> dict:
-        """
-        Converts the Fabricator object to a JSON object that can be sent to the front end
-        :return: JSON object
-        :rtype: dict
-        """
-        # Safely get queue data
+    def __to_JSON__(self):
         queue_data = []
         if hasattr(self, 'queue') and self.queue is not None:
             try:
@@ -140,7 +105,6 @@ class Fabricator(db.Model):
             except Exception:
                 queue_data = []
 
-        # Safely get current job
         current_job = None
         if hasattr(self, 'queue') and self.queue is not None:
             try:
@@ -149,7 +113,6 @@ class Fabricator(db.Model):
             except Exception:
                 current_job = None
 
-        # Safely get device data
         device_data = None
         if hasattr(self, 'device') and self.device is not None:
             try:
@@ -172,12 +135,7 @@ class Fabricator(db.Model):
         }
 
     @staticmethod
-    def getModelFromGcodeCommand(serialPort: ListPortInfo | SysFS | None) -> str:
-        """
-        returns the model of the printer based on the response to M997, NOTE: this is meant for use with Ender printers only for now.
-        :param ListPortInfo | SysFS | None serialPort: the serial port to connect to
-        :rtype: str
-        """
+    def getModelFromGcodeCommand(serialPort):
         testName = FabricatorConnection.staticCreateConnection(port=serialPort.device, baudrate=115200, timeout=60)
         testName.write(b"M997\n")
         while True:
@@ -190,16 +148,7 @@ class Fabricator(db.Model):
         return response
 
     @staticmethod
-    def staticCreateDevice(serialPort: ListPortInfo | SysFS | None, consoleLogger: TextIO | None = None, fileLogger: str | None = None, websocket_connection=None) -> Device | None:
-        """
-        creates the correct printer object based on the serial port info
-        :param Websocket | None websocket_connection: the websocket connection to the emulator, if it exists
-        :param ListPortInfo | SysFS | None serialPort: the serial port info
-        :param TextIO | None consoleLogger: the console stream to output to
-        :param str | None fileLogger: the file path to log to
-        :return: device without a fabricator object
-        :rtype: Device | None
-        """
+    def staticCreateDevice(serialPort, consoleLogger=None, fileLogger=None, websocket_connection=None):
         assert serialPort is not None, "Serial port is None"
         from Classes.Fabricators.Printers.Ender.EnderPrinter import EnderPrinter
         from Classes.Fabricators.Printers.MakerBot.MakerBotPrinter import MakerBotPrinter
@@ -231,21 +180,9 @@ class Fabricator(db.Model):
             if serialPort.pid == Replicator2.PRODUCTID:
                 return Replicator2(100000, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=False, websocket_connection=websocket_connection)
         else:
-            #TODO: assume generic printer, do stuff
             return None
 
-    def createDevice(self, serialPort: ListPortInfo | SysFS | None, consoleLogger: TextIO | None = None, fileLogger: str | None = None, addLogger: bool = False, websocket_connection=None, name: str = None) -> Device | None:
-        """
-        creates the correct printer object based on the serial port info
-        :param WebSocket | None websocket_connection: the websocket connection to the emulator, if it exists
-        :param ListPortInfo | SysFS | None serialPort: the serial port info
-        :param TextIO | None consoleLogger: the console stream to output to
-        :param str | None fileLogger: the file path to output file logs to
-        :param bool addLogger: whether to add a logger to the device
-        :param str name: the name of the fabricator for the device to reference
-        :return: the fabricator object
-        :rtype: Device | None
-        """
+    def createDevice(self, serialPort, consoleLogger=None, fileLogger=None, addLogger=False, websocket_connection=None, name=None):
         if serialPort is None:
             return None
         assert isinstance(self, Fabricator), f"self is not a Fabricator object: {self}"
@@ -282,26 +219,13 @@ class Fabricator(db.Model):
             else:
                 return None
         else:
-            #TODO: assume generic printer, do stuff
-            # Using generic printer
             return None
 
     @classmethod
-    def queryAll(cls) -> list["Fabricator"]:
-        """
-        Returns all fabricators in the database as a list of the Fabricator objects.
-        Runtime attributes (queue, status, device, error) are automatically initialized
-        by the @reconstructor method when loading from the database.
-        :return: list of Fabricator objects in the DB.
-        :rtype: list[Fabricator]
-        """
+    def queryAll(cls):
         return cls.query.all()
 
-    def begin(self) -> bool:
-        """
-        starts the fabrication process
-        :rtype: bool
-        """
+    def begin(self):
         try:
             if not self.device.serialConnection.is_open: assert self.device.connect(), "Failed to connect"
             assert self.device.serialConnection.is_open, "Serial connection is not open"
@@ -311,10 +235,8 @@ class Fabricator(db.Model):
             assert self.queue[0] is not None, "Job is None"
             self.checkValidJob()
             assert self.status != "error", "Invalid job"
-            # if isinstance(self.device, hasStartupSequence):
-            #     self.device.startupSequence()
             assert self.setStatus("printing"), "Failed to set status to printing"
-            self.error = self.device.parseGcode(self.queue[0]) # this is the actual command to read the file and fabricate.
+            self.error = self.device.parseGcode(self.queue[0])
             job_logger = self.queue[0].getLogger()
             self.handleVerdict()
             return True
@@ -324,14 +246,8 @@ class Fabricator(db.Model):
             current_app.socketio.emit("error_update", {"fabricator_id": self.dbID, "job_id": self.queue[0].id ,"error": str(e)})
             return False
 
-    def pause(self) -> bool:
-        """
-        pauses the fabrication process if the fabricator supports it
-        :rtype: bool
-        :raises AssertionError: if the device doesn't support pausing, or if the fabricator isn't paused despite being capable of it.
-        """
-        assert isinstance(self.device,
-                          Device), f"Device is not a Device object or subclass: {self.device}, type: {type(self.device)}"
+    def pause(self):
+        assert isinstance(self.device, Device), f"Device is not a Device object or subclass: {self.device}, type: {type(self.device)}"
         if not self.device.pauseCMD:
             return current_app.handle_errors_and_logging("Fabricator doesn't support pausing", self)
         if self.status != "printing":
@@ -340,14 +256,8 @@ class Fabricator(db.Model):
         self.setStatus("paused")
         return self.status == self.device.status == "paused"
 
-    def resume(self) -> bool:
-        """
-        resumes the fabrication process if the fabricator supports it
-        :rtype: bool
-        :raises AssertionError: if the device doesn't support resuming, or if the fabricator hasn't resumed despite being capable of it.
-        """
-        assert isinstance(self.device,
-                          Device), f"Device is not a Device object or subclass: {self.device}, type: {type(self.device)}"
+    def resume(self):
+        assert isinstance(self.device, Device), f"Device is not a Device object or subclass: {self.device}, type: {type(self.device)}"
         if not self.device.resumeCMD:
             return current_app.handle_errors_and_logging("Fabricator doesn't support pausing", self)
         if self.status != "paused":
@@ -355,12 +265,7 @@ class Fabricator(db.Model):
         self.setStatus("printing")
         return self.status == self.device.status == "printing"
 
-    def cancel(self) -> bool:
-        """
-        cancels the fabrication process
-        :rtype: bool
-        :raises AssertionError: if the fabricator isn't printing, or if the fabricator hasn't cancelled despite being capable of it
-        """
+    def cancel(self):
         try:
             assert self.queue[0] is not None, "Job is None"
             assert self.device is not None, "Device is None"
@@ -371,28 +276,17 @@ class Fabricator(db.Model):
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self.device.logger)
 
-    def getStatus(self) -> str:
-        """
-        gets the status of the fabricator
-        :rtype: str
-        """
+    def getStatus(self):
         return self.status
 
-    def setStatus(self, newStatus: str) -> bool:
-        """
-        sets the status of the fabricator
-        :param str newStatus: new status to set
-        :rtype: bool
-        """
+    def setStatus(self, newStatus):
         try:
             assert newStatus in ["idle", "printing", "paused", "complete", "error", "cancelled", "misprint", "ready", "offline"], f"Invalid status: {newStatus}"
             assert self.device is not None, "Device is None"
             if self.status == "error" and newStatus != "error":
                 self.device.hardReset(newStatus)
-            # this is a hack to make sure that the serial connection is open before setting the status to ready,
-            # this should be a temp fix until the serial connection is handled better
             if newStatus == "ready":
-                if  self.device.serialConnection is None or not self.device.serialConnection.is_open: assert self.device.connect(), "Failed to connect"
+                if self.device.serialConnection is None or not self.device.serialConnection.is_open: assert self.device.connect(), "Failed to connect"
             elif newStatus == "offline":
                 if self.device.serialConnection is not None and self.device.serialConnection.is_open: assert self.device.disconnect(), "Failed to disconnect"
             self.status = newStatus
@@ -402,17 +296,9 @@ class Fabricator(db.Model):
                     self.queue[0].status = newStatus
                     db.session.commit()
             if current_app:
-                # Notify all connected clients that this printer's status has changed
-                current_app.socketio.emit(
-                    "status_update", {"fabricator_id": self.dbID, "status": newStatus}
-                )
-
-                # Emit pause capability status - printer can only be paused when actively printing
+                current_app.socketio.emit("status_update", {"fabricator_id": self.dbID, "status": newStatus})
                 can_pause = newStatus == "printing"
-                current_app.socketio.emit(
-                    "can_pause", {"fabricator_id": self.dbID, "canPause": can_pause}
-                )
-
+                current_app.socketio.emit("can_pause", {"fabricator_id": self.dbID, "canPause": can_pause})
                 if len(self.queue) > 0 and self.queue[0] is not None:
                     Job.update_job_status(self.queue[0].id, newStatus)
             else:
@@ -422,26 +308,19 @@ class Fabricator(db.Model):
             return current_app.handle_errors_and_logging(e, self.device.logger)
 
     def resetToIdle(self):
-        #TODO: send message to front end insuring that the print bed is clear and that the job is done
         self.setStatus("idle")
 
     def handleVerdict(self):
-        """handles the verdict of the device, this is used for handling the completion of a job"""
         assert self.device.verdict in ["complete", "error", "cancelled", "misprint"], f"Invalid verdict: {self.device.verdict}"
         assert self.queue[0] is not None, "Job is None"
         if self.device.verdict == "complete":
             self.setStatus("complete")
             if current_app:
-                current_app.socketio.emit(
-                    "fabricator_status_update", {"id": self.dbID, "status": "complete"}
-                )
+                current_app.socketio.emit("fabricator_status_update", {"id": self.dbID, "status": "complete"})
         elif self.device.verdict == "error":
             self.setStatus("error")
             if current_app:
-                current_app.socketio.emit(
-                    "fabricator_status_update", {"id": self.dbID, "status": "error"}
-                )
-            # create issue
+                current_app.socketio.emit("fabricator_status_update", {"id": self.dbID, "status": "error"})
             from Classes.Issues import Issue
             Issue.create_issue(f"CODE ISSUE: Print Failed: {self.name} - {self.queue[0].file_name_original}", self.error, self.queue[0].id)
             self.getQueue().deleteJob(self.queue[0].id, self.dbID)
@@ -451,30 +330,17 @@ class Fabricator(db.Model):
             else: self.device.home()
             self.setStatus("cancelled")
             if current_app:
-                current_app.socketio.emit(
-                    "fabricator_status_update", {"id": self.dbID, "status": "cancelled"}
-                )
+                current_app.socketio.emit("fabricator_status_update", {"id": self.dbID, "status": "cancelled"})
             self.queue.removeJob()
         elif self.device.verdict== "misprint":
             self.setStatus("misprint")
             if current_app:
-                current_app.socketio.emit(
-                    "fabricator_status_update", {"id": self.dbID, "status": "misprint"}
-                )
+                current_app.socketio.emit("fabricator_status_update", {"id": self.dbID, "status": "misprint"})
 
-    def getName(self) -> str:
-        """
-        gets the name of the fabricator
-        :rtype: str
-        """
+    def getName(self):
         return self.name
 
-    def setName(self, name: str) -> Response:
-        """
-        sets the name of the fabricator
-        :param str name: new name to set
-        :rtype: Response
-        """
+    def setName(self, name):
         try:
             Fabricator.query.filter_by(hwid=self.hwid).first().name = name
             self.name = name
@@ -499,7 +365,6 @@ class Fabricator(db.Model):
         return self.queue
 
     def checkValidJob(self):
-        """checks if the job is valid for the fabricator"""
         try:
             assert self.queue[0] is not None, "Job is None"
             assert self.device is not None, "Device is None"
@@ -509,29 +374,22 @@ class Fabricator(db.Model):
             from Classes.Fabricators.CNCMachines.CNCMachine import CNCMachine
             from Classes.Fabricators.LaserCutters.LaserCutter import LaserCutter
             if isinstance(self.device, Printer):
-                # Default values for filament type, diameter, and nozzle diameter
-                if self.device.filamentType is None: 
+                if self.device.filamentType is None:
                     self.device.filamentType = settingsDict.get("filament_type", "PLA")
-                if self.device.filamentDiameter is None: 
+                if self.device.filamentDiameter is None:
                     self.device.filamentDiameter = float(settingsDict.get("filament_diameter", "1.75"))
-                if self.device.nozzleDiameter is None: 
+                if self.device.nozzleDiameter is None:
                     self.device.nozzleDiameter = float(settingsDict.get("nozzle_diameter", "0.4"))
-                
-                # Print warnings instead of assertions. The assertions were causing generic prints to have issues.
+
                 if "filament_type" in settingsDict and self.device.filamentType != settingsDict["filament_type"]:
                     print(f"WARNING: Filament type mismatch: {self.device.filamentType} != {settingsDict['filament_type']}")
                 if "filament_diameter" in settingsDict and self.device.filamentDiameter != float(settingsDict["filament_diameter"]):
                     print(f"WARNING: Filament diameter mismatch: {self.device.filamentDiameter} != {float(settingsDict['filament_diameter'])}")
                 if "nozzle_diameter" in settingsDict and self.device.nozzleDiameter != float(settingsDict["nozzle_diameter"]):
                     print(f"WARNING: Nozzle diameter mismatch: {self.device.nozzleDiameter} != {float(settingsDict['nozzle_diameter'])}")
-                
             elif isinstance(self.device, CNCMachine):
-                # if self.device.bitDiameter is not None and self.device.bitDiameter != float(settingsDict["bit_diameter"]):
-                #     return False
                 pass
             elif isinstance(self.device, LaserCutter):
-                # if self.device.laserPower is not None and self.device.laserPower != int(settingsDict["laser_power"]):
-                #     return False
                 pass
         except AssertionError as e:
             current_app.handle_errors_and_logging(e, self.device.logger)
@@ -540,12 +398,7 @@ class Fabricator(db.Model):
             self.queue[0] = None
 
 
-def getFileConfig(file: str) -> dict:
-    """
-    Get the config lines from the job file.
-    :param str file: the file path to the job file
-    :rtype: dict
-    """
+def getFileConfig(file):
     with open(file, 'r') as f:
         lines = f.readlines()
     comment_lines = [line.strip().lstrip(';').strip() for line in lines if line.strip().startswith(';') or ':' in line]

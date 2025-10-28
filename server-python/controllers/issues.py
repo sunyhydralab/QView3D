@@ -26,24 +26,14 @@ def getIssueByJob():
 def createIssue():
     try:
         data = request.get_json()
-
-        # Support both old format (issue string) and new format (title, description, etc.)
-        issue = data.get('issue', None)  # Legacy field
-        title = data.get('title', None)
-        description = data.get('description', None)
-        severity = data.get('severity', 'medium')
-        category = data.get('category', 'software')
-        fabricator_id = data.get('fabricator_id', None)
-        job_id = data.get('job_id', None) or data.get('job', None)  # Support both field names
-
         return Issue.create_issue(
-            issue=issue,
-            job_id=job_id,
-            title=title,
-            description=description,
-            severity=severity,
-            category=category,
-            fabricator_id=fabricator_id
+            issue=data.get('issue', None),
+            job_id=data.get('job_id', None) or data.get('job', None),
+            title=data.get('title', None),
+            description=data.get('description', None),
+            severity=data.get('severity', 'medium'),
+            category=data.get('category', 'software'),
+            fabricator_id=data.get('fabricator_id', None)
         )
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -53,12 +43,10 @@ def createIssue():
 def deleteIssue():
     try:
         data = request.get_json()
-        # Support both 'id' (frontend uses) and 'issueid' (legacy)
         issue_id = data.get('id') or data.get('issueid')
         if not issue_id:
             return jsonify({"error": "Issue ID is required"}), 400
-        res = Issue.delete_issue(issue_id)
-        return res
+        return Issue.delete_issue(issue_id)
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
@@ -67,38 +55,27 @@ def deleteIssue():
 def editIssue():
     try:
         data = request.get_json()
-        issue_id = data['issueid']
-        issue_new = data['issuenew']
-        res = Issue.edit_issue(issue_id, issue_new)
-        return res
+        return Issue.edit_issue(data['issueid'], data['issuenew'])
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500
 
 @issue_bp.route('/updateissue', methods=["POST"])
 def updateIssue():
-    """Update an existing issue with new field values."""
     try:
         data = request.get_json()
         issue_id = data.get('id')
         if not issue_id:
             return jsonify({"error": "Issue ID is required"}), 400
 
-        title = data.get('title')
-        description = data.get('description')
-        severity = data.get('severity')
-        category = data.get('category')
-        fabricator_id = data.get('fabricator_id')
-        job_id = data.get('job_id')
-
         res = Issue.update_issue(
             issue_id,
-            title=title,
-            description=description,
-            severity=severity,
-            category=category,
-            fabricator_id=fabricator_id,
-            job_id=job_id
+            title=data.get('title'),
+            description=data.get('description'),
+            severity=data.get('severity'),
+            category=data.get('category'),
+            fabricator_id=data.get('fabricator_id'),
+            job_id=data.get('job_id')
         )
         return jsonify(res)
     except Exception as e:
@@ -107,15 +84,12 @@ def updateIssue():
 
 @issue_bp.route('/resolveissue', methods=["POST"])
 def resolveIssue():
-    """Mark an issue as resolved."""
     try:
         data = request.get_json()
         issue_id = data.get('id')
         if not issue_id:
             return jsonify({"error": "Issue ID is required"}), 400
-
-        res = Issue.resolve_issue(issue_id)
-        return jsonify(res)
+        return jsonify(Issue.resolve_issue(issue_id))
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({"error": "Unexpected error occurred"}), 500

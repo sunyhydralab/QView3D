@@ -7,13 +7,11 @@ status_bp = Blueprint("status", __name__)
 @status_bp.route('/getprinters', methods=["GET"])
 def getPrinters():
     try:
-        printers = app.fabricator_list.fabricators  # call the method on the instance
-        return jsonify({"printers": printers})
+        return jsonify({"printers": app.fabricator_list.fabricators})
     except Exception as e:
         app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
 
-# this is the route that will be called by the UI to get the printers that have threads information
 @status_bp.route('/getprinterinfo', methods=["GET"])
 def getPrinterInfo():
     try:
@@ -25,10 +23,8 @@ def getPrinterInfo():
 @status_bp.route('/hardreset', methods=["POST"])
 def hardreset():
     try:
-        data = request.get_json() # get json data
-        id = data['printerid']
-        res = app.fabricator_list.resetThread(id)
-        return res
+        data = request.get_json()
+        return app.fabricator_list.resetThread(data['printerid'])
     except Exception as e:
         app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
@@ -36,11 +32,8 @@ def hardreset():
 @status_bp.route('/queuerestore', methods=["POST"])
 def queueRestore():
     try:
-        data = request.get_json() # get json data
-        id = data['printerid']
-        status = data['status']
-        res = app.fabricator_list.queueRestore(id, status)
-        return res
+        data = request.get_json()
+        return app.fabricator_list.queueRestore(data['printerid'], data['status'])
     except Exception as e:
         app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
@@ -48,10 +41,8 @@ def queueRestore():
 @status_bp.route("/removethread", methods=["POST"])
 def removeThread():
     try:
-        data = request.get_json() # get json data
-        printerid = data['printerid']
-        res = app.fabricator_list.deleteThread(printerid)
-        return res
+        data = request.get_json()
+        return app.fabricator_list.deleteThread(data['printerid'])
     except Exception as e:
         app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
@@ -60,22 +51,15 @@ def removeThread():
 def editName():
     try:
         data = request.get_json()
-        fabricator_id = data['fabricator_id']
-        name = data['newname']
-        return app.fabricator_list.editName(fabricator_id, name)
+        return app.fabricator_list.editName(data['fabricator_id'], data['newname'])
     except Exception as e:
         app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
 
 @status_bp.route("/serverVersion", methods=["GET"])
 def getVersion():
-    res = jsonify(os.environ.get('SERVER_VERSION'))
-    return res
+    return jsonify(os.environ.get('SERVER_VERSION'))
 
 @status_bp.route("/health", methods=["GET"])
 def health():
-    """Health check endpoint for middleware monitoring."""
-    return jsonify({
-        "status": "healthy",
-        "service": "qview3d-python-backend"
-    }), 200
+    return jsonify({"status": "healthy", "service": "qview3d-python-backend"}), 200

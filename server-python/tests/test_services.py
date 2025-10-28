@@ -214,29 +214,6 @@ class TestRoutesService:
             pytest.skip("Routes service not implemented")
 
 
-class TestDiscordService:
-    """Test Discord integration service."""
-
-    def test_discord_service_import(self):
-        """Test Discord service can be imported."""
-        try:
-            from services.discord_service import DiscordService
-            assert True
-        except ImportError:
-            import services.discord_service
-            assert True
-
-    def test_discord_webhook_config(self):
-        """Test Discord webhook configuration."""
-        try:
-            from services.discord_service import DiscordService
-
-            # Discord service should have configuration
-            # May use environment variables
-            assert True
-        except ImportError:
-            pytest.skip("Discord service not implemented")
-
 
 class TestCLIService:
     """Test CLI service."""
@@ -438,7 +415,6 @@ class TestServiceDocumentation:
             'websocket_service',
             'socketio_service',
             'routes_service',
-            'discord_service',
             'cli_service'
         ]
 
