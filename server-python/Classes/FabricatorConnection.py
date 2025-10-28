@@ -60,24 +60,15 @@ class SocketConnection(FabricatorConnection):
     def read(self):
         if not self._is_open:
             raise ConnectionError("WebSocket connection is not open")
-        listener_id = f"message_received_{self._fabricator_id}_{uuid.uuid4()}"
 
-        def on_message_received(_client_id, message):
+        # Use fabricator_id as listener key (no UUID needed)
+        listener_id = f"gcode_response_{self._fabricator_id}"
+
+        def on_message_received(message):
             try:
-                data = json.loads(message)
-                event_type = data.get("event", "unknown")
-                info = data.get("data", {})
-                if isinstance(info, str):
-                    try:
-                        parsed_info = json.loads(info)
-                        response = parsed_info.get("response", info)
-                    except json.JSONDecodeError:
-                        response = info
-                elif isinstance(info, dict):
-                    response = info.get("response", str(info))
-                else:
-                    response = str(info)
-                print(f"Received event: {event_type}, response: {response}")
+                data = json.loads(message) if isinstance(message, str) else message
+                response = data.get("response", "ok")
+                print(f"[SocketConnection] Received response for {self._fabricator_id}: {response}")
                 self._receive_queue.put(response)
                 self._response_event.set()
             except json.JSONDecodeError as e:
@@ -86,6 +77,7 @@ class SocketConnection(FabricatorConnection):
                 print(f"Error in message handling: {e}")
 
         try:
+            # Register listener (will be called by socketio_service when gcode_response arrives)
             current_app.event_emitter.on(listener_id, on_message_received)
             response = self._receive_queue.get(timeout=1.0)
             self._last_response = response.encode('utf-8') if isinstance(response, str) else response
@@ -98,7 +90,7 @@ class SocketConnection(FabricatorConnection):
                 print("No responses received yet, returning default 'ok'")
                 return b"ok\n"
         finally:
-            current_app.event_emitter.off(listener_id, on_message_received)
+            current_app.event_emitter.remove_event(listener_id)
 
     def close(self):
         if self._is_open:

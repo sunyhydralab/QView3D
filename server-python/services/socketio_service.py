@@ -67,6 +67,21 @@ class SocketIOService:
             self.logger.debug(f"Received message from emulator {sid}: {data}")
             self.socketio.emit('emulator_update', data, broadcast=True)
 
+        @self.socketio.on('gcode_response')
+        def handle_gcode_response(data):
+            """Forward emulator gcode responses to event emitter for SocketConnection"""
+            sid = request.sid
+            self.logger.debug(f"Received gcode_response from {sid}: {data}")
+            from services.app_service import current_app
+            import json
+
+            # Get the fabricator port/ID from the response
+            fabricator_id = data.get('port', '')
+            if fabricator_id:
+                # Emit to the specific fabricator's listener
+                listener_id = f"gcode_response_{fabricator_id}"
+                current_app.event_emitter.emit(listener_id, json.dumps(data))
+
     def get_socketio(self):
         return self.socketio
 

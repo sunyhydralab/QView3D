@@ -1,5 +1,3 @@
-import asyncio
-
 class EventEmitter:
     def __init__(self):
         self._events = {}
@@ -12,7 +10,17 @@ class EventEmitter:
     def emit(self, event_name, *args, **kwargs):
         if event_name in self._events:
             for callback in self._events[event_name]:
-                asyncio.create_task(callback(*args, **kwargs))
+                try:
+                    callback(*args, **kwargs)
+                except Exception as e:
+                    print(f"Error in event callback: {e}")
+
+    def off(self, event_name, callback):
+        if event_name in self._events:
+            try:
+                self._events[event_name].remove(callback)
+            except ValueError:
+                pass
 
     def remove_event(self, event_name):
         if event_name in self._events:
