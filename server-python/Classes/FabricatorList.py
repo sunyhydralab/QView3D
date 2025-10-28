@@ -56,8 +56,6 @@ class FabricatorList:
 
             # Start the idle monitor thread
             self.idle_monitor.start()
-            print(f"[FabricatorList] Initialized with {len(self.fabricators)} fabricators")
-            print(f"[FabricatorList] Using new threading architecture: 1 idle monitor thread")
 
     def __iter__(self):
         return iter(self.fabricators)
@@ -93,8 +91,6 @@ class FabricatorList:
         NEW: Stop idle monitor and all active print threads
         OLD: Stopped per-fabricator threads
         """
-        print("[FabricatorList] Tearing down threading...")
-
         # Stop idle monitor
         if hasattr(self, 'idle_monitor') and self.idle_monitor:
             self.idle_monitor.stop()
@@ -103,12 +99,9 @@ class FabricatorList:
         # Stop all active print threads
         if hasattr(self, 'active_print_threads'):
             for fabricator_id, thread in list(self.active_print_threads.items()):
-                print(f"[FabricatorList] Stopping print thread for fabricator {fabricator_id}")
                 thread.stop()
                 thread.join(timeout=5)
             self.active_print_threads.clear()
-
-        print("[FabricatorList] Teardown complete")
 
     def addFabricator(self, serialPortName: str, name: str = ""):
         """

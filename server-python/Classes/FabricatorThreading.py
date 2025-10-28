@@ -48,8 +48,6 @@ class IdleMonitorThread(Thread):
 
     def run(self):
         """Main loop for idle monitoring."""
-        print("[IdleMonitorThread] Starting idle fabricator monitoring...")
-
         with self.app.app_context():
             while not self.terminated:
                 try:
@@ -74,11 +72,8 @@ class IdleMonitorThread(Thread):
                     time.sleep(self._sleep_interval)
 
                 except Exception as e:
-                    print(f"[IdleMonitorThread] Error in monitoring loop: {e}")
                     self.app.handle_errors_and_logging(e)
                     time.sleep(self._sleep_interval)
-
-        print("[IdleMonitorThread] Stopped")
 
     def _is_printing(self, fabricator) -> bool:
         """
@@ -130,10 +125,9 @@ class IdleMonitorThread(Thread):
                     # Temperature read failed, printer may be disconnected
                     if getattr(fabricator, 'status', None) != 'offline':
                         fabricator.status = 'offline'
-                        print(f"[IdleMonitorThread] Printer {fabricator.name} appears offline")
 
-            except Exception as e:
-                print(f"[IdleMonitorThread] Error monitoring temperature for {fabricator.name}: {e}")
+            except Exception:
+                pass  # Temperature monitoring is best-effort
 
     def _check_for_job_start(self, fabricator):
         """
@@ -162,16 +156,13 @@ class IdleMonitorThread(Thread):
                 return
 
             # All conditions met - start the print job!
-            print(f"[IdleMonitorThread] Starting print job {next_job.id} on fabricator {fabricator.name}")
             self.fabricator_list.start_print_job(fabricator, next_job)
 
         except Exception as e:
-            print(f"[IdleMonitorThread] Error checking job start for {fabricator.name}: {e}")
             self.app.handle_errors_and_logging(e)
 
     def stop(self):
         """Stop the idle monitor thread gracefully."""
-        print("[IdleMonitorThread] Stopping...")
         self.terminated = True
 
 
@@ -208,8 +199,6 @@ class PrintWorkerThread(Thread):
 
     def run(self):
         """Execute the print job."""
-        print(f"[PrintWorkerThread] Starting print: Job {self.job.id} on {self.fabricator.name}")
-
         # CRITICAL FIX: Wrap entire operation in app context, including finally block
         with self.app.app_context():
             try:
@@ -227,12 +216,10 @@ class PrintWorkerThread(Thread):
                 # Determine final status
                 if success:
                     final_status = 'complete'
-                    print(f"[PrintWorkerThread] Print completed: Job {self.job.id}")
                 else:
                     final_status = 'error'
                     error_msg = getattr(self.fabricator, 'error', 'Unknown error')
-                    print(f"[PrintWorkerThread] Print failed: Job {self.job.id}")
-                    print(f"[PrintWorkerThread] Error detail: {error_msg}")
+                    print(f"Print failed - Job {self.job.id}: {error_msg}")
 
                 # Update job status
                 self.job.status = final_status
@@ -242,7 +229,7 @@ class PrintWorkerThread(Thread):
                 self.fabricator_list.print_completed(self.fabricator, success)
 
             except Exception as e:
-                print(f"[PrintWorkerThread] Error during print: {e}")
+                print(f"Print error - Job {self.job.id}: {e}")
                 self.app.handle_errors_and_logging(e)
 
                 # Mark job as error
@@ -250,9 +237,8 @@ class PrintWorkerThread(Thread):
                     self.job.status = 'error'
                     from config.db import db
                     db.session.commit()
-                except Exception as db_error:
-                    print(f"[PrintWorkerThread] Failed to mark job as error in database: {db_error}")
-                    # Continue anyway - we still need to notify and clean up
+                except Exception:
+                    pass  # Continue anyway - we still need to notify and clean up
 
                 # Notify of failure
                 self.fabricator_list.print_completed(self.fabricator, False)
@@ -261,13 +247,11 @@ class PrintWorkerThread(Thread):
                 # Remove job from queue (NOW INSIDE APP CONTEXT)
                 try:
                     self.fabricator.queue.removeJob()
-                except Exception as e:
-                    print(f"[PrintWorkerThread] Error removing job from queue: {e}")
+                except Exception:
+                    pass  # Queue cleanup is best-effort
 
                 # Reset fabricator status to ready
                 self.fabricator.status = 'ready'
-
-                print(f"[PrintWorkerThread] Thread terminating: Job {self.job.id}")
 
     def stop(self):
         """

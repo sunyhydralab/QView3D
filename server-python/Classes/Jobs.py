@@ -625,8 +625,6 @@ class Job(db.Model):
         return new_eta
 
     def colorEta(self):
-        print("before ETA: ", self.getJobTime()[1])
-
         now = datetime.now()
         pause_time = self.getJobTime()[3]
         duration = now - pause_time
@@ -641,8 +639,6 @@ class Job(db.Model):
         return total_time
 
     def calculateColorChangeTotal(self) -> float:
-        print("before Total Time: ", self.getJobTime()[0])
-
         now = datetime.now()
         pause_time = self.getJobTime()[3]
         duration = now - pause_time
