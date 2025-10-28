@@ -35,14 +35,36 @@ class SocketConnection(FabricatorConnection):
         self._is_open = True
         self._response_event = threading.Event()
         self._websocket_connection = websocket_connection
-        self._setup_listeners()
+        self._listener_registered = False
         self.emuListPortInfo = EmuListPortInfo(device=port, description="Emulator", hwid="")
         self.port = self.emuListPortInfo.device
         self.baudrate = baudrate
         self.timeout = timeout
+        self._setup_listeners()
 
     def _setup_listeners(self):
-        pass
+        """Setup permanent listener for this connection"""
+        listener_id = f"gcode_response_{self._fabricator_id}"
+
+        def on_message_received(message):
+            try:
+                data = json.loads(message) if isinstance(message, str) else message
+                response = data.get("response", "ok")
+                print(f"[SocketConnection] Received complete response for {self._fabricator_id}: '{response}'")
+                # Add newline to match serial behavior
+                if not response.endswith('\n'):
+                    response += '\n'
+                self._receive_queue.put(response)
+                self._response_event.set()
+            except json.JSONDecodeError as e:
+                print(f"Failed to decode message: {message} - {e}")
+            except Exception as e:
+                print(f"Error in message handling: {e}")
+
+        # Register permanent listener
+        current_app.event_emitter.on(listener_id, on_message_received)
+        self._listener_registered = True
+        print(f"[SocketConnection] Registered permanent listener for {self._fabricator_id}")
 
     def write(self, data):
         if not self._is_open:
@@ -61,41 +83,30 @@ class SocketConnection(FabricatorConnection):
         if not self._is_open:
             raise ConnectionError("WebSocket connection is not open")
 
-        # Use fabricator_id as listener key (no UUID needed)
-        listener_id = f"gcode_response_{self._fabricator_id}"
-
-        def on_message_received(message):
-            try:
-                data = json.loads(message) if isinstance(message, str) else message
-                response = data.get("response", "ok")
-                print(f"[SocketConnection] Received response for {self._fabricator_id}: {response}")
-                self._receive_queue.put(response)
-                self._response_event.set()
-            except json.JSONDecodeError as e:
-                print(f"Failed to decode message: {message} - {e}")
-            except Exception as e:
-                print(f"Error in message handling: {e}")
-
         try:
-            # Register listener (will be called by socketio_service when gcode_response arrives)
-            current_app.event_emitter.on(listener_id, on_message_received)
-            response = self._receive_queue.get(timeout=1.0)
+            # Wait for response from permanent listener
+            response = self._receive_queue.get(timeout=self._timeout)
             self._last_response = response.encode('utf-8') if isinstance(response, str) else response
+            print(f"[SocketConnection] read() returning: {self._last_response}")
             return self._last_response
         except Empty:
+            # Timeout - return last response or default
             if self._last_response is not None:
-                print(f"No new response, returning last response: {self._last_response}")
+                print(f"[SocketConnection] Timeout, returning last response: {self._last_response}")
                 return self._last_response
             else:
-                print("No responses received yet, returning default 'ok'")
+                print("[SocketConnection] Timeout, returning default 'ok\\n'")
                 return b"ok\n"
-        finally:
-            current_app.event_emitter.remove_event(listener_id)
 
     def close(self):
         if self._is_open:
             self._send_message("printer_disconnect", {"printerid": self._fabricator_id})
             self._is_open = False
+            # Clean up permanent listener
+            if self._listener_registered:
+                listener_id = f"gcode_response_{self._fabricator_id}"
+                current_app.event_emitter.remove_event(listener_id)
+                self._listener_registered = False
             print(f"Closed connection for printer {self._fabricator_id}")
 
     def open(self):
