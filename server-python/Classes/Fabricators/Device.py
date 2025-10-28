@@ -1,5 +1,6 @@
 import os.path
 import sys
+import threading
 from abc import ABC
 from time import sleep
 from services.app_service import current_app
@@ -46,6 +47,7 @@ class Device(ABC):
         self.status = "idle"
         self.verdict = ""
         self.websocket_connection = websocket_connection
+        self._serial_lock = threading.RLock()
         if self.serialPort:
             self.serialConnection = FabricatorConnection.staticCreateConnection(port=self.serialPort.device, websocket_connections=self.websocket_connection, fabricator_id=str(self.dbID))
 
@@ -213,7 +215,8 @@ class Device(ABC):
         assert self.serialConnection.is_open
         assert isinstance(gcode, bytes)
         assert isinstance(isVerbose, bool)
-        self.serialConnection.write(gcode)
+        with self._serial_lock:
+            self.serialConnection.write(gcode)
         if isVerbose:
             if self.logger is not None: self.logger.debug(gcode.decode("utf-8"))
             # Removed verbose print statement
@@ -227,11 +230,12 @@ class Device(ABC):
         :rtype: Vector3
         """
         assert hasattr(self, "getLocationCMD")
-        self.serialConnection.write(self.getLocationCMD)
-        response = ""
-        while not (("X:" in response) and ("Y:" in response) and ("Z:" in response)):
-            response = self.serialConnection.readline().decode("utf-8")
-            if isVerbose and self.logger: self.logger.info(response)
+        with self._serial_lock:
+            self.serialConnection.write(self.getLocationCMD)
+            response = ""
+            while not (("X:" in response) and ("Y:" in response) and ("Z:" in response)):
+                response = self.serialConnection.readline().decode("utf-8")
+                if isVerbose and self.logger: self.logger.info(response)
         loc = LocationResponse(response)
         return Vector3(loc.x, loc.y, loc.z)
 
@@ -282,7 +286,8 @@ class Device(ABC):
             if self.logger is not None: self.logger.info("Sending diagnostic G-code command (e.g., M115).")
             self.sendGcode(b"M115\n")
 
-            response = self.serialConnection.readline().decode("utf-8").strip()
+            with self._serial_lock:
+                response = self.serialConnection.readline().decode("utf-8").strip()
 
             if response:
                 if self.logger is not None: self.logger.info(f"Diagnosis response: {response}")

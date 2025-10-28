@@ -1,4 +1,5 @@
 import os
+import threading
 
 from flask import jsonify, Response
 from serial.tools.list_ports_common import ListPortInfo
@@ -40,11 +41,12 @@ class Fabricator(db.Model):
         initialized, regardless of how the object is loaded from the database.
         """
         from Classes.Queue import Queue
+        # Initialize thread safety lock for status
+        self._status_lock = threading.RLock()
+        self._status = 'offline'  # Default to offline since we don't have port connection yet
         # Initialize runtime attributes that aren't stored in the database
         if not hasattr(self, 'queue') or self.queue is None:
             self.queue = Queue()
-        if not hasattr(self, 'status'):
-            self.status = 'offline'  # Default to offline since we don't have port connection yet
         if not hasattr(self, 'device'):
             self.device = None  # Will be None until port is reconnected
         if not hasattr(self, 'error'):
@@ -64,7 +66,8 @@ class Fabricator(db.Model):
             from Classes.Queue import Queue
             self.dbID = None
             self.queue: Queue = Queue()
-            self.status: str = "ready"
+            self._status_lock = threading.RLock()
+            self._status: str = "ready"
             self.hwid = devicePort  # Use EMU_ port as hwid for emulated printers
             self.description = "Emulated Printer"
             self.name: str = name if name else "Emulated Printer"
@@ -82,7 +85,8 @@ class Fabricator(db.Model):
         from Classes.Queue import Queue
         self.dbID = None  # Initialize dbID
         self.queue: Queue = Queue()
-        self.status: str = "configuring"
+        self._status_lock = threading.RLock()
+        self._status: str = "configuring"
         self.hwid = port.hwid.split(" LOCATION=")[0]
         self.description = "New Fabricator"
         self.name: str = name
@@ -106,6 +110,18 @@ class Fabricator(db.Model):
 
     def __repr__(self):
         return f"Fabricator: {self.name}, description: {self.description}, HWID: {self.hwid}, port: {self.devicePort}, status: {self.status}, logger: {self.device.logger if hasattr(self, 'device') and hasattr(self.device, 'logger') else 'None'}, port open: {self.device.serialConnection.is_open if hasattr(self, 'device') and self.device and self.device.serialConnection else None}, queue: {self.queue}, job: {self.queue[0]}"
+
+    @property
+    def status(self):
+        """Thread-safe getter for status attribute."""
+        with self._status_lock:
+            return self._status
+
+    @status.setter
+    def status(self, value):
+        """Thread-safe setter for status attribute."""
+        with self._status_lock:
+            self._status = value
 
     def __to_JSON__(self) -> dict:
         """
