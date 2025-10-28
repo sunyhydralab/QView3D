@@ -24,8 +24,7 @@ async function initializeApp() {
   connectSocket()
 
   // Setup WebSockets with await inside async function
-  const fabricators = await retrieveRegisteredFabricators()
-  setupSockets(fabricators)
+  await retrieveRegisteredFabricators()
 
   // Create and mount the app
   const app = createApp(App)
