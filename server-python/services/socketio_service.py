@@ -67,6 +67,23 @@ class SocketIOService:
             self.logger.debug(f"Received message from emulator {sid}: {data}")
             self.socketio.emit('emulator_update', data, broadcast=True)
 
+        @self.socketio.on('fabricator_command')
+        def handle_fabricator_command(data):
+            """Forward backend commands to emulator"""
+            event_type = data.get('event', '')
+            event_data = data.get('data', {})
+            fabricator_id = data.get('fabricator_id', '')
+
+            self.logger.debug(f"Forwarding fabricator_command: {event_type} for {fabricator_id}")
+
+            # Map backend events to emulator events
+            if event_type == 'send_gcode':
+                # Forward to emulator with correct format
+                self.socketio.emit('send_gcode', {
+                    'port': event_data.get('printerid', fabricator_id),
+                    'gcode': event_data.get('gcode', '')
+                })
+
         @self.socketio.on('gcode_response')
         def handle_gcode_response(data):
             """Forward emulator gcode responses to event emitter for SocketConnection"""
