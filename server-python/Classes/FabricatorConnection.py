@@ -32,6 +32,7 @@ class SocketConnection(FabricatorConnection):
         self._timeout = timeout
         # Large buffer for streaming thousands of G-code commands
         self._receive_queue = Queue(maxsize=10000)
+        self._line_buffer = []  # Buffer for multi-line responses
         self._last_response = None
         self._is_open = True
         self._response_event = threading.Event()
@@ -71,6 +72,9 @@ class SocketConnection(FabricatorConnection):
         if not self._is_open:
             raise ConnectionError("WebSocket connection is not open")
         self._response_event.clear()
+        # Clear line buffer for new command
+        self._line_buffer.clear()
+        # Clear receive queue
         while not self._receive_queue.empty():
             try:
                 self._receive_queue.get_nowait()
@@ -129,10 +133,54 @@ class SocketConnection(FabricatorConnection):
         self._response_event.clear()
 
     def readline(self):
-        response = self.read()
-        if response is None:
-            response = b''
-        return response
+        """Read a single line, buffering multi-line responses"""
+        if not self._is_open:
+            raise ConnectionError("WebSocket connection is not open")
+
+        # If we have buffered lines, return the first one
+        if self._line_buffer:
+            line = self._line_buffer.pop(0)
+            return line.encode('utf-8') if isinstance(line, str) else line
+
+        # Otherwise, get a new response from the queue
+        try:
+            response = self._receive_queue.get(timeout=self._timeout)
+
+            # Handle string responses
+            if isinstance(response, str):
+                # Split multi-line responses
+                lines = response.split('\n')
+                # Filter out empty lines but keep meaningful ones
+                lines = [line for line in lines if line.strip() or line == '\n']
+
+                if not lines:
+                    return b'\n'
+
+                # Return first line, buffer the rest
+                first_line = lines[0]
+                if len(lines) > 1:
+                    self._line_buffer.extend(lines[1:])
+
+                # Add newline if not present
+                if not first_line.endswith('\n'):
+                    first_line += '\n'
+
+                self._last_response = first_line.encode('utf-8')
+                print(f"[SocketConnection] readline() returning: {self._last_response.strip()}")
+                return self._last_response
+            else:
+                # Handle bytes responses
+                self._last_response = response if isinstance(response, bytes) else response.encode('utf-8')
+                return self._last_response
+
+        except Empty:
+            # Timeout - return last response or default
+            if self._last_response is not None:
+                print(f"[SocketConnection] Timeout, returning last response: {self._last_response}")
+                return self._last_response
+            else:
+                print("[SocketConnection] Timeout, returning default 'ok\\n'")
+                return b"ok\n"
 
     @property
     def is_open(self):
