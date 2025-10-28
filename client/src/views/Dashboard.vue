@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { type Ref, ref, onMounted, computed } from 'vue';
-import { fabricatorList, retrieveRegisteredFabricators, type Fabricator } from '@/models/fabricator'
+import { type Ref, ref, onMounted, onUnmounted, computed } from 'vue';
+import { fabricatorList, retrieveRegisteredFabricators, cleanupFabricatorSocketListeners, type Fabricator } from '@/models/fabricator'
 import { type Job } from '../models/job'
 import NoPrinterRobot from '@/components/NoPrinterRobot.vue'
 import DashboardButtons from '@/components/DashboardButtons.vue'
@@ -18,6 +18,10 @@ onMounted(async () => {
       theadID.value = fabricatorList.value[i].id!
     }
   }
+});
+
+onUnmounted(() => {
+  cleanupFabricatorSocketListeners()
 });
 
 // State tracking for UI

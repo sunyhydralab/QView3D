@@ -1,13 +1,14 @@
 <!--TODO: Whenever the database is wiped, so should the localStorage for connectedFabricatorList-->
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import {
   type Fabricator,
   fabricatorList,
   getConnectedFabricators,
   registerFabricator,
   retrieveRegisteredFabricators,
+  cleanupFabricatorSocketListeners,
 } from '@/models/fabricator'
 import FabricatorCard from '@/components/RegisteredFabricatorCard.vue'
 import { addToast } from '../components/Toast.vue'
@@ -41,6 +42,10 @@ onMounted(async () => {
   // get the list of registered fabricators from the server
   await retrieveRegisteredFabricators()
   console.log('Loaded fabricatorList from server')
+})
+
+onUnmounted(() => {
+  cleanupFabricatorSocketListeners()
 })
 
 // update the list of connected Fabricators but filter out the registered ones

@@ -44,8 +44,14 @@ watchEffect(() => {
   console.log('fabricatorList updated:', fabricatorList.value)
 })
 
+// Store cleanup function for socket listeners
+let fabricatorSocketCleanup: (() => void) | null = null
+
 // Setup socket listeners for real-time fabricator updates
 export function setupFabricatorSocketListeners() {
+  // Clean up any existing listeners first to prevent duplicates
+  cleanupFabricatorSocketListeners()
+
   // Listen for fabricator status updates
   const removeStatusListener = onSocketEvent<Fabricator>('fabricator_status_update', (data) => {
     // Find the fabricator in the list and update its status
@@ -87,11 +93,21 @@ export function setupFabricatorSocketListeners() {
     },
   )
 
-  // Return cleanup function
-  return () => {
+  // Store and return cleanup function
+  fabricatorSocketCleanup = () => {
     removeStatusListener()
     removeRegistrationListener()
     removeDisconnectListener()
+  }
+
+  return fabricatorSocketCleanup
+}
+
+// Cleanup function to remove all fabricator socket listeners
+export function cleanupFabricatorSocketListeners() {
+  if (fabricatorSocketCleanup) {
+    fabricatorSocketCleanup()
+    fabricatorSocketCleanup = null
   }
 }
 
@@ -104,7 +120,7 @@ export async function retrieveRegisteredFabricators() {
   // Check if the api returned a valid response, if not, return an empty array, to avoid issue where the settings panel never loads.
   // Ensure fabricatorList is always an array, even if backend returns error object
   fabricatorList.value = (printerInfo && Array.isArray(printerInfo)) ? printerInfo : []
-  setupSockets(fabricatorList.value)
+  setupSockets()
   // Setup socket listeners after we have the initial data
   setupFabricatorSocketListeners()
   return fabricatorList.value
