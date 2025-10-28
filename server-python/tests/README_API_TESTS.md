@@ -117,7 +117,7 @@ curl -X POST http://localhost:8000/disconnectemulator \
 
 ## Expected Results
 
-### ✅ Passing Tests
+### Passing Tests
 
 ```
 ✓ Backend is healthy
@@ -132,7 +132,7 @@ curl -X POST http://localhost:8000/disconnectemulator \
 ✓ ALL TESTS PASSED - @reconstructor is working correctly!
 ```
 
-### ❌ Failing Tests (if @reconstructor is broken)
+### Failing Tests (if @reconstructor is broken)
 
 ```
 ✗ Missing runtime attribute 'status' (RECONSTRUCTOR BUG)

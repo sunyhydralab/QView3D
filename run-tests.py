@@ -18,9 +18,9 @@ def run_tests():
     try:
         import pytest
     except ImportError:
-        print("❌ pytest not installed. Installing...")
+        print("pytest not installed. Installing...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "pytest", "pytest-cov"])
-        print("✅ pytest installed")
+        print("pytest installed")
 
     # Change to server-python directory
     os.chdir('server-python')
@@ -30,9 +30,9 @@ def run_tests():
     result = subprocess.call([sys.executable, "-m", "pytest", "tests/", "-v", "--tb=short"])
 
     if result == 0:
-        print("\n✅ All tests passed!")
+        print("\nAll tests passed!")
     else:
-        print(f"\n❌ Tests failed with exit code {result}")
+        print(f"\nTests failed with exit code {result}")
 
     # Run frontend tests if they exist
     os.chdir('../client')
@@ -45,11 +45,11 @@ def run_tests():
         try:
             result = subprocess.call(["npm", "run", "test:unit"], shell=True)
             if result == 0:
-                print("\n✅ Frontend tests passed!")
+                print("\nFrontend tests passed!")
             else:
-                print("\n⚠️ Frontend tests failed or not configured")
+                print("\nFrontend tests failed or not configured")
         except Exception as e:
-            print(f"⚠️ Could not run frontend tests: {e}")
+            print(f"Could not run frontend tests: {e}")
 
     return result
 
@@ -62,5 +62,5 @@ if __name__ == "__main__":
         print("\n\nTest run interrupted by user")
         sys.exit(1)
     except Exception as e:
-        print(f"\n❌ Error running tests: {e}")
+        print(f"\nError running tests: {e}")
         sys.exit(1)

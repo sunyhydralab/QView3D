@@ -289,7 +289,7 @@ server.listen(PORT, () => {
   console.log('QView3D - MIDDLEWARE SERVER READY');
   console.log('='.repeat(80));
   console.log('');
-  console.log(`  🌐 ACCESS APPLICATION AT:  http://localhost:${PORT}`);
+  console.log(`  ACCESS APPLICATION AT:  http://localhost:${PORT}`);
   console.log('');
   console.log(`  Architecture:`);
   console.log(`    Browser → Middleware (${PORT}) → Backend (${BACKEND_TARGET_URL})`);
