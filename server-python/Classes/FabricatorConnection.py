@@ -54,8 +54,8 @@ class SocketConnection(FabricatorConnection):
         self._fabricator_id = fabricator_id
         self._timeout = timeout
 
-        # Queue for storing incoming messages
-        self._receive_queue = Queue()
+        # Queue for storing incoming messages (bounded to prevent memory growth)
+        self._receive_queue = Queue(maxsize=100)
 
         # Store last response
         self._last_response = None
