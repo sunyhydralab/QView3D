@@ -110,7 +110,8 @@ class Printer(Device, metaclass=ABCMeta):
                     if self.status == "cancelled":
                         self.sendGcode(self.cancelCMD)
                         self.verdict = "cancelled"
-                        logger.log("Job cancelled")
+                        if self.logger:
+                            self.logger.log("Job cancelled")
                         pass
                         return True
 
@@ -145,10 +146,11 @@ class Printer(Device, metaclass=ABCMeta):
                             current_app.socketio.emit("console_update", {"message": "Fabricating...", "level": "info", "fabricator_id": self.dbID})
 
                     # Send G-code command and check for errors
-                    if not self.sendGcode(line, logger=logger):
+                    if not self.sendGcode(line, logger=self.logger):
                         error_msg = f"Failed to send G-code: {line.strip()}"
                         print(f"[Printer] {error_msg}")
-                        logger.error(error_msg)
+                        if self.logger:
+                            self.logger.error(error_msg)
                         self.verdict = "error"
                         return False
 
