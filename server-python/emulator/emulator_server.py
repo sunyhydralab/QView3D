@@ -45,8 +45,12 @@ class EmulatorServer:
         self.socketio = SocketIO(
             self.app,
             cors_allowed_origins="*",
-            async_mode='threading'
+            async_mode='threading',
+            max_http_buffer_size=10**8  # 100MB max message size
         )
+
+        # Increase max listeners to prevent warnings
+        self.socketio.server.eio.max_http_buffer_size = 10**8
 
         # Emulated devices storage
         self.devices = {}  # {port: EmulatedDevice}
