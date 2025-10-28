@@ -151,7 +151,7 @@ python3 run.py
 
 When prompted:
 - Press `I` for first-time installation of dependencies
-- Press `D` (or Enter) to run in debug mode (starts both backends with redundant failover)
+- Press `D` (or Enter) to run in debug mode
 
 #### Windows (using WSL)
 1. Install WSL with Ubuntu if not already installed:
@@ -184,16 +184,10 @@ python run.py
 
 ### First Run
 1. Select `I` to install dependencies
-2. Run again and press `D` or Enter for debug mode (starts both Python and JavaScript backends with automatic failover)
+2. Run again and press `D` or Enter for debug mode
 
 ### Accessing the Application
-Once started, access the application at:
-- Frontend: http://localhost:8002
-- Python Backend: http://localhost:8000
-- JavaScript Backend: http://localhost:3000
-- Middleware (routing layer): http://localhost:3500
-
-You can change your preferred backend in the Settings panel (gear icon in bottom right)
+Once started, access the application at: **http://localhost:8002**
 
 ## Pull Requests
 
