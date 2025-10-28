@@ -4,7 +4,7 @@ from abc import ABCMeta
 from services.logger import logger
 import re
 from datetime import datetime
-from time import sleep
+from time import sleep, time
 from services.app_service import current_app
 from Classes.Fabricators.Device import Device
 from Classes.Jobs import Job
@@ -176,7 +176,9 @@ class Printer(Device, metaclass=ABCMeta):
                     if self.status == "paused":
                         self.pause()
                         job.setTime(datetime.now(), 3)
-                        while self.status == "paused":
+                        pause_start = time()
+                        pause_timeout = 3600.0  # 1 hour max pause
+                        while self.status == "paused" and (time() - pause_start) < pause_timeout:
                             sleep(.5)
                             readline = self.serialConnection.readline().decode("utf-8").strip()
                             if readline:
@@ -196,6 +198,18 @@ class Printer(Device, metaclass=ABCMeta):
                                 job.setTime(job.colorEta(), 1)
                                 job.setTime(job.calculateColorChangeTotal(), 0)
                                 job.setTime(datetime.min, 3)
+
+                        # Check if we exited due to timeout
+                        if self.status == "paused" and (time() - pause_start) >= pause_timeout:
+                            print(f"[Printer] Pause timeout after {pause_timeout}s, resuming print")
+                            logger.log(f"Pause timeout after {pause_timeout}s, resuming print")
+                            current_app.socketio.emit("console_update", {"message": f"Pause timeout after {pause_timeout}s, resuming print", "level": "warning", "fabricator_id": self.dbID})
+                            self.paused = False
+                            self.status = "printing"
+                            self.resume()
+                            job.setTime(job.colorEta(), 1)
+                            job.setTime(job.calculateColorChangeTotal(), 0)
+                            job.setTime(datetime.min, 3)
                     # software color change
                     if self.status == "colorchange" and job.getFilePause() == 0:
                         job.setTime(datetime.now(), 3)
@@ -272,30 +286,27 @@ class Printer(Device, metaclass=ABCMeta):
         self.serialConnection.write(gcode)
         line = b''
 
-        # Check for timeout
-
-        timeout_counter = 0
-        max_timeout = 100
+        # Check for timeout - use time-based timeout instead of iteration counter
 
         # Increase timeout for temperature commands
         gcode_str = gcode.decode().strip().split()[0]
         if gcode_str in ["M109", "M190"]:
-            max_timeout = 1200  # 20 minutes 
+            timeout_seconds = 1200.0  # 20 minutes for temperature commands
         else:
-            max_timeout = 100   
+            timeout_seconds = 10.0  # 10 seconds for regular commands
 
         for func in callables:
-            # Reset timeout counter for each callable
-            timeout_counter = 0
+            # Reset timeout start time for each callable
+            start_time = time()
             while True:
                 if self.status == "cancelled": return True
 
-                # Check if timeout has been reached
-                timeout_counter += 1
-                if timeout_counter > max_timeout:
+                # Check if timeout has been reached using actual elapsed time
+                elapsed_time = time() - start_time
+                if elapsed_time >= timeout_seconds:
                     # Print timeout
-                    print(f">>> TIMEOUT waiting for response to: {gcode.decode().strip()}")
-                    if should_log: logger.warning(f"Timeout waiting for response to {gcode.decode().strip()}")
+                    print(f">>> TIMEOUT waiting for response to: {gcode.decode().strip()} after {elapsed_time:.2f}s")
+                    if should_log: logger.warning(f"Timeout waiting for response to {gcode.decode().strip()} after {elapsed_time:.2f}s")
                     if gcode_str in ["M109", "M190"]:
                         if should_log: logger.log(f"Temperature command {gcode_str} timed out, assuming success")
                         break
