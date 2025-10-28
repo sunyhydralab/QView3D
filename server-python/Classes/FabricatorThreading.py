@@ -250,8 +250,9 @@ class PrintWorkerThread(Thread):
                     self.job.status = 'error'
                     from config.db import db
                     db.session.commit()
-                except Exception:
-                    pass
+                except Exception as db_error:
+                    print(f"[PrintWorkerThread] Failed to mark job as error in database: {db_error}")
+                    # Continue anyway - we still need to notify and clean up
 
                 # Notify of failure
                 self.fabricator_list.print_completed(self.fabricator, False)
