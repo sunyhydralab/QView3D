@@ -29,6 +29,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = config.middleware.port || 8002;
 
+// Debug logging flag (set to true for verbose output)
+const DEBUG = process.env.DEBUG === 'true' || false;
+
 // Backend selection - determined once at startup from config
 const SELECTED_BACKEND = config.middleware.mode || 'python';
 const BACKEND_CONFIG = SELECTED_BACKEND === 'python' ? config.backends.python : config.backends.javascript;
@@ -161,7 +164,9 @@ apiRoutes.forEach(route => {
         rewrittenPath = fullPath.substring(4); // Remove '/api' prefix
       }
 
-      console.log(`[Proxy] ${req.method} ${fullPath} → ${BACKEND_TARGET_URL}${rewrittenPath}`);
+      if (DEBUG) {
+        console.log(`[Proxy] ${req.method} ${fullPath} → ${BACKEND_TARGET_URL}${rewrittenPath}`);
+      }
       return rewrittenPath;
     },
     onError: (err, req, res) => {
@@ -196,8 +201,8 @@ app.use('/', createProxyMiddleware({
     });
   },
   onProxyReq: (proxyReq, req, res) => {
-    // Log proxied requests to Vite (only non-asset requests to reduce noise)
-    if (!req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
+    // Log proxied requests to Vite in debug mode only
+    if (DEBUG && !req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
       console.log(`[Vite Proxy] ${req.method} ${req.path} → ${VITE_DEV_SERVER}${req.path}`);
     }
   }
@@ -219,7 +224,7 @@ const io = new Server(server, {
 let backendSocket = null;
 
 function connectToBackend() {
-  console.log(`[SocketIO] Connecting to backend at ${BACKEND_TARGET_URL}`);
+  if (DEBUG) console.log(`[SocketIO] Connecting to backend at ${BACKEND_TARGET_URL}`);
 
   // Disconnect existing connection if any
   if (backendSocket) {
@@ -235,11 +240,11 @@ function connectToBackend() {
   });
 
   backendSocket.on('connect', () => {
-    console.log(`Connected to backend SocketIO at ${BACKEND_TARGET_URL}`);
+    if (DEBUG) console.log(`Connected to backend SocketIO at ${BACKEND_TARGET_URL}`);
   });
 
   backendSocket.on('disconnect', () => {
-    console.log(`Disconnected from backend SocketIO`);
+    if (DEBUG) console.log(`Disconnected from backend SocketIO`);
   });
 
   backendSocket.on('connect_error', (error) => {
@@ -248,14 +253,14 @@ function connectToBackend() {
 
   // Forward all backend events to frontend clients
   backendSocket.onAny((event, ...args) => {
-    console.log(`[SocketIO] Backend → Clients: ${event}`);
+    if (DEBUG) console.log(`[SocketIO] Backend → Clients: ${event}`);
     io.emit(event, ...args);
   });
 }
 
 // Handle frontend client connections
 io.on('connection', (socket) => {
-  console.log(`[SocketIO] Client connected: ${socket.id}`);
+  if (DEBUG) console.log(`[SocketIO] Client connected: ${socket.id}`);
 
   // Connect to backend if not already connected
   if (!backendSocket || !backendSocket.connected) {
@@ -264,7 +269,7 @@ io.on('connection', (socket) => {
 
   // Forward all client events to backend
   socket.onAny((event, ...args) => {
-    console.log(`[SocketIO] Client → Backend: ${event}`);
+    if (DEBUG) console.log(`[SocketIO] Client → Backend: ${event}`);
     if (backendSocket && backendSocket.connected) {
       backendSocket.emit(event, ...args);
     } else {
@@ -274,7 +279,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log(`[SocketIO] Client disconnected: ${socket.id}`);
+    if (DEBUG) console.log(`[SocketIO] Client disconnected: ${socket.id}`);
   });
 });
 
