@@ -158,6 +158,33 @@ class GCodeSimulator:
         elif command.startswith('M862'):  # Prusa-specific model check
             return "ok", 0.0
 
+        elif command == 'M555':  # Prusa-specific area definition
+            return "ok", 0.0
+
+        elif command.startswith('M73'):  # Set print progress
+            return "ok", 0.0
+
+        elif command.startswith('M155'):  # Temperature auto-report interval
+            return "ok", 0.0
+
+        elif command.startswith('M201'):  # Set max acceleration
+            return "ok", 0.0
+
+        elif command.startswith('M203'):  # Set max feedrate
+            return "ok", 0.0
+
+        elif command.startswith('M204'):  # Set acceleration
+            return "ok", 0.0
+
+        elif command.startswith('M205'):  # Advanced settings
+            return "ok", 0.0
+
+        elif command.startswith('M17'):  # Enable steppers
+            return "ok", 0.0
+
+        elif command.startswith('M486'):  # Cancel object
+            return "ok", 0.0
+
         else:
             # Unknown command - just return ok
             return "ok", 0.0
