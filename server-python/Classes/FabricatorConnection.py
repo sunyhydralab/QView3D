@@ -50,23 +50,26 @@ class SocketConnection(FabricatorConnection):
 
         def on_message_received(message):
             try:
+                print(f"[SocketConnection] RAW MESSAGE RECEIVED: type={type(message)}, content={message[:200] if isinstance(message, (str, bytes)) else message}")
                 data = json.loads(message) if isinstance(message, str) else message
                 response = data.get("response", "ok")
-                print(f"[SocketConnection] Received complete response for {self._fabricator_id}: '{response}'")
+                print(f"[SocketConnection] EXTRACTED RESPONSE for {self._fabricator_id}: '{response}' (len={len(response)})")
                 # Add newline to match serial behavior
                 if not response.endswith('\n'):
                     response += '\n'
                 self._receive_queue.put(response)
                 self._response_event.set()
             except json.JSONDecodeError as e:
-                print(f"Failed to decode message: {message} - {e}")
+                print(f"[SocketConnection] JSON DECODE ERROR: {message} - {e}")
             except Exception as e:
-                print(f"Error in message handling: {e}")
+                print(f"[SocketConnection] ERROR in message handling: {e}")
+                import traceback
+                traceback.print_exc()
 
         # Register permanent listener
         current_app.event_emitter.on(listener_id, on_message_received)
         self._listener_registered = True
-        print(f"[SocketConnection] Registered permanent listener for {self._fabricator_id}")
+        print(f"[SocketConnection] Registered permanent listener: {listener_id}")
 
     def write(self, data):
         if not self._is_open:
