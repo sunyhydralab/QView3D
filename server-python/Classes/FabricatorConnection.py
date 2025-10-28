@@ -20,7 +20,8 @@ class FabricatorConnection(ABC):
 class SerialConnection(FabricatorConnection, serial.Serial):
     def __init__(self, port, baudrate, timeout):
         try:
-            super().__init__(port, baudrate, timeout=timeout, inter_byte_timeout=1.0)
+            # Don't use inter_byte_timeout - it causes readline() to return partial lines
+            super().__init__(port, baudrate, timeout=timeout)
         except serial.SerialException as e:
             if not "Access is denied" in str(e):
                 print(f"Failed to open serial connection: {e}")
