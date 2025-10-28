@@ -21,7 +21,20 @@ class SerialConnection(FabricatorConnection, serial.Serial):
     def __init__(self, port, baudrate, timeout):
         try:
             # Don't use inter_byte_timeout - it causes readline() to return partial lines
-            super().__init__(port, baudrate, timeout=timeout)
+            # Use hardware flow control for reliable communication with Prusa printers
+            super().__init__(
+                port=port,
+                baudrate=baudrate,
+                timeout=timeout,
+                write_timeout=timeout,
+                bytesize=serial.EIGHTBITS,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE,
+                xonxoff=False,  # No software flow control
+                rtscts=True,    # Enable hardware flow control (RTS/CTS)
+                dsrdtr=False    # No DTR/DSR flow control
+            )
+            print(f"[SerialConnection] Opened {port} at {baudrate} baud with RTS/CTS flow control")
         except serial.SerialException as e:
             if not "Access is denied" in str(e):
                 print(f"Failed to open serial connection: {e}")

@@ -327,12 +327,14 @@ class Printer(Device, metaclass=ABCMeta):
 
                     #Empty line, continue
                     if not line:
+                        print(f">>> EMPTY LINE from readline() - continuing")
                         continue
 
                     decLine = line.decode("utf-8").strip()
 
                     # If the line is empty after decoding, continue
                     if not decLine:
+                        print(f">>> EMPTY DECODED LINE - continuing")
                         continue
 
                     # Print ALL responses received
@@ -368,7 +370,9 @@ class Printer(Device, metaclass=ABCMeta):
                         print(f"<<< M190 COMPLETED WITH OK: {decLine}")
                         break
                     
-                    if func(line, self):
+                    validator_result = func(line, self)
+                    print(f">>> VALIDATOR {func.__name__} returned: {validator_result}")
+                    if validator_result:
                         # Print when command completes successfully
                         print(f"<<< COMMAND COMPLETED: {gcode.decode().strip()} -> {decLine}")
                         break
