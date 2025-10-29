@@ -23,7 +23,10 @@ async function initializeApp() {
   // Initialize socket connection
   connectSocket()
 
-  // Setup WebSockets with await inside async function
+  // Setup socket event listeners (once during app initialization)
+  setupSockets()
+
+  // Fetch initial fabricator data
   await retrieveRegisteredFabricators()
 
   // Create and mount the app

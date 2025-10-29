@@ -3,7 +3,6 @@ import { type Job } from '@/models/job'
 import { api } from '@/models/api'
 import { onSocketEvent } from '@/services/socket'
 import { addToast } from '@/components/Toast.vue'
-import { setupSockets } from '@/composables/useWebSockets'
 
 export interface Fabricator {
   device: Record<string, any>
@@ -120,7 +119,6 @@ export async function retrieveRegisteredFabricators() {
   // Check if the api returned a valid response, if not, return an empty array, to avoid issue where the settings panel never loads.
   // Ensure fabricatorList is always an array, even if backend returns error object
   fabricatorList.value = (printerInfo && Array.isArray(printerInfo)) ? printerInfo : []
-  setupSockets()
   // Setup socket listeners after we have the initial data
   setupFabricatorSocketListeners()
   return fabricatorList.value
