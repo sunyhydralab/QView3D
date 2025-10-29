@@ -13,40 +13,124 @@ from serial.serialutil import SerialException, SerialTimeoutException
 
 
 class Printer(Device, metaclass=ABCMeta):
-    cancelCMD: bytes = b"M112\n"
-    keepAliveCMD: bytes = b"M113 S1\n"
-    doNotKeepAliveCMD: bytes = b"M113 S0\n"
-    statusCMD: bytes = b"M115\n"
-    getLocationCMD: bytes = b"M114\n"
-    pauseCMD: bytes = b"M601\n"
-    resumeCMD: bytes = b"M602\n"
-    getMachineNameCMD: bytes = b"M997\n"
-    startTimeCMD: str = "M75"
+    """
+    Abstract base class for 3D printers that use G-code communication.
 
+    Extends the Device class to provide printer-specific functionality including
+    G-code streaming, temperature monitoring, print job management, and firmware
+    communication. This class handles the low-level serial communication protocol
+    with Marlin-based firmware.
+
+    Attributes:
+        cancelCMD (bytes): Emergency stop command (M112)
+        keepAliveCMD (bytes): Enable host keepalive messages every 2 seconds (M113 S2)
+        doNotKeepAliveCMD (bytes): Disable keepalive messages (M113 S0)
+        statusCMD (bytes): Get firmware info command (M115)
+        getLocationCMD (bytes): Get current XYZ position (M114)
+        pauseCMD (bytes): Pause print command (M601)
+        resumeCMD (bytes): Resume print command (M602)
+        getMachineNameCMD (bytes): Get machine name (M997)
+        startTimeCMD (str): Start print timer command (M75)
+
+        bedTemperature (float): Current bed temperature in Celsius
+        bedTargetTemp (float): Target bed temperature in Celsius
+        nozzleTemperature (float): Current nozzle temperature in Celsius
+        nozzleTargetTemp (float): Target nozzle temperature in Celsius
+        filamentType (str): Type of filament loaded (e.g., PLA, PETG, ABS)
+        filamentDiameter (float): Diameter of filament in mm (typically 1.75 or 2.85)
+        nozzleDiameter (float): Diameter of nozzle in mm (e.g., 0.4, 0.6, 0.8)
+
+    Methods:
+        parseGcode(job): Stream and execute G-code commands from a job file
+        sendGcode(gcode, logger): Send a single G-code command and wait for response
+        handleTempLine(line): Parse temperature data from printer responses
+        pause(): Pause the current print job
+        resume(): Resume a paused print job
+        changeFilament(type, diameter): Update filament settings
+        changeNozzle(diameter): Update nozzle diameter setting
+
+    Notes:
+        - Uses synchronous command/response protocol: waits for "ok" before next command
+        - Implements validators to check specific responses (temps, positions, firmware)
+        - Supports auto-temperature reporting (M155) for continuous monitoring
+        - Keepalive messages prevent timeouts during heating and bed leveling
+    """
+
+    # G-code command constants (Marlin firmware)
+    cancelCMD: bytes = b"M112\n"  # Emergency stop - halts all movement immediately
+    keepAliveCMD: bytes = b"M113 S2\n"  # Send keepalive every 2 seconds during long operations
+    doNotKeepAliveCMD: bytes = b"M113 S0\n"  # Disable keepalive messages
+    statusCMD: bytes = b"M115\n"  # Request firmware name, version, and capabilities
+    getLocationCMD: bytes = b"M114\n"  # Get current XYZ position and extruder state
+    pauseCMD: bytes = b"M601\n"  # Pause print (filament change pause)
+    resumeCMD: bytes = b"M602\n"  # Resume print after pause
+    getMachineNameCMD: bytes = b"M997\n"  # Get machine name
+    startTimeCMD: str = "M75"  # Start/resume print timer
+
+    # Validator hashtable: maps G-code commands to validation functions
+    # Validators check if the printer's response indicates successful command execution
     callablesHashtable = {
-        "M31": [checkTime],  # Print time
-        "M104": [],  # Set hotend temp
-        "M109": [checkExtruderTemp],  # Wait for hotend to reach target temp
-        "M114": [checkXYZ],  # Get current position
-        "M115": [checkFirmware],  # Get firmware info
-        "M140": [],  # Set bed temp
-        "M155": [checkFirmware],  # Temperature auto-report (can return Cap: responses)
-        "M190": [checkBedTemp],  # Wait for bed to reach target temp
+        "M31": [checkTime],  # Print time - validates time format
+        "M104": [],  # Set hotend temp - no validation needed (fire and forget)
+        "M109": [checkExtruderTemp],  # Wait for hotend - validates temp reached target
+        "M113": [checkOK],  # Host keepalive - validates "ok" response
+        "M114": [checkXYZ],  # Get current position - validates X:Y:Z: format
+        "M115": [checkFirmware],  # Get firmware info - reads all Cap: lines until "ok"
+        "M140": [],  # Set bed temp - no validation needed (fire and forget)
+        "M155": [checkOK],  # Temperature auto-report - validates "ok" response
+        "M190": [checkBedTemp],  # Wait for bed - validates bed temp reached target
     }
+    # Merge with parent Device class validators
     callablesHashtable = {**Device.callablesHashtable, **callablesHashtable}
-    
-    bedTemperature: int | float | None = None
-    bedTargetTemp: float = 0.0
-    nozzleTemperature: int | float |  None = None
-    nozzleTargetTemp: float = 0.0
+
+    # Temperature tracking (updated continuously via M155 auto-reporting)
+    bedTemperature: int | float | None = None  # Current bed temperature
+    bedTargetTemp: float = 0.0  # Target bed temperature
+    nozzleTemperature: int | float |  None = None  # Current nozzle temperature
+    nozzleTargetTemp: float = 0.0  # Target nozzle temperature
 
     def __init__(self, dbID, serialPort, consoleLogger=None, fileLogger=None, addLogger: bool =False, websocket_connection=None, name:str = None):
+        """
+        Initialize a Printer instance.
+
+        :param int dbID: Database ID of the printer
+        :param ListPortInfo serialPort: Serial port object for communication
+        :param Logger consoleLogger: Optional console logger instance
+        :param Logger fileLogger: Optional file logger instance
+        :param bool addLogger: Whether to add a logger to this printer
+        :param WebSocket websocket_connection: Optional WebSocket connection for emulator
+        :param str name: Optional friendly name for the printer
+        """
         super().__init__(dbID, serialPort, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=addLogger, websocket_connection=websocket_connection, name=name)
-        self.filamentType = None
-        self.filamentDiameter = None
-        self.nozzleDiameter = None
+        # Filament and nozzle properties (set by user, affects print settings)
+        self.filamentType = None  # PLA, PETG, ABS, etc.
+        self.filamentDiameter = None  # 1.75mm or 2.85mm typically
+        self.nozzleDiameter = None  # 0.4mm, 0.6mm, 0.8mm, etc.
 
     def parseGcode(self, job: Job):
+        """
+        Stream and execute G-code commands from a job file to the printer.
+
+        This method performs a two-pass process:
+        1. First pass: Scan file for metadata (layer heights, time estimates)
+        2. Second pass: Stream G-code line-by-line to printer with synchronous execution
+
+        The method enables auto-temperature reporting (M155) and keepalive messages (M113)
+        at the start, and disables them when printing completes or errors occur.
+
+        :param Job job: The print job containing the G-code file path
+        :return: True if print completed successfully, False if error occurred
+        :rtype: bool
+
+        :raises AssertionError: If job is invalid, serial connection closed, or printer not in printing state
+        :raises Exception: For any errors during G-code streaming (caught and logged)
+
+        Notes:
+            - Supports pause/resume, color changes, and cancellation during printing
+            - Updates job progress in real-time via Job.setProgress()
+            - Handles temperature monitoring via handleTempLine()
+            - Always disables keepalive in finally block to prevent serial timeouts after print
+        """
         assert isinstance(job, Job), f"Expected Job, got {type(job)}"
         file = job.file_path
         assert isinstance(file, str), f"Expected file to be a str, got {type(file)}"
@@ -54,28 +138,28 @@ class Printer(Device, metaclass=ABCMeta):
         assert self.status == "printing", f"Printer status is {self.status}, expected printing"
         try:
             with open(file, "r") as g:
-                # create a logger for this job
-
+                # Create a logger for this job (currently simplified - no verbose logging)
                 jobName = str(job.file_name_original)
                 if jobName:
                     jobName = "-".join(jobName.split(".")[0].split("_"))
-                logger = None  # Simplified - no verbose logging
+                logger = None
                 job.job_logger = logger
-                # Read the file and store the lines in a list
+
+                # Early cancellation check
                 if self.status == "cancelled":
                     self.sendGcode(self.cancelCMD)
                     self.verdict = "cancelled"
                     logger.log("Job cancelled")
-                    pass
                     return True
 
-                # First pass: Quick metadata scan (streaming, no full load)
-                total_lines = 0
-                max_layer_height = 0
-                max_layer_height_candidate = None
-                comment_lines = []
+                # ===== FIRST PASS: Metadata Extraction =====
+                # Stream through file once to gather print info without loading entire file into memory
+                total_lines = 0  # Count of actual G-code commands (excluding comments)
+                max_layer_height = 0  # Maximum Z height for progress tracking
+                max_layer_height_candidate = None  # Temporary holder for layer change detection
+                comment_lines = []  # Store comment lines for time estimation
 
-                # Stream through file once to gather metadata
+                # Stream through file to gather metadata
                 for line in g:
                     line_stripped = line.strip()
                     if not line_stripped or line_stripped.startswith(";"):
@@ -95,35 +179,48 @@ class Printer(Device, metaclass=ABCMeta):
                 if max_layer_height != 0:
                     job.setMaxLayerHeight(max_layer_height)
 
-                # Estimate time from comments
+                # Extract time estimate from slicer-generated comments
                 total_time = job.getTimeFromFile(comment_lines)
                 job.setTime(total_time, 0)
 
-                # Reset file pointer for second pass (actual printing)
+                # ===== SECOND PASS: G-code Streaming =====
+                # Reset file pointer to beginning for actual printing
                 g.seek(0)
 
-                # Now stream line-by-line for printing (no memory overhead)
-                sent_lines = 0
-                # Stream G-code line by line (memory efficient for large files)
-                prev_line = ""
+                # Initialize streaming variables
+                sent_lines = 0  # Track number of commands sent for progress calculation
+                prev_line = ""  # Store previous line to detect layer changes
+                last_progress_update = 0  # Track last progress percentage for throttling time updates
                 current_app.socketio.emit("console_update", {"message": "Starting Job", "level": "info", "fabricator_id": self.dbID})
 
-                # Second pass: Stream and execute commands
+                # Enable continuous temperature monitoring (M155 S100 = 100ms interval)
+                # This allows M109/M190 commands to track temp progress in real-time
+                print("[Printer] Enabling auto temperature reporting (M155 S100)")
+                self.sendGcode("M155 S100\n", logger=self.logger)
+
+                # Initialize time tracking before starting actual printing
+                # This ensures frontend shows "00:00:00" instead of "Idle" at print start
+                job.setTimeStarted(1)
+                job.setTime(datetime.now(), 2)
+                job.updateTimeTracking()
+
+                # Stream and execute G-code commands line-by-line
                 for line in g:
+                    # Check for cancellation request
                     if self.status == "cancelled":
                         self.sendGcode(self.cancelCMD)
                         self.verdict = "cancelled"
                         if self.logger:
                             self.logger.log("Job cancelled")
-                        pass
                         return True
 
-                        # print("LINE: ", line, " STATUS: ", self.status, " FILE PAUSE: ", job.getFilePause())
+                    # Color change support (future feature)
                     if "layer" in line.lower() and self.status == 'colorchange':
-                        #TODO: implement color change
+                        # TODO: implement color change handling
                         pass
 
-                    # if line contains ";LAYER_CHANGE", do job.currentLayerHeight(the next line)
+                    # Track layer height for progress display
+                    # Slicers insert ";LAYER_CHANGE" followed by ";Z:X.XX" to mark layer transitions
                     if prev_line and ";LAYER_CHANGE" in prev_line:
                         match = re.search(r";Z:(\d+\.?\d*)", line)
                         if match:
@@ -131,22 +228,51 @@ class Printer(Device, metaclass=ABCMeta):
                             job.setCurrentLayerHeight(current_layer_height)
                     prev_line = line
 
-                    # remove whitespace
-                    line = line.strip()
-                    # Don't send empty lines and comments. ";" is a comment in gcode.
-                    if ";" in line:  # Remove inline comments
-                        line = line.split(";")[
-                            0
-                        ].strip()  # Remove comments starting with ";"
+                    # Clean up G-code line
+                    line = line.strip()  # Remove leading/trailing whitespace
+                    if ";" in line:  # Remove inline comments (everything after semicolon)
+                        line = line.split(";")[0].strip()
 
+                    # Skip empty lines and comment-only lines
                     if len(line) == 0 or line.startswith(";"):
                         continue
-                    if job.getTimeStarted() == 0 and ("M75" in line or self.startTimeCMD in line):
-                        job.setTimeStarted(1)
-                        job.setTime(job.calculateEta(), 1)
-                        job.setTime(datetime.now(), 2)
+
+                    # Emit "Fabricating..." message when actual printing starts (M75 command)
+                    if "M75" in line or self.startTimeCMD in line:
                         if current_app:
                             current_app.socketio.emit("console_update", {"message": "Fabricating...", "level": "info", "fabricator_id": self.dbID})
+
+                    # Parse M73 progress/time commands (Prusa firmware)
+                    # M73 provides real-time estimates directly from the printer firmware
+                    # Format: M73 P<progress%> R<remaining_minutes> Q<progress_silent%> S<remaining_silent_minutes>
+                    # This is more accurate than calculated estimates since printer knows actual speeds
+                    if line.startswith("M73"):
+                        # Parse all M73 parameters (re already imported at top of file)
+                        p_match = re.search(r'P(\d+)', line)  # Normal mode progress percentage
+                        r_match = re.search(r'R(\d+)', line)  # Normal mode remaining time (minutes)
+                        q_match = re.search(r'Q(\d+)', line)  # Silent mode progress percentage
+                        s_match = re.search(r'S(\d+)', line)  # Silent mode remaining time (minutes)
+
+                        if p_match:
+                            # Progress from printer overrides line-based calculation
+                            printer_progress = int(p_match.group(1))
+                            job.setProgress(float(printer_progress))
+
+                        if r_match:
+                            # Use normal mode remaining time
+                            remaining_minutes = int(r_match.group(1))
+                            job._printer_remaining_time = remaining_minutes * 60  # Convert to seconds
+
+                        # For Prusa printers in silent mode, Q/S may be more accurate than P/R
+                        # Use silent mode time if available and different from normal mode
+                        if s_match:
+                            remaining_silent_minutes = int(s_match.group(1))
+                            # Prefer silent mode estimate if printer is in silent mode
+                            job._printer_remaining_time = remaining_silent_minutes * 60
+
+                        # Update time tracking display immediately when M73 received
+                        if p_match or r_match or q_match or s_match:
+                            job.updateTimeTracking()
 
                     # Send G-code command and check for errors
                     if not self.sendGcode(line, logger=self.logger):
@@ -244,6 +370,11 @@ class Printer(Device, metaclass=ABCMeta):
                     # Call the setProgress method
                     job.setProgress(progress)
 
+                    # Update time tracking (throttled to every 1% change to reduce socket traffic)
+                    if int(progress) > last_progress_update:
+                        last_progress_update = int(progress)
+                        job.updateTimeTracking()
+
                     # if self.status == "complete" and job.extruded != 0:
                     if self.status == "complete":
                         self.verdict = "complete"
@@ -266,46 +397,80 @@ class Printer(Device, metaclass=ABCMeta):
             return True
         except Exception as e:
             self.verdict = "error"
+            print(f"[Printer] EXCEPTION in parseGcode: {e}")
             current_app.socketio.emit("error_update",{"fabricator_id": self.dbID, "job_id": job.id, "error": str(e)})
             current_app.socketio.emit("console_update", {"message": "Job error", "level": "error", "fabricator_id": self.dbID})
             current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
-            pass
-            return e
-        
+            return False  # Return False not exception object
+        finally:
+            # Disable keepalive messages when print ends (success, error, or cancellation)
+            self.disableKeepalive(logger=self.logger)
+
     def sendGcode(self, gcode: bytes | str, logger = None) -> bool:
         """
-        Method to send gcode to the printer
-        :param bytes | str | LiteralString gcode: the line of gcode to send to the printer
-        :param JobLogger logger: the logger to use
+        Send a single G-code command to the printer and wait for response validation.
+
+        This method implements a synchronous command/response protocol:
+        1. Send G-code command via serial
+        2. Read response lines until validator confirms success or timeout occurs
+        3. Handle special cases like temperature monitoring and multi-line responses
+
+        The method uses validator functions (from callablesHashtable) to determine
+        when a command has completed successfully. For example:
+        - checkOK: Waits for "ok" response
+        - checkExtruderTemp: Waits for nozzle to reach target temperature
+        - checkFirmware: Reads all M115 Cap: lines until "ok"
+
+        :param bytes | str gcode: G-code command to send (automatically adds newline if missing)
+        :param Logger logger: Optional logger instance for debug output
+        :return: True if command succeeded, False if failed or timed out
         :rtype: bool
+
+        :raises AssertionError: If serial connection is None or not open
+
+        Timeout behavior:
+            - Temperature commands (M109, M190): 20 minutes
+            - Regular commands: 10 seconds
+            - Cancellation: Returns True immediately if status is "cancelled"
+
+        Notes:
+            - Temperature lines (T:X B:Y format) are automatically parsed via handleTempLine()
+            - Empty responses are silently skipped (keepalive may cause empty reads)
+            - "echo:busy: processing" messages are filtered out
+            - Debug output shows all sent commands and received responses
         """
+        # Use provided logger or fall back to printer's logger
         if logger is None: logger = self.logger
-        should_log = logger is not None  # Define should_log based on logger availability
+        should_log = logger is not None
+
+        # Validate serial connection is ready
         assert self.serialConnection is not None, "Serial connection is None"
         assert self.serialConnection.is_open, "Serial connection is not open"
+
+        # Ensure command is properly formatted as bytes with newline
         if isinstance(gcode, str):
             if gcode[-1] != "\n": gcode += "\n"
             gcode = gcode.encode("utf-8")
         assert isinstance(gcode, bytes), f"Expected bytes, got {type(gcode)}"
+
+        # Get validator functions for this command (defaults to checkOK)
         callables = self.callablesHashtable.get(self.extractIndex(gcode, logger), [checkOK])
 
-        # Print command being sent
+        # Debug: Print command being sent
         print(f">>> SENDING GCODE: {gcode.decode().strip()}")
 
-        # Write GCode command to serial connection
-        # Note: Frontend does not listen for gcode_line events
+        # Write command to serial port
         self.serialConnection.write(gcode)
         line = b''
 
-        # Check for timeout - use time-based timeout instead of iteration counter
-
-        # Increase timeout for temperature commands
+        # Set timeout based on command type
         gcode_str = gcode.decode().strip().split()[0]
         if gcode_str in ["M109", "M190"]:
-            timeout_seconds = 1200.0  # 20 minutes for temperature commands
+            timeout_seconds = 1200.0  # 20 minutes for heating commands
         else:
             timeout_seconds = 10.0  # 10 seconds for regular commands
 
+        # Process each validator function for this command
         for func in callables:
             # Reset timeout start time for each callable
             start_time = time()
@@ -555,7 +720,7 @@ class Printer(Device, metaclass=ABCMeta):
             assert self.serialConnection is not None
             assert self.serialConnection.is_open
             if hasattr(self, "keepAliveCMD") and self.keepAliveCMD:
-                self.sendGcode(self.keepAliveCMD)
+                self.enableKeepalive(logger=logger)
             self.sendGcode(self.pauseCMD)
             if self.logger is not None: self.logger.log("Job Paused")
             return True
@@ -570,19 +735,64 @@ class Printer(Device, metaclass=ABCMeta):
             assert isinstance(self, Device), "self is not an instance of Device"
             assert self.serialConnection is not None, "Serial connection is None"
             assert self.serialConnection.is_open, "Serial connection is not open"
-            if hasattr(self, "doNotKeepAliveCMD") and self.doNotKeepAliveCMD: self.sendGcode(self.doNotKeepAliveCMD, False)
+            if hasattr(self, "doNotKeepAliveCMD") and self.doNotKeepAliveCMD:
+                self.disableKeepalive(logger=logger)
             self.sendGcode(self.resumeCMD, False)
             if self.logger is not None: self.logger.log("Job Resumed")
             return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self.logger if not logger else logger)
 
+    def enableKeepalive(self, logger=None) -> bool:
+        """
+        Enable host keepalive messages to prevent serial timeout during long operations.
+
+        Sends M113 S2 to enable keepalive messages every 2 seconds. This is essential
+        during heating, bed leveling, and other operations that don't produce regular
+        serial output.
+
+        :param Logger logger: Optional logger instance
+        :return: True if command succeeded, False otherwise
+        :rtype: bool
+        """
+        try:
+            print("[Printer] Enabling keepalive (M113 S2)")
+            return self.sendGcode(self.keepAliveCMD, logger=logger)
+        except Exception as e:
+            print(f"[Printer] Failed to enable keepalive: {e}")
+            if current_app:
+                return current_app.handle_errors_and_logging(e, logger or self.logger)
+            return False
+
+    def disableKeepalive(self, logger=None) -> bool:
+        """
+        Disable host keepalive messages.
+
+        Sends M113 S0 to stop keepalive messages. Should be called when disconnecting
+        or when print job ends to prevent unnecessary serial traffic.
+
+        :param Logger logger: Optional logger instance
+        :return: True if command succeeded, False otherwise
+        :rtype: bool
+        """
+        try:
+            print("[Printer] Disabling keepalive (M113 S0)")
+            return self.sendGcode(self.doNotKeepAliveCMD, logger=logger)
+        except Exception as e:
+            print(f"[Printer] Failed to disable keepalive: {e}")
+            if current_app:
+                return current_app.handle_errors_and_logging(e, logger or self.logger)
+            return False
+
     def connect(self) -> bool:
         assert super().connect(), "Failed to connect to printer"
         try:
             assert self.serialConnection is not None, "Serial connection is None"
             assert self.serialConnection.is_open, "Serial connection is not open"
+            # Enable auto temperature reporting (M155 S1 = 1 second interval)
             self.sendGcode("M155 S1\n", False)
+            # Enable keepalive messages to prevent serial timeout during idle periods
+            self.enableKeepalive(logger=self.logger)
             return True
         except Exception as e:
             return current_app.handle_errors_and_logging(e, self.logger)
@@ -590,10 +800,15 @@ class Printer(Device, metaclass=ABCMeta):
     def disconnect(self) -> bool:
         try:
             if self.serialConnection and self.serialConnection.is_open:
+                # Disable keepalive messages before disconnecting
+                self.disableKeepalive(logger=self.logger)
+                # Disable temperature auto-reporting
                 self.sendGcode("M155 S100\n", False)
                 self.sendGcode("M155 S0\n", False)
+                # Turn off heaters for safety
                 self.sendGcode("M104 S0\n", False)
                 self.sendGcode("M140 S0\n", False)
+                # Disable motors
                 self.sendGcode("M84\n", False)
                 self.serialConnection.close()
             return True

@@ -41,7 +41,7 @@ def checkBedTemp(line, dev):
         temps = match.groups() if match else None
         return checkTemp(temps, dev, ["bedTemperature", "bedTargetTemp"])  # Name matches Printer.py
     except Exception as e:
-        return current_app.handle_errors_and_logging(e, dev.logger)
+        return current_app.handle_errors_and_logging(e, getattr(dev, 'logger', None) if dev else None)
 
 def checkExtruderTemp(line, dev):
     from Classes.Fabricators.Printers.Printer import Printer
@@ -52,7 +52,7 @@ def checkExtruderTemp(line, dev):
         temps = match.groups() if match else None
         return checkTemp(temps, dev, ["nozzleTemperature", "nozzleTargetTemp"])  # Name matchses Printer.py
     except Exception as e:
-        return current_app.handle_errors_and_logging(e, dev.logger)
+        return current_app.handle_errors_and_logging(e, getattr(dev, 'logger', None) if dev else None)
 
 def checkTemp(temps, dev, attrs):
     try:
@@ -67,7 +67,7 @@ def checkTemp(temps, dev, attrs):
                 return False
         return abs(getattr(dev, attrs[1]) - getattr(dev, attrs[0])) < 0.75
     except Exception as e:
-        return current_app.handle_errors_and_logging(e, dev.logger)
+        return current_app.handle_errors_and_logging(e, getattr(dev, 'logger', None) if dev else None)
 
 def checkTime(line, dev):
     line = (line.decode() if isinstance(line, bytes) else line).strip()

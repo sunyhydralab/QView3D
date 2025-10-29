@@ -136,7 +136,7 @@ class FabricatorList:
         if dbFab is not None: # means that the fabricator is in the db
             if listFab is not None: # means that the fabricator is in the list and the db
                 err = Exception(f"This fabricator is already registered as {dbFab.getName()}")
-                app.handle_errors_and_logging(err, listFab.device.logger)
+                app.handle_errors_and_logging(err, getattr(listFab.device, 'logger', None) if listFab.device else None)
                 raise err
             else: # means that the fabricator is in the db but not in the list
                 newFab = Fabricator(serialPort, name=dbFab.getName())

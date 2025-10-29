@@ -1,26 +1,31 @@
 <script setup lang="ts">
 import { deleteFabricator } from '@/models/fabricator';
 import { computed, ref } from 'vue'
+import { api } from '@/models/api'
+import { addToast } from '@/components/Toast.vue'
+
 interface FabricatorProps {
   name: string
   model: string
   date: string | Date
   id: number
+  status?: string
 }
 
 const props = defineProps<FabricatorProps>()
-const emit = defineEmits(['deregistered'])
+const emit = defineEmits(['deregistered', 'statusChanged'])
 
 // Add state for animation control
 const isVisible = ref(true)
+const isTogglingStatus = ref(false)
 
 // Format the date if it's provided
 const formattedDate = computed(() => {
   if (!props.date) return 'Unknown date'
-  
+
   // If already a string, return as is
   if (typeof props.date === 'string') return props.date
-  
+
   // If Date object, format it
   return new Date(props.date).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -29,11 +34,16 @@ const formattedDate = computed(() => {
   })
 })
 
+// Compute status display properties
+const isOnline = computed(() => props.status === 'ready')
+const statusColor = computed(() => isOnline.value ? 'green' : 'gray')
+const statusText = computed(() => isOnline.value ? 'Online' : 'Offline')
+
 // Function to handle deregister button click
 async function handleDeregister() {
   // First trigger the fade-out animation
   isVisible.value = false
-  
+
   // Wait for animation to complete before actual deletion
   setTimeout(async () => {
     // Proceed with deletion in backend
@@ -41,6 +51,32 @@ async function handleDeregister() {
     console.log(`Deregistering fabricator: ${props.name}`)
     emit('deregistered', props.id)
   }, 500) // Match this with CSS transition duration
+}
+
+// Function to toggle fabricator online/offline status
+async function toggleStatus() {
+  if (isTogglingStatus.value) return
+
+  isTogglingStatus.value = true
+  const newStatus = isOnline.value ? 'offline' : 'online'
+
+  try {
+    // Call the appropriate API endpoint
+    const endpoint = `fabricator/${props.id}/${newStatus}`
+    const result = await api(endpoint, {}, 'POST')
+
+    if (result.success) {
+      addToast(`${props.name} is now ${newStatus}`, 'success')
+      emit('statusChanged', { id: props.id, status: result.status })
+    } else {
+      addToast(`Failed to turn ${props.name} ${newStatus}`, 'error')
+    }
+  } catch (error) {
+    console.error(`Error toggling status for ${props.name}:`, error)
+    addToast(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error')
+  } finally {
+    isTogglingStatus.value = false
+  }
 }
 </script>
 
@@ -80,15 +116,47 @@ async function handleDeregister() {
       
       <!-- Status indicator -->
       <div class="flex items-center mt-4">
-        <div class="h-2 w-2 rounded-full bg-green-500 mr-2 animate-pulse"></div>
-        <span class="text-xs text-green-600 dark:text-green-400">Online</span>
+        <div
+          class="h-2 w-2 rounded-full mr-2"
+          :class="{
+            'bg-green-500 animate-pulse': isOnline,
+            'bg-gray-400': !isOnline
+          }"
+        ></div>
+        <span
+          class="text-xs"
+          :class="{
+            'text-green-600 dark:text-green-400': isOnline,
+            'text-gray-500 dark:text-gray-400': !isOnline
+          }"
+        >
+          {{ statusText }}
+        </span>
       </div>
     </div>
-    
+
     <!-- Card actions -->
     <div
       class="px-5 py-3 bg-light-primary dark:bg-dark-primary flex justify-end space-x-2"
     >
+      <!-- Turn Online/Offline button -->
+      <button
+        class="p-1 text-dark-primary dark:text-light-primary transition-colors duration-200 rounded flex items-center"
+        :class="{
+          'hover:text-green-500 dark:hover:text-green-400': !isOnline,
+          'hover:text-orange-500 dark:hover:text-orange-400': isOnline,
+          'opacity-50 cursor-not-allowed': isTogglingStatus
+        }"
+        :disabled="isTogglingStatus"
+        @click="toggleStatus"
+      >
+        <!-- Power icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <span class="text-sm">Turn {{ isOnline ? 'Offline' : 'Online' }}</span>
+      </button>
+
       <!-- Deregister button -->
       <button
         class="p-1 text-dark-primary dark:text-light-primary hover:text-red-500 dark:hover:text-red-400 transition-colors duration-200 rounded flex items-center"

@@ -6,7 +6,7 @@ class LoggingService:
         self.app = app
         self.logger = logger
 
-        if not logger.debug:
+        if not logger.debug_mode:
             logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
     def get_logger(self):

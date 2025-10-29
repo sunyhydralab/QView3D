@@ -37,11 +37,12 @@ export interface Job {
   
     job_client?: {
       // this is frontend data CALCULATED based on the backend data
-      total_time: number
-      eta: number
-      elapsed_time: number
-      extra_time: number
-      remaining_time: number
+      // Time values are formatted as "HH:MM:SS" strings for display
+      total_time: string
+      eta: string
+      elapsed_time: string
+      extra_time?: string
+      remaining_time: string
     }
     time_started?: number
     colorbuff?: number 

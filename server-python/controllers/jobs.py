@@ -498,6 +498,49 @@ def startPrint():
         current_app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
 
+@jobs_bp.route('/confirmjobcomplete', methods=["POST"])
+def confirmJobComplete():
+    """
+    Manually confirm that a printed job is complete.
+    Called when user clicks the Complete button after inspecting the print.
+    """
+    try:
+        data = request.get_json()
+        printerid = data['printerid']
+        jobid = data['jobid']
+
+        printerobject = findPrinterObject(printerid)
+        if printerobject is None:
+            return jsonify({"error": "Fabricator not found."}), 404
+
+        queue = printerobject.getQueue()
+        if queue is None or len(queue) == 0:
+            return jsonify({"error": "No job in queue."}), 404
+
+        job = queue[0]
+        if job.id != jobid:
+            return jsonify({"error": f"Job mismatch. Expected {jobid}, found {job.id}"}), 400
+
+        # Verify job is in awaiting confirmation state
+        if job.status != 'awaiting_user_confirmation':
+            return jsonify({"error": f"Job not awaiting confirmation. Status: {job.status}"}), 400
+
+        # Mark job as complete
+        job.status = 'complete'
+        Job.update_job_status(jobid, 'complete')
+
+        # Remove from queue
+        queue.removeJob()
+        print(f"Job {jobid} manually marked complete and removed from queue")
+
+        # Set fabricator back to ready
+        printerobject.status = 'ready'
+
+        return jsonify({"success": True, "message": "Job marked as complete."}), 200
+    except Exception as e:
+        current_app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
+
 @jobs_bp.route('/savecomment', methods=["POST"])
 def saveComment():
     try:

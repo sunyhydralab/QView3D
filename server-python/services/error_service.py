@@ -7,7 +7,7 @@ class ErrorService:
         error_msg = str(e) if isinstance(e, Exception) else e
         log = log_instance or logger
 
-        if logger.debug:
+        if logger.debug_mode:
             log.error(error_msg, exc=traceback.format_exc())
         else:
             log.error(error_msg)

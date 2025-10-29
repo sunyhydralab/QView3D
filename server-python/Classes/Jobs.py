@@ -676,3 +676,59 @@ class Job(db.Model):
         # Store job timing data for internal use
         # Frontend does not listen for set_time events, so we skip emission
         self.job_time[index] = timeData
+
+    def updateTimeTracking(self):
+        """
+        Calculate and emit real-time time tracking updates for the frontend.
+
+        Computes:
+            - Elapsed: Time since print started
+            - Remaining: Estimated time remaining based on progress
+            - Total: Total estimated print time (from slicer metadata)
+            - ETA: Estimated completion time
+
+        Emits 'time_update' event with all time values to frontend for reactive display.
+        Only emits if job is in 'printing' status and has started.
+        """
+        if self.status != 'printing' or self.time_started == 0:
+            return
+
+        now = datetime.now()
+        time_started = self.job_time[2] if self.job_time[2] != datetime.min else now
+        total_seconds = self.job_time[0] if self.job_time[0] > 0 else 0
+        progress = self.progress if hasattr(self, 'progress') else 0
+
+        # Calculate elapsed time
+        elapsed = (now - time_started).total_seconds()
+
+        # Calculate remaining time based on printer feedback (M73) or progress
+        # Priority: 1) Printer's M73 remaining time, 2) Progress-based estimate, 3) Slicer estimate
+        if hasattr(self, '_printer_remaining_time') and self._printer_remaining_time is not None:
+            # Use printer's M73 remaining time estimate (most accurate)
+            remaining = self._printer_remaining_time
+        elif progress > 0 and elapsed > 0:
+            # Estimate total time based on current progress rate
+            estimated_total = (elapsed / progress) * 100
+            remaining = estimated_total - elapsed
+        elif total_seconds > 0:
+            # Fall back to slicer estimate minus elapsed
+            remaining = total_seconds - elapsed
+        else:
+            remaining = 0
+
+        # Ensure remaining is not negative
+        remaining = max(0, remaining)
+
+        # Calculate ETA
+        eta = now + timedelta(seconds=remaining)
+
+        # Emit time update to frontend
+        if current_app:
+            current_app.socketio.emit('time_update', {
+                'job_id': self.id,
+                'elapsed': int(elapsed),  # seconds
+                'remaining': int(remaining),  # seconds
+                'total': int(total_seconds) if total_seconds > 0 else int(elapsed + remaining),  # seconds
+                'eta': eta.isoformat(),  # ISO 8601 timestamp
+                'progress': progress  # percentage
+            })

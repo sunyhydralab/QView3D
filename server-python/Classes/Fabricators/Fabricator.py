@@ -14,70 +14,183 @@ from datetime import datetime, timezone
 from services.app_service import current_app
 
 class Fabricator(db.Model):
+    """
+    Database model and controller for digital fabrication devices (3D printers, CNC machines, laser cutters).
+
+    Fabricator acts as the bridge between:
+    - Database persistence (SQLAlchemy model with hwid, name, port info)
+    - Physical device communication (Device instance with serial connection)
+    - Job queue management (Queue instance holding pending jobs)
+    - Application state (status tracking with thread-safe locking)
+
+    The Fabricator class is responsible for:
+    - Registering devices in the database by hardware ID (hwid)
+    - Creating appropriate Device subclass instances (Printer, CNC, LaserCutter)
+    - Managing device lifecycle (connect, disconnect, status changes)
+    - Coordinating job execution via the queue
+    - Providing REST API endpoints for device control
+
+    Database Columns:
+        dbID (int): Primary key, unique identifier for each fabricator
+        description (str): Human-readable description (e.g., "Original Prusa MK4S")
+        hwid (str): Hardware ID from USB (e.g., "USB VID:PID=2C99:001A SER=...")
+        name (str): User-assigned friendly name for the device
+        date (datetime): Registration timestamp
+        devicePort (str): Serial port name (e.g., "cu.usbmodem212301")
+        model (str): Device model identifier (optional)
+
+    Runtime Attributes (not persisted):
+        device (Device): Instance of Printer/CNC/LaserCutter for communication
+        queue (Queue): Job queue for this fabricator
+        status (str): Current state (offline, ready, printing, paused, error, etc.)
+        error (str): Last error message if status is 'error'
+
+    Status Values:
+        - offline: Device not connected or not responding
+        - configuring: Device is being initialized
+        - ready: Device connected and idle, ready for jobs
+        - printing: Actively executing a print job
+        - paused: Print job paused by user
+        - cancelled: Print job cancelled by user
+        - complete: Print job finished successfully
+        - error: Error occurred during operation
+        - awaiting_user_confirmation: Print finished, waiting for user to confirm completion
+
+    Methods:
+        __init__(port, name, ...): Initialize new fabricator or load from database
+        init_on_load(): Reconstruct runtime attributes when loaded from database
+        createDevice(port, ...): Factory method to create appropriate Device subclass
+        connect(): Establish serial connection to device
+        disconnect(): Close serial connection
+        startPrint(job): Begin executing a print job
+        pausePrint(): Pause current print job
+        resumePrint(): Resume paused print job
+        cancelPrint(): Cancel current print job
+    """
+
     __tablename__ = "Fabricators"
-    dbID = db.Column(db.Integer, primary_key=True)
-    description = db.Column(db.String(50), nullable=False)
-    hwid = db.Column(db.String(150), nullable=False)
-    name = db.Column(db.String(50), nullable=False)
-    date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).astimezone(), nullable=False)
-    devicePort = db.Column(db.String(50), nullable=False)
-    model = db.Column(db.String(100), nullable=True)
+
+    # Database columns (persisted)
+    dbID = db.Column(db.Integer, primary_key=True)  # Unique database ID
+    description = db.Column(db.String(50), nullable=False)  # Device description
+    hwid = db.Column(db.String(150), nullable=False)  # Hardware ID (USB VID:PID:SER)
+    name = db.Column(db.String(50), nullable=False)  # User-friendly name
+    date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).astimezone(), nullable=False)  # Registration date
+    devicePort = db.Column(db.String(50), nullable=False)  # Serial port name
+    model = db.Column(db.String(100), nullable=True)  # Device model
 
     @reconstructor
     def init_on_load(self):
+        """
+        Reconstruct runtime attributes when Fabricator is loaded from database.
+
+        Called automatically by SQLAlchemy after querying a Fabricator from the database.
+        Initializes non-persistent attributes like queue, device, status, and locks.
+
+        This ensures that fabricators loaded from the database have the same runtime
+        state as freshly created ones.
+        """
         from Classes.Queue import Queue
+        # Thread-safe status management
         self._status_lock = threading.RLock()
-        self._status = 'offline'
+        self._status = 'offline'  # Default to offline when loaded from DB
+        # Initialize job queue
         if not hasattr(self, 'queue') or self.queue is None:
             self.queue = Queue()
+        # Initialize device reference (will be set during connection)
         if not hasattr(self, 'device'):
             self.device = None
+        # Initialize error tracking
         if not hasattr(self, 'error'):
             self.error = None
 
     def __init__(self, port=None, name="", consoleLogger=None, fileLogger=None, devicePort=None):
+        """
+        Initialize a new Fabricator instance or create emulated fabricator.
+
+        This constructor handles three scenarios:
+        1. Emulated fabricator (devicePort starts with 'EMU_')
+        2. Real fabricator from serial port (checks database for existing entry by hwid)
+        3. No initialization (port=None, used for database queries)
+
+        :param ListPortInfo | SysFS port: Serial port object for the device
+        :param str name: User-assigned friendly name
+        :param Logger consoleLogger: Optional console logger
+        :param Logger fileLogger: Optional file logger
+        :param str devicePort: Optional port override for emulator (starts with 'EMU_')
+
+        Behavior:
+            - If hwid exists in database: Load existing fabricator data
+            - If hwid is new: Create new database entry
+            - Automatically creates appropriate Device subclass (Printer/CNC/LaserCutter)
+            - Initializes job queue and thread-safe status management
+        """
+        # ===== SCENARIO 1: Emulated Fabricator =====
         if devicePort is not None and devicePort.startswith('EMU_'):
             from Classes.Queue import Queue
-            self.dbID = None
+            self.dbID = None  # Emulators are not persisted to database
             self.queue = Queue()
             self._status_lock = threading.RLock()
             self._status = "ready"
-            self.hwid = devicePort
+            self.hwid = devicePort  # Use devicePort as hwid for emulators
             self.description = "Emulated Printer"
             self.name = name if name else "Emulated Printer"
             self.devicePort = devicePort
-            self.device = None
+            self.device = None  # Device created later via WebSocket connection
             self.date = datetime.now(timezone.utc).astimezone()
             self.error = None
             return
 
+        # ===== SCENARIO 2: Database Query (no initialization) =====
         if port is None:
-            return
+            return  # Used when querying fabricators from database
+
+        # ===== SCENARIO 3: Real Fabricator from Serial Port =====
         assert isinstance(port, ListPortInfo) or isinstance(port, SysFS), f"Invalid port type: {type(port)}"
         assert isinstance(name, str), f"Invalid name type: {type(name)}"
+
         from Classes.Queue import Queue
         self.dbID = None
         self.queue = Queue()
         self._status_lock = threading.RLock()
-        self._status = "configuring"
-        self.hwid = port.hwid.split(" LOCATION=")[0]
-        self.description = "New Fabricator"
+        self._status = "configuring"  # Set to configuring during initialization
+
+        # Extract hardware ID and port info from serial port object
+        self.hwid = port.hwid.split(" LOCATION=")[0]  # Remove LOCATION suffix
+        self.description = "New Fabricator"  # Temporary, updated after device creation
         self.name = name
-        self.devicePort = port.device.strip("/").split("/")[-1]
+        self.devicePort = port.device.strip("/").split("/")[-1]  # Extract port name
+
+        # Check if this fabricator already exists in database (by hwid)
         dbFab = Fabricator.query.filter_by(hwid=self.hwid).first()
         if dbFab is None:
+            # New fabricator: Add to database
             db.session.add(self)
             db.session.commit()
             self.dbID = self.dbID
         else:
+            # Existing fabricator: Load data from database
             self.name = dbFab.name
             self.description = dbFab.description
             self.hwid = dbFab.hwid
             self.devicePort = dbFab.devicePort.strip("/").split("/")[-1]
             self.date = dbFab.date
             self.dbID = dbFab.dbID
-        self.device = self.createDevice(port, consoleLogger=consoleLogger, fileLogger=fileLogger, addLogger=True, websocket_connection=next(iter(current_app.emulator_connections.values())) if port.device == current_app.get_emu_ports()[0] else None, name=name)
-        if self.description == "New Fabricator": self.description = self.device.getDescription()
+
+        # Create appropriate Device subclass (Printer, CNC, LaserCutter)
+        self.device = self.createDevice(
+            port,
+            consoleLogger=consoleLogger,
+            fileLogger=fileLogger,
+            addLogger=True,
+            websocket_connection=next(iter(current_app.emulator_connections.values())) if port.device == current_app.get_emu_ports()[0] else None,
+            name=name
+        )
+
+        # Update description with device-specific info if not already set
+        if self.description == "New Fabricator":
+            self.description = self.device.getDescription()
+
         self.error = None
         db.session.commit()
 
@@ -242,7 +355,7 @@ class Fabricator(db.Model):
             return True
         except Exception as e:
             self.error = e
-            current_app.handle_errors_and_logging(e, self.device.logger, level=50)
+            current_app.handle_errors_and_logging(e, getattr(self.device, 'logger', None) if self.device else None, level=50)
             current_app.socketio.emit("error_update", {"fabricator_id": self.dbID, "job_id": self.queue[0].id ,"error": str(e)})
             return False
 
@@ -274,7 +387,7 @@ class Fabricator(db.Model):
             self.setStatus("cancelled")
             return self.status == self.device.status == "cancelled"
         except Exception as e:
-            return current_app.handle_errors_and_logging(e, self.device.logger)
+            return current_app.handle_errors_and_logging(e, getattr(self.device, 'logger', None) if self.device else None)
 
     def getStatus(self):
         return self.status
@@ -305,7 +418,7 @@ class Fabricator(db.Model):
                 print(f"current app is None, status: {newStatus}")
             return True
         except Exception as e:
-            return current_app.handle_errors_and_logging(e, self.device.logger)
+            return current_app.handle_errors_and_logging(e, getattr(self.device, 'logger', None) if self.device else None)
 
     def resetToIdle(self):
         self.setStatus("idle")
@@ -392,7 +505,7 @@ class Fabricator(db.Model):
             elif isinstance(self.device, LaserCutter):
                 pass
         except AssertionError as e:
-            current_app.handle_errors_and_logging(e, self.device.logger)
+            current_app.handle_errors_and_logging(e, getattr(self.device, 'logger', None) if self.device else None)
             self.setStatus("error")
             self.queue.removeJob()
             self.queue[0] = None

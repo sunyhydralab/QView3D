@@ -12,6 +12,7 @@ a more efficient "shared idle monitor + per-print worker threads" model.
 import time
 import threading
 from threading import Thread
+from time import sleep
 from typing import Dict, List, Callable
 from services.app_service import current_app
 
@@ -115,16 +116,28 @@ class IdleMonitorThread(Thread):
                     continue
 
                 # Double-check fabricator is not printing (safety check)
-                if getattr(fabricator, 'status', '') == 'printing':
+                status = getattr(fabricator, 'status', '')
+                if status == 'printing':
                     continue
 
-                # Read temperature (non-blocking with timeout)
+                # Skip temperature monitoring if there's a job actively starting
+                # Allow monitoring for awaiting_user_confirmation state (print finished)
+                if hasattr(fabricator, 'queue') and len(fabricator.queue) > 0:
+                    first_job = fabricator.queue[0]
+                    if hasattr(first_job, 'status') and first_job.status in ['ready', 'printing']:
+                        continue  # Job is about to start or currently printing
+
+                # Send M105 command to get temperature (proper G-code, doesn't steal bytes)
                 try:
-                    fabricator.device.handleTempLine(fabricator.device.serialConnection.read())
-                except Exception as e:
-                    # Temperature read failed, printer may be disconnected
-                    if getattr(fabricator, 'status', None) != 'offline':
-                        fabricator.status = 'offline'
+                    # Use sendGcode to properly request temperature
+                    fabricator.device.serialConnection.write(b"M105\n")
+                    sleep(0.1)  # Wait for response
+                    response = fabricator.device.serialConnection.readline()
+                    if response:
+                        fabricator.device.handleTempLine(response)
+                except Exception:
+                    # Temperature monitoring is best-effort, fail silently
+                    pass
 
             except Exception:
                 pass  # Temperature monitoring is best-effort
@@ -215,7 +228,9 @@ class PrintWorkerThread(Thread):
 
                 # Determine final status
                 if success:
-                    final_status = 'complete'
+                    # Don't auto-complete - wait for user to manually mark complete
+                    final_status = 'awaiting_user_confirmation'
+                    print(f"Print finished - Job {self.job.id}: Awaiting user confirmation")
                 else:
                     final_status = 'error'
                     error_msg = getattr(self.fabricator, 'error', 'Unknown error')
@@ -244,14 +259,22 @@ class PrintWorkerThread(Thread):
                 self.fabricator_list.print_completed(self.fabricator, False)
 
             finally:
-                # Remove job from queue (NOW INSIDE APP CONTEXT)
+                # Only remove job from queue if it failed (errors)
+                # Keep job in queue if awaiting user confirmation (successful prints)
                 try:
-                    self.fabricator.queue.removeJob()
-                except Exception:
-                    pass  # Queue cleanup is best-effort
+                    if self.job.status in ['error', 'cancelled']:
+                        self.fabricator.queue.removeJob()
+                        print(f"Job {self.job.id} removed from queue (status: {self.job.status})")
+                    elif self.job.status == 'awaiting_user_confirmation':
+                        print(f"Job {self.job.id} kept in queue, awaiting user confirmation")
+                except Exception as e:
+                    print(f"Error managing queue: {e}")
 
-                # Reset fabricator status to ready
-                self.fabricator.status = 'ready'
+                # Set fabricator status based on job outcome
+                if self.job.status == 'awaiting_user_confirmation':
+                    self.fabricator.status = 'awaiting_user_confirmation'
+                else:
+                    self.fabricator.status = 'ready'
 
     def stop(self):
         """

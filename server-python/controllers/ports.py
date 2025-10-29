@@ -187,3 +187,77 @@ def getFabricatorModels():
     except Exception as e:
         app.handle_errors_and_logging(e)
         return jsonify(['Prusa MK3', 'Prusa MK4', 'Ender 3', 'MakerBot Replicator'])
+
+@ports_bp.route("/fabricator/<int:fabricator_id>/online", methods=["POST"])
+def setFabricatorOnline(fabricator_id):
+    """
+    Turn a fabricator online by connecting and enabling keepalive.
+
+    This endpoint:
+    1. Gets the fabricator by ID
+    2. Sets status to 'ready' which triggers device.connect()
+    3. Keepalive is automatically enabled by Printer.connect()
+
+    Args:
+        fabricator_id (int): Database ID of the fabricator
+
+    Returns:
+        JSON response with success status or error message
+    """
+    try:
+        fabricator = app.fabricator_list.getFabricatorById(fabricator_id)
+        if not fabricator:
+            return jsonify({"error": "Fabricator not found"}), 404
+
+        # setStatus('ready') will call device.connect() which enables keepalive
+        if fabricator.setStatus('ready'):
+            if app.socketio:
+                app.socketio.emit('fabricator_online', {'id': fabricator_id, 'status': 'ready'})
+            return jsonify({
+                "success": True,
+                "message": "Fabricator is now online with keepalive enabled",
+                "status": fabricator.status
+            })
+        else:
+            return jsonify({"error": "Failed to bring fabricator online"}), 500
+
+    except Exception as e:
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500
+
+@ports_bp.route("/fabricator/<int:fabricator_id>/offline", methods=["POST"])
+def setFabricatorOffline(fabricator_id):
+    """
+    Turn a fabricator offline by disabling keepalive and disconnecting.
+
+    This endpoint:
+    1. Gets the fabricator by ID
+    2. Sets status to 'offline' which triggers device.disconnect()
+    3. Keepalive is automatically disabled by Printer.disconnect()
+
+    Args:
+        fabricator_id (int): Database ID of the fabricator
+
+    Returns:
+        JSON response with success status or error message
+    """
+    try:
+        fabricator = app.fabricator_list.getFabricatorById(fabricator_id)
+        if not fabricator:
+            return jsonify({"error": "Fabricator not found"}), 404
+
+        # setStatus('offline') will call device.disconnect() which disables keepalive
+        if fabricator.setStatus('offline'):
+            if app.socketio:
+                app.socketio.emit('fabricator_offline', {'id': fabricator_id, 'status': 'offline'})
+            return jsonify({
+                "success": True,
+                "message": "Fabricator is now offline with keepalive disabled",
+                "status": fabricator.status
+            })
+        else:
+            return jsonify({"error": "Failed to bring fabricator offline"}), 500
+
+    except Exception as e:
+        app.handle_errors_and_logging(e)
+        return jsonify({"error": format_exc()}), 500

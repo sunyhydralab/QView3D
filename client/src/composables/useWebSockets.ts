@@ -16,6 +16,7 @@ export function setupSockets() {
     setupCanPauseSocket()
     setupPauseFeedbackSocket()
     setupTimeStartedSocket()
+    setupTimeUpdateSocket()
     setupProgressSocket()
     setupReleaseSocket()
     setupJobStatusSocket()
@@ -44,11 +45,15 @@ interface WebSocketDataPacket {
   Fabricator?: Record<string, any>
   gcode_num?: number
   level?: string
-  message?: string 
+  message?: string
   extruded?: number
   colorbuff?: number
   max_layer_height?: number
   current_layer_height?: number
+  elapsed?: number
+  remaining?: number
+  total?: number
+  eta?: string
 }
 
 // *** PORTS ***
@@ -141,6 +146,59 @@ function setupTimeStartedSocket() {
 
     if (job) {
       job.time_started = data.time_started
+    }
+  })
+}
+
+// Helper function to format seconds as HH:MM:SS
+function formatTime(seconds: number | undefined): string {
+  if (seconds === undefined || seconds < 0) return 'Idle'
+
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const secs = Math.floor(seconds % 60)
+
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+}
+
+// Function to update reactive time tracking for jobs
+function setupTimeUpdateSocket() {
+  socket.value.off('time_update')
+  socket.value.on('time_update', (data: WebSocketDataPacket) => {
+    const job = fabricatorList.value
+      .flatMap((printer: Fabricator) => printer.queue)
+      .find((job: Job | undefined) => job?.id === data.job_id)
+
+    if (job) {
+      // Initialize job_client if it doesn't exist
+      if (!job.job_client) {
+        job.job_client = {
+          elapsed_time: 'Idle',
+          remaining_time: 'Idle',
+          total_time: 'Idle',
+          eta: 'Idle'
+        }
+      }
+
+      // Update time fields with formatted values
+      job.job_client.elapsed_time = formatTime(data.elapsed)
+      job.job_client.remaining_time = formatTime(data.remaining)
+      job.job_client.total_time = formatTime(data.total)
+      job.job_client.eta = data.eta || 'Idle'
+
+      // Also update progress if provided
+      if (data.progress !== undefined) {
+        job.progress = data.progress
+      }
+
+      console.debug('Time update received:', {
+        job_id: data.job_id,
+        elapsed: job.job_client.elapsed_time,
+        remaining: job.job_client.remaining_time,
+        total: job.job_client.total_time,
+        eta: job.job_client.eta,
+        progress: job.progress
+      })
     }
   })
 }
