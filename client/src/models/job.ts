@@ -138,7 +138,16 @@ export function setupJobSocketListeners() {
 
 export async function getAllJobs() {
   try {
-    jobHistory.value = await api('getjobs')
+    const response = await api('getjobs')
+    // Backend returns {jobs: [...], total: N} format
+    if (response && response.jobs) {
+      jobHistory.value = response.jobs
+    } else if (Array.isArray(response)) {
+      // Fallback for array format
+      jobHistory.value = response
+    } else {
+      jobHistory.value = []
+    }
     // Setup socket listeners after initial data load
     setupJobSocketListeners()
     return jobHistory.value

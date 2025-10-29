@@ -690,7 +690,12 @@ class Job(db.Model):
         Emits 'time_update' event with all time values to frontend for reactive display.
         Only emits if job is in 'printing' status and has started.
         """
-        if self.status != 'printing' or self.time_started == 0:
+        if self.status != 'printing':
+            print(f"[Job {self.id}] updateTimeTracking skipped: status={self.status} (expected 'printing')")
+            return
+
+        if self.time_started == 0:
+            print(f"[Job {self.id}] updateTimeTracking skipped: time_started=0 (not started yet)")
             return
 
         now = datetime.now()
@@ -724,11 +729,22 @@ class Job(db.Model):
 
         # Emit time update to frontend
         if current_app:
-            current_app.socketio.emit('time_update', {
+            time_data = {
                 'job_id': self.id,
                 'elapsed': int(elapsed),  # seconds
                 'remaining': int(remaining),  # seconds
                 'total': int(total_seconds) if total_seconds > 0 else int(elapsed + remaining),  # seconds
                 'eta': eta.isoformat(),  # ISO 8601 timestamp
                 'progress': progress  # percentage
-            })
+            }
+            current_app.socketio.emit('time_update', time_data)
+            print(f"[Job {self.id}] Emitted time_update: elapsed={formatTime(elapsed)}, remaining={formatTime(remaining)}, progress={progress:.1f}%, ETA={eta.strftime('%I:%M %p')}")
+        else:
+            print(f"[Job {self.id}] Cannot emit time_update: current_app is None")
+
+def formatTime(seconds):
+    """Helper to format seconds as HH:MM:SS for logging"""
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}"

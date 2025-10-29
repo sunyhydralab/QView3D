@@ -370,15 +370,19 @@ class Fabricator(db.Model):
             print(f"[Fabricator] Error in begin() for {self.name}: {error_msg}")
             current_app.handle_errors_and_logging(e, getattr(self.device, 'logger', None) if self.device else None, level=50)
 
-            # Auto-create issue for print start failures
+            # Auto-create issue for print start failures with full details
             job = self.queue[0] if self.queue and len(self.queue) > 0 else None
             if job:
                 from Classes.Issues import Issue
-                Issue.create_issue(
-                    f"Print Start Failed: {self.name}",
-                    error_msg,
-                    job.id
+                issue = Issue.create_issue(
+                    title=f"Print Start Failed: {job.file_name_original}",
+                    description=f"Printer: {self.name}\nJob: {job.file_name_original} (ID: {job.id})\nError: {error_msg}",
+                    severity="high",
+                    category="job",
+                    job_id=job.id,
+                    fabricator_id=self.dbID
                 )
+                print(f"[Fabricator] Job {job.id} failed to start on {self.name}. Issue #{issue.get('issue_id') if issue else 'N/A'} created")
                 current_app.socketio.emit("error_update", {"fabricator_id": self.dbID, "job_id": job.id, "error": error_msg})
             else:
                 current_app.socketio.emit("error_update", {"fabricator_id": self.dbID, "job_id": None, "error": error_msg})
@@ -468,15 +472,18 @@ class Fabricator(db.Model):
             # Update job status to error in database
             from Classes.Jobs import Job as JobClass
             JobClass.update_job_status(job.id, "error")
-            # Auto-create issue from error
+            # Auto-create issue from error with full details
             from Classes.Issues import Issue
             error_msg = str(self.error) if self.error else "Unknown print error"
             issue = Issue.create_issue(
-                f"Print Failed: {self.name} - {job.file_name_original}",
-                error_msg,
-                job.id
+                title=f"Print Failed: {job.file_name_original}",
+                description=f"Printer: {self.name}\nJob: {job.file_name_original} (ID: {job.id})\nError: {error_msg}",
+                severity="high",
+                category="job",
+                job_id=job.id,
+                fabricator_id=self.dbID
             )
-            print(f"[Fabricator] Job {job.id} failed with error. Issue #{issue.id if issue else 'N/A'} created")
+            print(f"[Fabricator] Job {job.id} failed on {self.name}. Issue #{issue.get('issue_id') if issue else 'N/A'} created")
             if current_app:
                 current_app.socketio.emit("fabricator_status_update", {"id": self.dbID, "status": "error"})
                 current_app.socketio.emit("job_error", {"job_id": job.id, "fabricator_id": self.dbID, "error": error_msg})
@@ -500,14 +507,17 @@ class Fabricator(db.Model):
             # Update job status to error (misprint is a type of error)
             from Classes.Jobs import Job as JobClass
             JobClass.update_job_status(job.id, "error")
-            # Auto-create issue for misprint
+            # Auto-create issue for misprint with full details
             from Classes.Issues import Issue
             issue = Issue.create_issue(
-                f"Misprint: {self.name} - {job.file_name_original}",
-                "Print quality issue detected",
-                job.id
+                title=f"Misprint: {job.file_name_original}",
+                description=f"Printer: {self.name}\nJob: {job.file_name_original} (ID: {job.id})\nIssue: Print quality problem detected",
+                severity="medium",
+                category="job",
+                job_id=job.id,
+                fabricator_id=self.dbID
             )
-            print(f"[Fabricator] Job {job.id} marked as misprint. Issue #{issue.id if issue else 'N/A'} created")
+            print(f"[Fabricator] Job {job.id} marked as misprint on {self.name}. Issue #{issue.get('issue_id') if issue else 'N/A'} created")
             self.setStatus("misprint")
             if current_app:
                 current_app.socketio.emit("fabricator_status_update", {"id": self.dbID, "status": "misprint"})

@@ -161,6 +161,29 @@ function formatTime(seconds: number | undefined): string {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
 }
 
+// Helper function to format ETA timestamp as readable time
+function formatETA(isoTimestamp: string | undefined): string {
+  if (!isoTimestamp || isoTimestamp === 'Idle') return 'Idle'
+
+  try {
+    const etaDate = new Date(isoTimestamp)
+    const now = new Date()
+
+    // If ETA is in the past, return 'Soon'
+    if (etaDate <= now) return 'Soon'
+
+    // Format as time (e.g., "6:30 PM")
+    return etaDate.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+  } catch (error) {
+    console.error('Error formatting ETA:', error)
+    return 'Unknown'
+  }
+}
+
 // Function to update reactive time tracking for jobs
 function setupTimeUpdateSocket() {
   socket.value.off('time_update')
@@ -184,7 +207,7 @@ function setupTimeUpdateSocket() {
       job.job_client.elapsed_time = formatTime(data.elapsed)
       job.job_client.remaining_time = formatTime(data.remaining)
       job.job_client.total_time = formatTime(data.total)
-      job.job_client.eta = data.eta || 'Idle'
+      job.job_client.eta = formatETA(data.eta)
 
       // Also update progress if provided
       if (data.progress !== undefined) {
