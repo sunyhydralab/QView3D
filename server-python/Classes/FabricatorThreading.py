@@ -259,22 +259,29 @@ class PrintWorkerThread(Thread):
                 self.fabricator_list.print_completed(self.fabricator, False)
 
             finally:
-                # Only remove job from queue if it failed (errors)
-                # Keep job in queue if awaiting user confirmation (successful prints)
+                # Remove completed or failed jobs from queue
+                # This ensures jobs move to history and can be rerun
                 try:
-                    if self.job.status in ['error', 'cancelled']:
+                    if self.job.status in ['error', 'cancelled', 'complete', 'awaiting_user_confirmation']:
                         self.fabricator.queue.removeJob()
                         print(f"Job {self.job.id} removed from queue (status: {self.job.status})")
-                    elif self.job.status == 'awaiting_user_confirmation':
-                        print(f"Job {self.job.id} kept in queue, awaiting user confirmation")
+
+                        # Emit queue update to frontend
+                        if current_app and hasattr(current_app, 'socketio'):
+                            current_app.socketio.emit('queue_update', {
+                                'queue': self.fabricator.queue.convertQueueToJson(),
+                                'fabricator_id': self.fabricator.dbID
+                            })
                 except Exception as e:
                     print(f"Error managing queue: {e}")
 
-                # Set fabricator status based on job outcome
-                if self.job.status == 'awaiting_user_confirmation':
-                    self.fabricator.status = 'awaiting_user_confirmation'
-                else:
-                    self.fabricator.status = 'ready'
+                # Set fabricator status back to ready
+                self.fabricator.status = 'ready'
+                if current_app and hasattr(current_app, 'socketio'):
+                    current_app.socketio.emit('status_update', {
+                        'fabricator_id': self.fabricator.dbID,
+                        'status': 'ready'
+                    })
 
     def stop(self):
         """
