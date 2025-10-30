@@ -10,6 +10,7 @@ from Classes.Jobs import Job
 from Classes.Queue import Queue
 from Classes.FabricatorThreading import IdleMonitorThread, PrintWorkerThread
 import time
+import threading
 from services.app_service import current_app as app
 # Removed tabs import - no longer needed
 from config.db import db
@@ -41,6 +42,9 @@ class FabricatorList:
 
             # NEW: Dict of active print threads {fabricator_id: PrintWorkerThread}
             self.active_print_threads = {}
+
+            # Thread-safe lock for accessing active_print_threads
+            self._print_threads_lock = threading.Lock()
 
             # Restore queues from database
             self.restore_queues_from_database()
@@ -229,17 +233,19 @@ class FabricatorList:
         :param fabricator: Fabricator to execute the print
         :param job: Job to print
         """
-        # Check if there's already a print thread for this fabricator
-        if fabricator.dbID in self.active_print_threads:
-            print(f"[FabricatorList] WARNING: Fabricator {fabricator.name} already has an active print thread")
-            return
+        # Thread-safe access to active_print_threads
+        with self._print_threads_lock:
+            # Check if there's already a print thread for this fabricator
+            if fabricator.dbID in self.active_print_threads:
+                print(f"[FabricatorList] WARNING: Fabricator {fabricator.name} already has an active print thread")
+                return
 
-        # Create and start print worker thread
-        print_thread = PrintWorkerThread(fabricator, job, self, self.app)
-        self.active_print_threads[fabricator.dbID] = print_thread
-        print_thread.start()
+            # Create and start print worker thread
+            print_thread = PrintWorkerThread(fabricator, job, self, self.app)
+            self.active_print_threads[fabricator.dbID] = print_thread
+            print_thread.start()
 
-        print(f"[FabricatorList] Started print thread for {fabricator.name}, Job {job.id}")
+            print(f"[FabricatorList] Started print thread for {fabricator.name}, Job {job.id}")
 
     def print_completed(self, fabricator: Fabricator, success: bool):
         """
@@ -251,10 +257,11 @@ class FabricatorList:
         :param fabricator: Fabricator that completed the print
         :param success: True if print succeeded, False if failed/cancelled
         """
-        # Remove print thread from active list
-        if fabricator.dbID in self.active_print_threads:
-            del self.active_print_threads[fabricator.dbID]
-            print(f"[FabricatorList] Print completed for {fabricator.name}, success={success}")
+        # Thread-safe removal of print thread from active list
+        with self._print_threads_lock:
+            if fabricator.dbID in self.active_print_threads:
+                del self.active_print_threads[fabricator.dbID]
+                print(f"[FabricatorList] Print completed for {fabricator.name}, success={success}")
 
         # Fabricator is now idle again - idle monitor will pick it up
         # No need to explicitly notify - idle monitor checks periodically

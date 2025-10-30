@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, watch, ref, nextTick } from 'vue'
 import * as GCodePreview from 'gcode-preview'
-import { onSocketEvent } from '@/services/socket'
+import { onSocketEvent, socket } from '@/services/socket'
 import { addToast } from '@/components/Toast.vue'
 import { isDark } from '@/composables/useMode'
 

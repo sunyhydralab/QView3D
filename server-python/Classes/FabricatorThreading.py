@@ -54,10 +54,10 @@ class IdleMonitorThread(Thread):
                 try:
                     current_time = time.time()
 
-                    # Get list of idle fabricators (not currently printing)
+                    # Get list of idle fabricators (not currently printing and not offline)
                     idle_fabricators = [
                         fab for fab in self.fabricator_list.fabricators
-                        if not self._is_printing(fab)
+                        if not self._is_printing(fab) and fab.status != 'offline'
                     ]
 
                     # Periodic temperature monitoring for idle printers
@@ -159,13 +159,13 @@ class IdleMonitorThread(Thread):
             if not next_job:
                 return
 
-            # Check if job is ready to print (status must be 'inqueue', not already printing)
-            if next_job.status != 'inqueue':
+            # Check if job is ready to print (status must be 'inqueue' or 'ready', not 'submitted' or already 'printing')
+            if next_job.status not in ['inqueue', 'ready']:
                 return
 
             # Check if fabricator is in a ready state
             fabricator_status = getattr(fabricator, 'status', 'unknown')
-            if fabricator_status not in ['ready', 'offline']:  # offline printers can try to reconnect
+            if fabricator_status != 'ready':
                 return
 
             # Verify device is connected (prevent starting jobs on disconnected printers)

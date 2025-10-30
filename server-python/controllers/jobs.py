@@ -51,7 +51,7 @@ def add_job_to_queue():
         td_id = int(request.form['td_id'])
         filament = request.form['filament']
 
-        res = Job.jobHistoryInsert(name, printer_id, 'inqueue', file, file_name_original, favorite, td_id)
+        res = Job.jobHistoryInsert(name, printer_id, 'submitted', file, file_name_original, favorite, td_id)
         id = res['id']
         job = Job.query.get(id)
 
@@ -85,7 +85,7 @@ def auto_queue():
         filament = request.form['filament']
 
         fabricator_id = getSmallestQueue()
-        res = Job.jobHistoryInsert(name, fabricator_id, 'inqueue', file, file_name_original, favorite, td_id)
+        res = Job.jobHistoryInsert(name, fabricator_id, 'submitted', file, file_name_original, favorite, td_id)
         id = res['id']
         job = Job.query.get(id)
 
@@ -488,10 +488,13 @@ def startPrint():
         assert printerobject.queue[0] is not None, f"Job not found: jobid: {jobid}"
 
         job = printerobject.queue[0]
-        if job.getStatus() == "inqueue":
-            job.setStatus("ready")
-        assert job.getStatus() == "ready", f"Job not ready to print. Status: {job.getStatus()}"
+        # Change status from 'submitted' to 'inqueue' to trigger auto-start
+        if job.getStatus() == "submitted":
+            job.setStatus("inqueue")
+            Job.update_job_status(job.id, "inqueue")
+        assert job.getStatus() in ["inqueue", "ready"], f"Job not ready to print. Status: {job.getStatus()}"
 
+        # Start the print job directly
         current_app.fabricator_list.start_print_job(printerobject, job)
         return jsonify({"success": True, "message": "Job started successfully."}), 200
     except Exception as e:
@@ -642,7 +645,7 @@ def getSmallestQueue() -> int:
 def rerunjob(printerpk: int, jobpk: int, position: str) -> tuple[Response, int]:
     job = Job.findJob(jobpk)
     file_name_original = job.getFileNameOriginal()
-    res = Job.jobHistoryInsert(name=job.getName(), fabricator_id=printerpk, status='inqueue', file=job.getFile(), file_name_original=file_name_original, favorite=job.getFileFavorite(), td_id=job.getTdId())
+    res = Job.jobHistoryInsert(name=job.getName(), fabricator_id=printerpk, status='submitted', file=job.getFile(), file_name_original=file_name_original, favorite=job.getFileFavorite(), td_id=job.getTdId())
 
     id = res['id']
     rjob = Job.query.get(id)
