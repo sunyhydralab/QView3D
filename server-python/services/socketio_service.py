@@ -99,6 +99,42 @@ class SocketIOService:
                 listener_id = f"gcode_response_{fabricator_id}"
                 current_app.event_emitter.emit(listener_id, json.dumps(data))
 
+        @self.socketio.on('request_gcode_buffer')
+        def handle_request_gcode_buffer(data):
+            """Send accumulated gcode buffer to client for live preview"""
+            from services.app_service import current_app
+            from Classes.Jobs import Job as JobClass
+
+            job_id = data.get('job_id')
+            if not job_id:
+                self.logger.error("request_gcode_buffer missing job_id")
+                return
+
+            # Find the job in active queue across all fabricators
+            job = None
+            from Classes.Fabricators.Fabricator import Fabricator
+            fabricators = Fabricator.query.all()
+
+            for fabricator in fabricators:
+                if fabricator.queue and len(fabricator.queue) > 0:
+                    for queued_job in fabricator.queue:
+                        if queued_job and queued_job.id == job_id:
+                            job = queued_job
+                            break
+                if job:
+                    break
+
+            if job:
+                buffer = job.getGcodeBuffer()
+                self.logger.debug(f"Sending gcode buffer for job {job_id}: {len(buffer)} chars, progress: {job.progress:.1f}%")
+                self.socketio.emit('gcode_buffer_response', {
+                    'job_id': job.id,
+                    'gcode_buffer': buffer,
+                    'progress': job.progress
+                })
+            else:
+                self.logger.warning(f"Job {job_id} not found in any active queue")
+
     def get_socketio(self):
         return self.socketio
 

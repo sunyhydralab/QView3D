@@ -43,6 +43,7 @@ class Job(db.Model):
     extruded = 0
     job_time = [0, datetime.min, datetime.min, datetime.min]
     job_logger = None
+    gcode_buffer = []  # Buffer for live gcode preview (not persisted to DB)
 
     def __init__(self, file, name, fabricator_id, status, file_name_original, favorite, td_id, fabricator_name):
         self.path = None
@@ -67,6 +68,7 @@ class Job(db.Model):
         self.max_layer_height = 0.0
         self.current_layer_height = 0.0
         self.filament = ''
+        self.gcode_buffer = []  # Initialize empty buffer for live preview
 
     def __repr__(self):
         return f"Job(id={self.id}, name={self.name}, printer_id={self.fabricator_id}, status={self.status})"
@@ -652,6 +654,22 @@ class Job(db.Model):
 
     def setFilament(self, filament):
         self.filament = filament
+
+    def clearGcodeBuffer(self):
+        """Clear the gcode buffer (called when job completes/fails)"""
+        self.gcode_buffer = []
+        print(f"[Job {self.id}] GCode buffer cleared")
+
+    def getGcodeBuffer(self):
+        """Get the accumulated gcode buffer for live preview"""
+        return '\n'.join(self.gcode_buffer) if self.gcode_buffer else ''
+
+    def appendToGcodeBuffer(self, gcode_lines):
+        """Append gcode lines to the buffer"""
+        if isinstance(gcode_lines, list):
+            self.gcode_buffer.extend(gcode_lines)
+        else:
+            self.gcode_buffer.append(gcode_lines)
 
     def setPath(self, path):
         self.path = path

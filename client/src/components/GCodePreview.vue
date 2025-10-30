@@ -270,9 +270,33 @@ function setupGcodeSocketListeners(jobId: number) {
   
   // Only set up listeners if we're in live preview mode
   if (!isLivePreview.value) return;
-  
+
   console.log(`Setting up socket listeners for job ID: ${jobId}`);
-  
+
+  // Request accumulated gcode buffer for jobs already in progress
+  const requestBufferListener = onSocketEvent<{
+    job_id: number;
+    gcode_buffer: string;
+    progress: number;
+  }>('gcode_buffer_response', (data) => {
+    if (data.job_id !== jobId) return;
+
+    if (data.gcode_buffer && preview && isLivePreview.value) {
+      console.log(`[GCode Live Preview] Received buffer with ${data.progress.toFixed(1)}% progress`);
+      gcodeString.value = data.gcode_buffer;
+
+      // Process the accumulated buffer
+      try {
+        preview.processGCode(data.gcode_buffer);
+      } catch (error) {
+        console.error('Error processing gcode buffer:', error);
+      }
+    }
+  });
+
+  // Request the buffer immediately after setting up listener
+  socket.value.emit('request_gcode_buffer', { job_id: jobId });
+
   // Listen for gcode line updates
   const removeGcodeUpdateListener = onSocketEvent<{
     job_id: number;
@@ -318,6 +342,7 @@ function setupGcodeSocketListeners(jobId: number) {
   
   // Store cleanup function
   socketCleanup = () => {
+    requestBufferListener();
     removeGcodeUpdateListener();
     removeGcodeCompleteListener();
   };

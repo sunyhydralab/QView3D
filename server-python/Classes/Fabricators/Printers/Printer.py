@@ -286,6 +286,8 @@ class Printer(Device, metaclass=ABCMeta):
 
                     # Add line to buffer for live gcode preview
                     gcode_lines_buffer.append(line)
+                    # Also store in job's persistent buffer for client reconnection
+                    job.appendToGcodeBuffer(line)
 
                     if job.getFilePause() == 1:
                         # self.setStatus("printing")
@@ -431,6 +433,9 @@ class Printer(Device, metaclass=ABCMeta):
         finally:
             # Disable keepalive messages when print ends (success, error, or cancellation)
             self.disableKeepalive(logger=self.logger)
+
+            # Clear gcode buffer to free memory
+            job.clearGcodeBuffer()
 
     def sendGcode(self, gcode: bytes | str, logger = None) -> bool:
         """
