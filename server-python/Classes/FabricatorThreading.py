@@ -286,13 +286,36 @@ class PrintWorkerThread(Thread):
                 except Exception as e:
                     print(f"Error managing queue: {e}")
 
-                # Set fabricator status back to ready
-                self.fabricator.status = 'ready'
-                if current_app and hasattr(current_app, 'socketio'):
-                    current_app.socketio.emit('status_update', {
-                        'fabricator_id': self.fabricator.dbID,
-                        'status': 'ready'
-                    })
+                # Set fabricator status back to ready only if device is still connected
+                # If device disconnected, mark as offline to prevent auto-starting more jobs
+                device = getattr(self.fabricator, 'device', None)
+                if device is not None:
+                    serial_conn = getattr(device, 'serialConnection', None)
+                    if serial_conn is None or not serial_conn.is_open:
+                        # Device disconnected - mark offline
+                        self.fabricator.status = 'offline'
+                        print(f"[PrintWorker] Fabricator {self.fabricator.name} marked offline - device disconnected")
+                        if current_app and hasattr(current_app, 'socketio'):
+                            current_app.socketio.emit('status_update', {
+                                'fabricator_id': self.fabricator.dbID,
+                                'status': 'offline'
+                            })
+                    else:
+                        # Device still connected - mark ready
+                        self.fabricator.status = 'ready'
+                        if current_app and hasattr(current_app, 'socketio'):
+                            current_app.socketio.emit('status_update', {
+                                'fabricator_id': self.fabricator.dbID,
+                                'status': 'ready'
+                            })
+                else:
+                    # No device - mark ready (might be a virtual fabricator)
+                    self.fabricator.status = 'ready'
+                    if current_app and hasattr(current_app, 'socketio'):
+                        current_app.socketio.emit('status_update', {
+                            'fabricator_id': self.fabricator.dbID,
+                            'status': 'ready'
+                        })
 
     def stop(self):
         """
