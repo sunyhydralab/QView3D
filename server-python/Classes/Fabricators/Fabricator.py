@@ -360,10 +360,16 @@ class Fabricator(db.Model):
             self.checkValidJob()
             assert self.status != "error", "Invalid job"
             assert self.setStatus("printing"), "Failed to set status to printing"
-            self.error = self.device.parseGcode(self.queue[0])
+
+            # Execute print job (blocking call)
+            parse_success = self.device.parseGcode(self.queue[0])
             job_logger = self.queue[0].getLogger()
+
+            # Process verdict and update job status
             self.handleVerdict()
-            return True
+
+            # Return success only if verdict is "complete"
+            return self.device.verdict == "complete"
         except Exception as e:
             self.error = e
             error_msg = str(e)

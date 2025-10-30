@@ -168,6 +168,17 @@ class IdleMonitorThread(Thread):
             if fabricator_status not in ['ready', 'offline']:  # offline printers can try to reconnect
                 return
 
+            # Verify device is connected (prevent starting jobs on disconnected printers)
+            device = getattr(fabricator, 'device', None)
+            if device is not None:
+                # Check if serialConnection exists and is open
+                serial_conn = getattr(device, 'serialConnection', None)
+                if serial_conn is None or not serial_conn.is_open:
+                    print(f"[IdleMonitor] Skipping job start for {fabricator.name} - device not connected")
+                    # Mark fabricator as offline until reconnection
+                    fabricator.status = 'offline'
+                    return
+
             # All conditions met - start the print job!
             self.fabricator_list.start_print_job(fabricator, next_job)
 

@@ -806,13 +806,17 @@ class Printer(Device, metaclass=ABCMeta):
         :return: True if command succeeded, False otherwise
         :rtype: bool
         """
+        # Check if device is still connected before attempting to send command
+        if not hasattr(self, 'serialConnection') or self.serialConnection is None or not self.serialConnection.is_open:
+            print("[Printer] Skipping keepalive disable - device not connected")
+            return False
+
         try:
             print("[Printer] Disabling keepalive (M113 S0)")
             return self.sendGcode(self.doNotKeepAliveCMD, logger=logger)
         except Exception as e:
-            print(f"[Printer] Failed to disable keepalive: {e}")
-            if current_app:
-                return current_app.handle_errors_and_logging(e, logger or self.logger)
+            # Device may have disconnected during print - this is expected in error scenarios
+            print(f"[Printer] Could not disable keepalive (device may be disconnected): {e}")
             return False
 
     def connect(self) -> bool:
