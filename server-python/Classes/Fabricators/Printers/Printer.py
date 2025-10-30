@@ -191,6 +191,7 @@ class Printer(Device, metaclass=ABCMeta):
                 sent_lines = 0  # Track number of commands sent for progress calculation
                 prev_line = ""  # Store previous line to detect layer changes
                 last_progress_update = 0  # Track last progress percentage for throttling time updates
+                gcode_lines_buffer = []  # Buffer for live gcode preview
                 current_app.socketio.emit("console_update", {"message": "Starting Job", "level": "info", "fabricator_id": self.dbID})
 
                 # Enable continuous temperature monitoring (M155 S100 = 100ms interval)
@@ -282,6 +283,9 @@ class Printer(Device, metaclass=ABCMeta):
                             self.logger.error(error_msg)
                         self.verdict = "error"
                         return False
+
+                    # Add line to buffer for live gcode preview
+                    gcode_lines_buffer.append(line)
 
                     if job.getFilePause() == 1:
                         # self.setStatus("printing")
@@ -375,6 +379,20 @@ class Printer(Device, metaclass=ABCMeta):
                         last_progress_update = int(progress)
                         job.updateTimeTracking()
 
+                        # Emit gcode preview update for live rendering (throttled with time tracking)
+                        if gcode_lines_buffer and current_app:
+                            current_app.socketio.emit('gcode_progress_update', {
+                                'job_id': job.id,
+                                'fabricator_id': self.dbID,
+                                'line_number': sent_lines,
+                                'total_lines': total_lines,
+                                'progress': progress,
+                                'current_layer_height': job.current_layer_height,
+                                'gcode_chunk': '\n'.join(gcode_lines_buffer)
+                            })
+                            # Clear buffer after emission
+                            gcode_lines_buffer = []
+
                     # if self.status == "complete" and job.extruded != 0:
                     if self.status == "complete":
                         self.verdict = "complete"
@@ -391,6 +409,14 @@ class Printer(Device, metaclass=ABCMeta):
                         return True
             self.verdict = "complete"
             self.status = "complete"
+
+            # Emit gcode complete event for live preview
+            if current_app:
+                current_app.socketio.emit('gcode_complete', {
+                    'job_id': job.id,
+                    'fabricator_id': self.dbID,
+                    'gcode_complete': True
+                })
             logger.log("Job complete")
             pass
             current_app.socketio.emit("console_update", {"message": "Job complete", "level": "info", "fabricator_id": self.dbID})
