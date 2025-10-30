@@ -30,19 +30,19 @@ onMounted(() => {
     withoutConsoleWarnings(() => {
       if (gcodeCanvas.value) {
         console.log("Initializing GCode preview...");
-        // Initialize the GCode preview with improved settings
+        // Initialize the GCode preview with realistic 3D printer settings
         preview = GCodePreview.init({
           canvas: gcodeCanvas.value,
           extrusionColor: 'turquoise',
           backgroundColor: 'black',
           buildVolume: { x: 250, y: 210, z: 220 },
-          travelColor: 'limegreen', // Changed to limegreen for better visibility
-          lineWidth: 1.5,          // Increased for better visibility
-          lineHeight: 1.5,         // Increased for better visibility
-          extrusionWidth: 1.0,     // Increased for better visibility
+          travelColor: 'limegreen',
+          lineWidth: 0.4,          // Realistic nozzle diameter (0.4mm)
+          lineHeight: 0.2,         // Realistic layer height (0.2mm)
+          extrusionWidth: 0.4,     // Realistic extrusion width (0.4mm)
           renderExtrusion: true,
-          renderTravel: true,      // Enabled travel lines by default
-          renderTubes: true
+          renderTravel: true,
+          renderTubes: true        // Keep tubes for better visual appearance
         });
         
         // Set the camera position explicitly for better view
