@@ -91,8 +91,14 @@ export function setupJobSocketListeners() {
   
   // Listen for job completed events
   const removeJobCompletedListener = onSocketEvent<{job: Job}>('job_completed', (data) => {
+    // Guard against undefined job data
+    if (!data || !data.job) {
+      console.error('Received job_completed event with missing job data:', data)
+      return
+    }
+
     const index = jobHistory.value.findIndex(job => job.id === data.job.id)
-    
+
     if (index !== -1) {
       // Update the job in our history
       jobHistory.value[index] = { ...jobHistory.value[index], ...data.job, status: 'Done' }
@@ -100,31 +106,41 @@ export function setupJobSocketListeners() {
       // Add the completed job to our history
       jobHistory.value.push({ ...data.job, status: 'Done' })
     }
-    
+
     addToast(`Job '${data.job.name}' completed successfully!`, 'success')
   })
   
   // Listen for job error events
   const removeJobErrorListener = onSocketEvent<{job: Job, error: string}>('job_error', (data) => {
+    // Guard against undefined job data
+    if (!data || !data.job) {
+      console.error('Received job_error event with missing job data:', data)
+      // Still show error toast if we have an error message
+      if (data && data.error) {
+        addToast(`Job error: ${data.error}`, 'error')
+      }
+      return
+    }
+
     const index = jobHistory.value.findIndex(job => job.id === data.job.id)
-    
+
     if (index !== -1) {
       // Update the job in our history
-      jobHistory.value[index] = { 
-        ...jobHistory.value[index], 
-        ...data.job, 
+      jobHistory.value[index] = {
+        ...jobHistory.value[index],
+        ...data.job,
         status: 'Error',
         error: data.error
       }
     } else {
       // Add the errored job to our history
-      jobHistory.value.push({ 
-        ...data.job, 
+      jobHistory.value.push({
+        ...data.job,
         status: 'Error',
-        error: data.error 
+        error: data.error
       })
     }
-    
+
     addToast(`Error in job '${data.job.name}': ${data.error}`, 'error')
   })
   

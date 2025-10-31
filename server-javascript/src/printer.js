@@ -39,6 +39,9 @@ export class Printer {
     #serialPort;
     // Used to call any callback functions that are listening for events from this printer
     #eventEmitter;
+    // Store bound listener functions to enable proper cleanup
+    #boundPortListener;
+    #boundCloseListener;
 
     constructor() {
         this.#eventEmitter = new EventEmitter();
@@ -46,6 +49,9 @@ export class Printer {
         this.#dataBuffer = '';
         this.#serialPort = undefined;
         this.#currentScript = undefined;
+        // Bind listeners once to avoid creating new function references
+        this.#boundPortListener = this.#portListener.bind(this);
+        this.#boundCloseListener = this.#closeListener.bind(this);
     }
     
     #sendGcodeCommand(gcodeCommand) {
@@ -211,6 +217,9 @@ export class Printer {
             if (this.#state === PrinterState.PRINTING || this.#state === PrinterState.PAUSED)
                 throw new PrinterError(`Cannot set serial port because the printer at port "${this.#serialPort.path}" is currently printing`);
 
+            // Remove event listeners before closing to prevent memory leaks
+            this.#serialPort.removeListener('data', this.#boundPortListener);
+            this.#serialPort.removeListener('close', this.#boundCloseListener);
             this.#serialPort.close();
         }
         
@@ -228,9 +237,10 @@ export class Printer {
                 throw new TypeError(`connectedCallback is meant to be a function or undefined, not ${typeof connectedCallback}`);
         });
         
+        // Use pre-bound listeners to enable proper cleanup
         this.#serialPort
-            .on('data', this.#portListener.bind(this))
-            .on('close', this.#closeListener.bind(this));
+            .on('data', this.#boundPortListener)
+            .on('close', this.#boundCloseListener);
     }
     
     /**
