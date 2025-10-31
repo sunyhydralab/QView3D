@@ -406,7 +406,20 @@ class Printer(Device, metaclass=ABCMeta):
                     if self.status == "error":
                         self.verdict = "error"
                         logger.error("Job error")
-                        pass
+
+                        # Auto-create issue for job error
+                        from Classes.Issues import Issue
+                        error_title = f"Print Failed: {job.file_name_original if hasattr(job, 'file_name_original') else 'Unknown Job'}"
+                        error_desc = f"Printer: {self.name or f'ID {self.dbID}'}\nJob: {job.file_name_original if hasattr(job, 'file_name_original') else f'ID {job.id}'} (ID: {job.id})\nError: Unknown print error"
+                        Issue.create_issue_from_error(
+                            title=error_title,
+                            description=error_desc,
+                            category='job',
+                            fabricator_id=self.dbID,
+                            job_id=job.id,
+                            auto_severity='high'
+                        )
+
                         current_app.socketio.emit("console_update", {"message": "Job error", "level": "error", "fabricator_id": self.dbID})
                         return True
             self.verdict = "complete"
@@ -426,6 +439,20 @@ class Printer(Device, metaclass=ABCMeta):
         except Exception as e:
             self.verdict = "error"
             print(f"[Printer] EXCEPTION in parseGcode: {e}")
+
+            # Auto-create issue for exception
+            from Classes.Issues import Issue
+            error_title = f"Print Failed: {job.file_name_original if hasattr(job, 'file_name_original') else f'Job {job.id}'}"
+            error_desc = f"Printer: {self.name or f'ID {self.dbID}'}\nJob: {job.file_name_original if hasattr(job, 'file_name_original') else f'ID {job.id}'} (ID: {job.id})\nError: {str(e)}"
+            Issue.create_issue_from_error(
+                title=error_title,
+                description=error_desc,
+                category='job',
+                fabricator_id=self.dbID,
+                job_id=job.id,
+                auto_severity='high'
+            )
+
             current_app.socketio.emit("error_update",{"fabricator_id": self.dbID, "job_id": job.id, "error": str(e)})
             current_app.socketio.emit("console_update", {"message": "Job error", "level": "error", "fabricator_id": self.dbID})
             current_app.handle_errors_and_logging(e, self.logger if not logger else logger)

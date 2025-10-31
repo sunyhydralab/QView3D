@@ -34,6 +34,9 @@ class Issue(db.Model):
     """
     __tablename__ = "Issues"  # Explicitly sets the table name in the database
 
+    # Valid severity levels (must match frontend options)
+    VALID_SEVERITIES = ['low', 'medium', 'high', 'critical']
+
     # Columns in the database
     id = db.Column(db.Integer, primary_key=True)  # Primary key for the issue
     issue = db.Column(db.String(200), nullable=True)  # Legacy: Description of the issue (kept for backward compatibility)
@@ -46,6 +49,21 @@ class Issue(db.Model):
     resolved = db.Column(db.Boolean, default=False)  # Whether issue is resolved
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))  # When issue was created
 
+    @classmethod
+    def validate_severity(cls, severity):
+        """
+        Validate and normalize severity level.
+
+        Args:
+            severity (str): Severity level to validate
+
+        Returns:
+            str: Valid severity level (defaults to 'medium' if invalid)
+        """
+        if severity and severity.lower() in cls.VALID_SEVERITIES:
+            return severity.lower()
+        return 'medium'
+
     def __init__(self, issue=None, job_id=None, title=None, description=None, severity=None, category=None, fabricator_id=None):
 
         """
@@ -55,7 +73,7 @@ class Issue(db.Model):
         # Handle new format (title, description, etc.)
         self.title = title
         self.description = description
-        self.severity = severity or 'medium'
+        self.severity = self.validate_severity(severity)
         self.category = category
         self.fabricator_id = fabricator_id
         self.job_id = job_id
@@ -102,6 +120,7 @@ class Issue(db.Model):
                         "fabricator_id": issue.fabricator_id,
                         "job_id": issue.job_id,
                         "resolved": issue.resolved or False,
+                        "status": "resolved" if issue.resolved else "open",  # Map boolean to status string for frontend
                         "created_at": issue.created_at.isoformat() if issue.created_at else None,
                         "issue": issue.issue
                     } for issue in issues
@@ -186,7 +205,7 @@ class Issue(db.Model):
             if description is not None:
                 issue_to_update.description = description
             if severity is not None:
-                issue_to_update.severity = severity
+                issue_to_update.severity = cls.validate_severity(severity)
             if category is not None:
                 issue_to_update.category = category
             if fabricator_id is not None:
@@ -214,3 +233,146 @@ class Issue(db.Model):
             if current_app:
                 current_app.handle_errors_and_logging(e)
             raise
+
+    @classmethod
+    def create_issue_from_error(cls, title, description, category, fabricator_id=None, job_id=None, auto_severity='high', deduplicate=True):
+        """
+        Automatically create an issue from an error event with optional deduplication.
+
+        Args:
+            title (str): Brief title of the error
+            description (str): Detailed error description
+            category (str): Category of issue ('printer', 'job', or 'software')
+            fabricator_id (int, optional): Printer ID if applicable
+            job_id (int, optional): Job ID if applicable
+            auto_severity (str): Severity level for the issue (default: 'high')
+            deduplicate (bool): Whether to check for duplicate issues (default: True)
+
+        Returns:
+            dict: Success status and issue ID (new or existing)
+        """
+        try:
+            # Determine severity based on error keywords
+            severity = cls._determine_severity_from_error(description, auto_severity)
+
+            # Check for duplicate issues if deduplication is enabled
+            if deduplicate:
+                duplicate = cls._find_duplicate_issue(
+                    title=title,
+                    category=category,
+                    fabricator_id=fabricator_id,
+                    job_id=job_id
+                )
+                if duplicate:
+                    print(f"[AutoIssue] Duplicate issue found (ID: {duplicate.id}), skipping creation")
+                    return {
+                        "success": True,
+                        "message": "Duplicate issue found, skipping creation",
+                        "issue_id": duplicate.id,
+                        "duplicate": True
+                    }
+
+            # Create new issue
+            new_issue = cls(
+                title=title,
+                description=description,
+                severity=severity,
+                category=category,
+                fabricator_id=fabricator_id,
+                job_id=job_id
+            )
+
+            print(f"[AutoIssue] Created new issue (ID: {new_issue.id}): {title}")
+            return {
+                "success": True,
+                "message": "Issue automatically created from error",
+                "issue_id": new_issue.id,
+                "duplicate": False
+            }
+
+        except Exception as e:
+            print(f"[AutoIssue] Failed to create issue from error: {e}")
+            if current_app:
+                current_app.handle_errors_and_logging(e)
+            return {"success": False, "error": str(e)}
+
+    @classmethod
+    def _determine_severity_from_error(cls, error_text, default_severity='high'):
+        """
+        Analyze error text to determine appropriate severity level.
+
+        Args:
+            error_text (str): The error message text
+            default_severity (str): Default severity if no keywords match
+
+        Returns:
+            str: Determined severity level
+        """
+        if not error_text:
+            return cls.validate_severity(default_severity)
+
+        error_lower = error_text.lower()
+
+        # Critical keywords
+        critical_keywords = ['critical', 'fatal', 'emergency', 'catastrophic', 'fire', 'thermal runaway']
+        if any(keyword in error_lower for keyword in critical_keywords):
+            return 'critical'
+
+        # High severity keywords
+        high_keywords = ['failed', 'error', 'timeout', 'disconnected', 'lost connection', 'exception']
+        if any(keyword in error_lower for keyword in high_keywords):
+            return 'high'
+
+        # Medium severity keywords
+        medium_keywords = ['warning', 'retry', 'slow', 'degraded']
+        if any(keyword in error_lower for keyword in medium_keywords):
+            return 'medium'
+
+        # Default to provided severity
+        return cls.validate_severity(default_severity)
+
+    @classmethod
+    def _find_duplicate_issue(cls, title, category, fabricator_id=None, job_id=None, time_window_hours=24):
+        """
+        Search for duplicate unresolved issues within a time window.
+
+        Args:
+            title (str): Issue title to match
+            category (str): Issue category
+            fabricator_id (int, optional): Printer ID to match
+            job_id (int, optional): Job ID to match
+            time_window_hours (int): Time window in hours to search for duplicates
+
+        Returns:
+            Issue or None: Duplicate issue if found, None otherwise
+        """
+        from datetime import timedelta
+
+        # Calculate time threshold
+        time_threshold = datetime.now(timezone.utc) - timedelta(hours=time_window_hours)
+
+        # Build query for unresolved issues in the same category
+        query = cls.query.filter(
+            cls.resolved == False,
+            cls.category == category,
+            cls.created_at >= time_threshold
+        )
+
+        # Add fabricator_id filter if provided (for printer issues)
+        if fabricator_id is not None:
+            query = query.filter(cls.fabricator_id == fabricator_id)
+
+        # Add job_id filter if provided (for job issues)
+        if job_id is not None:
+            query = query.filter(cls.job_id == job_id)
+
+        # Search for similar titles (exact match or contained substring)
+        existing_issues = query.all()
+        for issue in existing_issues:
+            if issue.title and title:
+                # Check if titles match (case-insensitive partial match)
+                if (title.lower() in issue.title.lower() or
+                    issue.title.lower() in title.lower()):
+                    return issue
+
+        return None
