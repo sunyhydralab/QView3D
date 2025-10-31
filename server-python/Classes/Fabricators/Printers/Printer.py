@@ -83,6 +83,20 @@ class Printer(Device, metaclass=ABCMeta):
     # Merge with parent Device class validators
     callablesHashtable = {**Device.callablesHashtable, **callablesHashtable}
 
+    # Commands that are informational/compatibility checks - timeouts don't abort print
+    # These commands can fail or timeout without affecting print quality/safety
+    # WARNING: G28/G29 added per user request - may allow prints to continue with bad positioning
+    NON_CRITICAL_COMMANDS = {
+        "M115",   # Firmware info/version check
+        "M862",   # Prusa compatibility checks (all variants: M862.1, M862.3, etc.)
+        "M486",   # Cancel object / object tracking
+        "M555",   # Prusa area definition
+        "M302",   # Cold extrusion limit (config command)
+        "M997",   # Get machine name
+        "G28",    # Homing - non-critical per user request (RISKY: bad home = bad print)
+        "G29",    # Bed leveling - non-critical per user request (RISKY: bad level = bad print)
+    }
+
     # Temperature tracking (updated continuously via M155 auto-reporting)
     bedTemperature: int | float | None = None  # Current bed temperature
     bedTargetTemp: float = 0.0  # Target bed temperature
@@ -137,6 +151,9 @@ class Printer(Device, metaclass=ABCMeta):
         assert self.serialConnection.is_open, "Serial connection is not open"
         assert self.status == "printing", f"Printer status is {self.status}, expected printing"
         try:
+            # Initialize errors list for this print job
+            self.errors = []
+
             with open(file, "r") as g:
                 # Create a logger for this job (currently simplified - no verbose logging)
                 jobName = str(job.file_name_original)
@@ -277,12 +294,16 @@ class Printer(Device, metaclass=ABCMeta):
 
                     # Send G-code command and check for errors
                     if not self.sendGcode(line, logger=self.logger):
+                        # Command failed - log error but NEVER stop the printer
                         error_msg = f"Failed to send G-code: {line.strip()}"
-                        print(f"[Printer] {error_msg}")
+                        print(f"[Printer] WARNING: {error_msg} (continuing print)")
                         if self.logger:
-                            self.logger.error(error_msg)
-                        self.verdict = "error"
-                        return False
+                            self.logger.warning(error_msg)
+                        # Store error for debugging but continue to next line
+                        if not hasattr(self, 'errors'):
+                            self.errors = []
+                        self.errors.append(error_msg)
+                        # Continue to next line instead of aborting
 
                     # Add line to buffer for live gcode preview
                     gcode_lines_buffer.append(line)
@@ -410,7 +431,14 @@ class Printer(Device, metaclass=ABCMeta):
                         # Auto-create issue for job error
                         from Classes.Issues import Issue
                         error_title = f"Print Failed: {job.file_name_original if hasattr(job, 'file_name_original') else 'Unknown Job'}"
-                        error_desc = f"Printer: {self.name or f'ID {self.dbID}'}\nJob: {job.file_name_original if hasattr(job, 'file_name_original') else f'ID {job.id}'} (ID: {job.id})\nError: Unknown print error"
+
+                        # Get all stored errors or fall back to single error or default
+                        if hasattr(self, 'errors') and self.errors:
+                            error_details = '\n'.join(self.errors)
+                        else:
+                            error_details = getattr(self, 'error', 'Unknown print error')
+
+                        error_desc = f"Printer: {self.name or f'ID {self.dbID}'}\nJob: {job.file_name_original if hasattr(job, 'file_name_original') else f'ID {job.id}'} (ID: {job.id})\nErrors:\n{error_details}"
                         Issue.create_issue_from_error(
                             title=error_title,
                             description=error_desc,
@@ -438,6 +466,7 @@ class Printer(Device, metaclass=ABCMeta):
             return True
         except Exception as e:
             self.verdict = "error"
+            self.error = str(e)  # Store error for issue creation
             print(f"[Printer] EXCEPTION in parseGcode: {e}")
 
             # Auto-create issue for exception
@@ -525,6 +554,8 @@ class Printer(Device, metaclass=ABCMeta):
         gcode_str = gcode.decode().strip().split()[0]
         if gcode_str in ["M109", "M190"]:
             timeout_seconds = 1200.0  # 20 minutes for heating commands
+        elif gcode_str in ["G28", "G29"]:
+            timeout_seconds = 120.0  # 2 minutes for homing and bed leveling (multiple probe points)
         else:
             timeout_seconds = 10.0  # 10 seconds for regular commands
 
@@ -563,7 +594,15 @@ class Printer(Device, metaclass=ABCMeta):
                     # Print ALL responses received
                     print(f"<<< RECEIVED: {decLine}")
 
-                    if "processing" in decLine or "echo" in decLine: continue
+                    # Filter out busy messages - printer is working on previous command
+                    if "echo:busy:" in decLine:
+                        print(f">>> PRINTER BUSY: {decLine}")
+                        continue
+                    # Filter other informational echo messages (but not error/important ones)
+                    if "echo:" in decLine and "ok" not in decLine.lower():
+                        # Log but don't wait for these informational messages
+                        print(f">>> INFO MESSAGE: {decLine}")
+                        continue
                     if "T:" in decLine and "B:" in decLine:
                         # Highlight temperature lines
                         print(f"<<< TEMPERATURE LINE: {decLine}")
@@ -841,12 +880,21 @@ class Printer(Device, metaclass=ABCMeta):
             print("[Printer] Skipping keepalive disable - device not connected")
             return False
 
+        # Validate command exists before sending
+        if not hasattr(self, 'doNotKeepAliveCMD') or self.doNotKeepAliveCMD is None:
+            print("[Printer] Skipping keepalive disable - command not defined")
+            return False
+
         try:
             print("[Printer] Disabling keepalive (M113 S0)")
             return self.sendGcode(self.doNotKeepAliveCMD, logger=logger)
+        except AssertionError as e:
+            # Serial connection assertions may fail if device disconnected
+            print(f"[Printer] Could not disable keepalive (device disconnected): {e}")
+            return False
         except Exception as e:
             # Device may have disconnected during print - this is expected in error scenarios
-            print(f"[Printer] Could not disable keepalive (device may be disconnected): {e}")
+            print(f"[Printer] Could not disable keepalive (unexpected error): {e}")
             return False
 
     def connect(self) -> bool:

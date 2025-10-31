@@ -16,7 +16,7 @@ class PrusaPrinter(Printer, hasEndingSequence, metaclass=ABCMeta):
 
     callablesHashtable = {
         "G28": [checkXYZ, checkOK],  # Home
-        "G29.01": [checkXYZ, checkOK],  # Auto bed leveling
+        "G29.01": [checkOK],  # Auto bed leveling (G29 P1) - accepts any "ok" during probing
         "G29.02": [checkOK],  # Auto bed leveling
         "M31": [checkOK, checkTime, checkOK],  # Print time
     }

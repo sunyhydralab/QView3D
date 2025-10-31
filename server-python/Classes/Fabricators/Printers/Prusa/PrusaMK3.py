@@ -20,8 +20,8 @@ class PrusaMK3(PrusaPrinter):
     callablesHashtable = {
         "M31": [checkTime, checkOK],  # Print time
         "G28": [checkOK],  # Home
-        "G29.02": [checkOK, checkOK],
-        "G29.01": [checkOK, checkXYZ, checkXYZ, checkOK],  # Auto bed leveling
+        "G29.02": [checkOK],  # Auto bed leveling
+        "G29.01": [checkOK],  # Auto bed leveling (G29 P1) - accepts any "ok" during probing
         "M601": [] # Pause
     }
 

@@ -342,11 +342,15 @@ class Fabricator(db.Model):
         try:
             # Verify device exists
             if self.device is None:
-                raise Exception(f"Fabricator {self.name} (ID: {self.dbID}) has no device initialized. Cannot start print.")
+                error_msg = f"Fabricator {self.name} (ID: {self.dbID}) has no device initialized. Cannot start print."
+                self.error = error_msg
+                raise Exception(error_msg)
 
             # Verify serial connection exists
             if not hasattr(self.device, 'serialConnection') or self.device.serialConnection is None:
-                raise Exception(f"Fabricator {self.name} has no serial connection. Device may not be connected.")
+                error_msg = f"Fabricator {self.name} has no serial connection. Device may not be connected."
+                self.error = error_msg
+                raise Exception(error_msg)
 
             # Connect if not open
             if not self.device.serialConnection.is_open:
@@ -371,7 +375,7 @@ class Fabricator(db.Model):
             # Return success only if verdict is "complete"
             return self.device.verdict == "complete"
         except Exception as e:
-            self.error = e
+            self.error = str(e)  # Store as string for consistency
             error_msg = str(e)
             print(f"[Fabricator] Error in begin() for {self.name}: {error_msg}")
             current_app.handle_errors_and_logging(e, getattr(self.device, 'logger', None) if self.device else None, level=50)
@@ -475,7 +479,7 @@ class Fabricator(db.Model):
                 print(f"[Fabricator] Job {job.id} marked as complete")
                 if current_app:
                     current_app.socketio.emit("fabricator_status_update", {"id": self.dbID, "status": "complete"})
-                    current_app.socketio.emit("job_completed", {"job_id": job.id, "fabricator_id": self.dbID})
+                    current_app.socketio.emit("job_completed", {"job": job.__to_JSON__()})
             elif self.device.verdict == "error":
                 self.setStatus("error")
                 # Update job status to error in database
@@ -483,10 +487,18 @@ class Fabricator(db.Model):
                 JobClass.update_job_status(job.id, "error")
                 # Auto-create issue from error with deduplication
                 from Classes.Issues import Issue
-                error_msg = str(self.error) if self.error else "Unknown print error"
+                # Try to get errors from device first (can be list or single), then fabricator, then default
+                if hasattr(self.device, 'errors') and self.device.errors:
+                    error_msg = '\n'.join(self.device.errors)
+                elif hasattr(self, 'errors') and self.errors:
+                    error_msg = '\n'.join(self.errors)
+                else:
+                    error_msg = (getattr(self.device, 'error', None) or
+                                getattr(self, 'error', None) or
+                                "Unknown print error")
                 issue = Issue.create_issue_from_error(
                     title=f"Print Failed: {job.file_name_original}",
-                    description=f"Printer: {self.name}\nJob: {job.file_name_original} (ID: {job.id})\nError: {error_msg}",
+                    description=f"Printer: {self.name}\nJob: {job.file_name_original} (ID: {job.id})\nErrors:\n{error_msg}",
                     category="job",
                     job_id=job.id,
                     fabricator_id=self.dbID,
@@ -496,7 +508,7 @@ class Fabricator(db.Model):
                 print(f"[Fabricator] Job {job.id} failed on {self.name}. Issue #{issue.get('issue_id') if issue else 'N/A'} {'(duplicate)' if issue.get('duplicate') else '(new)'}")
                 if current_app:
                     current_app.socketio.emit("fabricator_status_update", {"id": self.dbID, "status": "error"})
-                    current_app.socketio.emit("job_error", {"job_id": job.id, "fabricator_id": self.dbID, "error": error_msg})
+                    current_app.socketio.emit("job_error", {"job": job.__to_JSON__(), "error": error_msg})
                 self.getQueue().deleteJob(job.id, self.dbID)
                 self.device.disconnect()
             elif self.device.verdict == "cancelled":
@@ -532,7 +544,7 @@ class Fabricator(db.Model):
                 self.setStatus("misprint")
                 if current_app:
                     current_app.socketio.emit("fabricator_status_update", {"id": self.dbID, "status": "misprint"})
-                    current_app.socketio.emit("job_error", {"job_id": job.id, "fabricator_id": self.dbID, "error": "Misprint detected"})
+                    current_app.socketio.emit("job_error", {"job": job.__to_JSON__(), "error": "Misprint detected"})
 
     def getName(self):
         return self.name
@@ -590,6 +602,7 @@ class Fabricator(db.Model):
                 pass
         except AssertionError as e:
             current_app.handle_errors_and_logging(e, getattr(self.device, 'logger', None) if self.device else None)
+            self.error = str(e)  # Store error message for issue creation
             self.setStatus("error")
             self.queue.removeJob()
             self.queue[0] = None
