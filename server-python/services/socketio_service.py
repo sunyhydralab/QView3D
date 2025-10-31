@@ -22,11 +22,13 @@ class SocketIOService:
         @self.socketio.on('ping')
         def handle_ping():
             self.socketio.emit('pong')
+            return
 
         @self.socketio.on('connect')
         def handle_connect():
             sid = request.sid
             print(f"Client connected: {sid}")
+            return
 
         @self.socketio.on('disconnect')
         def handle_disconnect():
@@ -34,6 +36,7 @@ class SocketIOService:
             print(f"Client disconnected: {sid}")
             if sid in self.emulator_connections:
                 del self.emulator_connections[sid]
+            return
 
         @self.socketio.on('emulator_identify')
         def handle_emulator_identify(data):
@@ -60,12 +63,14 @@ class SocketIOService:
             else:
                 self.logger.error(f"Invalid emulator identification data: {data}")
                 self.socketio.emit('emulator_identified', {'success': False, 'error': 'Missing identification data'}, room=sid)
+            return
 
         @self.socketio.on('emulator_message')
         def handle_emulator_message(data):
             sid = request.sid
             self.logger.debug(f"Received message from emulator {sid}: {data}")
             self.socketio.emit('emulator_update', data, broadcast=True)
+            return
 
         @self.socketio.on('fabricator_command')
         def handle_fabricator_command(data):
@@ -83,6 +88,7 @@ class SocketIOService:
                     'port': event_data.get('printerid', fabricator_id),
                     'gcode': event_data.get('gcode', '')
                 })
+            return
 
         @self.socketio.on('gcode_response')
         def handle_gcode_response(data):
@@ -98,6 +104,7 @@ class SocketIOService:
                 # Emit to the specific fabricator's listener
                 listener_id = f"gcode_response_{fabricator_id}"
                 current_app.event_emitter.emit(listener_id, json.dumps(data))
+            return
 
         @self.socketio.on('request_gcode_buffer')
         def handle_request_gcode_buffer(data):
@@ -134,6 +141,7 @@ class SocketIOService:
                 })
             else:
                 self.logger.warning(f"Job {job_id} not found in any active queue")
+            return
 
     def get_socketio(self):
         return self.socketio

@@ -517,7 +517,7 @@ class Printer(Device, metaclass=ABCMeta):
                     if gcode_str in ["M109", "M190"]:
                         if should_log: logger.log(f"Temperature command {gcode_str} timed out, assuming success")
                         break
-                    break
+                    return False  # Timeout failure for non-heating commands
                 try:
                     line = self.serialConnection.readline()
 
@@ -552,7 +552,7 @@ class Printer(Device, metaclass=ABCMeta):
                             else:
                                 print(f">>> BED TEMP NOT REACHED YET: Need {self.bedTargetTemp - self.bedTemperature:.1f}°C more")
                         elif func == checkExtruderTemp and self.nozzleTemperature and self.nozzleTargetTemp:
-                            if abs(self.nozzleTemperature - self.nozzleTargetTemp) <= 2:  # Within 2 degrees
+                            if abs(self.nozzleTemperature - self.nozzleTargetTemp) <= 0.75:  # Within 0.75 degrees (match validator)
                                 # Print when nozzle temp reached
                                 print(f"<<< NOZZLE TEMP REACHED: {self.nozzleTemperature}°C (target: {self.nozzleTargetTemp}°C)")
                                 if should_log: logger.log(f"Nozzle temperature reached: {self.nozzleTemperature}°C")
@@ -560,10 +560,13 @@ class Printer(Device, metaclass=ABCMeta):
                         elif func != checkBedTemp and func != checkExtruderTemp and "ok" not in decLine.lower():
                             continue
                         
-                    # Special handling for M190, 'ok' as completion
+                    # Special handling for M109/M190, 'ok' as completion
                     gcode_str = gcode.decode().strip().split()[0]
                     if gcode_str == "M190" and "ok" in decLine.lower():
                         print(f"<<< M190 COMPLETED WITH OK: {decLine}")
+                        break
+                    if gcode_str == "M109" and "ok" in decLine.lower():
+                        print(f"<<< M109 COMPLETED WITH OK: {decLine}")
                         break
                     
                     validator_result = func(line, self)

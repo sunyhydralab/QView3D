@@ -64,6 +64,43 @@ def add_job_to_queue():
         if fabricator is None:
             return jsonify({"error": "Fabricator not found."}), 404
 
+        # Check device connection before adding to queue
+        from Classes.Fabricators.Printers.Printer import Printer
+        device = getattr(fabricator, 'device', None)
+        is_connected = (
+            isinstance(device, Printer) and
+            device and
+            hasattr(device, 'serialConnection') and
+            device.serialConnection and
+            device.serialConnection.is_open
+        )
+
+        # If disconnected, set pending_connection status and mark fabricator offline
+        if not is_connected:
+            print(f"[JobSubmission] Printer {fabricator.name} disconnected - job {job.id} set to pending_connection")
+            job.setStatus('pending_connection')
+            fabricator.status = 'offline'
+
+            # Still add to queue, but with pending status
+            if request.form['priority'] == 'true':
+                fabricator.queue.addToFront(job)
+            else:
+                fabricator.queue.addToBack(job)
+
+            # Emit status update
+            if current_app and hasattr(current_app, 'socketio'):
+                current_app.socketio.emit('status_update', {
+                    'fabricator_id': fabricator.dbID,
+                    'status': 'offline'
+                })
+
+            return jsonify({
+                "success": False,
+                "warning": f"Printer {fabricator.name} is currently offline. Job queued and will start when printer reconnects.",
+                "status": "pending_connection"
+            }), 200
+
+        # Device connected - proceed normally
         if request.form['priority'] == 'true':
             fabricator.queue.addToFront(job)
         else:
@@ -97,6 +134,41 @@ def auto_queue():
         fabricator = findPrinterObject(fabricator_id)
         if fabricator is None:
             return jsonify({"error": "Fabricator not found."}), 404
+
+        # Check device connection before adding to queue
+        from Classes.Fabricators.Printers.Printer import Printer
+        device = getattr(fabricator, 'device', None)
+        is_connected = (
+            isinstance(device, Printer) and
+            device and
+            hasattr(device, 'serialConnection') and
+            device.serialConnection and
+            device.serialConnection.is_open
+        )
+
+        # If disconnected, set pending_connection status and mark fabricator offline
+        if not is_connected:
+            print(f"[JobSubmission] Printer {fabricator.name} disconnected - job {job.id} set to pending_connection")
+            job.setStatus('pending_connection')
+            fabricator.status = 'offline'
+
+            # Still add to queue, but with pending status
+            fabricator.queue.addToBack(job)
+
+            # Emit status update
+            if current_app and hasattr(current_app, 'socketio'):
+                current_app.socketio.emit('status_update', {
+                    'fabricator_id': fabricator.dbID,
+                    'status': 'offline'
+                })
+
+            return jsonify({
+                "success": False,
+                "warning": f"Printer {fabricator.name} is currently offline. Job queued and will start when printer reconnects.",
+                "status": "pending_connection"
+            }), 200
+
+        # Device connected - proceed normally
         fabricator.queue.addToBack(job)
         return jsonify({"success": True, "message": "Job added to printer queue."}), 200
     except Exception as e:
@@ -120,7 +192,7 @@ def job_db_insert():
     try:
         jobdata = json.loads(request.form.get('jobdata'))
         res = Job.jobHistoryInsert(jobdata.get('name'), jobdata.get('printer_id'), jobdata.get('status'), jobdata.get('file_path'), jobdata.get('file_name'))
-        return "success"
+        return jsonify({"success": True})
     except Exception as e:
         current_app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
@@ -408,7 +480,7 @@ def nullifyJobs():
         data = request.get_json()
         printerid = data['printerid']
         res = Job.nullifyPrinterId(printerid)
-        return res
+        return jsonify(res) if not isinstance(res, tuple) else res
     except Exception as e:
         current_app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
@@ -417,7 +489,7 @@ def nullifyJobs():
 def clearSpace():
     try:
         res = Job.clearSpace()
-        return res
+        return jsonify(res) if not isinstance(res, tuple) else res
     except Exception as e:
         current_app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
@@ -439,7 +511,7 @@ def favoriteJob():
         favorite = data['favorite']
         job = Job.findJob(jobid)
         res = job.setFileFavorite(favorite)
-        return res
+        return jsonify(res) if not isinstance(res, tuple) else res
     except Exception as e:
         current_app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
@@ -453,7 +525,7 @@ def assignIssue():
         job = Job.findJob(jobid)
         jobid = job.getJobId()
         res = job.setIssue(jobid, issueid)
-        return res
+        return jsonify(res) if not isinstance(res, tuple) else res
     except Exception as e:
         current_app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
@@ -466,7 +538,7 @@ def removeIssue():
         job = Job.findJob(jobid)
         jobid = job.getJobId()
         res = job.unsetIssue(jobid)
-        return res
+        return jsonify(res) if not isinstance(res, tuple) else res
     except Exception as e:
         current_app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500
@@ -600,7 +672,7 @@ def repair_ports():
             for fabricator_info in repaired_fabricators:
                 current_app.socketio.emit('port_repair', fabricator_info)
 
-        return {"success": True, "message": "Printer port(s) successfully updated."}
+        return jsonify({"success": True, "message": "Printer port(s) successfully updated."})
     except Exception as e:
         current_app.handle_errors_and_logging(e)
         return jsonify({"error": format_exc()}), 500

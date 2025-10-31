@@ -65,6 +65,10 @@ class IdleMonitorThread(Thread):
                         self._monitor_temperatures(idle_fabricators)
                         self._last_temp_check = current_time
 
+                    # Monitor connections for ALL fabricators (not just idle)
+                    # This detects disconnections and reconnections continuously
+                    self._monitor_connections(self.fabricator_list.fabricators)
+
                     # Check each idle fabricator for new jobs in queue
                     for fabricator in idle_fabricators:
                         self._check_for_job_start(fabricator)
@@ -93,6 +97,67 @@ class IdleMonitorThread(Thread):
             return fabricator.dbID in self.fabricator_list.active_print_threads
 
         return False
+
+    def _monitor_connections(self, all_fabricators):
+        """
+        Monitor device connections for all printers.
+        Auto-mark offline when disconnected, auto-start pending jobs when reconnected.
+
+        :param all_fabricators: List of all Fabricator instances
+        """
+        from Classes.Fabricators.Printers.Printer import Printer
+        from services.app_service import current_app
+
+        for fabricator in all_fabricators:
+            try:
+                # Only monitor actual Printer devices
+                if not isinstance(getattr(fabricator, 'device', None), Printer):
+                    continue
+
+                # Check current connection state
+                device = fabricator.device
+                is_connected = (
+                    device and
+                    hasattr(device, 'serialConnection') and
+                    device.serialConnection and
+                    device.serialConnection.is_open
+                )
+
+                current_status = getattr(fabricator, 'status', 'unknown')
+
+                # Handle disconnection: mark offline if was ready/idle
+                if not is_connected and current_status not in ['offline', 'printing']:
+                    print(f"[IdleMonitor] Device disconnected: {fabricator.name}, marking offline")
+                    fabricator.status = 'offline'
+                    if current_app and hasattr(current_app, 'socketio'):
+                        current_app.socketio.emit('status_update', {
+                            'fabricator_id': fabricator.dbID,
+                            'status': 'offline'
+                        })
+
+                # Handle reconnection: mark ready and start pending jobs
+                elif is_connected and current_status == 'offline':
+                    print(f"[IdleMonitor] Device reconnected: {fabricator.name}, marking ready")
+                    fabricator.status = 'ready'
+                    if current_app and hasattr(current_app, 'socketio'):
+                        current_app.socketio.emit('status_update', {
+                            'fabricator_id': fabricator.dbID,
+                            'status': 'ready'
+                        })
+
+                    # Auto-start any pending_connection jobs
+                    if hasattr(fabricator, 'queue') and len(fabricator.queue) > 0:
+                        for job in fabricator.queue:
+                            if hasattr(job, 'status') and job.status == 'pending_connection':
+                                print(f"[IdleMonitor] Auto-starting pending job {job.id} for reconnected {fabricator.name}")
+                                # Change status to inqueue so it will be auto-started
+                                job.status = 'inqueue'
+                                from config.db import db
+                                db.session.commit()
+                                break  # Only start first pending job
+
+            except Exception as e:
+                print(f"[IdleMonitor] Error monitoring connection for {fabricator.name}: {e}")
 
     def _monitor_temperatures(self, idle_fabricators):
         """
@@ -270,24 +335,8 @@ class PrintWorkerThread(Thread):
                 self.fabricator_list.print_completed(self.fabricator, False)
 
             finally:
-                # Remove completed or failed jobs from queue
-                # This ensures jobs move to history and can be rerun
-                try:
-                    if self.job.status in ['error', 'cancelled', 'complete', 'awaiting_user_confirmation']:
-                        self.fabricator.queue.removeJob()
-                        print(f"Job {self.job.id} removed from queue (status: {self.job.status})")
-
-                        # Emit queue update to frontend
-                        if current_app and hasattr(current_app, 'socketio'):
-                            current_app.socketio.emit('queue_update', {
-                                'queue': self.fabricator.queue.convertQueueToJson(),
-                                'fabricator_id': self.fabricator.dbID
-                            })
-                except Exception as e:
-                    print(f"Error managing queue: {e}")
-
-                # Set fabricator status back to ready only if device is still connected
-                # If device disconnected, mark as offline to prevent auto-starting more jobs
+                # CRITICAL: Set fabricator status FIRST before removing job from queue
+                # This prevents race condition where IdleMonitor starts next job before status is set to offline
                 device = getattr(self.fabricator, 'device', None)
                 if device is not None:
                     serial_conn = getattr(device, 'serialConnection', None)
@@ -316,6 +365,22 @@ class PrintWorkerThread(Thread):
                             'fabricator_id': self.fabricator.dbID,
                             'status': 'ready'
                         })
+
+                # NOW remove completed or failed jobs from queue
+                # Status is already set, so IdleMonitor will see correct status
+                try:
+                    if self.job.status in ['error', 'cancelled', 'complete', 'awaiting_user_confirmation']:
+                        self.fabricator.queue.removeJob()
+                        print(f"Job {self.job.id} removed from queue (status: {self.job.status})")
+
+                        # Emit queue update to frontend
+                        if current_app and hasattr(current_app, 'socketio'):
+                            current_app.socketio.emit('queue_update', {
+                                'queue': self.fabricator.queue.convertQueueToJson(),
+                                'fabricator_id': self.fabricator.dbID
+                            })
+                except Exception as e:
+                    print(f"Error managing queue: {e}")
 
     def stop(self):
         """
