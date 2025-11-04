@@ -9,7 +9,7 @@ from services.app_service import current_app
 
 class FabricatorConnection(ABC):
     @staticmethod
-    def staticCreateConnection(port=None, baudrate=115200, timeout=10.0, websocket_connections=None, fabricator_id=None):
+    def staticCreateConnection(port=None, baudrate=115200, timeout=30.0, websocket_connections=None, fabricator_id=None):
         if websocket_connections is not None and fabricator_id is not None:
             return SocketConnection(port, baudrate, websocket_connections, fabricator_id, timeout=timeout)
         elif port is not None and baudrate is not None:
@@ -21,27 +21,27 @@ class SerialConnection(FabricatorConnection, serial.Serial):
     def __init__(self, port, baudrate, timeout):
         try:
             # Don't use inter_byte_timeout - it causes readline() to return partial lines
-            # Use hardware flow control for reliable communication with Prusa printers
+            # Disable hardware flow control for Prusa - it has large internal buffers
             super().__init__(
                 port=port,
                 baudrate=baudrate,
                 timeout=timeout,
-                write_timeout=timeout,
+                write_timeout=120.0,  # 2 minutes write timeout for slow operations like bed leveling
                 bytesize=serial.EIGHTBITS,
                 parity=serial.PARITY_NONE,
                 stopbits=serial.STOPBITS_ONE,
                 xonxoff=False,  # No software flow control
-                rtscts=True,    # Enable hardware flow control (RTS/CTS)
+                rtscts=False,   # Disable hardware flow control - Prusa handles buffering internally
                 dsrdtr=False    # No DTR/DSR flow control
             )
-            print(f"[SerialConnection] Opened {port} at {baudrate} baud with RTS/CTS flow control")
+            print(f"[SerialConnection] Opened {port} at {baudrate} baud (no flow control, 120s write timeout)")
         except serial.SerialException as e:
             if not "Access is denied" in str(e):
                 print(f"Failed to open serial connection: {e}")
                 raise ConnectionError(f"Failed to open serial connection: {e}")
 
 class SocketConnection(FabricatorConnection):
-    def __init__(self, port, baudrate, websocket_connection, fabricator_id, timeout=10.0):
+    def __init__(self, port, baudrate, websocket_connection, fabricator_id, timeout=30.0):
         self._fabricator_id = fabricator_id
         self._timeout = timeout
         # Large buffer for streaming thousands of G-code commands

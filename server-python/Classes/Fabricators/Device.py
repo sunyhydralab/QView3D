@@ -205,6 +205,7 @@ class Device(ABC):
     def sendGcode(self, gcode: bytes, isVerbose: bool = False) -> bool:
         """
         Send a G-code command to the device.
+        Note: Printer subclass overrides this with more sophisticated response handling.
         :param bytes gcode: The line to send to the hardware
         :param bool isVerbose: Whether to log the command
         :rtype: bool
@@ -219,7 +220,6 @@ class Device(ABC):
             self.serialConnection.write(gcode)
         if isVerbose:
             if self.logger is not None: self.logger.debug(gcode.decode("utf-8"))
-            # Removed verbose print statement
         return True
 
     def getToolHeadLocation(self, isVerbose: bool = False) -> Vector3:

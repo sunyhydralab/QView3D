@@ -30,20 +30,35 @@ onMounted(() => {
     withoutConsoleWarnings(() => {
       if (gcodeCanvas.value) {
         console.log("Initializing GCode preview...");
+        
+        // Ensure canvas has dimensions
+        const canvasWidth = gcodeCanvas.value.clientWidth || 800;
+        const canvasHeight = gcodeCanvas.value.clientHeight || 600;
+        gcodeCanvas.value.width = canvasWidth;
+        gcodeCanvas.value.height = canvasHeight;
+        console.log(`Canvas dimensions: ${canvasWidth}x${canvasHeight}`);
+        
         // Initialize the GCode preview with realistic 3D printer settings
-        preview = GCodePreview.init({
-          canvas: gcodeCanvas.value,
-          extrusionColor: 'turquoise',
-          backgroundColor: 'black',
-          buildVolume: { x: 250, y: 210, z: 220 },
-          travelColor: 'limegreen',
-          lineWidth: 0.4,          // Realistic nozzle diameter (0.4mm)
-          lineHeight: 0.2,         // Realistic layer height (0.2mm)
-          extrusionWidth: 0.4,     // Realistic extrusion width (0.4mm)
-          renderExtrusion: true,
-          renderTravel: true,
-          renderTubes: true        // Keep tubes for better visual appearance
-        });
+        try {
+          preview = GCodePreview.init({
+            canvas: gcodeCanvas.value,
+            extrusionColor: 'turquoise',
+            backgroundColor: 'black',
+            buildVolume: { x: 250, y: 210, z: 220 },
+            travelColor: 'limegreen',
+            lineWidth: 0.4,          // Realistic nozzle diameter (0.4mm)
+            lineHeight: 0.2,         // Realistic layer height (0.2mm)
+            extrusionWidth: 0.4,     // Realistic extrusion width (0.4mm)
+            renderExtrusion: true,
+            renderTravel: true,
+            renderTubes: true        // Keep tubes for better visual appearance
+          });
+          console.log("GCode preview initialized successfully");
+        } catch (error) {
+          console.error("Failed to initialize GCode preview:", error);
+          addToast(`Failed to initialize 3D viewer: ${error}`, 'error');
+          return;
+        }
         
         // Set the camera position explicitly for better view
         if (preview && preview.camera) {
@@ -55,6 +70,9 @@ onMounted(() => {
         if (props.file) {
           processFile(props.file);
         }
+      } else {
+        console.error("Canvas element not found!");
+        addToast('3D viewer canvas not found', 'error');
       }
       
       // Setup socket listeners for gcode updates if we have a job ID
@@ -117,25 +135,31 @@ async function processFile(file: File) {
 
 // Process the entire GCode file at once for static display with improved approach
 function processStaticGCode(gcode: string) {
-  if (!preview) return;
+  if (!preview) {
+    console.error("GCode preview not initialized!");
+    addToast('GCode preview not initialized', 'error');
+    return;
+  }
   
   console.log(`Processing static GCode file with ${gcode.split('\n').length} lines`);
   
-  // Clear previous content
-  preview.clear();
-  
-  // Set the camera position explicitly before each render
-  if (preview.camera) {
-    preview.camera.position.set(-200, 232, 200);
-    preview.camera.lookAt(0, 0, 0);
-  }
-  
   try {
+    // Clear previous content
+    preview.clear();
+    
+    // Set the camera position explicitly before each render
+    if (preview.camera) {
+      preview.camera.position.set(-200, 232, 200);
+      preview.camera.lookAt(0, 0, 0);
+    }
+    
     // Process the entire gcode at once
     preview.processGCode(gcode);
     console.log("Static GCode rendering complete");
+    addToast('3D preview loaded successfully', 'success');
   } catch (error) {
     console.error("Error rendering static GCode:", error);
+    addToast(`3D preview error: ${error}`, 'error');
     // Try fallback render if primary fails
     try {
       // Process without renderTravel if the first attempt failed
@@ -143,9 +167,11 @@ function processStaticGCode(gcode: string) {
         preview.renderTravel = false;
         preview.processGCode(gcode);
         preview.renderTravel = true; // Reset to default
+        addToast('3D preview loaded (travel moves disabled)', 'warning');
       }
     } catch (fallbackError) {
       console.error("Fallback rendering also failed:", fallbackError);
+      addToast('3D preview failed to load', 'error');
     }
   }
 }

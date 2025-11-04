@@ -166,7 +166,8 @@ class Printer(Device, metaclass=ABCMeta):
                 if self.status == "cancelled":
                     self.sendGcode(self.cancelCMD)
                     self.verdict = "cancelled"
-                    logger.log("Job cancelled")
+                    if logger:
+                        logger.log("Job cancelled")
                     return True
 
                 # ===== FIRST PASS: Metadata Extraction =====
@@ -223,9 +224,18 @@ class Printer(Device, metaclass=ABCMeta):
                 job.updateTimeTracking()
 
                 # Stream and execute G-code commands line-by-line
+                line_number = 0  # Track line number for debugging
+                commands_sent = 0  # Track number of actual commands sent
+                commands_failed = 0  # Track failed commands
+                
+                print(f"[GCode Streaming] Starting to stream {total_lines} commands for Job {job.id}")
+                
                 for line in g:
+                    line_number += 1
+                    
                     # Check for cancellation request
                     if self.status == "cancelled":
+                        print(f"[GCode Streaming] Job cancelled at line {line_number}, sent {commands_sent}/{total_lines} commands")
                         self.sendGcode(self.cancelCMD)
                         self.verdict = "cancelled"
                         if self.logger:
@@ -255,8 +265,14 @@ class Printer(Device, metaclass=ABCMeta):
                     if len(line) == 0 or line.startswith(";"):
                         continue
 
+                    # Log command being sent
+                    commands_sent += 1
+                    if commands_sent % 100 == 0:  # Log every 100 commands
+                        print(f"[GCode Progress] Sent {commands_sent}/{total_lines} commands ({commands_sent*100.0/total_lines:.1f}%), Failed: {commands_failed}")
+                    
                     # Emit "Fabricating..." message when actual printing starts (M75 command)
                     if "M75" in line or self.startTimeCMD in line:
+                        print(f"[GCode Streaming] Print timer started (M75) at line {line_number}")
                         if current_app:
                             current_app.socketio.emit("console_update", {"message": "Fabricating...", "level": "info", "fabricator_id": self.dbID})
 
@@ -293,17 +309,24 @@ class Printer(Device, metaclass=ABCMeta):
                             job.updateTimeTracking()
 
                     # Send G-code command and check for errors
-                    if not self.sendGcode(line, logger=self.logger):
-                        # Command failed - log error but NEVER stop the printer
-                        error_msg = f"Failed to send G-code: {line.strip()}"
-                        print(f"[Printer] WARNING: {error_msg} (continuing print)")
+                    send_success = self.sendGcode(line, logger=self.logger)
+                    
+                    if not send_success:
+                        # Command failed - log error
+                        commands_failed += 1
+                        error_msg = f"Line {line_number}: Failed to send G-code: {line.strip()}"
+                        print(f"[GCode ERROR] {error_msg}")
                         if self.logger:
                             self.logger.warning(error_msg)
-                        # Store error for debugging but continue to next line
+                        # Store error for debugging
                         if not hasattr(self, 'errors'):
                             self.errors = []
                         self.errors.append(error_msg)
                         # Continue to next line instead of aborting
+                    else:
+                        # Success - only log critical commands
+                        if line.startswith(('G28', 'G29', 'M104', 'M109', 'M140', 'M190')):
+                            print(f"[GCode Critical] Line {line_number}: {line.strip()} - SUCCESS")
 
                     # Add line to buffer for live gcode preview
                     gcode_lines_buffer.append(line)
@@ -319,7 +342,8 @@ class Printer(Device, metaclass=ABCMeta):
                         if self.status == "cancelled":
                             self.sendGcode(self.cancelCMD, logger=logger)
                             self.verdict = "cancelled"
-                            logger.log("Job cancelled")
+                            if logger:
+                                logger.log("Job cancelled")
                             pass
                             return True
                         self.status = "printing"
@@ -346,14 +370,17 @@ class Printer(Device, metaclass=ABCMeta):
                             sleep(.5)
                             readline = self.serialConnection.readline().decode("utf-8").strip()
                             if readline:
-                                logger.debug(readline)
+                                if logger:
+                                    logger.debug(readline)
                                 if "T:" in readline and "B:" in readline:
-                                    logger.debug(f"Temperature line: {readline}")
+                                    if logger:
+                                        logger.debug(f"Temperature line: {readline}")
                                     self.handleTempLine(readline)
                             if self.status == "cancelled":
                                 self.sendGcode(self.cancelCMD)
                                 self.verdict = "cancelled"
-                                logger.log("Job cancelled")
+                                if logger:
+                                    logger.log("Job cancelled")
                                 pass
                                 current_app.socketio.emit("console_update", {"message": "Job cancelled", "level": "info", "fabricator_id": self.dbID})
                                 return True
@@ -366,7 +393,8 @@ class Printer(Device, metaclass=ABCMeta):
                         # Check if we exited due to timeout
                         if self.status == "paused" and (time() - pause_start) >= pause_timeout:
                             print(f"[Printer] Pause timeout after {pause_timeout}s, resuming print")
-                            logger.log(f"Pause timeout after {pause_timeout}s, resuming print")
+                            if logger:
+                                logger.log(f"Pause timeout after {pause_timeout}s, resuming print")
                             current_app.socketio.emit("console_update", {"message": f"Pause timeout after {pause_timeout}s, resuming print", "level": "warning", "fabricator_id": self.dbID})
                             self.paused = False
                             self.status = "printing"
@@ -419,14 +447,16 @@ class Printer(Device, metaclass=ABCMeta):
                     # if self.status == "complete" and job.extruded != 0:
                     if self.status == "complete":
                         self.verdict = "complete"
-                        logger.log("Job complete")
+                        if logger:
+                            logger.log("Job complete")
                         pass
                         current_app.socketio.emit("console_update", {"message": "Job complete", "level": "info", "fabricator_id": self.dbID})
                         return True
 
                     if self.status == "error":
                         self.verdict = "error"
-                        logger.error("Job error")
+                        if logger:
+                            logger.error("Job error")
 
                         # Auto-create issue for job error
                         from Classes.Issues import Issue
@@ -453,6 +483,11 @@ class Printer(Device, metaclass=ABCMeta):
             self.verdict = "complete"
             self.status = "complete"
 
+            # Print final statistics
+            print(f"[GCode Streaming] COMPLETED Job {job.id}")
+            print(f"[GCode Statistics] Total lines: {total_lines}, Commands sent: {commands_sent}, Failed: {commands_failed}")
+            print(f"[GCode Statistics] Success rate: {(commands_sent-commands_failed)*100.0/commands_sent:.2f}%")
+            
             # Emit gcode complete event for live preview
             if current_app:
                 current_app.socketio.emit('gcode_complete', {
@@ -460,7 +495,8 @@ class Printer(Device, metaclass=ABCMeta):
                     'fabricator_id': self.dbID,
                     'gcode_complete': True
                 })
-            logger.log("Job complete")
+            if logger:
+                logger.log("Job complete")
             pass
             current_app.socketio.emit("console_update", {"message": "Job complete", "level": "info", "fabricator_id": self.dbID})
             return True
@@ -546,8 +582,18 @@ class Printer(Device, metaclass=ABCMeta):
         # Debug: Print command being sent
         print(f">>> SENDING GCODE: {gcode.decode().strip()}")
 
-        # Write command to serial port
-        self.serialConnection.write(gcode)
+        # Write command to serial port with error detection
+        try:
+            bytes_written = self.serialConnection.write(gcode)
+            expected_bytes = len(gcode)
+            if bytes_written != expected_bytes:
+                print(f">>> WARNING: Incomplete write! Expected {expected_bytes} bytes, wrote {bytes_written} bytes")
+                if should_log: logger.warning(f"Incomplete write for {gcode.decode().strip()}: {bytes_written}/{expected_bytes} bytes")
+        except Exception as write_error:
+            print(f">>> WRITE ERROR: {write_error}")
+            if should_log: logger.error(f"Failed to write {gcode.decode().strip()}: {write_error}")
+            raise
+            
         line = b''
 
         # Set timeout based on command type
