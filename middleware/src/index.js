@@ -91,94 +91,102 @@ app.get('/api/middleware/health', async (req, res) => {
 
 /**
  * API routes that should be proxied to the backend
+ * Routes are organized by HTTP method they should accept
  */
-const apiRoutes = [
-  '/api',
-  '/socket.io',
-  '/getfabricators',
-  '/registerfabricator',
-  '/deletefabricator',
-  '/pauseprinter',
-  '/resumeprinter',
-  '/cancelprinter',
-  '/getqueue',
-  '/reorderqueue',
-  '/clearqueue',
-  '/uploadfiles',
-  '/getfiles',
-  '/deletefile',
-  '/addjob',
-  '/canceljob',
-  '/getjobhistory',
-  '/getjobs',  // Added - frontend calls this
-  '/getports',  // Added - frontend calls this
-  '/register',  // Added - frontend calls this
-  '/setstatus',  // Added - frontend calls this
-  '/startprint',  // Added - frontend calls this
-  '/releasejob',  // Added - frontend calls this
-  '/autoqueue',  // Added - frontend calls this
-  '/cancelfromqueue',  // Added - frontend calls this
-  '/addjobtoqueue',  // Added - frontend calls this
-  '/startemulator',
-  '/registeremulator',
-  '/disconnectemulator',
-  '/getissues',
-  '/createissue',
-  '/updateissue',
-  '/deleteissue',
-  '/resolveissue',
-  '/health',
-  '/getprinterinfo',
-  '/serverVersion'
-];
+const apiRoutes = {
+  // Routes that accept both GET and POST (or other methods)
+  all: [
+    '/api',
+    '/socket.io',
+    '/getfabricators',
+    '/getports',
+    '/getqueue',
+    '/getjobhistory',
+    '/getjobs',
+    '/getfiles',
+    '/getissues',
+    '/getprinterinfo',
+    '/health',
+    '/serverVersion'
+  ],
+  // Routes that only accept POST (should not intercept GET for SPA routing)
+  postOnly: [
+    '/register',
+    '/registerfabricator',
+    '/deletefabricator',
+    '/pauseprinter',
+    '/resumeprinter',
+    '/cancelprinter',
+    '/reorderqueue',
+    '/clearqueue',
+    '/uploadfiles',
+    '/deletefile',
+    '/addjob',
+    '/canceljob',
+    '/setstatus',
+    '/startprint',
+    '/releasejob',
+    '/autoqueue',
+    '/cancelfromqueue',
+    '/addjobtoqueue',
+    '/startemulator',
+    '/registeremulator',
+    '/disconnectemulator',
+    '/createissue',
+    '/updateissue',
+    '/deleteissue',
+    '/resolveissue'
+  ]
+};
+
+// Helper function to create proxy middleware
+const createProxy = (route) => createProxyMiddleware({
+  target: BACKEND_TARGET_URL,
+  changeOrigin: true,
+  ws: route === '/socket.io',
+  pathRewrite: (path, req) => {
+    let fullPath = req.baseUrl;
+    if (req.url !== '/') {
+      fullPath += req.url;
+    }
+
+    const backendHealth = healthChecker.getStatus(BACKEND_NAME);
+    if (backendHealth && backendHealth.status !== 'healthy') {
+      console.warn(`[Proxy] WARNING: Routing to ${backendHealth.status} backend (${BACKEND_NAME}): ${fullPath}`);
+    }
+
+    let rewrittenPath = fullPath;
+    if (fullPath.startsWith('/api/')) {
+      rewrittenPath = fullPath.substring(4);
+    }
+
+    if (DEBUG) {
+      console.log(`[Proxy] ${req.method} ${fullPath} → ${BACKEND_TARGET_URL}${rewrittenPath}`);
+    }
+    return rewrittenPath;
+  },
+  onError: (err, req, res) => {
+    console.error(`[Proxy Error] ${req.path}:`, err.message);
+    if (res.headersSent) return;
+    res.status(500).json({
+      error: 'Backend connection failed',
+      message: err.message,
+      backend: BACKEND_TARGET_URL
+    });
+  }
+});
 
 /**
- * Apply proxy middleware ONLY to specific API routes
- * All routes are statically proxied to the backend selected at startup
+ * Apply proxy middleware to API routes
+ * POST-only routes only proxy POST requests to allow SPA routing for GET
  */
-apiRoutes.forEach(route => {
-  app.use(route, createProxyMiddleware({
-    target: BACKEND_TARGET_URL,  // Static target set at startup
-    changeOrigin: true,
-    ws: route === '/socket.io',  // Enable WebSocket for Socket.IO
-    // Strip /api prefix when forwarding to backend (backend routes don't have /api prefix)
-    pathRewrite: (path, req) => {
-      // The original route is in req.baseUrl, and the remaining path is in req.url
-      // If req.url is just '/', we want just the baseUrl without the trailing slash
-      let fullPath = req.baseUrl;
-      if (req.url !== '/') {
-        fullPath += req.url;
-      }
+apiRoutes.all.forEach(route => {
+  app.use(route, createProxy(route));
+});
 
-      // Check backend health and warn if unhealthy
-      const backendHealth = healthChecker.getStatus(BACKEND_NAME);
-
-      if (backendHealth && backendHealth.status !== 'healthy') {
-        console.warn(`[Proxy] WARNING: Routing to ${backendHealth.status} backend (${BACKEND_NAME}): ${fullPath}`);
-      }
-
-      // Strip /api prefix for backend routes
-      // Backend routes are defined without /api prefix (e.g., /createissue, /emulator/list)
-      let rewrittenPath = fullPath;
-      if (fullPath.startsWith('/api/')) {
-        rewrittenPath = fullPath.substring(4); // Remove '/api' prefix
-      }
-
-      if (DEBUG) {
-        console.log(`[Proxy] ${req.method} ${fullPath} → ${BACKEND_TARGET_URL}${rewrittenPath}`);
-      }
-      return rewrittenPath;
-    },
-    onError: (err, req, res) => {
-      console.error(`[Proxy Error] ${req.path}:`, err.message);
-      if (res.headersSent) return;
-      res.status(500).json({
-        error: 'Backend connection failed',
-        message: err.message,
-        backend: BACKEND_TARGET_URL
-      });
-    }
-  }));
+// POST-only routes: only proxy POST requests, let GET fall through to Vite
+apiRoutes.postOnly.forEach(route => {
+  app.post(route, createProxy(route));
 });
 
 /**
@@ -296,7 +304,7 @@ server.listen(PORT, () => {
   console.log('');
   console.log(`  Middleware Functions:`);
   console.log(`    - Proxying Frontend: Vite dev server (http://localhost:5173)`);
-  console.log(`    - Proxying ${apiRoutes.length} API routes to backend (static routing)`);
+  console.log(`    - Proxying ${apiRoutes.all.length + apiRoutes.postOnly.length} API routes to backend (static routing)`);
   console.log(`    - Handling WebSocket connections`);
   console.log(`    - Monitoring backend health every 10s`);
   console.log('');

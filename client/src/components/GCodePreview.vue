@@ -25,6 +25,47 @@ const originalConsoleDebug = console.debug
 let preview: ReturnType<typeof GCodePreview.init> | null = null
 let socketCleanup: (() => void) | null = null
 
+// Fetch G-code file from API if file is not provided but jobId is available
+async function fetchJobFile(jobId: number): Promise<void> {
+  if (!preview || !gcodeCanvas.value) {
+    console.log("Preview or canvas not ready, waiting...");
+    return;
+  }
+
+  try {
+    console.log(`Fetching G-code file for job ID: ${jobId}`);
+    const response = await fetch(`/getfile?jobid=${jobId}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch file: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    if (data.file) {
+      console.log(`Loaded G-code file from API with ${data.file.split('\n').length} lines`);
+      gcodeString.value = data.file;
+      
+      // Extract layers for potential layer-based rendering
+      layers = extractLayers(gcodeString.value);
+      console.log(`Identified ${layers.length} layers in the GCode file`);
+      
+      // Process the G-code
+      if (isLivePreview.value) {
+        processGCodeProgressively(gcodeString.value);
+      } else {
+        processStaticGCode(gcodeString.value);
+      }
+    } else {
+      console.error("No file data in API response");
+      addToast('Failed to load G-code file from job', 'error');
+    }
+  } catch (error) {
+    console.error("Error fetching job file:", error);
+    addToast(`Failed to load G-code file: ${error}`, 'error');
+  }
+}
+
 onMounted(() => {
   nextTick(() => {
     withoutConsoleWarnings(() => {
@@ -69,6 +110,9 @@ onMounted(() => {
         // If we have a file already, process it
         if (props.file) {
           processFile(props.file);
+        } else if (props.jobId) {
+          // If no file but we have a jobId, fetch the file from API
+          fetchJobFile(props.jobId);
         }
       } else {
         console.error("Canvas element not found!");
@@ -387,6 +431,15 @@ watch(() => props.file, (newFile) => {
     });
   }
 });
+
+// Watch for jobId changes - if file is not available, fetch it from API
+watch([() => props.jobId, () => props.file, () => preview], ([jobId, file, previewInstance]) => {
+  // Only fetch if we have a jobId, no file, and preview is ready
+  if (jobId && !file && previewInstance && gcodeCanvas.value) {
+    console.log(`Job ID ${jobId} provided but no file - fetching from API`);
+    fetchJobFile(jobId);
+  }
+}, { immediate: true });
 
 // Watch for job ID changes to update socket listeners
 watch(() => props.jobId, (newJobId) => {

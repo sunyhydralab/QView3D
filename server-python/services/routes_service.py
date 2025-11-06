@@ -1,5 +1,5 @@
 import os
-from flask import request, Response, send_from_directory
+from flask import request, Response, send_from_directory, jsonify
 from flask_cors import CORS
 
 class RoutesService:
@@ -39,8 +39,22 @@ class RoutesService:
         @self.app.route('/<path:path>')
         def serve_spa(path):
             if path.startswith('api/') or path.startswith('socket.io/'):
-                return {'error': 'Not found'}, 404
+                return jsonify({'error': 'Not found'}), 404
             return send_from_directory(self.app.static_folder, 'index.html')
+        
+        # Handle 405 Method Not Allowed for GET requests to POST-only API routes
+        # This allows SPA routing to work when navigating directly to routes like /register
+        @self.app.errorhandler(405)
+        def handle_405(e):
+            # For GET requests to API routes, serve the SPA instead of 405
+            if request.method == 'GET':
+                try:
+                    if self.app.static_folder and os.path.exists(os.path.join(self.app.static_folder, 'index.html')):
+                        return send_from_directory(self.app.static_folder, 'index.html')
+                except Exception:
+                    pass
+            # For other methods or if static file doesn't exist, return the standard 405
+            return jsonify({'error': 'Method not allowed'}), 405
 
     def setup_cors(self):
         @self.app.before_request
