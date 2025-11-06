@@ -197,9 +197,10 @@ ALTER TABLE Jobs ADD COLUMN td_request_id VARCHAR(50);
 - Full implementation: 10-14 hours (issues + jobs + UI)
 
 ## Success Criteria
-- ✅ Issues automatically create TeamDynamix tickets
-- ✅ Resolved issues close TeamDynamix tickets
-- ✅ Jobs optionally create service requests
-- ✅ Ticket IDs stored and displayed in QView3D
-- ✅ Manual sync available for historical data
-- ✅ Proper error handling and logging
+- Issues automatically create TeamDynamix tickets
+- Resolved issues close TeamDynamix tickets
+- Jobs optionally create service requests
+- Ticket IDs stored and displayed in QView3D
+- Manual sync available for historical data
+- Proper error handling and logging
+
