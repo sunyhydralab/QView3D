@@ -3,7 +3,6 @@ import { type Job } from '@/models/job'
 import { api } from '@/models/api'
 import { onSocketEvent } from '@/services/socket'
 import { addToast } from '@/components/Toast.vue'
-import { setupSockets } from '@/composables/useWebSockets'
 
 export interface Fabricator {
   device: Record<string, any>
@@ -44,8 +43,14 @@ watchEffect(() => {
   console.log('fabricatorList updated:', fabricatorList.value)
 })
 
+// Store cleanup function for socket listeners
+let fabricatorSocketCleanup: (() => void) | null = null
+
 // Setup socket listeners for real-time fabricator updates
 export function setupFabricatorSocketListeners() {
+  // Clean up any existing listeners first to prevent duplicates
+  cleanupFabricatorSocketListeners()
+
   // Listen for fabricator status updates
   const removeStatusListener = onSocketEvent<Fabricator>('fabricator_status_update', (data) => {
     // Find the fabricator in the list and update its status
@@ -87,11 +92,21 @@ export function setupFabricatorSocketListeners() {
     },
   )
 
-  // Return cleanup function
-  return () => {
+  // Store and return cleanup function
+  fabricatorSocketCleanup = () => {
     removeStatusListener()
     removeRegistrationListener()
     removeDisconnectListener()
+  }
+
+  return fabricatorSocketCleanup
+}
+
+// Cleanup function to remove all fabricator socket listeners
+export function cleanupFabricatorSocketListeners() {
+  if (fabricatorSocketCleanup) {
+    fabricatorSocketCleanup()
+    fabricatorSocketCleanup = null
   }
 }
 
@@ -102,8 +117,8 @@ export async function getConnectedFabricators() {
 export async function retrieveRegisteredFabricators() {
   const printerInfo = await api('getprinterinfo')
   // Check if the api returned a valid response, if not, return an empty array, to avoid issue where the settings panel never loads.
-  fabricatorList.value = printerInfo ? printerInfo : []
-  setupSockets(fabricatorList.value)
+  // Ensure fabricatorList is always an array, even if backend returns error object
+  fabricatorList.value = (printerInfo && Array.isArray(printerInfo)) ? printerInfo : []
   // Setup socket listeners after we have the initial data
   setupFabricatorSocketListeners()
   return fabricatorList.value

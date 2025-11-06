@@ -5,7 +5,13 @@
   "main": "run.js",
   "type": "module",
   "scripts": {
-    "run": "echo 'Just run files individually'"
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "node --test test/**/*.test.js",
+    "test:database": "node --test test/database.test.js",
+    "test:jobs": "node --test test/jobs.test.js",
+    "test:fabricators": "node --test test/fabricators.test.js",
+    "test:emulator": "node --test test/emulator.integration.test.js"
   },
   "repository": {
     "type": "git",
@@ -24,10 +30,16 @@
   },
   "homepage": "https://github.com/sunyhydralab/QView3D#readme",
   "dependencies": {
-    "express": "^5.1.0",
-    "serialport": "^13.0.0"
+    "express": "5.1.0",
+    "@serialport/stream": "13.0.0",
+    "@serialport/bindings-cpp": "13.0.0",
+    "cors": "^2.8.5",
+    "ws": "^8.18.0",
+    "sqlite3": "^5.1.7",
+    "multer": "^2.0.2",
+    "compression": "^1.7.4"
   },
   "devDependencies": {
-    "jsdoc": "^4.0.4"
+    "nodemon": "^3.1.0"
   }
 }

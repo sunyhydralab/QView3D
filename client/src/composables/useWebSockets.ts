@@ -1,31 +1,32 @@
 import { API_URL } from '@/composables/useIPSettings'
 import io from 'socket.io-client'
 import { ref } from 'vue'
-import {type Fabricator} from '@/models/fabricator'
+import {type Fabricator, fabricatorList} from '@/models/fabricator'
 import {type Job} from "@/models/job";
 
 export const socket = ref(io(API_URL.value, {
     transports: ['websocket']
 }));
 
-export function setupSockets(printers: Array<Fabricator>) {
-    setupTempSocket(printers)
-    setupStatusSocket(printers)
-    setupQueueSocket(printers)
-    setupErrorSocket(printers)
-    setupCanPauseSocket(printers)
-    setupPauseFeedbackSocket(printers)
-    setupTimeStartedSocket(printers)
-    setupProgressSocket(printers)
-    setupReleaseSocket(printers)
-    setupJobStatusSocket(printers)
-    setupPortRepairSocket(printers)
-    setupGCodeViewerSocket(printers)
-    setupExtrusionSocket(printers)
-    setupColorChangeBuffer(printers)
-    setupMaxLayerHeightSocket(printers)
-    setupCurrentLayerHeightSocket(printers)
-    setupConsoleSocket(printers)
+export function setupSockets() {
+    setupTempSocket()
+    setupStatusSocket()
+    setupQueueSocket()
+    setupErrorSocket()
+    setupCanPauseSocket()
+    setupPauseFeedbackSocket()
+    setupTimeStartedSocket()
+    setupTimeUpdateSocket()
+    setupProgressSocket()
+    setupReleaseSocket()
+    setupJobStatusSocket()
+    setupPortRepairSocket()
+    setupGCodeViewerSocket()
+    setupExtrusionSocket()
+    setupColorChangeBuffer()
+    setupMaxLayerHeightSocket()
+    setupCurrentLayerHeightSocket()
+    setupConsoleSocket()
 }
 
 interface WebSocketDataPacket {
@@ -44,18 +45,22 @@ interface WebSocketDataPacket {
   Fabricator?: Record<string, any>
   gcode_num?: number
   level?: string
-  message?: string 
+  message?: string
   extruded?: number
   colorbuff?: number
   max_layer_height?: number
   current_layer_height?: number
+  elapsed?: number
+  remaining?: number
+  total?: number
+  eta?: string
 }
 
 // *** PORTS ***
-function setupTempSocket(printers: Array<Fabricator>) {
+function setupTempSocket() {
   socket.value.off('temp_update')
   socket.value.on('temp_update', (data: WebSocketDataPacket) => {
-    const printer = printers.find((p: Fabricator) => p.id === data.fabricator_id)
+    const printer = fabricatorList.value.find((p: Fabricator) => p.id === data.fabricator_id)
     if (printer) {
       printer.extruder_temp = data.extruder_temp
       printer.bed_temp = data.bed_temp
@@ -65,193 +70,215 @@ function setupTempSocket(printers: Array<Fabricator>) {
 }
 
 // function to set up the socket for status updates
-function setupStatusSocket(printers: Array<Fabricator>) {
+function setupStatusSocket() {
   socket.value.off('status_update')
   socket.value.on('status_update', (data: WebSocketDataPacket) => {
-    if (printers) {
-      const printer = printers.find((p: Fabricator) => p.id === data.fabricator_id)
-      if (printer) {
-        printer.status = data.status
-      }
-    } else {
-      console.error('printers is undefined')
+    const printer = fabricatorList.value.find((p: Fabricator) => p.id === data.fabricator_id)
+    if (printer) {
+      printer.status = data.status
     }
   })
 }
 
-function setupJobStatusSocket(printers: Array<Fabricator>) {
-  socket.value.off('job_status_update')
-  // Always set up the socket connection and event listener
+function setupJobStatusSocket() {
   socket.value.off('job_status_update')
   socket.value.on('job_status_update', (data: WebSocketDataPacket) => {
-    if (printers) {
-      const job = printers
-        .flatMap((printer: Fabricator) => printer.queue)
-        .find((job: Job | undefined) => job?.id === data.job_id)
+    const job = fabricatorList.value
+      .flatMap((printer: Fabricator) => printer.queue)
+      .find((job: Job | undefined) => job?.id === data.job_id)
 
-      if (job) {
-        job.status = data.status
-      }
-    } else {
-      console.error('printers is undefined')
+    if (job) {
+      job.status = data.status
     }
   })
 }
 
-function setupQueueSocket(printers: Array<Fabricator>) {
+function setupQueueSocket() {
   socket.value.off('queue_update')
   socket.value.on('queue_update', (data: WebSocketDataPacket) => {
-    if (printers) {
-      const printer = printers.find((p: Fabricator) => p.id === data.fabricator_id)
-      if (printer) {
-        printer.queue = data.queue
-      }
-    } else {
-      console.error('printers is undefined')
+    const printer = fabricatorList.value.find((p: Fabricator) => p.id === data.fabricator_id)
+    if (printer) {
+      printer.queue = data.queue
     }
   })
 }
 
-function setupErrorSocket(printers: Array<Fabricator>) {
+function setupErrorSocket() {
   socket.value.off('error_update')
   socket.value.on('error_update', (data: WebSocketDataPacket) => {
-    if (printers) {
-      const printer = printers.find((p: Fabricator) => p.id === data.fabricator_id)
-      if (printer) {
-        printer.error = data.error
-      }
-    } else {
-      console.error('printers is undefined')
+    const printer = fabricatorList.value.find((p: Fabricator) => p.id === data.fabricator_id)
+    if (printer) {
+      printer.error = data.error
     }
   })
 }
 
-function setupCanPauseSocket(printers: Array<Fabricator>) {
+function setupCanPauseSocket() {
   socket.value.off('can_pause')
   socket.value.on('can_pause', (data: WebSocketDataPacket) => {
-    if (printers) {
-      const printer = printers.find((p: Fabricator) => p.id === data.fabricator_id)
-      if (printer) {
-        printer.canPause = data.canPause
-      }
-    } else {
-      console.error('printers is undefined')
+    const printer = fabricatorList.value.find((p: Fabricator) => p.id === data.fabricator_id)
+    if (printer) {
+      printer.canPause = data.canPause
     }
   })
 }
 
 // *** JOBS ***
-function setupPauseFeedbackSocket(printers: Array<Fabricator>) {
+function setupPauseFeedbackSocket() {
   socket.value.off('file_pause_update')
   socket.value.on('file_pause_update', (data: WebSocketDataPacket) => {
-    if (printers) {
-      const job = printers
-        .flatMap((printer: Fabricator) => printer.queue)
-        .find((job: Job | undefined) => job?.id === data.job_id)
+    const job = fabricatorList.value
+      .flatMap((printer: Fabricator) => printer.queue)
+      .find((job: Job | undefined) => job?.id === data.job_id)
 
-      if (job) {
-        job.file_pause = data.file_pause || false
-      }
-    } else {
-      console.error('printers is undefined')
+    if (job) {
+      job.file_pause = data.file_pause || false
     }
   })
 }
 
-function setupTimeStartedSocket(printers: Array<Fabricator>) {
-  socket.value.off('set_time_started')
-  // Always set up the socket connection and event listener
+function setupTimeStartedSocket() {
   socket.value.off('set_time_started')
   socket.value.on('set_time_started', (data: WebSocketDataPacket) => {
-    if (printers) {
-      const job = printers
-        .flatMap((printer: Fabricator) => printer.queue)
-        .find((job: Job | undefined) => job?.id === data.job_id)
+    const job = fabricatorList.value
+      .flatMap((printer: Fabricator) => printer.queue)
+      .find((job: Job | undefined) => job?.id === data.job_id)
 
-      if (job) {
-        job.time_started = data.time_started
+    if (job) {
+      job.time_started = data.time_started
+    }
+  })
+}
+
+// Helper function to format seconds as HH:MM:SS
+function formatTime(seconds: number | undefined): string {
+  if (seconds === undefined || seconds < 0) return 'Idle'
+
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const secs = Math.floor(seconds % 60)
+
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+}
+
+// Helper function to format ETA timestamp as readable time
+function formatETA(isoTimestamp: string | undefined): string {
+  if (!isoTimestamp || isoTimestamp === 'Idle') return 'Idle'
+
+  try {
+    const etaDate = new Date(isoTimestamp)
+    const now = new Date()
+
+    // If ETA is in the past, return 'Soon'
+    if (etaDate <= now) return 'Soon'
+
+    // Format as time (e.g., "6:30 PM")
+    return etaDate.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+  } catch (error) {
+    console.error('Error formatting ETA:', error)
+    return 'Unknown'
+  }
+}
+
+// Function to update reactive time tracking for jobs
+function setupTimeUpdateSocket() {
+  socket.value.off('time_update')
+  socket.value.on('time_update', (data: WebSocketDataPacket) => {
+    const job = fabricatorList.value
+      .flatMap((printer: Fabricator) => printer.queue)
+      .find((job: Job | undefined) => job?.id === data.job_id)
+
+    if (job) {
+      // Initialize job_client if it doesn't exist
+      if (!job.job_client) {
+        job.job_client = {
+          elapsed_time: 'Idle',
+          remaining_time: 'Idle',
+          total_time: 'Idle',
+          eta: 'Idle'
+        }
       }
-    } else {
-      console.error('printers is undefined')
+
+      // Update time fields with formatted values
+      job.job_client.elapsed_time = formatTime(data.elapsed)
+      job.job_client.remaining_time = formatTime(data.remaining)
+      job.job_client.total_time = formatTime(data.total)
+      job.job_client.eta = formatETA(data.eta)
+
+      // Also update progress if provided
+      if (data.progress !== undefined) {
+        job.progress = data.progress
+      }
+
+      console.debug('Time update received:', {
+        job_id: data.job_id,
+        elapsed: job.job_client.elapsed_time,
+        remaining: job.job_client.remaining_time,
+        total: job.job_client.total_time,
+        eta: job.job_client.eta,
+        progress: job.progress
+      })
     }
   })
 }
 
 // function to constantly update progress of job
-function setupProgressSocket(printers: Array<Fabricator>) {
-  socket.value.off('progress_update')
-  // Always set up the socket connection and event listener
+function setupProgressSocket() {
   socket.value.off('progress_update')
   socket.value.on('progress_update', (data: WebSocketDataPacket) => {
-    if (printers) {
-      const job = printers
-        .flatMap((printer: Fabricator) => printer.queue)
-        .find((job: Job | undefined) => job?.id === data.job_id)
+    const job = fabricatorList.value
+      .flatMap((printer: Fabricator) => printer.queue)
+      .find((job: Job | undefined) => job?.id === data.job_id)
 
-      if (job) {
+    if (job) {
+      job.progress = data.progress
+      // job.elapsed_time = data.elapsed_time
+      // Update the display value only if progress is defined
+      if (data.progress !== undefined) {
         job.progress = data.progress
-        // job.elapsed_time = data.elapsed_time
-        // Update the display value only if progress is defined
-        if (data.progress !== undefined) {
-          job.progress = data.progress
-        }
       }
-    } else {
-      console.error('printers is undefined')
     }
   })
 }
 
-function setupReleaseSocket(printers: Array<Fabricator>) {
-  socket.value.off('release_job')
-  // Always set up the socket connection and event listener
+function setupReleaseSocket() {
   socket.value.off('release_job')
   socket.value.on('release_job', (data: WebSocketDataPacket) => {
-    if (printers) {
-      const job = printers
-        .flatMap((printer: Fabricator) => printer.queue)
-        .find((job: Job | undefined) => job?.id === data.job_id)
-      if (job) {
-        job.released = data.released
-      }
-    } else {
-      console.error('printers is undefined')
+    const job = fabricatorList.value
+      .flatMap((printer: Fabricator) => printer.queue)
+      .find((job: Job | undefined) => job?.id === data.job_id)
+    if (job) {
+      job.released = data.released
     }
   })
 }
 
-function setupPortRepairSocket(printers: Array<Fabricator>) {
-    socket.value.off('port_repair')
-  // Always set up the socket connection and event listener
+function setupPortRepairSocket() {
   socket.value.off('port_repair')
   socket.value.on('port_repair', (data: WebSocketDataPacket) => {
-    if (printers) {
-      const printer = printers.find((p: Fabricator) => p.id === data.fabricator_id)
-      if (printer) {
-        console.log('printer Fabricator: ' + printer.device, ' data Fabricator: ' + data.Fabricator)
-        printer.device = data.Fabricator || printer.device
-      } else{
-        console.error('printer is undefined')
-      }
-    } else {
-      console.error('printers is undefined')
+    const printer = fabricatorList.value.find((p: Fabricator) => p.id === data.fabricator_id)
+    if (printer) {
+      console.log('printer Fabricator: ' + printer.device, ' data Fabricator: ' + data.Fabricator)
+      printer.device = data.Fabricator || printer.device
+    } else{
+      console.error('printer is undefined')
     }
   })
 }
 
-function setupGCodeViewerSocket(printers: Array<Fabricator>) {
+function setupGCodeViewerSocket() {
   socket.value.off('gcode_viewer')
   socket.value.on('gcode_viewer', (data: WebSocketDataPacket) => {
-    if (printers) {
-      const job = printers
-        .flatMap((printer: Fabricator) => printer.queue)
-        .find((job: Job | undefined) => job?.id === data.job_id)
+    const job = fabricatorList.value
+      .flatMap((printer: Fabricator) => printer.queue)
+      .find((job: Job | undefined) => job?.id === data.job_id)
 
-      if (job) {
-        job.gcode_num = data.gcode_num
-      }
-    } else {
-      console.error('printers is undefined')
+    if (job) {
+      job.gcode_num = data.gcode_num
     }
   })
 }
@@ -259,101 +286,80 @@ function setupGCodeViewerSocket(printers: Array<Fabricator>) {
 const arrayLevels = ['critical', 'error', 'warning', 'info', 'debug']
 const colors = ['\x1b[95m', '\x1b[91m', '\x1b[93m', '\x1b[0m', '\x1b[94m']
 
-function setupConsoleSocket(printers: Array<Fabricator>) {
-  for (let i = 0; i < printers.length; i++) {
-    if (printers[i].consoles) {
+function setupConsoleSocket() {
+  for (let i = 0; i < fabricatorList.value.length; i++) {
+    if (fabricatorList.value[i].consoles) {
       for (let j = 0; j < 5; j++) {
-        printers[i].consoles![j] = []
+        fabricatorList.value[i].consoles![j] = []
       }
     }
   }
   socket.value.off('console_update')
   socket.value.on('console_update', (data: WebSocketDataPacket) => {
     console.debug("console update", data)
-    if (printers) {
-      const printer = printers.find((p: Fabricator) => p.id === data.fabricator_id)
-      if (printer && printer.consoles) {
-        if (data.level) {
-          const maxLevelToAdd = arrayLevels.indexOf(data.level)
-          if (maxLevelToAdd === -1) {
-            console.error('Invalid console level:', data.level)
-          } else {
-            for (let i = maxLevelToAdd; i < printer.consoles.length; i++) {
-              printer.consoles[i].push(colors[maxLevelToAdd] + data.message + '\x1b[0m')
-            }
-          }
-
+    const printer = fabricatorList.value.find((p: Fabricator) => p.id === data.fabricator_id)
+    if (printer && printer.consoles) {
+      if (data.level) {
+        const maxLevelToAdd = arrayLevels.indexOf(data.level)
+        if (maxLevelToAdd === -1) {
+          console.error('Invalid console level:', data.level)
         } else {
-          console.error('data.level is undefined')
+          for (let i = maxLevelToAdd; i < printer.consoles.length; i++) {
+            printer.consoles[i].push(colors[maxLevelToAdd] + data.message + '\x1b[0m')
+          }
         }
+      } else {
+        console.error('data.level is undefined')
       }
-    } else {
-      console.error('printers is undefined')
     }
   })
 }
 
-function setupExtrusionSocket(printers: Array<Fabricator>) {
+function setupExtrusionSocket() {
   socket.value.off('extruded_update')
   socket.value.on('extruded_update', (data: WebSocketDataPacket) => {
-    if (printers) {
-      const job = printers
-        .flatMap((printer: Fabricator) => printer.queue)
-        .find((job: Job | undefined) => job?.id === data.job_id)
+    const job = fabricatorList.value
+      .flatMap((printer: Fabricator) => printer.queue)
+      .find((job: Job | undefined) => job?.id === data.job_id)
 
-      if (job) {
-        job.extruded = data.extruded
-      }
-    } else {
-      console.error('printers is undefined')
+    if (job) {
+      job.extruded = data.extruded
     }
   })
 }
 
-function setupColorChangeBuffer(printers: Array<Fabricator>) {
+function setupColorChangeBuffer() {
   socket.value.off('color_buff')
   socket.value.on('color_buff', (data: WebSocketDataPacket) => {
-    if (printers) {
-      const printer = printers.find((p: Fabricator) => p.id === data.fabricator_id)
-      if (printer) {
-        printer.colorbuff = data.colorbuff
-      }
-    } else {
-      console.error('printers is undefined')
+    const printer = fabricatorList.value.find((p: Fabricator) => p.id === data.fabricator_id)
+    if (printer) {
+      printer.colorbuff = data.colorbuff
     }
   })
 }
 
-function setupMaxLayerHeightSocket(printers: Array<Fabricator>) {
+function setupMaxLayerHeightSocket() {
   socket.value.off('max_layer_height')
   socket.value.on('max_layer_height', (data: WebSocketDataPacket) => {
-    if (printers) {
-      const job = printers
-        .flatMap((printer: Fabricator) => printer.queue)
-        .find((job: Job | undefined) => job?.id === data.job_id)
+    const job = fabricatorList.value
+      .flatMap((printer: Fabricator) => printer.queue)
+      .find((job: Job | undefined) => job?.id === data.job_id)
 
-      if (job) {
-        job.max_layer_height = data.max_layer_height
-      }
-    } else {
-      console.error('printers is undefined')
+    if (job) {
+      job.max_layer_height = data.max_layer_height
     }
   })
 }
 
-function setupCurrentLayerHeightSocket(printers: Array<Fabricator>) {
+function setupCurrentLayerHeightSocket() {
   socket.value.off('current_layer_height')
   socket.value.on('current_layer_height', (data: WebSocketDataPacket) => {
-    if (printers) {
-      const job = printers
-        .flatMap((printer: Fabricator) => printer.queue)
-        .find((job: Job | undefined) => job?.id === data.job_id)
+    const job = fabricatorList.value
+      .flatMap((printer: Fabricator) => printer.queue)
+      .find((job: Job | undefined) => job?.id === data.job_id)
 
-      if (job) {
-        job.current_layer_height = data.current_layer_height
-      }
-    } else {
-      console.error('printers is undefined')
+    if (job) {
+      job.current_layer_height = data.current_layer_height
     }
   })
 }

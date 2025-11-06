@@ -1,13 +1,14 @@
 <!--TODO: Whenever the database is wiped, so should the localStorage for connectedFabricatorList-->
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import {
   type Fabricator,
   fabricatorList,
   getConnectedFabricators,
   registerFabricator,
   retrieveRegisteredFabricators,
+  cleanupFabricatorSocketListeners,
 } from '@/models/fabricator'
 import FabricatorCard from '@/components/RegisteredFabricatorCard.vue'
 import { addToast } from '../components/Toast.vue'
@@ -43,6 +44,10 @@ onMounted(async () => {
   console.log('Loaded fabricatorList from server')
 })
 
+onUnmounted(() => {
+  cleanupFabricatorSocketListeners()
+})
+
 // update the list of connected Fabricators but filter out the registered ones
 async function refreshFabricatorList() {
   // Trigger rotation animation
@@ -52,7 +57,11 @@ async function refreshFabricatorList() {
   // filter out fabricators that have already been registered
   connectedFabricatorList.value = updatedList.filter((fabricator: Fabricator) => {
     // checks if the fabricator is registered and already has a name by it's serialPort id
-    const isRegisteredFabricator = searchFabricatorById(fabricator.device.serialPort) // TODO Change how we uniquely identify printers
+    // Null check: device can be null for offline/database-loaded fabricators
+    const serialPort = fabricator.device?.serialPort
+    if (!serialPort) return true // Include if no serial port (can't check if registered)
+
+    const isRegisteredFabricator = searchFabricatorById(serialPort) // TODO Change how we uniquely identify printers
 
     // returns true if the fabricator is not registered
     return !isRegisteredFabricator
@@ -72,7 +81,8 @@ function triggerRotation() {
 // helper function to search by fabricatorList.value serialPort id
 function searchFabricatorById(id: string) {
   return fabricatorList.value.find((fabricator: Fabricator) => {
-    return fabricator.device.serialPort === id // TODO Change how we uniquely identify printers
+    // Null check: device can be null for offline/database-loaded fabricators
+    return fabricator.device?.serialPort === id // TODO Change how we uniquely identify printers
   })
 }
 
@@ -131,7 +141,7 @@ async function handleFabricatorDeleted(id: number) {
 
           <!-- Select Fabricator -->
           <div class="space-y-2">
-            <label for="fabricatorSelect" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">Select
+            <label for="fabricatorSelect" class="block mb-2 text-sm font-medium text-dark-primary dark:text-light-primary">Select
               a Fabricator</label>
             <div class="flex items-center">
               <select id="fabricatorSelect" v-model="selectedFabricator"
@@ -172,18 +182,18 @@ async function handleFabricatorDeleted(id: number) {
 
           <!-- Fabricator Name -->
           <div class="space-y-2">
-            <label for="name" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">Fabricator
+            <label for="name" class="block mb-2 text-sm font-medium text-dark-primary dark:text-light-primary">Fabricator
               Name</label>
             <input id="name" type="text"
-              class="input-style w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:border-accent-primary-light focus:ring-accent-primary-light transition-all duration-300"
+              class="input-style w-full px-4 py-3 border border-light-primary-dark dark:border-dark-primary-light rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:border-accent-primary-light focus:ring-accent-primary-light transition-all duration-300"
               v-model="customName" placeholder="Name your fabricator" />
           </div>
 
           <!-- Model -->
           <div class="space-y-2">
-            <label for="model" class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">Model</label>
+            <label for="model" class="block mb-2 text-sm font-medium text-dark-primary dark:text-light-primary">Model</label>
             <input id="model" type="text"
-              class="input-style w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm bg-gray-100 cursor-not-allowed transition-all duration-300"
+              class="input-style w-full px-4 py-3 border border-light-primary-dark dark:border-dark-primary-light rounded-lg shadow-sm bg-light-primary dark:bg-dark-primary cursor-not-allowed transition-all duration-300"
               disabled :placeholder="selectedFabricator?.description || 'Select a fabricator'" />
           </div>
 
@@ -229,7 +239,7 @@ async function handleFabricatorDeleted(id: number) {
             </transition-group>
           </div>
           <div v-else class="flex items-center justify-center h-full">
-            <p class="text-gray-500 dark:text-gray-400 text-center py-12">
+            <p class="text-dark-primary dark:text-light-primary text-center py-12">
               No fabricators registered yet. Register a fabricator to see it here.
             </p>
           </div>

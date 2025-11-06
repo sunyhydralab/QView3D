@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { type Ref, ref, onMounted, computed } from 'vue';
-import { fabricatorList, retrieveRegisteredFabricators, type Fabricator } from '@/models/fabricator'
+import { type Ref, ref, onMounted, onUnmounted, computed } from 'vue';
+import { fabricatorList, retrieveRegisteredFabricators, cleanupFabricatorSocketListeners, type Fabricator } from '@/models/fabricator'
 import { type Job } from '../models/job'
 import NoPrinterRobot from '@/components/NoPrinterRobot.vue'
 import DashboardButtons from '@/components/DashboardButtons.vue'
@@ -18,6 +18,10 @@ onMounted(async () => {
       theadID.value = fabricatorList.value[i].id!
     }
   }
+});
+
+onUnmounted(() => {
+  cleanupFabricatorSocketListeners()
 });
 
 // State tracking for UI
@@ -92,27 +96,27 @@ function getProgress(job: Job | undefined): string {
           <div class="block md:hidden">
             <div class="bg-light-primary-light dark:bg-dark-primary-light rounded-lg shadow mb-4 p-4">              <div class="flex justify-between mb-2">
                 <div>
-                  <span class="font-bold text-gray-900 dark:text-white">ID: {{ currentFabricator.id }}</span>
+                  <span class="font-bold text-dark-primary dark:text-light-primary-light">ID: {{ currentFabricator.id }}</span>
                 </div>
                 <div>
                   <button @click="toggleDetails(currentFabricator)" class="p-1">
-                    <i class="fas text-gray-600 dark:text-gray-300 w-8 flex justify-center" :class="getDetails(currentFabricator) ? 'fa-caret-up' : 'fa-caret-down'"></i>
+                    <i class="fas text-dark-primary dark:text-light-primary w-8 flex justify-center" :class="getDetails(currentFabricator) ? 'fa-caret-up' : 'fa-caret-down'"></i>
                   </button>
                 </div>
               </div>
 
               <div class="flex flex-col mb-2">
                 <div class="py-1">
-                  <span class="font-semibold text-gray-800 dark:text-gray-200">Printer:</span>
-                  <span class="overflow-hidden text-ellipsis text-gray-900 dark:text-white">{{ currentFabricator.name }}</span>
+                  <span class="font-semibold text-dark-primary dark:text-light-primary-dark">Printer:</span>
+                  <span class="overflow-hidden text-ellipsis text-dark-primary dark:text-light-primary-light">{{ currentFabricator.name }}</span>
                 </div>
                 <div class="py-1">
-                  <span class="font-semibold text-gray-800 dark:text-gray-200">Job:</span>
-                  <span class="overflow-hidden text-ellipsis text-gray-900 dark:text-white">{{ getCurrentJob(currentFabricator)?.name ?? 'N/A' }}</span>
+                  <span class="font-semibold text-dark-primary dark:text-light-primary-dark">Job:</span>
+                  <span class="overflow-hidden text-ellipsis text-dark-primary dark:text-light-primary-light">{{ getCurrentJob(currentFabricator)?.name ?? 'N/A' }}</span>
                 </div>
                 <div class="py-1">
-                  <span class="font-semibold text-gray-800 dark:text-gray-200">File:</span>
-                  <span class="overflow-hidden text-ellipsis text-gray-900 dark:text-white">{{ getCurrentJob(currentFabricator)?.file_name_original ?? 'N/A' }}</span>
+                  <span class="font-semibold text-dark-primary dark:text-light-primary-dark">File:</span>
+                  <span class="overflow-hidden text-ellipsis text-dark-primary dark:text-light-primary-light">{{ getCurrentJob(currentFabricator)?.file_name_original ?? 'N/A' }}</span>
                 </div>
               </div>
 
@@ -240,8 +244,8 @@ function getProgress(job: Job | undefined): string {
                   @click="toggleDetails(currentFabricator)"
                 >
                   <div class="flex justify-center items-center h-full">
-                    <button class="w-8 h-6 flex items-center justify-center rounded hover:bg-light-primary-dark dark:hover:bg-dark-primary-dark">
-                      <i class="fas text-gray-600 dark:text-gray-300" :class="getDetails(currentFabricator) ? 'fa-caret-up' : 'fa-caret-down'" title="Toggle Details"></i>
+                    <button class="w-8 h-6 flex items-center justify-center rounded hover:bg-light-primary dark:hover:bg-dark-primary">
+                      <i class="fas text-dark-primary dark:text-light-primary" :class="getDetails(currentFabricator) ? 'fa-caret-up' : 'fa-caret-down'" title="Toggle Details"></i>
                     </button>
                   </div>
                 </td>
@@ -251,8 +255,8 @@ function getProgress(job: Job | undefined): string {
                   @click="toggleGCodeViewer(currentFabricator)"
                 >
                   <div class="flex justify-center items-center h-full">
-                    <button class="w-8 h-6 flex items-center justify-center rounded hover:bg-light-primary-dark dark:hover:bg-dark-primary-dark">
-                      <i class="fas text-gray-600 dark:text-gray-300" :class="isGCodeViewerVisible(currentFabricator) ? 'fa-eye-slash' : 'fa-eye'" title="Toggle GCode Viewer"></i>
+                    <button class="w-8 h-6 flex items-center justify-center rounded hover:bg-light-primary dark:hover:bg-dark-primary">
+                      <i class="fas text-dark-primary dark:text-light-primary" :class="isGCodeViewerVisible(currentFabricator) ? 'fa-eye-slash' : 'fa-eye'" title="Toggle GCode Viewer"></i>
                     </button>
                   </div>
                 </td>
@@ -396,52 +400,52 @@ function getProgress(job: Job | undefined): string {
         <transition name="dropdown">
           <div v-if="getDetails(currentFabricator)" class="bg-light-primary-light dark:bg-dark-primary-light rounded-lg p-4">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="font-bold text-gray-900 dark:text-white">Print Details</h3>
+              <h3 class="font-bold text-dark-primary dark:text-light-primary-light">Print Details</h3>
               <button
                 @click="toggleGCodeViewer(currentFabricator)"
                 class="flex items-center justify-center w-8 h-8 rounded-full bg-light-primary dark:bg-dark-primary hover:bg-light-primary-dark dark:hover:bg-dark-primary-dark"
               >
-                <i class="fas text-gray-700 dark:text-gray-300" :class="isGCodeViewerVisible(currentFabricator) ? 'fa-eye-slash' : 'fa-eye'"></i>
+                <i class="fas text-dark-primary dark:text-light-primary" :class="isGCodeViewerVisible(currentFabricator) ? 'fa-eye-slash' : 'fa-eye'"></i>
               </button>
             </div>
 
               <div class="grid grid-cols-2 gap-3 mb-4">
-                <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
-                  <div class="text-xs font-medium text-gray-800 dark:text-gray-200">Layer</div>
-                  <div class="overflow-hidden text-ellipsis text-gray-900 dark:text-white">{{ getCurrentJob(currentFabricator)?.current_layer_height ?? 'N/A' }}</div>
+                <div class="bg-light-primary dark:bg-dark-primary p-2 rounded">
+                  <div class="text-xs font-medium text-dark-primary dark:text-light-primary-dark">Layer</div>
+                  <div class="overflow-hidden text-ellipsis text-dark-primary dark:text-light-primary-light">{{ getCurrentJob(currentFabricator)?.current_layer_height ?? 'N/A' }}</div>
                 </div>
-                <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
-                  <div class="text-xs font-medium text-gray-800 dark:text-gray-200">Filament</div>
-                  <div class="overflow-hidden text-ellipsis text-gray-900 dark:text-white">{{ getCurrentJob(currentFabricator)?.filament ?? 'Idle' }}</div>
+                <div class="bg-light-primary dark:bg-dark-primary p-2 rounded">
+                  <div class="text-xs font-medium text-dark-primary dark:text-light-primary-dark">Filament</div>
+                  <div class="overflow-hidden text-ellipsis text-dark-primary dark:text-light-primary-light">{{ getCurrentJob(currentFabricator)?.filament ?? 'Idle' }}</div>
                 </div>
-                <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
-                  <div class="text-xs font-medium text-gray-800 dark:text-gray-200">Nozzle</div>
-                  <div class="overflow-hidden text-ellipsis text-gray-900 dark:text-white">{{ currentFabricator?.extruder_temp ? currentFabricator.extruder_temp + '°C' : 'Idle' }}</div>
+                <div class="bg-light-primary dark:bg-dark-primary p-2 rounded">
+                  <div class="text-xs font-medium text-dark-primary dark:text-light-primary-dark">Nozzle</div>
+                  <div class="overflow-hidden text-ellipsis text-dark-primary dark:text-light-primary-light">{{ currentFabricator?.extruder_temp ? currentFabricator.extruder_temp + '°C' : 'Idle' }}</div>
                 </div>
-                <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
-                  <div class="text-xs font-medium text-gray-800 dark:text-gray-200">Bed</div>
-                  <div class="overflow-hidden text-ellipsis text-gray-900 dark:text-white">{{ currentFabricator?.bed_temp ? currentFabricator.bed_temp + '°C' : 'Idle' }}</div>
+                <div class="bg-light-primary dark:bg-dark-primary p-2 rounded">
+                  <div class="text-xs font-medium text-dark-primary dark:text-light-primary-dark">Bed</div>
+                  <div class="overflow-hidden text-ellipsis text-dark-primary dark:text-light-primary-light">{{ currentFabricator?.bed_temp ? currentFabricator.bed_temp + '°C' : 'Idle' }}</div>
                 </div>
-                <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
-                  <div class="text-xs font-medium text-gray-800 dark:text-gray-200">Elapsed</div>
-                  <div class="overflow-hidden text-ellipsis text-gray-900 dark:text-white">{{ getCurrentJob(currentFabricator)?.job_client?.elapsed_time ?? 'Idle' }}</div>
+                <div class="bg-light-primary dark:bg-dark-primary p-2 rounded">
+                  <div class="text-xs font-medium text-dark-primary dark:text-light-primary-dark">Elapsed</div>
+                  <div class="overflow-hidden text-ellipsis text-dark-primary dark:text-light-primary-light">{{ getCurrentJob(currentFabricator)?.job_client?.elapsed_time ?? 'Idle' }}</div>
                 </div>
-                <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
-                  <div class="text-xs font-medium text-gray-800 dark:text-gray-200">Remaining</div>
-                  <div class="overflow-hidden text-ellipsis text-gray-900 dark:text-white">{{ getCurrentJob(currentFabricator)?.job_client?.remaining_time ?? 'Idle' }}</div>
+                <div class="bg-light-primary dark:bg-dark-primary p-2 rounded">
+                  <div class="text-xs font-medium text-dark-primary dark:text-light-primary-dark">Remaining</div>
+                  <div class="overflow-hidden text-ellipsis text-dark-primary dark:text-light-primary-light">{{ getCurrentJob(currentFabricator)?.job_client?.remaining_time ?? 'Idle' }}</div>
                 </div>
-                <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
-                  <div class="text-xs font-medium text-gray-800 dark:text-gray-200">Total</div>
-                  <div class="overflow-hidden text-ellipsis text-gray-900 dark:text-white">{{ getCurrentJob(currentFabricator)?.job_client?.total_time ?? 'Idle' }}</div>
+                <div class="bg-light-primary dark:bg-dark-primary p-2 rounded">
+                  <div class="text-xs font-medium text-dark-primary dark:text-light-primary-dark">Total</div>
+                  <div class="overflow-hidden text-ellipsis text-dark-primary dark:text-light-primary-light">{{ getCurrentJob(currentFabricator)?.job_client?.total_time ?? 'Idle' }}</div>
                 </div>
-                <div class="bg-light-primary-ultralight dark:bg-dark-primary p-2 rounded">
-                  <div class="text-xs font-medium text-gray-800 dark:text-gray-200">ETA</div>
-                  <div class="overflow-hidden text-ellipsis text-gray-900 dark:text-white">{{ getCurrentJob(currentFabricator)?.job_client?.eta ?? 'Idle' }}</div>
+                <div class="bg-light-primary dark:bg-dark-primary p-2 rounded">
+                  <div class="text-xs font-medium text-dark-primary dark:text-light-primary-dark">ETA</div>
+                  <div class="overflow-hidden text-ellipsis text-dark-primary dark:text-light-primary-light">{{ getCurrentJob(currentFabricator)?.job_client?.eta ?? 'Idle' }}</div>
                 </div>
               </div>
 
               <!-- Toggle text - only show on mobile -->
-              <div v-if="isGCodeViewerVisible(currentFabricator)" class="flex justify-center items-center text-xs text-gray-700 dark:text-gray-300 mb-2">
+              <div v-if="isGCodeViewerVisible(currentFabricator)" class="flex justify-center items-center text-xs text-dark-primary dark:text-light-primary mb-2">
                 Tap the eye icon to toggle the GCode viewer
               </div>
 

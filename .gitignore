@@ -8,19 +8,14 @@ migrations/
 
 *.db
 
-server/qview3dserver.egg-info/
-server/dist
-
-printeremu/testserver/node_modules/
 /qodana.yaml
-/Tests/logs/
-/Tests/server/
 /logs/
-/server/logs/
-/server/__Hidden__/
-/server/.python-venv
+/server-python/.python-venv
+/server-python/__pycache__/
 /uploads
 /tempcsv
+QView.db
+qview.log
 
 # Logs
 logs
@@ -32,6 +27,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+package-lock.json
 .DS_Store
 dist
 dist-ssr
@@ -51,9 +47,33 @@ coverage
 *.sln
 *.sw?
 
-package-lock.json
-
 *.tsbuildinfo
 
 .env
 venv/
+.venv/
+.python-venv/
+.claude/
+
+# Python database files
+*.sqlite
+*.sqlite3
+
+# OS and editor temporary files
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*.tmp
+nul
+
+# Backup files
+*.bak
+*.old
+*~
+# Test outputs
+client/playwright-report/
+client/test-results/
+server-python/.coverage
+.pytest_cache/
+**/__pycache__/

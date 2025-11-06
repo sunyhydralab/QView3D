@@ -1,0 +1,72 @@
+import os
+from flask import request, Response, send_from_directory, jsonify
+from flask_cors import CORS
+
+class RoutesService:
+    def __init__(self, app):
+        self.app = app
+        self.setup_routes()
+
+    def setup_routes(self):
+        self.define_routes()
+        self.setup_static_routes()
+        self.setup_cors()
+
+    def define_routes(self):
+        from controllers.ports import ports_bp
+        from controllers.jobs import jobs_bp
+        from controllers.statusService import status_bp
+        from controllers.issues import issue_bp
+        from controllers.emulator import emulator_bp
+
+        CORS(self.app)
+
+        self.app.register_blueprint(ports_bp)
+        self.app.register_blueprint(jobs_bp)
+        self.app.register_blueprint(status_bp)
+        self.app.register_blueprint(issue_bp)
+        self.app.register_blueprint(emulator_bp)
+
+    def setup_static_routes(self):
+        @self.app.route('/')
+        def serve_index():
+            return send_from_directory(self.app.static_folder, 'index.html')
+
+        @self.app.route('/assets/<path:filename>')
+        def serve_assets(filename):
+            return send_from_directory(os.path.join(self.app.static_folder, 'assets'), filename)
+
+        @self.app.route('/<path:path>')
+        def serve_spa(path):
+            if path.startswith('api/') or path.startswith('socket.io/'):
+                return jsonify({'error': 'Not found'}), 404
+            return send_from_directory(self.app.static_folder, 'index.html')
+        
+        # Handle 405 Method Not Allowed for GET requests to POST-only API routes
+        # This allows SPA routing to work when navigating directly to routes like /register
+        @self.app.errorhandler(405)
+        def handle_405(e):
+            # For GET requests to API routes, serve the SPA instead of 405
+            if request.method == 'GET':
+                try:
+                    if self.app.static_folder and os.path.exists(os.path.join(self.app.static_folder, 'index.html')):
+                        return send_from_directory(self.app.static_folder, 'index.html')
+                except Exception:
+                    pass
+            # For other methods or if static file doesn't exist, return the standard 405
+            return jsonify({'error': 'Method not allowed'}), 405
+
+    def setup_cors(self):
+        @self.app.before_request
+        def handle_preflight():
+            if request.path.startswith('/socket.io/'):
+                return None
+
+            if request.method == "OPTIONS":
+                res = Response()
+                res.status_code = 200
+                res.headers['X-Content-Type-Options'] = '*'
+                res.headers['Access-Control-Allow-Origin'] = '*'
+                res.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+                res.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+                return res

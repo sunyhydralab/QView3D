@@ -1,0 +1,77 @@
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.4s ease-out;
+}
+
+.gradient-button {
+  @apply relative px-6 py-3 rounded-xl font-medium text-white overflow-hidden shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105;
+  @apply bg-gradient-to-r from-accent-primary to-accent-primary-light;
+  @apply flex items-center space-x-2;
+}
+
+.gradient-button:hover {
+  @apply from-accent-primary-dark to-accent-primary;
+}
+
+.action-button {
+  @apply px-4 py-2 rounded-lg text-sm font-medium transition-colors;
+}
+
+.action-button.primary {
+  @apply bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20;
+  @apply dark:bg-accent-primary-light/10 dark:text-accent-primary-light dark:hover:bg-accent-primary-light/20;
+}
+
+.action-button.success {
+  @apply bg-green-100 text-green-700 hover:bg-green-200;
+  @apply dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800;
+}
+
+.action-button.danger {
+  @apply bg-red-100 text-red-700 hover:bg-red-200;
+  @apply dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800;
+}
+
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.3s ease;
+}
+
+.list-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.list-move {
+  transition: transform 0.3s ease;
+}

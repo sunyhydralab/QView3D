@@ -1,42 +1,250 @@
 <script setup lang="ts">
 import { type Fabricator } from '../models/fabricator'
-import { removeJob } from '../models/job'
-import { ref } from 'vue'
+import { removeJob, moveJobInQueue } from '../models/job'
+import { ref, computed } from 'vue'
+import FilterForm from './FilterForm.vue'
 
 const props = defineProps<{ fabricator: Fabricator }>()
 const currentFabricator = props.fabricator
 
 const allJobs = ref(currentFabricator.queue || [])
 const showDetails = ref(true)
+const draggedJob = ref<any>(null)
+const dragOverIndex = ref<number | null>(null)
+
+// Filter state for queue
+const activeFilters = ref<{
+  model?: string
+  status?: string
+  searchTerm?: string
+}>({})
+
+// Handle filter changes
+const handleFilterChange = (filters: any) => {
+  activeFilters.value = filters
+}
+
+// Filter jobs based on active filters
+const filteredJobs = computed(() => {
+  let jobs = [...allJobs.value]
+
+  // Filter by search term (job name or ticket)
+  if (activeFilters.value.searchTerm) {
+    const searchLower = activeFilters.value.searchTerm.toLowerCase()
+    jobs = jobs.filter(job => {
+      const jobName = job?.name || ''
+      const ticketId = job?.td_id?.toString() || ''
+      const fileName = job?.file_name_original || ''
+      return jobName.toLowerCase().includes(searchLower) ||
+             ticketId.toLowerCase().includes(searchLower) ||
+             fileName.toLowerCase().includes(searchLower)
+    })
+  }
+
+  // Filter by status
+  if (activeFilters.value.status) {
+    jobs = jobs.filter(job => {
+      const status = job?.status || 'pending'
+      return status.toLowerCase() === activeFilters.value.status!.toLowerCase()
+    })
+  }
+
+  return jobs
+})
 
 const deleteJob = async (jobId: number) => {
-  await removeJob([jobId])
-  
-  if (allJobs.value) {
-    const jobIndex = allJobs.value.findIndex((job) => job.id === jobId)
-    if (jobIndex !== -1) {
-      allJobs.value.splice(jobIndex, 1)
+  if (!confirm('Are you sure you want to remove this job from the queue?')) {
+    return
+  }
+
+  try {
+    // Wait for backend confirmation before updating UI
+    const response = await removeJob([jobId])
+
+    // Only update UI after successful backend deletion
+    if (allJobs.value) {
+      const jobIndex = allJobs.value.findIndex((job) => job.id === jobId)
+      if (jobIndex !== -1) {
+        allJobs.value.splice(jobIndex, 1)
+      }
     }
+  } catch (error) {
+    console.error('Failed to remove job:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    alert(`Failed to remove job from queue: ${errorMessage}`)
   }
 }
 
-function toggleDetails() {
+const toggleDetails = () => {
   showDetails.value = !showDetails.value
 }
 
-function onDeleteClick(jobId: number) {
+const onDeleteClick = (jobId: number) => {
   deleteJob(jobId)
+}
+
+// Drag and drop functions
+const handleDragStart = (event: DragEvent, job: any, index: number) => {
+  draggedJob.value = { job, index }
+  event.dataTransfer!.effectAllowed = 'move'
+  event.dataTransfer!.setData('text/html', '') // Required for Firefox
+}
+
+const handleDragOver = (event: DragEvent, index: number) => {
+  event.preventDefault()
+  dragOverIndex.value = index
+}
+
+const handleDragLeave = () => {
+  dragOverIndex.value = null
+}
+
+const handleDrop = async (event: DragEvent, dropIndex: number) => {
+  event.preventDefault()
+  dragOverIndex.value = null
+
+  if (!draggedJob.value || !allJobs.value || !currentFabricator) return
+
+  const { job, index: dragIndex } = draggedJob.value
+
+  // Validate job and indices
+  if (!job || dragIndex === dropIndex || dragIndex < 0 || dropIndex < 0) {
+    draggedJob.value = null
+    return
+  }
+
+  // Remove from old position
+  allJobs.value.splice(dragIndex, 1)
+
+  // Insert at new position
+  allJobs.value.splice(dropIndex, 0, job)
+
+  // Update backend
+  try {
+    const jobIds = allJobs.value.map(j => j.id)
+    await moveJobInQueue(currentFabricator.id, jobIds)
+  } catch (error) {
+    console.error('Failed to update queue order:', error)
+    // Revert on failure
+    allJobs.value.splice(dropIndex, 1)
+    allJobs.value.splice(dragIndex, 0, job)
+    alert('Failed to update queue order')
+  }
+
+  draggedJob.value = null
+}
+
+const handleDragEnd = () => {
+  draggedJob.value = null
+  dragOverIndex.value = null
+}
+
+// Move job up in queue
+const moveJobUp = async (index: number) => {
+  if (index === 0 || !allJobs.value || !currentFabricator) return
+
+  const job = filteredJobs.value[index]
+  if (!job || !job.id) return
+
+  // Find actual position in unfiltered queue
+  const actualIndex = allJobs.value.findIndex(j => j.id === job.id)
+  if (actualIndex <= 0) return  // Can't move up if not found or already at top
+
+  // Store original order for rollback
+  const originalOrder = [...allJobs.value]
+
+  // Swap positions
+  [allJobs.value[actualIndex - 1], allJobs.value[actualIndex]] =
+  [allJobs.value[actualIndex], allJobs.value[actualIndex - 1]]
+
+  // Update backend
+  try {
+    const jobIds = allJobs.value.map(j => j.id)
+    await moveJobInQueue(currentFabricator.id, jobIds)
+  } catch (error) {
+    console.error('Failed to move job up:', error)
+    // Revert to original order on failure
+    allJobs.value = originalOrder
+    alert('Failed to move job up in queue')
+  }
+}
+
+// Move job down in queue
+const moveJobDown = async (index: number) => {
+  if (index === filteredJobs.value.length - 1 || !allJobs.value || !currentFabricator) return
+
+  const job = filteredJobs.value[index]
+  if (!job || !job.id) return
+
+  // Find actual position in unfiltered queue
+  const actualIndex = allJobs.value.findIndex(j => j.id === job.id)
+  if (actualIndex === -1 || actualIndex >= allJobs.value.length - 1) return  // Can't move down if not found or at bottom
+
+  // Store original order for rollback
+  const originalOrder = [...allJobs.value]
+
+  // Swap positions
+  [allJobs.value[actualIndex], allJobs.value[actualIndex + 1]] =
+  [allJobs.value[actualIndex + 1], allJobs.value[actualIndex]]
+
+  // Update backend
+  try {
+    const jobIds = allJobs.value.map(j => j.id)
+    await moveJobInQueue(currentFabricator.id, jobIds)
+  } catch (error) {
+    console.error('Failed to move job down:', error)
+    // Revert to original order on failure
+    allJobs.value = originalOrder
+    alert('Failed to move job down in queue')
+  }
+}
+
+// Get job status badge color
+const getStatusColor = (status: string | null) => {
+  switch(status?.toLowerCase()) {
+    case 'printing':
+      return 'bg-blue-500'
+    case 'paused':
+      return 'bg-yellow-500'
+    case 'pending':
+      return 'bg-accent-secondary'
+    default:
+      return 'bg-dark-primary dark:bg-light-primary'
+  }
 }
 </script>
 
 <template>
   <transition name="slide-down" appear>
-    <!-- Developer Note: This is simply a beginning setup. Subject to change eventually. -->
     <div class="container mx-auto mt-3">
+      <!-- Filter section for queue -->
+      <div class="mb-3">
+        <FilterForm
+          filter-type="queue"
+          @filter-change="handleFilterChange"
+        />
+      </div>
+
+      <!-- Queue summary -->
+      <div class="mb-2 text-sm text-dark-primary dark:text-light-primary">
+        <span v-if="filteredJobs.length === 0 && allJobs.length > 0">
+          No jobs match your filters
+        </span>
+        <span v-else>
+          {{ filteredJobs.length }} job{{ filteredJobs.length !== 1 ? 's' : '' }} in queue
+          <span v-if="activeFilters.searchTerm"> (filtered)</span>
+        </span>
+      </div>
+
       <!-- Main Table -->
       <table class="min-w-full">
         <thead>
           <tr class="bg-light-primary-light dark:bg-dark-primary-light">
+            <th
+              class="w-8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            >
+              #
+            </th>
             <th
               class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
@@ -58,9 +266,19 @@ function onDeleteClick(jobId: number) {
               File Name
             </th>
             <th
+              class="w-20 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            >
+              Status
+            </th>
+            <th
               class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
               Progress
+            </th>
+            <th
+              class="w-24 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+            >
+              Actions
             </th>
             <th
               class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-1"
@@ -73,26 +291,64 @@ function onDeleteClick(jobId: number) {
         </thead>
         <transition name="expand">
           <tbody v-if="showDetails">
-            <tr v-for="job in allJobs" class="text-center" :key="job.id">
+            <tr v-if="filteredJobs.length === 0" class="text-center">
+              <td colspan="9" class="border border-light-primary dark:border-dark-primary dark:text-light-primary p-4">
+                <span v-if="allJobs.length === 0">No jobs in queue</span>
+                <span v-else>No jobs match your search criteria</span>
+              </td>
+            </tr>
+            <tr
+              v-else
+              v-for="(job, index) in filteredJobs"
+              class="text-center transition-all duration-200 hover:bg-light-primary-light dark:hover:bg-dark-primary-dark"
+              :key="job.id"
+              :class="{
+                'bg-blue-50 dark:bg-blue-900/20': dragOverIndex === index,
+                'opacity-50': draggedJob?.job.id === job.id
+              }"
+              draggable="true"
+              @dragstart="handleDragStart($event, job, index)"
+              @dragover="handleDragOver($event, index)"
+              @dragleave="handleDragLeave"
+              @drop="handleDrop($event, index)"
+              @dragend="handleDragEnd"
+            >
+              <td
+                class="w-8 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2 cursor-move"
+              >
+                {{ index + 1 }}
+              </td>
               <td
                 class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
               >
-                {{ job.td_id }}
+                {{ job.td_id || '-' }}
               </td>
               <td
                 class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
               >
-                {{ currentFabricator.description }}
+                {{ currentFabricator.description || currentFabricator.name }}
               </td>
               <td
                 class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+                :title="job?.name"
               >
-                {{ job?.name ?? '-' }}
+                {{ job?.name || '-' }}
               </td>
               <td
                 class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+                :title="job?.file_name_original"
               >
-                {{ job?.file_name_original ?? '-' }}
+                {{ job?.file_name_original || '-' }}
+              </td>
+              <td
+                class="w-20 border border-light-primary dark:border-dark-primary p-2"
+              >
+                <span
+                  :class="getStatusColor(job?.status)"
+                  class="text-white text-xs px-2 py-1 rounded"
+                >
+                  {{ job?.status || 'Pending' }}
+                </span>
               </td>
               <td
                 class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
@@ -112,20 +368,48 @@ function onDeleteClick(jobId: number) {
                 </div>
               </td>
               <td
-                class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2 text-center align-middle"
+                class="w-24 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
               >
-                <div class="flex items-center justify-center">
+                <div class="flex items-center justify-center space-x-1">
+                  <!-- Move up button -->
                   <button
-                    class="w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded flex items-center justify-center"
-                    @click="onDeleteClick(job.id)"
+                    :disabled="index === 0"
+                    class="w-8 h-8 bg-blue-500 hover:bg-blue-600 disabled:bg-light-primary-dark dark:disabled:bg-dark-primary disabled:cursor-not-allowed text-white rounded flex items-center justify-center"
+                    @click="moveJobUp(index)"
+                    title="Move up"
                   >
-                    <i class="fa-solid fa-trash"></i>
+                    <i class="fa-solid fa-arrow-up text-xs"></i>
+                  </button>
+                  <!-- Move down button -->
+                  <button
+                    :disabled="index === filteredJobs.length - 1"
+                    class="w-8 h-8 bg-blue-500 hover:bg-blue-600 disabled:bg-light-primary-dark dark:disabled:bg-dark-primary disabled:cursor-not-allowed text-white rounded flex items-center justify-center"
+                    @click="moveJobDown(index)"
+                    title="Move down"
+                  >
+                    <i class="fa-solid fa-arrow-down text-xs"></i>
+                  </button>
+                  <!-- Delete button -->
+                  <button
+                    class="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded flex items-center justify-center"
+                    @click="onDeleteClick(job.id)"
+                    title="Remove from queue"
+                  >
+                    <i class="fa-solid fa-trash text-xs"></i>
                   </button>
                 </div>
               </td>
-            </tr></tbody
-        ></transition>
+              <td
+                class="w-12 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
+              >
+                <i class="fa-solid fa-grip-vertical text-dark-primary dark:text-light-primary"></i>
+              </td>
+            </tr>
+          </tbody>
+        </transition>
       </table>
+
+      <!-- Queue action buttons removed - pause/resume functionality not implemented -->
     </div>
   </transition>
 </template>
@@ -143,7 +427,7 @@ function onDeleteClick(jobId: number) {
 }
 .expand-enter-to,
 .expand-leave-from {
-  max-height: 1000px;
+  max-height: 2000px;
   opacity: 1;
 }
 .w-48 {
@@ -160,5 +444,14 @@ function onDeleteClick(jobId: number) {
 .slide-down-enter-to {
   transform: translateY(0);
   opacity: 1;
+}
+
+/* Drag and drop cursor styles */
+tr[draggable="true"] {
+  cursor: move;
+}
+
+tr[draggable="true"]:active {
+  cursor: grabbing;
 }
 </style>

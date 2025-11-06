@@ -18,9 +18,9 @@ async function initFullPreview(file: File) {
     backgroundColor: 'black',
     buildVolume: { x: 250, y: 210, z: 220 },
     travelColor: 'limegreen',
-    lineWidth: 0.5,
-    lineHeight: 0.5,
-    extrusionWidth: 0.25,
+    lineWidth: 0.4,          // Realistic nozzle diameter (0.4mm)
+    lineHeight: 0.2,         // Realistic layer height (0.2mm)
+    extrusionWidth: 0.4,     // Realistic extrusion width (0.4mm)
     renderExtrusion: true,
     renderTravel: false,
     renderTubes: true,

@@ -1,0 +1,32 @@
+{
+  "name": "qview3d-middleware",
+  "version": "0.1.0",
+  "description": "API gateway middleware for QView3D backend routing",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test test/**/*.test.js"
+  },
+  "keywords": [
+    "qview3d",
+    "middleware",
+    "api-gateway",
+    "proxy"
+  ],
+  "author": "QView3D Contributors",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.1.0",
+    "cors": "^2.8.5",
+    "http-proxy-middleware": "^3.0.0",
+    "ws": "^8.18.0",
+    "axios": "^1.7.0",
+    "socket.io": "^4.7.0",
+    "socket.io-client": "^4.7.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

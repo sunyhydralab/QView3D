@@ -108,7 +108,7 @@ export function clearToasts() {
       <!-- Close button -->
       <button
         @click="removeToast(toast.id)"
-        class="p-2 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100"
+        class="p-2 flex items-center justify-center text-dark-primary hover:text-accent-primary dark:text-light-primary dark:hover:text-accent-primary-light"
       >
         <i class="fas fa-times"></i>
       </button>

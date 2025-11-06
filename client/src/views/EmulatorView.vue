@@ -1,497 +1,436 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { api } from '@/models/api';
-import { onSocketEvent, emitSocketEvent } from '@/services/socket';
+import { DEBUG_MODE } from '@/composables/useIPSettings';
 import { addToast } from '@/components/Toast.vue';
 
-// Define interfaces for socket event data
-interface EmulatorStatusData {
-  status: string;
-  message?: string;
-}
-
-interface EmulatorTemperatureData {
-  extruder?: number;
-  bed?: number;
-  targetExtruder?: number;
-  targetBed?: number;
-}
-
-interface EmulatorRegistrationData {
-  name?: string;
-  id?: number;
-}
-
-// Emulator State
-const isConnected = ref(false);
-const isRegistered = ref(false);
+const router = useRouter();
 const loading = ref(false);
-const selectedPrinterType = ref('Prusa MK4');
-const emulatorStatus = ref('Offline');
-const statusMessage = ref('');
-const temperatureData = reactive({
-  extruder: 25,
-  bed: 25,
-  targetExtruder: 0,
-  targetBed: 0
+const emulators = ref<any[]>([]);
+const showCreateModal = ref(false);
+
+// Form data for new emulator
+const newEmulator = ref({
+  name: '',
+  model: 'Prusa MK4',
+  description: ''
 });
 
-// Available printer models based on printeremu/data/printers.json
+// Available printer models
 const printerModels = [
-  { value: 'Prusa MK4', label: 'Prusa MK4' }, // ID: 1
-  { value: 'Ender 3', label: 'Ender 3' }      // ID: 2
+  { value: 'Prusa MK4', label: 'Prusa MK4', icon: 'fas fa-cube' },
+  { value: 'Prusa Mini', label: 'Prusa Mini', icon: 'fas fa-cube' },
+  { value: 'Ender 3', label: 'Creality Ender 3', icon: 'fas fa-cube' },
+  { value: 'Ender 3 Pro', label: 'Creality Ender 3 Pro', icon: 'fas fa-cube' },
+  { value: 'CR-10', label: 'Creality CR-10', icon: 'fas fa-cube' },
+  { value: 'Generic', label: 'Generic Printer', icon: 'fas fa-cube' }
 ];
 
-// Printer configuration
-const printerConfig = reactive({
-  name: 'Emulator Printer',
-  port: 'EMU001',
-  description: 'Virtual 3D Printer',
-  hwid: 'EMU-' + Math.floor(Math.random() * 10000)
-});
-
-// Temperature control
-const extruderTemp = ref(0);
-const bedTemp = ref(0);
-
-// Track registered event unsubscribe functions
-const unsubscribers = ref<(() => void)[]>([]);
-
-// Setup socket listeners for emulator updates
-onMounted(() => {
-  setupSocketListeners();
-
-  // Ensure cleanup of event handlers when component is unmounted
-  return () => {
-    cleanupSocketListeners();
-  };
-});
-
-// Clean up socket listeners to prevent duplicates
-function cleanupSocketListeners() {
-  // Execute all unsubscribe functions
-  unsubscribers.value.forEach(unsubscribe => unsubscribe());
-  unsubscribers.value = [];
-  console.log('All socket event listeners cleaned up');
-}
-
-function setupSocketListeners() {
-  // Clean up any existing listeners first
-  cleanupSocketListeners();
-
-  // Listen for emulator status updates
-  const statusUnsubscribe = onSocketEvent<EmulatorStatusData>('emulator_status', (data) => {
-    emulatorStatus.value = data.status;
-    if (data.message) {
-      statusMessage.value = data.message;
-    }
-
-    // If the status changed, show a toast notification
-    addToast(`Emulator status: ${data.status}`, data.status === 'Error' ? 'error' : 'info');
-  });
-  unsubscribers.value.push(statusUnsubscribe);
-
-  // Listen for temperature updates
-  const tempUnsubscribe = onSocketEvent<EmulatorTemperatureData>('emulator_temperature', (data) => {
-    if (data.extruder !== undefined) temperatureData.extruder = data.extruder;
-    if (data.bed !== undefined) temperatureData.bed = data.bed;
-    if (data.targetExtruder !== undefined) temperatureData.targetExtruder = data.targetExtruder;
-    if (data.targetBed !== undefined) temperatureData.targetBed = data.targetBed;
-  });
-  unsubscribers.value.push(tempUnsubscribe);
-
-  // Listen for registration status
-  const regUnsubscribe = onSocketEvent<EmulatorRegistrationData>('emulator_registered', (data) => {
-    isRegistered.value = true;
-    addToast(`Emulator registered as ${data.name || 'Virtual Printer'}`, 'success');
-  });
-  unsubscribers.value.push(regUnsubscribe);
-  
-  console.log('Socket event listeners set up successfully');
-}
-
-// Update the printer configuration based on selected model
-watch(selectedPrinterType, (newValue) => {
-  switch(newValue) {
-    case 'Prusa MK3':
-      printerConfig.description = 'Prusa MK3 Virtual Printer';
-      break;
-    case 'Prusa MK4':
-      printerConfig.description = 'Prusa MK4 Virtual Printer';
-      break;
-    case 'Prusa MK4S':
-      printerConfig.description = 'Prusa MK4S Virtual Printer';
-      break;
-    case 'Ender 3':
-      printerConfig.description = 'Ender 3 Virtual Printer';
-      break;
-  }
-});
-
-// Connect to the emulator
-const connectEmulator = async () => {
-  loading.value = true;
-  statusMessage.value = 'Connecting to emulator...';
-  
-  try {
-    // First, let's check if we need to start the emulator
-    await api('startemulator', {
-      model: selectedPrinterType.value,
-      config: printerConfig
-    }, 'POST');
-    
-    isConnected.value = true;
-    emulatorStatus.value = 'Connected';
-    statusMessage.value = 'Emulator connected successfully';
-    addToast('Emulator connected successfully', 'success');
-  } catch (error) {
-    console.error('Error connecting to emulator:', error);
-    statusMessage.value = 'Failed to connect to emulator';
-    addToast('Failed to connect to emulator', 'error');
-  } finally {
-    loading.value = false;
-  }
-};
-
-// Disconnect from the emulator
-const disconnectEmulator = async () => {
-  loading.value = true;
-  statusMessage.value = 'Disconnecting from emulator...';
-  
-  try {
-    const response = await api('disconnectemulator', { 
-      printerConfig: printerConfig
-    }, 'POST');
-    
-    if (response && response.message) {
-      statusMessage.value = response.message;
-      isConnected.value = false;
-      isRegistered.value = false;
-      emulatorStatus.value = 'Offline';
-      addToast('Emulator disconnected successfully', 'info');
-    } else if (response && response.error) {
-      statusMessage.value = response.error;
-      addToast(`Error: ${response.error}`, 'error');
-    }
-  } catch (error) {
-    console.error('Error disconnecting emulator:', error);
-    statusMessage.value = 'Error disconnecting emulator';
-    addToast('Error disconnecting emulator', 'error');
-  } finally {
-    loading.value = false;
-  }
-};
-
-// Register the printer with the system
-const registerPrinter = async () => {
-  loading.value = true;
-  statusMessage.value = 'Registering emulator with the system...';
-  
-  try {
-    const response = await api('registeremulator', { 
-      model: selectedPrinterType.value,
-      config: printerConfig
-    }, 'POST');
-    
-    if (response && response.message) {
-      statusMessage.value = response.message;
-      isRegistered.value = true;
-      addToast('Emulator registered successfully', 'success');
-    } else if (response && response.error) {
-      statusMessage.value = response.error;
-      addToast(`Error: ${response.error}`, 'error');
-    }
-  } catch (error) {
-    console.error('Error registering emulator:', error);
-    statusMessage.value = 'Error registering emulator';
-    addToast('Error registering emulator', 'error');
-  } finally {
-    loading.value = false;
-  }
-};
-
-// Set the temperature of the printer
-const setTemperature = async () => {
-  try {
-    await api('setemulatortemperature', {
-      extruder: extruderTemp.value,
-      bed: bedTemp.value
-    }, 'POST');
-    
-    addToast(`Target temperatures set: Extruder ${extruderTemp.value}°C, Bed ${bedTemp.value}°C`, 'success');
-  } catch (error) {
-    console.error('Error setting temperature:', error);
-    addToast('Failed to set temperature', 'error');
-  }
-};
-
-// Generate a gcode test
-const runGCodeTest = async () => {
-  if (!isRegistered.value) {
-    addToast('Printer must be registered before running a test', 'warning');
+// Check if debug mode is enabled
+onMounted(async () => {
+  if (!DEBUG_MODE.value) {
+    addToast('Debug mode is required to access the emulator', 'warning');
+    router.push('/');
     return;
   }
-  
+  await loadEmulators();
+});
+
+// Load list of emulators
+const loadEmulators = async () => {
+  loading.value = true;
   try {
-    await api('runemulatortest', {
-      type: 'simple_move'
-    }, 'POST');
-    addToast('G-code test started', 'info');
+    const response = await api('api/emulator/list', undefined, 'GET');
+    if (response && response.emulators) {
+      emulators.value = response.emulators;
+    } else {
+      emulators.value = [];
+    }
   } catch (error) {
-    console.error('Error running G-code test:', error);
-    addToast('Failed to run G-code test', 'error');
+    console.error('Error loading emulators:', error);
+    addToast('Failed to load emulators', 'error');
+    emulators.value = [];
+  } finally {
+    loading.value = false;
   }
 };
 
-// Reset the emulator state
-const resetEmulator = async () => {
+// Open create modal
+const openCreateModal = () => {
+  newEmulator.value = {
+    name: '',
+    model: 'Prusa MK4',
+    description: ''
+  };
+  showCreateModal.value = true;
+};
+
+// Create emulator
+const createEmulator = async () => {
+  if (!newEmulator.value.name.trim()) {
+    addToast('Please enter a name for the emulator', 'warning');
+    return;
+  }
+
+  loading.value = true;
+
   try {
-    await api('resetemulator', {}, 'POST');
-    emulatorStatus.value = 'Reset';
-    statusMessage.value = 'Emulator has been reset';
-    temperatureData.extruder = 25;
-    temperatureData.bed = 25;
-    temperatureData.targetExtruder = 0;
-    temperatureData.targetBed = 0;
-    addToast('Emulator reset successfully', 'success');
+    const response = await api('startemulator', {
+      model: newEmulator.value.model,
+      config: {
+        name: newEmulator.value.name,
+        description: newEmulator.value.description || 'Virtual Printer for Testing',
+        hwid: 'EMU-' + Math.floor(Math.random() * 10000)
+      }
+    }, 'POST');
+
+    if (!response.success && !response.emulator_id) {
+      throw new Error('Failed to create emulator');
+    }
+
+    addToast(`Emulator "${newEmulator.value.name}" created successfully`, 'success');
+    showCreateModal.value = false;
+    await loadEmulators();
   } catch (error) {
-    console.error('Error resetting emulator:', error);
-    addToast('Failed to reset emulator', 'error');
+    console.error('Error creating emulator:', error);
+    addToast('Failed to create emulator', 'error');
+  } finally {
+    loading.value = false;
+  }
+};
+
+// Delete emulator
+const deleteEmulator = async (emulatorId: string | number) => {
+  if (!confirm('Are you sure you want to delete this emulator?')) {
+    return;
+  }
+
+  loading.value = true;
+
+  try {
+    const response = await api(`api/emulator/delete/${emulatorId}`, undefined, 'DELETE');
+
+    if (response && response.success !== false) {
+      addToast('Emulator deleted successfully', 'success');
+      await loadEmulators();
+    } else {
+      throw new Error(response?.error || 'Failed to delete emulator');
+    }
+  } catch (error) {
+    console.error('Error deleting emulator:', error);
+    addToast('Failed to delete emulator', 'error');
+  } finally {
+    loading.value = false;
+  }
+};
+
+// Get status badge color
+const getStatusColor = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case 'active':
+    case 'online':
+    case 'running':
+      return 'bg-green-500';
+    case 'inactive':
+    case 'offline':
+    case 'stopped':
+      return 'bg-gray-500';
+    case 'error':
+    case 'failed':
+      return 'bg-red-500';
+    default:
+      return 'bg-yellow-500';
   }
 };
 </script>
 
 <template>
-  <transition name="slide-down" appear>
-    <div class="container mx-auto pt-12 px-4">
-      <h1 class="text-3xl font-bold mb-6 text-center text-gray-800 dark:text-light-primary">
-        Printer Emulator
-      </h1>
-      
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Configuration Panel -->
-        <div class="bg-light-primary-light dark:bg-dark-primary-light rounded-lg shadow-lg p-6 transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1">
-          <h2 class="text-xl font-semibold mb-4 dark:text-light-primary">Printer Configuration</h2>
-          
-          <div class="mb-4">
-            <label class="block text-sm font-medium mb-2 dark:text-light-primary">Printer Model</label>
-            <select 
-              v-model="selectedPrinterType"
-              class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
-              :disabled="isConnected"
-            >
-              <option v-for="model in printerModels" :key="model.value" :value="model.value">
-                {{ model.label }}
-              </option>
-            </select>
+  <div class="min-h-screen bg-gradient-to-br from-light-primary via-white to-light-primary dark:from-dark-primary-dark dark:via-dark-primary dark:to-dark-primary-light transition-colors duration-300">
+    <div class="container mx-auto px-4 py-12">
+      <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-12">
+          <div>
+            <div class="flex items-center space-x-4">
+              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-accent-primary to-accent-primary-light">
+                <i class="fas fa-microchip text-3xl text-white"></i>
+              </div>
+              <div>
+                <h1 class="text-4xl font-bold bg-gradient-to-r from-accent-primary via-accent-primary-light to-accent-secondary bg-clip-text text-transparent">
+                  Virtual Emulators
+                </h1>
+                <p class="text-gray-600 dark:text-gray-400 mt-1">
+                  Create and manage virtual 3D printers for testing
+                </p>
+              </div>
+            </div>
           </div>
-          
-          <div class="mb-4">
-            <label class="block text-sm font-medium mb-2 dark:text-light-primary">Printer Name</label>
-            <input 
-              v-model="printerConfig.name"
-              type="text"
-              class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
-              :disabled="isConnected"
-            />
-          </div>
-          
-          <div class="mb-4">
-            <label class="block text-sm font-medium mb-2 dark:text-light-primary">Description</label>
-            <input 
-              v-model="printerConfig.description"
-              type="text"
-              class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
-              :disabled="isConnected"
-            />
-          </div>
-          
-          <div class="mb-4">
-            <label class="block text-sm font-medium mb-2 dark:text-light-primary">Hardware ID</label>
-            <input 
-              v-model="printerConfig.hwid"
-              type="text"
-              class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
-              :disabled="isConnected"
-            />
-          </div>
-          
-          <div class="flex space-x-2">
-            <button 
-              @click="connectEmulator"
-              class="bg-accent-primary text-white px-4 py-2 rounded-md hover:bg-accent-primary-dark flex-1"
-              :disabled="isConnected || loading"
-            >
-              <span v-if="loading && !isConnected">Connecting...</span>
-              <span v-else>Connect</span>
-            </button>
-            
-            <button 
-              @click="disconnectEmulator"
-              class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 flex-1"
-              :disabled="!isConnected || loading"
-            >
-              <span v-if="loading && isConnected">Disconnecting...</span>
-              <span v-else>Disconnect</span>
-            </button>
+          <button
+            @click="openCreateModal"
+            :disabled="loading"
+            class="group relative px-6 py-3 rounded-xl font-medium text-white overflow-hidden shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <div class="absolute inset-0 bg-gradient-to-r from-accent-primary to-accent-primary-light group-hover:from-accent-primary-dark group-hover:to-accent-primary transition-all duration-200"></div>
+            <div class="relative flex items-center space-x-2">
+              <i class="fas fa-plus"></i>
+              <span>Create Emulator</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- Info Box -->
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-8">
+          <div class="flex items-start space-x-3">
+            <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 mt-0.5"></i>
+            <div class="text-sm text-blue-900 dark:text-blue-200">
+              <p class="font-medium mb-1">Virtual Emulators</p>
+              <ul class="list-disc list-inside space-y-1 text-blue-800 dark:text-blue-300">
+                <li>Create multiple virtual printers for testing</li>
+                <li>Choose from different printer models (Prusa, Ender, etc.)</li>
+                <li>Emulators appear on Dashboard alongside physical printers</li>
+                <li>Perfect for development and testing without hardware</li>
+              </ul>
+            </div>
           </div>
         </div>
-        
-        <!-- Status Panel -->
-        <div class="bg-light-primary-light dark:bg-dark-primary-light rounded-lg shadow-lg p-6 transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1">
-          <h2 class="text-xl font-semibold mb-4 dark:text-light-primary">Emulator Status</h2>
-          
-          <div class="mb-4">
-            <div class="flex items-center mb-2">
-              <div class="font-medium dark:text-light-primary">Status:</div>
-              <div class="ml-2 px-3 py-1 rounded-full text-sm" :class="{
-                'bg-green-100 text-green-800': emulatorStatus === 'Online' || emulatorStatus === 'Connected',
-                'bg-red-100 text-red-800': emulatorStatus === 'Offline' || emulatorStatus === 'Error',
-                'bg-yellow-100 text-yellow-800': emulatorStatus === 'Busy' || emulatorStatus === 'Connecting',
-                'bg-blue-100 text-blue-800': emulatorStatus === 'Reset'
-              }">
-                {{ emulatorStatus }}
-              </div>
-            </div>
-            
-            <div class="flex items-center mb-2">
-              <div class="font-medium dark:text-light-primary">Connection:</div>
-              <div class="ml-2 px-3 py-1 rounded-full text-sm" :class="{
-                'bg-green-100 text-green-800': isConnected,
-                'bg-red-100 text-red-800': !isConnected
-              }">
-                {{ isConnected ? 'Connected' : 'Disconnected' }}
-              </div>
-            </div>
-            
-            <div class="flex items-center mb-2">
-              <div class="font-medium dark:text-light-primary">Registration:</div>
-              <div class="ml-2 px-3 py-1 rounded-full text-sm" :class="{
-                'bg-green-100 text-green-800': isRegistered,
-                'bg-red-100 text-red-800': !isRegistered
-              }">
-                {{ isRegistered ? 'Registered' : 'Not Registered' }}
-              </div>
-            </div>
+
+        <!-- Loading State -->
+        <div v-if="loading && emulators.length === 0" class="text-center py-12">
+          <i class="fas fa-spinner fa-spin text-4xl text-accent-primary mb-4"></i>
+          <p class="text-gray-600 dark:text-gray-400">Loading emulators...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else-if="!loading && emulators.length === 0" class="text-center py-12">
+          <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gray-100 dark:bg-dark-primary mb-4">
+            <i class="fas fa-microchip text-5xl text-gray-400 dark:text-gray-600"></i>
           </div>
-          
-          <div class="mb-4">
-            <h3 class="font-medium mb-2 dark:text-light-primary">Temperature</h3>
-            
-            <div class="grid grid-cols-2 gap-4 mb-4">
-              <div class="bg-light-primary dark:bg-dark-primary p-3 rounded-lg">
-                <div class="text-sm text-gray-500 dark:text-gray-400">Extruder</div>
-                <div class="text-xl font-bold dark:text-light-primary">{{ temperatureData.extruder }}°C</div>
-                <div class="text-xs text-gray-400 dark:text-gray-500">Target: {{ temperatureData.targetExtruder }}°C</div>
-              </div>
-              
-              <div class="bg-light-primary dark:bg-dark-primary p-3 rounded-lg">
-                <div class="text-sm text-gray-500 dark:text-gray-400">Bed</div>
-                <div class="text-xl font-bold dark:text-light-primary">{{ temperatureData.bed }}°C</div>
-                <div class="text-xs text-gray-400 dark:text-gray-500">Target: {{ temperatureData.targetBed }}°C</div>
+          <h3 class="text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-2">No Emulators Yet</h3>
+          <p class="text-gray-600 dark:text-gray-400 mb-6">Create your first virtual printer to get started</p>
+          <button
+            @click="openCreateModal"
+            class="inline-flex items-center space-x-2 px-6 py-3 rounded-xl font-medium text-white bg-gradient-to-r from-accent-primary to-accent-primary-light hover:from-accent-primary-dark hover:to-accent-primary transition-all"
+          >
+            <i class="fas fa-plus"></i>
+            <span>Create First Emulator</span>
+          </button>
+        </div>
+
+        <!-- Emulators Grid -->
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div
+            v-for="emulator in emulators"
+            :key="emulator.id"
+            class="bg-white dark:bg-dark-primary-light rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-shadow duration-300"
+          >
+            <!-- Status Header -->
+            <div class="px-6 py-4 bg-gradient-to-r from-gray-600 to-gray-700">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                  <div class="relative">
+                    <div
+                      class="w-3 h-3 rounded-full"
+                      :class="getStatusColor(emulator.status)"
+                    ></div>
+                    <div
+                      v-if="emulator.status === 'active' || emulator.status === 'online'"
+                      class="absolute inset-0 w-3 h-3 rounded-full animate-ping"
+                      :class="getStatusColor(emulator.status)"
+                    ></div>
+                  </div>
+                  <span class="text-white text-sm font-medium">
+                    {{ emulator.status || 'Unknown' }}
+                  </span>
+                </div>
+                <i class="fas fa-microchip text-white/80"></i>
               </div>
             </div>
-          </div>
-          
-          <div v-if="statusMessage" class="mb-4 p-3 bg-light-primary dark:bg-dark-primary rounded-lg">
-            <div class="text-sm font-medium dark:text-light-primary">Message:</div>
-            <div class="text-gray-600 dark:text-gray-300">{{ statusMessage }}</div>
-          </div>
-          
-          <div class="flex">
-            <button 
-              @click="registerPrinter"
-              class="bg-accent-primary text-white px-4 py-2 rounded-md hover:bg-accent-primary-dark flex-1"
-              :disabled="!isConnected || isRegistered || loading"
-            >
-              Register Printer
-            </button>
+
+            <!-- Content -->
+            <div class="p-6">
+              <h3 class="text-xl font-bold text-dark-primary dark:text-light-primary-light mb-2">
+                {{ emulator.name || 'Unnamed Emulator' }}
+              </h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                {{ emulator.model || 'Unknown Model' }}
+              </p>
+
+              <div v-if="emulator.description" class="text-sm text-gray-700 dark:text-gray-300 mb-4">
+                {{ emulator.description }}
+              </div>
+
+              <div class="space-y-2 mb-4">
+                <div v-if="emulator.hwid" class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                  <i class="fas fa-fingerprint w-5"></i>
+                  <span>{{ emulator.hwid }}</span>
+                </div>
+                <div v-if="emulator.id" class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                  <i class="fas fa-hashtag w-5"></i>
+                  <span>ID: {{ emulator.id }}</span>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="flex gap-2">
+                <button
+                  @click="deleteEmulator(emulator.id)"
+                  :disabled="loading"
+                  class="flex-1 px-4 py-2 rounded-xl font-medium text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  <i class="fas fa-trash mr-2"></i>
+                  Delete
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-        
-        <!-- Control Panel -->
-        <div class="bg-light-primary-light dark:bg-dark-primary-light rounded-lg shadow-lg p-6 transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1">
-          <h2 class="text-xl font-semibold mb-4 dark:text-light-primary">Printer Controls</h2>
-          
-          <div class="mb-4">
-            <h3 class="font-medium mb-2 dark:text-light-primary">Temperature Control</h3>
-            
-            <div class="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label class="block text-sm font-medium mb-1 dark:text-light-primary">Extruder (°C)</label>
-                <input 
-                  v-model="extruderTemp" 
-                  type="number" 
-                  min="0" 
-                  max="300"
-                  class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
-                  :disabled="!isConnected"
-                />
-              </div>
-              
-              <div>
-                <label class="block text-sm font-medium mb-1 dark:text-light-primary">Bed (°C)</label>
-                <input 
-                  v-model="bedTemp" 
-                  type="number" 
-                  min="0" 
-                  max="120"
-                  class="w-full p-2 rounded border bg-light-primary dark:bg-dark-primary text-dark-primary dark:text-light-primary"
-                  :disabled="!isConnected"
-                />
-              </div>
-            </div>
-            
-            <button 
-              @click="setTemperature"
-              class="w-full bg-accent-primary text-white px-4 py-2 rounded-md hover:bg-accent-primary-dark mb-4"
-              :disabled="!isConnected"
-            >
-              Set Temperature
-            </button>
-          </div>
-          
-          <div class="mb-4">
-            <h3 class="font-medium mb-2 dark:text-light-primary">Test Commands</h3>
-            
-            <button 
-              @click="runGCodeTest"
-              class="w-full bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 mb-2"
-              :disabled="!isRegistered"
-            >
-              Run G-code Test
-            </button>
-            
-            <button 
-              @click="resetEmulator"
-              class="w-full bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600"
-              :disabled="!isConnected"
-            >
-              Reset Emulator
-            </button>
-          </div>
+
+        <!-- Debug Notice -->
+        <div class="text-center text-sm text-gray-500 dark:text-gray-400 mt-8 pt-8 border-t border-gray-200 dark:border-dark-primary">
+          <i class="fas fa-code mr-1"></i>
+          Debug mode is enabled
         </div>
       </div>
     </div>
-  </transition>
+
+    <!-- Create Emulator Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="showCreateModal"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          @click.self="showCreateModal = false"
+        >
+          <div
+            class="relative w-full max-w-md bg-white dark:bg-dark-primary-light rounded-2xl shadow-2xl transform transition-all overflow-hidden"
+            @click.stop
+          >
+            <!-- Header -->
+            <div class="px-6 py-4 bg-gradient-to-r from-accent-primary to-accent-primary-light">
+              <button
+                @click="showCreateModal = false"
+                class="absolute top-4 right-4 p-2 rounded-lg text-white hover:bg-white/20 transition-colors"
+              >
+                <i class="fas fa-times text-xl"></i>
+              </button>
+              <h2 class="text-2xl font-bold text-white">Create New Emulator</h2>
+              <p class="text-white/80 mt-1">Configure your virtual printer</p>
+            </div>
+
+            <!-- Form -->
+            <form @submit.prevent="createEmulator" class="p-6 space-y-4">
+              <!-- Name -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Emulator Name *
+                </label>
+                <input
+                  v-model="newEmulator.name"
+                  type="text"
+                  required
+                  placeholder="e.g., Test Printer 1"
+                  class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-dark-primary focus:border-accent-primary dark:focus:border-accent-primary-light bg-white dark:bg-dark-primary text-gray-900 dark:text-white placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary/20"
+                  :disabled="loading"
+                />
+              </div>
+
+              <!-- Model Selection -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Printer Model *
+                </label>
+                <select
+                  v-model="newEmulator.model"
+                  required
+                  class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-dark-primary focus:border-accent-primary dark:focus:border-accent-primary-light bg-white dark:bg-dark-primary text-gray-900 dark:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary/20"
+                  :disabled="loading"
+                >
+                  <option v-for="model in printerModels" :key="model.value" :value="model.value">
+                    {{ model.label }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Description -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Description (Optional)
+                </label>
+                <textarea
+                  v-model="newEmulator.description"
+                  rows="3"
+                  placeholder="Optional description for this emulator"
+                  class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-dark-primary focus:border-accent-primary dark:focus:border-accent-primary-light bg-white dark:bg-dark-primary text-gray-900 dark:text-white placeholder-gray-400 transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary/20 resize-none"
+                  :disabled="loading"
+                />
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  @click="showCreateModal = false"
+                  :disabled="loading"
+                  class="px-6 py-3 rounded-xl font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-dark-primary hover:bg-gray-200 dark:hover:bg-dark-primary-dark transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  :disabled="loading || !newEmulator.name.trim()"
+                  class="group relative px-6 py-3 rounded-xl font-medium text-white overflow-hidden shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  <div class="absolute inset-0 bg-gradient-to-r from-accent-primary to-accent-primary-light group-hover:from-accent-primary-dark group-hover:to-accent-primary transition-all duration-200"></div>
+                  <div class="relative flex items-center space-x-2">
+                    <i v-if="loading" class="fas fa-spinner fa-spin"></i>
+                    <i v-else class="fas fa-plus"></i>
+                    <span>{{ loading ? 'Creating...' : 'Create Emulator' }}</span>
+                  </div>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+  </div>
 </template>
 
 <style scoped>
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
-/* Animation styles to match other pages */
-.slide-down-enter-active {
-  transition: all 0.5s ease;
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
-.slide-down-enter-from {
-  transform: translateY(-20px);
+
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-enter-active .relative,
+.modal-leave-active .relative {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-enter-from,
+.modal-leave-to {
   opacity: 0;
 }
-.slide-down-enter-to {
-  transform: translateY(0);
-  opacity: 1;
+
+.modal-enter-from .relative {
+  transform: scale(0.9) translateY(-20px);
+}
+
+.modal-leave-to .relative {
+  transform: scale(0.95) translateY(10px);
 }
 </style>

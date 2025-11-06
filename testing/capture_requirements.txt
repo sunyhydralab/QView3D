@@ -1,0 +1,2 @@
+# Requirements for Prusa MK4 capture script
+pyserial>=3.5

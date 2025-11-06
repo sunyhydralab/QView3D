@@ -1,18 +1,29 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import ToggleMode from '@/components/ToggleMode.vue';
+import { DEBUG_MODE } from '@/composables/useIPSettings';
 
 // State for mobile menu
 const isOpen = ref(false);
 
-const navigationItems = ref([
+const allNavigationItems = [
     { name: 'Dashboard', route: '/' },
     { name: 'Registration', route: '/register' },
     { name: 'Queues', route: '/queue' },
     { name: 'Job History', route: '/history' },
-    { name: 'Emulator', route: '/emulator' },
-]);
+    { name: 'Issues', route: '/issues' },
+    { name: 'Emulator', route: '/emulator', requiresDebug: true },
+];
+
+const navigationItems = computed(() => {
+    return allNavigationItems.filter(item => {
+        if (item.requiresDebug) {
+            return DEBUG_MODE.value;
+        }
+        return true;
+    });
+});
 
 // Get current route
 const route = useRoute();
@@ -57,8 +68,8 @@ onMounted(() => {
                         <router-link v-for="(item, index) in navigationItems" :key="index" :to="item.route" :class="[
                             'inline-flex items-center px-1 pt-1 border-b-2 text-xl font-semibold transition-colors duration-200 ease-in-out',
                             isActive(item.route)
-                                ? 'border-b-2 border-[#7561A9] text-[#7E66B9]'
-                                : 'border-transparent text-gray-700 hover:text-[#7561A9] hover:border-gray-500 dark:hover:border-white dark:text-white'
+                                ? 'border-b-2 border-accent-primary text-accent-primary'
+                                : 'border-transparent text-dark-primary hover:text-accent-primary hover:border-accent-primary-light dark:hover:border-accent-primary-light dark:text-light-primary-light'
                         ]" aria-current="page">
                             {{ item.name }}
                         </router-link>
@@ -71,12 +82,12 @@ onMounted(() => {
                     <ToggleMode class="mr-3" />
 
                     <!-- Divider Line -->
-                    <div class="lg:hidden h-8 w-px bg-gray-300 mr-3"></div>
+                    <div class="lg:hidden h-8 w-px bg-light-primary-dark dark:bg-dark-primary-light mr-3"></div>
 
                     <!-- Mobile menu button -->
                     <div class="lg:hidden">
                         <button @click="isOpen = !isOpen"
-                            class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-[#7561A9] hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#7561A9]"
+                            class="inline-flex items-center justify-center p-2 rounded-md text-dark-primary dark:text-light-primary hover:text-accent-primary hover:bg-light-primary dark:hover:bg-dark-primary focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-primary"
                             :aria-expanded="isOpen">
                             <span class="sr-only">Open main menu</span>
                             <!-- If menu is opened, show X icon -->
@@ -103,8 +114,8 @@ onMounted(() => {
                 <router-link v-for="(item, index) in navigationItems" :key="index" :to="item.route" :class="[
                     'block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors duration-200 ease-in-out',
                     isActive(item.route)
-                        ? 'border-[#7561A9] text-[#7E66B9] bg-purple-50 dark:bg-gray-700 dark:hover:bg-gray-700'
-                        : 'border-transparent text-gray-800 hover:bg-purple-50 hover:border-gray-300 hover:text-[#7E66B9] dark:text-gray-100 dark:hover:bg-gray-700'
+                        ? 'border-accent-primary text-accent-primary bg-accent-primary/10 dark:bg-accent-primary/20 dark:hover:bg-accent-primary/20'
+                        : 'border-transparent text-dark-primary hover:bg-light-primary hover:border-light-primary-dark hover:text-accent-primary dark:text-light-primary-light dark:hover:bg-dark-primary-light'
                 ]">
                     {{ item.name }}
                 </router-link>

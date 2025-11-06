@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, watch, ref, nextTick } from 'vue'
 import * as GCodePreview from 'gcode-preview'
-import { onSocketEvent } from '@/services/socket'
+import { onSocketEvent, socket } from '@/services/socket'
 import { addToast } from '@/components/Toast.vue'
 import { isDark } from '@/composables/useMode'
 
@@ -25,25 +25,81 @@ const originalConsoleDebug = console.debug
 let preview: ReturnType<typeof GCodePreview.init> | null = null
 let socketCleanup: (() => void) | null = null
 
+// Fetch G-code file from API if file is not provided but jobId is available
+async function fetchJobFile(jobId: number): Promise<void> {
+  if (!preview || !gcodeCanvas.value) {
+    console.log("Preview or canvas not ready, waiting...");
+    return;
+  }
+
+  try {
+    console.log(`Fetching G-code file for job ID: ${jobId}`);
+    const response = await fetch(`/getfile?jobid=${jobId}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch file: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    if (data.file) {
+      console.log(`Loaded G-code file from API with ${data.file.split('\n').length} lines`);
+      gcodeString.value = data.file;
+      
+      // Extract layers for potential layer-based rendering
+      layers = extractLayers(gcodeString.value);
+      console.log(`Identified ${layers.length} layers in the GCode file`);
+      
+      // Process the G-code
+      if (isLivePreview.value) {
+        processGCodeProgressively(gcodeString.value);
+      } else {
+        processStaticGCode(gcodeString.value);
+      }
+    } else {
+      console.error("No file data in API response");
+      addToast('Failed to load G-code file from job', 'error');
+    }
+  } catch (error) {
+    console.error("Error fetching job file:", error);
+    addToast(`Failed to load G-code file: ${error}`, 'error');
+  }
+}
+
 onMounted(() => {
   nextTick(() => {
     withoutConsoleWarnings(() => {
       if (gcodeCanvas.value) {
         console.log("Initializing GCode preview...");
-        // Initialize the GCode preview with improved settings
-        preview = GCodePreview.init({
-          canvas: gcodeCanvas.value,
-          extrusionColor: 'turquoise',
-          backgroundColor: 'black',
-          buildVolume: { x: 250, y: 210, z: 220 },
-          travelColor: 'limegreen', // Changed to limegreen for better visibility
-          lineWidth: 1.5,          // Increased for better visibility
-          lineHeight: 1.5,         // Increased for better visibility
-          extrusionWidth: 1.0,     // Increased for better visibility
-          renderExtrusion: true,
-          renderTravel: true,      // Enabled travel lines by default
-          renderTubes: true
-        });
+        
+        // Ensure canvas has dimensions
+        const canvasWidth = gcodeCanvas.value.clientWidth || 800;
+        const canvasHeight = gcodeCanvas.value.clientHeight || 600;
+        gcodeCanvas.value.width = canvasWidth;
+        gcodeCanvas.value.height = canvasHeight;
+        console.log(`Canvas dimensions: ${canvasWidth}x${canvasHeight}`);
+        
+        // Initialize the GCode preview with realistic 3D printer settings
+        try {
+          preview = GCodePreview.init({
+            canvas: gcodeCanvas.value,
+            extrusionColor: 'turquoise',
+            backgroundColor: 'black',
+            buildVolume: { x: 250, y: 210, z: 220 },
+            travelColor: 'limegreen',
+            lineWidth: 0.4,          // Realistic nozzle diameter (0.4mm)
+            lineHeight: 0.2,         // Realistic layer height (0.2mm)
+            extrusionWidth: 0.4,     // Realistic extrusion width (0.4mm)
+            renderExtrusion: true,
+            renderTravel: true,
+            renderTubes: true        // Keep tubes for better visual appearance
+          });
+          console.log("GCode preview initialized successfully");
+        } catch (error) {
+          console.error("Failed to initialize GCode preview:", error);
+          addToast(`Failed to initialize 3D viewer: ${error}`, 'error');
+          return;
+        }
         
         // Set the camera position explicitly for better view
         if (preview && preview.camera) {
@@ -54,7 +110,13 @@ onMounted(() => {
         // If we have a file already, process it
         if (props.file) {
           processFile(props.file);
+        } else if (props.jobId) {
+          // If no file but we have a jobId, fetch the file from API
+          fetchJobFile(props.jobId);
         }
+      } else {
+        console.error("Canvas element not found!");
+        addToast('3D viewer canvas not found', 'error');
       }
       
       // Setup socket listeners for gcode updates if we have a job ID
@@ -117,25 +179,31 @@ async function processFile(file: File) {
 
 // Process the entire GCode file at once for static display with improved approach
 function processStaticGCode(gcode: string) {
-  if (!preview) return;
+  if (!preview) {
+    console.error("GCode preview not initialized!");
+    addToast('GCode preview not initialized', 'error');
+    return;
+  }
   
   console.log(`Processing static GCode file with ${gcode.split('\n').length} lines`);
   
-  // Clear previous content
-  preview.clear();
-  
-  // Set the camera position explicitly before each render
-  if (preview.camera) {
-    preview.camera.position.set(-200, 232, 200);
-    preview.camera.lookAt(0, 0, 0);
-  }
-  
   try {
+    // Clear previous content
+    preview.clear();
+    
+    // Set the camera position explicitly before each render
+    if (preview.camera) {
+      preview.camera.position.set(-200, 232, 200);
+      preview.camera.lookAt(0, 0, 0);
+    }
+    
     // Process the entire gcode at once
     preview.processGCode(gcode);
     console.log("Static GCode rendering complete");
+    addToast('3D preview loaded successfully', 'success');
   } catch (error) {
     console.error("Error rendering static GCode:", error);
+    addToast(`3D preview error: ${error}`, 'error');
     // Try fallback render if primary fails
     try {
       // Process without renderTravel if the first attempt failed
@@ -143,9 +211,11 @@ function processStaticGCode(gcode: string) {
         preview.renderTravel = false;
         preview.processGCode(gcode);
         preview.renderTravel = true; // Reset to default
+        addToast('3D preview loaded (travel moves disabled)', 'warning');
       }
     } catch (fallbackError) {
       console.error("Fallback rendering also failed:", fallbackError);
+      addToast('3D preview failed to load', 'error');
     }
   }
 }
@@ -238,24 +308,26 @@ async function processGCodeProgressively(gcode: string) {
 function toggleLivePreview() {
   isLivePreview.value = !isLivePreview.value;
   emit('toggle-live-preview', isLivePreview.value);
-  
+
   if (!isLivePreview.value && socketCleanup) {
     // If turning off live preview, clean up socket listeners
     socketCleanup();
     socketCleanup = null;
-    
+
     // Process the whole file at once in static mode
     if (gcodeString.value && preview) {
       processStaticGCode(gcodeString.value);
     }
   } else if (isLivePreview.value && props.jobId) {
-    // If turning on live preview, set up socket listeners
-    setupGcodeSocketListeners(props.jobId);
-    
-    // If we have gcode data and toggling to live preview, process it progressively
-    if (gcodeString.value && preview) {
-      processGCodeProgressively(gcodeString.value);
+    // If turning on live preview, clear canvas and start fresh
+    if (preview) {
+      preview.clear();
+      gcodeString.value = '';  // Clear accumulated gcode
+      console.log('[GCode Live Preview] Switched to live mode - waiting for printer updates');
     }
+
+    // Set up socket listeners for real-time updates
+    setupGcodeSocketListeners(props.jobId);
   }
 }
 
@@ -268,63 +340,79 @@ function setupGcodeSocketListeners(jobId: number) {
   
   // Only set up listeners if we're in live preview mode
   if (!isLivePreview.value) return;
-  
+
   console.log(`Setting up socket listeners for job ID: ${jobId}`);
-  
+
+  // Request accumulated gcode buffer for jobs already in progress
+  const requestBufferListener = onSocketEvent<{
+    job_id: number;
+    gcode_buffer: string;
+    progress: number;
+  }>('gcode_buffer_response', (data) => {
+    if (data.job_id !== jobId) return;
+
+    if (data.gcode_buffer && preview && isLivePreview.value) {
+      console.log(`[GCode Live Preview] Received buffer with ${data.progress.toFixed(1)}% progress`);
+      gcodeString.value = data.gcode_buffer;
+
+      // Process the accumulated buffer
+      try {
+        preview.processGCode(data.gcode_buffer);
+      } catch (error) {
+        console.error('Error processing gcode buffer:', error);
+      }
+    }
+  });
+
+  // Request the buffer immediately after setting up listener
+  socket.value.emit('request_gcode_buffer', { job_id: jobId });
+
   // Listen for gcode line updates
   const removeGcodeUpdateListener = onSocketEvent<{
-    jobId: number; 
-    gcodeLineNumber: number; 
-    gcodeData?: string;
-    current_layer_height?: number;
+    job_id: number;
+    fabricator_id: number;
+    line_number: number;
+    total_lines: number;
+    progress: number;
+    current_layer_height: number;
+    gcode_chunk: string;
   }>('gcode_progress_update', (data) => {
     // Only process updates for our job
-    if (data.jobId !== jobId) return;
-    
-    if (data.gcodeData && preview) {
-      console.log(`Received gcode update for line ${data.gcodeLineNumber}`);
-      // If we received new gcode data, accumulate it
-      gcodeString.value += data.gcodeData + '\n';
-      
-      // Update occasionally to avoid too many renders
-      if (data.gcodeLineNumber % 20 === 0 || data.current_layer_height) {
-        // If we have layer information, try to render up to the current layer
-        if (data.current_layer_height && layers.length > 0) {
-          const currentLayerIndex = layers.findIndex(
-            layer => layer.some(line => line.includes(`;Z:${data.current_layer_height}`))
-          );
-          
-          if (currentLayerIndex !== -1) {
-            preview.clear();
-            const layersToRender = layers.slice(0, currentLayerIndex + 1).flat();
-            preview.processGCode(layersToRender.join('\n'));
-          } else {
-            // Fallback if layer not found
-            preview.processGCode(gcodeString.value);
-          }
-        } else {
-          // Standard update if no layer info
-          preview.processGCode(gcodeString.value);
-        }
+    if (data.job_id !== jobId) return;
+
+    if (data.gcode_chunk && preview && isLivePreview.value) {
+      console.log(`[GCode Live Preview] Progress: ${data.progress.toFixed(1)}% (${data.line_number}/${data.total_lines} lines, layer: ${data.current_layer_height})`);
+
+      // Accumulate the gcode data
+      gcodeString.value += data.gcode_chunk + '\n';
+
+      // Process the new chunk incrementally (don't clear, just add to existing preview)
+      try {
+        preview.processGCode(data.gcode_chunk);
+      } catch (error) {
+        console.error('Error processing gcode chunk:', error);
       }
     }
   });
   
   // Listen for gcode complete updates
-  const removeGcodeCompleteListener = onSocketEvent<{jobId: number; gcodeComplete: boolean}>('gcode_complete', (data) => {
+  const removeGcodeCompleteListener = onSocketEvent<{
+    job_id: number;
+    fabricator_id: number;
+    gcode_complete: boolean;
+  }>('gcode_complete', (data) => {
     // Only process updates for our job
-    if (data.jobId !== jobId) return;
-    
-    if (data.gcodeComplete && preview) {
-      console.log('GCode processing complete, rendering final result');
-      // When gcode is complete, do a final update
-      preview.processGCode(gcodeString.value);
-      addToast('3D preview completed', 'success');
+    if (data.job_id !== jobId) return;
+
+    if (data.gcode_complete && preview) {
+      console.log('[GCode Live Preview] Print complete - preview finalized');
+      addToast('Live 3D preview completed', 'success');
     }
   });
   
   // Store cleanup function
   socketCleanup = () => {
+    requestBufferListener();
     removeGcodeUpdateListener();
     removeGcodeCompleteListener();
   };
@@ -344,10 +432,27 @@ watch(() => props.file, (newFile) => {
   }
 });
 
+// Watch for jobId changes - if file is not available, fetch it from API
+watch([() => props.jobId, () => props.file, () => preview], ([jobId, file, previewInstance]) => {
+  // Only fetch if we have a jobId, no file, and preview is ready
+  if (jobId && !file && previewInstance && gcodeCanvas.value) {
+    console.log(`Job ID ${jobId} provided but no file - fetching from API`);
+    fetchJobFile(jobId);
+  }
+}, { immediate: true });
+
 // Watch for job ID changes to update socket listeners
 watch(() => props.jobId, (newJobId) => {
   if (newJobId) {
     console.log(`Job ID changed to ${newJobId}, setting up socket listeners`);
+
+    // Clear canvas and gcode buffer for new job in live preview mode
+    if (isLivePreview.value && preview) {
+      preview.clear();
+      gcodeString.value = '';
+      console.log('[GCode Live Preview] New job started - canvas cleared');
+    }
+
     setupGcodeSocketListeners(newJobId);
   } else if (socketCleanup) {
     socketCleanup();

@@ -37,11 +37,12 @@ export interface Job {
   
     job_client?: {
       // this is frontend data CALCULATED based on the backend data
-      total_time: number
-      eta: number
-      elapsed_time: number
-      extra_time: number
-      remaining_time: number
+      // Time values are formatted as "HH:MM:SS" strings for display
+      total_time: string
+      eta: string
+      elapsed_time: string
+      extra_time?: string
+      remaining_time: string
     }
     time_started?: number
     colorbuff?: number 
@@ -90,8 +91,14 @@ export function setupJobSocketListeners() {
   
   // Listen for job completed events
   const removeJobCompletedListener = onSocketEvent<{job: Job}>('job_completed', (data) => {
+    // Guard against undefined job data
+    if (!data || !data.job) {
+      console.error('Received job_completed event with missing job data:', data)
+      return
+    }
+
     const index = jobHistory.value.findIndex(job => job.id === data.job.id)
-    
+
     if (index !== -1) {
       // Update the job in our history
       jobHistory.value[index] = { ...jobHistory.value[index], ...data.job, status: 'Done' }
@@ -99,31 +106,41 @@ export function setupJobSocketListeners() {
       // Add the completed job to our history
       jobHistory.value.push({ ...data.job, status: 'Done' })
     }
-    
+
     addToast(`Job '${data.job.name}' completed successfully!`, 'success')
   })
   
   // Listen for job error events
   const removeJobErrorListener = onSocketEvent<{job: Job, error: string}>('job_error', (data) => {
+    // Guard against undefined job data
+    if (!data || !data.job) {
+      console.error('Received job_error event with missing job data:', data)
+      // Still show error toast if we have an error message
+      if (data && data.error) {
+        addToast(`Job error: ${data.error}`, 'error')
+      }
+      return
+    }
+
     const index = jobHistory.value.findIndex(job => job.id === data.job.id)
-    
+
     if (index !== -1) {
       // Update the job in our history
-      jobHistory.value[index] = { 
-        ...jobHistory.value[index], 
-        ...data.job, 
+      jobHistory.value[index] = {
+        ...jobHistory.value[index],
+        ...data.job,
         status: 'Error',
         error: data.error
       }
     } else {
       // Add the errored job to our history
-      jobHistory.value.push({ 
-        ...data.job, 
+      jobHistory.value.push({
+        ...data.job,
         status: 'Error',
-        error: data.error 
+        error: data.error
       })
     }
-    
+
     addToast(`Error in job '${data.job.name}': ${data.error}`, 'error')
   })
   
@@ -137,7 +154,16 @@ export function setupJobSocketListeners() {
 
 export async function getAllJobs() {
   try {
-    jobHistory.value = await api('getjobs')
+    const response = await api('getjobs')
+    // Backend returns {jobs: [...], total: N} format
+    if (response && response.jobs) {
+      jobHistory.value = response.jobs
+    } else if (Array.isArray(response)) {
+      // Fallback for array format
+      jobHistory.value = response
+    } else {
+      jobHistory.value = []
+    }
     // Setup socket listeners after initial data load
     setupJobSocketListeners()
     return jobHistory.value
@@ -173,5 +199,22 @@ export async function removeJob(jobarr: number[]) {
     }
   } catch (error) {
     console.error(error)
+  }
+}
+
+export async function moveJobInQueue(fabricatorId: number, jobIds: number[]) {
+  try {
+    const response = await api('reorderqueue', {
+      fabricator_id: fabricatorId,
+      job_ids: jobIds
+    })
+    if (response) {
+      return response
+    } else {
+      console.error('Failed to reorder queue')
+    }
+  } catch (error) {
+    console.error('Error reordering queue:', error)
+    throw error
   }
 }

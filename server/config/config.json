@@ -1,12 +1,20 @@
 {
     "environment": "development",
     "databaseURI": "QView",
-    "emulator_port": 8001,
-    "discord": {
-        "enabled": false,
-        "token": "<token>",
-        "command_prefix": "!",
-        "issues_channel": "<issues_channel>",
-        "issues_role": "<issues_role>"
-    }
+    "emulator_port": 8004,
+    "middleware": {
+        "port": 8002,
+        "mode": "python"
+    },
+    "backends": {
+        "python": {
+            "url": "http://localhost:8000",
+            "ws_port": 8001
+        },
+        "javascript": {
+            "url": "http://localhost:8005",
+            "ws_port": 8006
+        }
+    },
+    "active_backend": "python"
 }

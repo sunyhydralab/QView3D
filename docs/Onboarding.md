@@ -88,11 +88,55 @@ Flask application started
 
 When QView3D starts successfully, you'll have:
 
-- ✅ **Flask Server** on port 8000 (backend API)
-- ✅ **Vue.js Frontend** on port 8002 (main UI)
-- ✅ **WebSocket Server** for real-time communication
-- ✅ **SQLite Database** initialized
-- ✅ **Fabricator Management System** ready
+- **Flask Server** on port 8000 (backend API)
+- **Vue.js Frontend** on port 8002 (main UI)
+- **WebSocket Server** for real-time communication
+- **SQLite Database** initialized
+- **Fabricator Management System** ready
+
+### Application Startup Sequence
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant S as run.py Script
+    participant V as Vite Server<br/>Port 5173
+    participant M as Middleware<br/>Port 8002
+    participant P as Python Backend<br/>Port 8000
+    participant DB as SQLite Database
+
+    U->>S: Execute python run.py
+    S->>S: Display menu
+    U->>S: Select 'D' (Debug Mode)
+
+    Note over S,DB: Starting Services
+
+    S->>V: Start Vite Dev Server
+    V->>V: Initialize Vue 3 app
+    V->>V: Enable HMR
+    V-->>S: ✓ Running on 5173
+
+    S->>M: Start Middleware
+    M->>M: Load configuration
+    M->>M: Read config.middleware.mode
+    M->>M: Set static backend target URL
+    M->>M: Initialize Socket.IO
+    M-->>S: ✓ Running on 8002
+
+    S->>P: Start Python Backend
+    P->>DB: Initialize database
+    DB-->>P: ✓ Database ready
+    P->>P: Load fabricators
+    P->>P: Start WebSocket server
+    P-->>S: ✓ Running on 8000
+
+    S-->>U: All services started
+
+    Note over U,DB: Application Ready
+    U->>M: Browse to localhost:8002
+    M->>V: Proxy frontend request
+    V-->>U: Serve Vue app
+```
 
 ## Troubleshooting
 
