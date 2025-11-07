@@ -390,6 +390,9 @@ function setupGcodeSocketListeners(jobId: number) {
   socket.value.emit('request_gcode_buffer', { job_id: jobId });
 
   // Listen for gcode line updates
+  // TODO: Future improvement - implement true live preview that shows actual printer position
+  // Current implementation processes chunks incrementally but may have rendering issues
+  // Consider: 1) M114 position tracking, 2) Progressive geometry building, 3) Buffer vs execution tracking
   const removeGcodeUpdateListener = onSocketEvent<{
     job_id: number;
     fabricator_id: number;
