@@ -1,52 +1,60 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import * as GCodePreview from 'gcode-preview'
+import { useGCodeViewer } from '@/composables/useGCodeViewer'
 
 const props = defineProps<{ file: File | null }>()
 const emit = defineEmits(['close'])
 const canvas = ref<HTMLCanvasElement | null>(null)
-let preview: GCodePreview.WebGLPreview | null = null
 
-// helper to init (or re-init) preview once canvas exists
-async function initPreview(file: File) {
+// Use the composable for shared functionality
+const {
+  initPreview: initGCodePreview,
+  preprocessGCodeForZOffset,
+  stripGCodeComments
+} = useGCodeViewer()
+
+let preview: ReturnType<typeof initGCodePreview> = null
+
+// Command-by-command animation rendering
+async function initAnimatedPreview(file: File) {
   if (!canvas.value) return
-  preview?.clear()
 
-  preview = GCodePreview.init({
-    canvas: canvas.value,
-    extrusionColor: '#7561A9',
-    backgroundColor: 'black',
-    buildVolume: { x: 250, y: 210, z: 220 },
-    travelColor: 'limegreen',
-    lineWidth: 0.4,          // Realistic nozzle diameter (0.4mm)
-    lineHeight: 0.2,         // Realistic layer height (0.2mm)
-    extrusionWidth: 0.4,     // Realistic extrusion width (0.4mm)
-    renderExtrusion: true,
-    renderTravel: false,
-    renderTubes: true,
+  // Initialize with consistent configuration
+  preview = initGCodePreview(canvas.value, {
+    extrusionColor: '#7561A9',  // Custom color for this viewer
+    renderTravel: true  // Show travel moves in animation
   })
 
-  preview.camera.position.set(-200, 232, 200)
-  preview.camera.lookAt(0, 0, 0)
+  if (!preview) {
+    console.error('Failed to initialize GCode preview')
+    return
+  }
 
+  // Read and preprocess the file
   const text = await file.text()
-  const commands = text
-    .split('\n')
-    .filter(line => !line.trim().startsWith(';'))
+  const strippedCommands = stripGCodeComments(text)
 
+  // Apply Z-offset correction for proper positioning
+  const correctedGCode = preprocessGCodeForZOffset(strippedCommands)
+  const commands = correctedGCode.split('\n').filter(cmd => cmd.length > 0)
+
+  console.log(`[Animated Preview] Processing ${commands.length} commands with animation`)
+
+  // Process command-by-command for visual animation effect
   for (const cmd of commands) {
-    preview.renderTravel = true
     preview.processGCode(cmd)
-    // tiny pause so WebGL can catch up
+    // Pause between commands for visual effect (30ms per command)
     await new Promise(r => setTimeout(r, 30))
   }
+
+  console.log('[Animated Preview] Animation complete')
 }
 
 onMounted(async () => {
   // wait for the canvas to actually exist
   await nextTick()
   if (props.file) {
-    await initPreview(props.file)
+    await initAnimatedPreview(props.file)
   }
 })
 
@@ -56,7 +64,7 @@ watch(
     if (file) {
       // again wait for any DOM updates (just in case)
       await nextTick()
-      await initPreview(file)
+      await initAnimatedPreview(file)
     }
   },
 )

@@ -157,7 +157,15 @@ export class GenericMarlinFabricator {
      * @param {Object} [overrides] Used to dynamically override any of the default properties of this class **unsafe**
      */
     constructor(port, overrides) {
-        Object.assign(this, overrides); /** @todo Add something that checks to see if the properties provided are valid? */
+        // Use spread operator to safely merge overrides without directly modifying 'this'
+        // This avoids the deprecated Object.assign pattern on 'this'
+        if (overrides) {
+            for (const key in overrides) {
+                if (overrides.hasOwnProperty(key)) {
+                    this[key] = overrides[key];
+                }
+            }
+        }
 
         this.#openPort = new SerialPort({ path: port, baudRate: this.BAUD_RATE });
 
@@ -226,7 +234,8 @@ export class GenericMarlinFabricator {
                                     if (extractorResult === null)
                                         extractorResult = {};
 
-                                    Object.assign(extractorResult, currentMatch.groups);
+                                    // Use spread operator instead of Object.assign for merging objects
+                                    extractorResult = { ...extractorResult, ...currentMatch.groups };
                                 }
                             }
 

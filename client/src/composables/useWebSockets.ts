@@ -1,32 +1,43 @@
-import { API_URL } from '@/composables/useIPSettings'
-import io from 'socket.io-client'
 import { ref } from 'vue'
 import {type Fabricator, fabricatorList} from '@/models/fabricator'
 import {type Job} from "@/models/job";
+// Use the shared socket from services instead of creating a duplicate connection
+import { socket, onSocketEvent } from '@/services/socket';
 
-export const socket = ref(io(API_URL.value, {
-    transports: ['websocket']
-}));
+// Keep track of cleanup functions for all socket listeners
+const socketCleanupFunctions: (() => void)[] = [];
 
 export function setupSockets() {
-    setupTempSocket()
-    setupStatusSocket()
-    setupQueueSocket()
-    setupErrorSocket()
-    setupCanPauseSocket()
-    setupPauseFeedbackSocket()
-    setupTimeStartedSocket()
-    setupTimeUpdateSocket()
-    setupProgressSocket()
-    setupReleaseSocket()
-    setupJobStatusSocket()
-    setupPortRepairSocket()
-    setupGCodeViewerSocket()
-    setupExtrusionSocket()
-    setupColorChangeBuffer()
-    setupMaxLayerHeightSocket()
-    setupCurrentLayerHeightSocket()
-    setupConsoleSocket()
+    // Clear any existing listeners first
+    cleanupSockets();
+
+    // Setup all socket listeners and store their cleanup functions
+    socketCleanupFunctions.push(
+        setupTempSocket(),
+        setupStatusSocket(),
+        setupQueueSocket(),
+        setupErrorSocket(),
+        setupCanPauseSocket(),
+        setupPauseFeedbackSocket(),
+        setupTimeStartedSocket(),
+        setupTimeUpdateSocket(),
+        setupProgressSocket(),
+        setupReleaseSocket(),
+        setupJobStatusSocket(),
+        setupPortRepairSocket(),
+        setupGCodeViewerSocket(),
+        setupExtrusionSocket(),
+        setupColorChangeBuffer(),
+        setupMaxLayerHeightSocket(),
+        setupCurrentLayerHeightSocket(),
+        setupConsoleSocket()
+    );
+}
+
+// Function to cleanup all socket listeners
+export function cleanupSockets() {
+    socketCleanupFunctions.forEach(cleanup => cleanup());
+    socketCleanupFunctions.length = 0;
 }
 
 interface WebSocketDataPacket {
@@ -58,96 +69,149 @@ interface WebSocketDataPacket {
 
 // *** PORTS ***
 function setupTempSocket() {
-  socket.value.off('temp_update')
-  socket.value.on('temp_update', (data: WebSocketDataPacket) => {
-    const printer = fabricatorList.value.find((p: Fabricator) => p.id === data.fabricator_id)
-    if (printer) {
-      printer.extruder_temp = data.extruder_temp
-      printer.bed_temp = data.bed_temp
+  return onSocketEvent<WebSocketDataPacket>('temp_update', (data) => {
+    const index = fabricatorList.value.findIndex((p: Fabricator) => p.id === data.fabricator_id);
+    if (index !== -1) {
+      // Replace the entire object to trigger Vue reactivity
+      fabricatorList.value[index] = {
+        ...fabricatorList.value[index],
+        extruder_temp: data.extruder_temp,
+        bed_temp: data.bed_temp
+      };
     }
-    console.debug()
-  })
+  });
 }
 
 // function to set up the socket for status updates
 function setupStatusSocket() {
-  socket.value.off('status_update')
-  socket.value.on('status_update', (data: WebSocketDataPacket) => {
-    const printer = fabricatorList.value.find((p: Fabricator) => p.id === data.fabricator_id)
-    if (printer) {
-      printer.status = data.status
+  return onSocketEvent<WebSocketDataPacket>('status_update', (data) => {
+    const index = fabricatorList.value.findIndex((p: Fabricator) => p.id === data.fabricator_id);
+    if (index !== -1) {
+      // Replace the entire object to trigger Vue reactivity
+      fabricatorList.value[index] = {
+        ...fabricatorList.value[index],
+        status: data.status
+      };
     }
-  })
+  });
 }
 
 function setupJobStatusSocket() {
-  socket.value.off('job_status_update')
-  socket.value.on('job_status_update', (data: WebSocketDataPacket) => {
-    const job = fabricatorList.value
-      .flatMap((printer: Fabricator) => printer.queue)
-      .find((job: Job | undefined) => job?.id === data.job_id)
+  return onSocketEvent<WebSocketDataPacket>('job_status_update', (data) => {
+    // Find printer and job index
+    for (let i = 0; i < fabricatorList.value.length; i++) {
+      const printer = fabricatorList.value[i];
+      const jobIndex = printer.queue?.findIndex((job: Job) => job?.id === data.job_id) ?? -1;
 
-    if (job) {
-      job.status = data.status
+      if (jobIndex !== -1 && printer.queue) {
+        // Create new queue array with updated job to trigger reactivity
+        const updatedQueue = [...printer.queue];
+        updatedQueue[jobIndex] = {
+          ...updatedQueue[jobIndex],
+          status: data.status
+        };
+
+        // Replace entire printer object with updated queue
+        fabricatorList.value[i] = {
+          ...printer,
+          queue: updatedQueue
+        };
+        break;
+      }
     }
-  })
+  });
 }
 
 function setupQueueSocket() {
-  socket.value.off('queue_update')
-  socket.value.on('queue_update', (data: WebSocketDataPacket) => {
-    const printer = fabricatorList.value.find((p: Fabricator) => p.id === data.fabricator_id)
-    if (printer) {
-      printer.queue = data.queue
+  return onSocketEvent<WebSocketDataPacket>('queue_update', (data) => {
+    const index = fabricatorList.value.findIndex((p: Fabricator) => p.id === data.fabricator_id);
+    if (index !== -1) {
+      // Replace the entire object to trigger Vue reactivity
+      fabricatorList.value[index] = {
+        ...fabricatorList.value[index],
+        queue: data.queue
+      };
     }
-  })
+  });
 }
 
 function setupErrorSocket() {
-  socket.value.off('error_update')
-  socket.value.on('error_update', (data: WebSocketDataPacket) => {
-    const printer = fabricatorList.value.find((p: Fabricator) => p.id === data.fabricator_id)
-    if (printer) {
-      printer.error = data.error
+  return onSocketEvent<WebSocketDataPacket>('error_update', (data) => {
+    const index = fabricatorList.value.findIndex((p: Fabricator) => p.id === data.fabricator_id);
+    if (index !== -1) {
+      // Replace the entire object to trigger Vue reactivity
+      fabricatorList.value[index] = {
+        ...fabricatorList.value[index],
+        error: data.error
+      };
     }
-  })
+  });
 }
 
 function setupCanPauseSocket() {
-  socket.value.off('can_pause')
-  socket.value.on('can_pause', (data: WebSocketDataPacket) => {
-    const printer = fabricatorList.value.find((p: Fabricator) => p.id === data.fabricator_id)
-    if (printer) {
-      printer.canPause = data.canPause
+  return onSocketEvent<WebSocketDataPacket>('can_pause', (data) => {
+    const index = fabricatorList.value.findIndex((p: Fabricator) => p.id === data.fabricator_id);
+    if (index !== -1) {
+      // Replace the entire object to trigger Vue reactivity
+      fabricatorList.value[index] = {
+        ...fabricatorList.value[index],
+        canPause: data.canPause
+      };
     }
-  })
+  });
 }
 
 // *** JOBS ***
 function setupPauseFeedbackSocket() {
-  socket.value.off('file_pause_update')
-  socket.value.on('file_pause_update', (data: WebSocketDataPacket) => {
-    const job = fabricatorList.value
-      .flatMap((printer: Fabricator) => printer.queue)
-      .find((job: Job | undefined) => job?.id === data.job_id)
+  return onSocketEvent<WebSocketDataPacket>('file_pause_update', (data) => {
+    // Find printer and job index
+    for (let i = 0; i < fabricatorList.value.length; i++) {
+      const printer = fabricatorList.value[i];
+      const jobIndex = printer.queue?.findIndex((job: Job) => job?.id === data.job_id) ?? -1;
 
-    if (job) {
-      job.file_pause = data.file_pause || false
+      if (jobIndex !== -1 && printer.queue) {
+        // Create new queue array with updated job to trigger reactivity
+        const updatedQueue = [...printer.queue];
+        updatedQueue[jobIndex] = {
+          ...updatedQueue[jobIndex],
+          file_pause: data.file_pause || false
+        };
+
+        // Replace entire printer object with updated queue
+        fabricatorList.value[i] = {
+          ...printer,
+          queue: updatedQueue
+        };
+        break;
+      }
     }
-  })
+  });
 }
 
 function setupTimeStartedSocket() {
-  socket.value.off('set_time_started')
-  socket.value.on('set_time_started', (data: WebSocketDataPacket) => {
-    const job = fabricatorList.value
-      .flatMap((printer: Fabricator) => printer.queue)
-      .find((job: Job | undefined) => job?.id === data.job_id)
+  return onSocketEvent<WebSocketDataPacket>('set_time_started', (data) => {
+    // Find printer and job index
+    for (let i = 0; i < fabricatorList.value.length; i++) {
+      const printer = fabricatorList.value[i];
+      const jobIndex = printer.queue?.findIndex((job: Job) => job?.id === data.job_id) ?? -1;
 
-    if (job) {
-      job.time_started = data.time_started
+      if (jobIndex !== -1 && printer.queue) {
+        // Create new queue array with updated job to trigger reactivity
+        const updatedQueue = [...printer.queue];
+        updatedQueue[jobIndex] = {
+          ...updatedQueue[jobIndex],
+          time_started: data.time_started
+        };
+
+        // Replace entire printer object with updated queue
+        fabricatorList.value[i] = {
+          ...printer,
+          queue: updatedQueue
+        };
+        break;
+      }
     }
-  })
+  });
 }
 
 // Helper function to format seconds as HH:MM:SS
@@ -186,180 +250,287 @@ function formatETA(isoTimestamp: string | undefined): string {
 
 // Function to update reactive time tracking for jobs
 function setupTimeUpdateSocket() {
-  socket.value.off('time_update')
-  socket.value.on('time_update', (data: WebSocketDataPacket) => {
-    const job = fabricatorList.value
-      .flatMap((printer: Fabricator) => printer.queue)
-      .find((job: Job | undefined) => job?.id === data.job_id)
+  return onSocketEvent<WebSocketDataPacket>('time_update', (data) => {
+    // Find printer and job index
+    for (let i = 0; i < fabricatorList.value.length; i++) {
+      const printer = fabricatorList.value[i];
+      const jobIndex = printer.queue?.findIndex((job: Job) => job?.id === data.job_id) ?? -1;
 
-    if (job) {
-      // Initialize job_client if it doesn't exist
-      if (!job.job_client) {
-        job.job_client = {
+      if (jobIndex !== -1 && printer.queue) {
+        const job = printer.queue[jobIndex];
+
+        // Initialize job_client if it doesn't exist
+        const job_client = job.job_client || {
           elapsed_time: 'Idle',
           remaining_time: 'Idle',
           total_time: 'Idle',
           eta: 'Idle'
-        }
+        };
+
+        // Create new queue array with updated job to trigger reactivity
+        const updatedQueue = [...printer.queue];
+        updatedQueue[jobIndex] = {
+          ...job,
+          job_client: {
+            ...job_client,
+            elapsed_time: formatTime(data.elapsed),
+            remaining_time: formatTime(data.remaining),
+            total_time: formatTime(data.total),
+            eta: formatETA(data.eta)
+          },
+          progress: data.progress !== undefined ? data.progress : job.progress
+        };
+
+        // Replace entire printer object with updated queue
+        fabricatorList.value[i] = {
+          ...printer,
+          queue: updatedQueue
+        };
+
+        console.debug('Time update received:', {
+          job_id: data.job_id,
+          elapsed: updatedQueue[jobIndex].job_client?.elapsed_time,
+          remaining: updatedQueue[jobIndex].job_client?.remaining_time,
+          total: updatedQueue[jobIndex].job_client?.total_time,
+          eta: updatedQueue[jobIndex].job_client?.eta,
+          progress: updatedQueue[jobIndex].progress
+        });
+        break;
       }
-
-      // Update time fields with formatted values
-      job.job_client.elapsed_time = formatTime(data.elapsed)
-      job.job_client.remaining_time = formatTime(data.remaining)
-      job.job_client.total_time = formatTime(data.total)
-      job.job_client.eta = formatETA(data.eta)
-
-      // Also update progress if provided
-      if (data.progress !== undefined) {
-        job.progress = data.progress
-      }
-
-      console.debug('Time update received:', {
-        job_id: data.job_id,
-        elapsed: job.job_client.elapsed_time,
-        remaining: job.job_client.remaining_time,
-        total: job.job_client.total_time,
-        eta: job.job_client.eta,
-        progress: job.progress
-      })
     }
-  })
+  });
 }
 
 // function to constantly update progress of job
 function setupProgressSocket() {
-  socket.value.off('progress_update')
-  socket.value.on('progress_update', (data: WebSocketDataPacket) => {
-    const job = fabricatorList.value
-      .flatMap((printer: Fabricator) => printer.queue)
-      .find((job: Job | undefined) => job?.id === data.job_id)
+  return onSocketEvent<WebSocketDataPacket>('progress_update', (data) => {
+    // Find printer and job index
+    for (let i = 0; i < fabricatorList.value.length; i++) {
+      const printer = fabricatorList.value[i];
+      const jobIndex = printer.queue?.findIndex((job: Job) => job?.id === data.job_id) ?? -1;
 
-    if (job) {
-      job.progress = data.progress
-      // job.elapsed_time = data.elapsed_time
-      // Update the display value only if progress is defined
-      if (data.progress !== undefined) {
-        job.progress = data.progress
+      if (jobIndex !== -1 && printer.queue && data.progress !== undefined) {
+        // Create new queue array with updated job to trigger reactivity
+        const updatedQueue = [...printer.queue];
+        updatedQueue[jobIndex] = {
+          ...updatedQueue[jobIndex],
+          progress: data.progress
+        };
+
+        // Replace entire printer object with updated queue
+        fabricatorList.value[i] = {
+          ...printer,
+          queue: updatedQueue
+        };
+        break;
       }
     }
-  })
+  });
 }
 
 function setupReleaseSocket() {
-  socket.value.off('release_job')
-  socket.value.on('release_job', (data: WebSocketDataPacket) => {
-    const job = fabricatorList.value
-      .flatMap((printer: Fabricator) => printer.queue)
-      .find((job: Job | undefined) => job?.id === data.job_id)
-    if (job) {
-      job.released = data.released
+  return onSocketEvent<WebSocketDataPacket>('release_job', (data) => {
+    // Find printer and job index
+    for (let i = 0; i < fabricatorList.value.length; i++) {
+      const printer = fabricatorList.value[i];
+      const jobIndex = printer.queue?.findIndex((job: Job) => job?.id === data.job_id) ?? -1;
+
+      if (jobIndex !== -1 && printer.queue) {
+        // Create new queue array with updated job to trigger reactivity
+        const updatedQueue = [...printer.queue];
+        updatedQueue[jobIndex] = {
+          ...updatedQueue[jobIndex],
+          released: data.released
+        };
+
+        // Replace entire printer object with updated queue
+        fabricatorList.value[i] = {
+          ...printer,
+          queue: updatedQueue
+        };
+        break;
+      }
     }
-  })
+  });
 }
 
 function setupPortRepairSocket() {
-  socket.value.off('port_repair')
-  socket.value.on('port_repair', (data: WebSocketDataPacket) => {
-    const printer = fabricatorList.value.find((p: Fabricator) => p.id === data.fabricator_id)
-    if (printer) {
-      console.log('printer Fabricator: ' + printer.device, ' data Fabricator: ' + data.Fabricator)
-      printer.device = data.Fabricator || printer.device
-    } else{
-      console.error('printer is undefined')
+  return onSocketEvent<WebSocketDataPacket>('port_repair', (data) => {
+    const index = fabricatorList.value.findIndex((p: Fabricator) => p.id === data.fabricator_id);
+    if (index !== -1) {
+      console.log('printer Fabricator: ' + fabricatorList.value[index].device, ' data Fabricator: ' + data.Fabricator);
+      // Replace the entire object to trigger Vue reactivity
+      fabricatorList.value[index] = {
+        ...fabricatorList.value[index],
+        device: data.Fabricator || fabricatorList.value[index].device
+      };
+    } else {
+      console.error('printer is undefined');
     }
-  })
+  });
 }
 
 function setupGCodeViewerSocket() {
-  socket.value.off('gcode_viewer')
-  socket.value.on('gcode_viewer', (data: WebSocketDataPacket) => {
-    const job = fabricatorList.value
-      .flatMap((printer: Fabricator) => printer.queue)
-      .find((job: Job | undefined) => job?.id === data.job_id)
+  return onSocketEvent<WebSocketDataPacket>('gcode_viewer', (data) => {
+    // Find printer and job index
+    for (let i = 0; i < fabricatorList.value.length; i++) {
+      const printer = fabricatorList.value[i];
+      const jobIndex = printer.queue?.findIndex((job: Job) => job?.id === data.job_id) ?? -1;
 
-    if (job) {
-      job.gcode_num = data.gcode_num
+      if (jobIndex !== -1 && printer.queue) {
+        // Create new queue array with updated job to trigger reactivity
+        const updatedQueue = [...printer.queue];
+        updatedQueue[jobIndex] = {
+          ...updatedQueue[jobIndex],
+          gcode_num: data.gcode_num
+        };
+
+        // Replace entire printer object with updated queue
+        fabricatorList.value[i] = {
+          ...printer,
+          queue: updatedQueue
+        };
+        break;
+      }
     }
-  })
+  });
 }
 
 const arrayLevels = ['critical', 'error', 'warning', 'info', 'debug']
 const colors = ['\x1b[95m', '\x1b[91m', '\x1b[93m', '\x1b[0m', '\x1b[94m']
 
 function setupConsoleSocket() {
+  // Initialize console arrays for all fabricators
   for (let i = 0; i < fabricatorList.value.length; i++) {
     if (fabricatorList.value[i].consoles) {
+      const updatedConsoles = [...(fabricatorList.value[i].consoles || [])];
       for (let j = 0; j < 5; j++) {
-        fabricatorList.value[i].consoles![j] = []
+        updatedConsoles[j] = [];
       }
+      fabricatorList.value[i] = {
+        ...fabricatorList.value[i],
+        consoles: updatedConsoles
+      };
     }
   }
-  socket.value.off('console_update')
-  socket.value.on('console_update', (data: WebSocketDataPacket) => {
-    console.debug("console update", data)
-    const printer = fabricatorList.value.find((p: Fabricator) => p.id === data.fabricator_id)
-    if (printer && printer.consoles) {
-      if (data.level) {
-        const maxLevelToAdd = arrayLevels.indexOf(data.level)
-        if (maxLevelToAdd === -1) {
-          console.error('Invalid console level:', data.level)
-        } else {
-          for (let i = maxLevelToAdd; i < printer.consoles.length; i++) {
-            printer.consoles[i].push(colors[maxLevelToAdd] + data.message + '\x1b[0m')
-          }
-        }
+
+  return onSocketEvent<WebSocketDataPacket>('console_update', (data) => {
+    console.debug("console update", data);
+    const index = fabricatorList.value.findIndex((p: Fabricator) => p.id === data.fabricator_id);
+
+    if (index !== -1 && fabricatorList.value[index].consoles && data.level) {
+      const maxLevelToAdd = arrayLevels.indexOf(data.level);
+
+      if (maxLevelToAdd === -1) {
+        console.error('Invalid console level:', data.level);
       } else {
-        console.error('data.level is undefined')
+        // Create a new consoles array to trigger reactivity
+        const updatedConsoles = fabricatorList.value[index].consoles!.map((console, i) => {
+          if (i >= maxLevelToAdd) {
+            return [...console, colors[maxLevelToAdd] + data.message + '\x1b[0m'];
+          }
+          return console;
+        });
+
+        // Replace the entire object to trigger Vue reactivity
+        fabricatorList.value[index] = {
+          ...fabricatorList.value[index],
+          consoles: updatedConsoles
+        };
       }
+    } else if (!data.level) {
+      console.error('data.level is undefined');
     }
-  })
+  });
 }
 
 function setupExtrusionSocket() {
-  socket.value.off('extruded_update')
-  socket.value.on('extruded_update', (data: WebSocketDataPacket) => {
-    const job = fabricatorList.value
-      .flatMap((printer: Fabricator) => printer.queue)
-      .find((job: Job | undefined) => job?.id === data.job_id)
+  return onSocketEvent<WebSocketDataPacket>('extruded_update', (data) => {
+    // Find printer and job index
+    for (let i = 0; i < fabricatorList.value.length; i++) {
+      const printer = fabricatorList.value[i];
+      const jobIndex = printer.queue?.findIndex((job: Job) => job?.id === data.job_id) ?? -1;
 
-    if (job) {
-      job.extruded = data.extruded
+      if (jobIndex !== -1 && printer.queue) {
+        // Create new queue array with updated job to trigger reactivity
+        const updatedQueue = [...printer.queue];
+        updatedQueue[jobIndex] = {
+          ...updatedQueue[jobIndex],
+          extruded: data.extruded
+        };
+
+        // Replace entire printer object with updated queue
+        fabricatorList.value[i] = {
+          ...printer,
+          queue: updatedQueue
+        };
+        break;
+      }
     }
-  })
+  });
 }
 
 function setupColorChangeBuffer() {
-  socket.value.off('color_buff')
-  socket.value.on('color_buff', (data: WebSocketDataPacket) => {
-    const printer = fabricatorList.value.find((p: Fabricator) => p.id === data.fabricator_id)
-    if (printer) {
-      printer.colorbuff = data.colorbuff
+  return onSocketEvent<WebSocketDataPacket>('color_buff', (data) => {
+    const index = fabricatorList.value.findIndex((p: Fabricator) => p.id === data.fabricator_id);
+    if (index !== -1) {
+      // Replace the entire object to trigger Vue reactivity
+      fabricatorList.value[index] = {
+        ...fabricatorList.value[index],
+        colorbuff: data.colorbuff
+      };
     }
-  })
+  });
 }
 
 function setupMaxLayerHeightSocket() {
-  socket.value.off('max_layer_height')
-  socket.value.on('max_layer_height', (data: WebSocketDataPacket) => {
-    const job = fabricatorList.value
-      .flatMap((printer: Fabricator) => printer.queue)
-      .find((job: Job | undefined) => job?.id === data.job_id)
+  return onSocketEvent<WebSocketDataPacket>('max_layer_height', (data) => {
+    // Find printer and job index
+    for (let i = 0; i < fabricatorList.value.length; i++) {
+      const printer = fabricatorList.value[i];
+      const jobIndex = printer.queue?.findIndex((job: Job) => job?.id === data.job_id) ?? -1;
 
-    if (job) {
-      job.max_layer_height = data.max_layer_height
+      if (jobIndex !== -1 && printer.queue) {
+        // Create new queue array with updated job to trigger reactivity
+        const updatedQueue = [...printer.queue];
+        updatedQueue[jobIndex] = {
+          ...updatedQueue[jobIndex],
+          max_layer_height: data.max_layer_height
+        };
+
+        // Replace entire printer object with updated queue
+        fabricatorList.value[i] = {
+          ...printer,
+          queue: updatedQueue
+        };
+        break;
+      }
     }
-  })
+  });
 }
 
 function setupCurrentLayerHeightSocket() {
-  socket.value.off('current_layer_height')
-  socket.value.on('current_layer_height', (data: WebSocketDataPacket) => {
-    const job = fabricatorList.value
-      .flatMap((printer: Fabricator) => printer.queue)
-      .find((job: Job | undefined) => job?.id === data.job_id)
+  return onSocketEvent<WebSocketDataPacket>('current_layer_height', (data) => {
+    // Find printer and job index
+    for (let i = 0; i < fabricatorList.value.length; i++) {
+      const printer = fabricatorList.value[i];
+      const jobIndex = printer.queue?.findIndex((job: Job) => job?.id === data.job_id) ?? -1;
 
-    if (job) {
-      job.current_layer_height = data.current_layer_height
+      if (jobIndex !== -1 && printer.queue) {
+        // Create new queue array with updated job to trigger reactivity
+        const updatedQueue = [...printer.queue];
+        updatedQueue[jobIndex] = {
+          ...updatedQueue[jobIndex],
+          current_layer_height: data.current_layer_height
+        };
+
+        // Replace entire printer object with updated queue
+        fabricatorList.value[i] = {
+          ...printer,
+          queue: updatedQueue
+        };
+        break;
+      }
     }
-  })
+  });
 }

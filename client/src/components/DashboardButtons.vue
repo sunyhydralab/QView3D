@@ -44,31 +44,36 @@ async function release(key?: number) {
   releaseJobDebouncer.value = true
 
   try {
-    if (currentFabricator.queue == undefined) {
-      addToast("The Queue is undefined.", "error")
-      return
-    }
-    if (currentFabricator.queue![0] == undefined) {
-      addToast("The Queue is empty.", "error")
-      return
-    }
+    // Basic validation - fabricator must exist
     if (currentFabricator.id == undefined) {
       addToast("The fabricator ID is undefined.", "error")
       return
     }
 
-    console.debug("release job api call")
-    await releaseJob(currentFabricator.queue![0], currentFabricator.id!, key ?? 3)
+    // Check if there's a job to release (but don't block if queue seems empty on client)
+    // The backend will validate and return proper error if queue is actually empty
+    const jobToRelease = currentFabricator.queue?.[0]
+    if (!jobToRelease) {
+      console.debug("No job found in client queue, but attempting release anyway")
+    }
+
+    console.debug("release job api call", { job: jobToRelease, fabricatorId: currentFabricator.id, key })
+
+    await releaseJob(jobToRelease || { id: 0 } as Job, currentFabricator.id!, key ?? 3)
       .then(response => {
-        console.debug(response)
-        if (key != 2) {
-          currentFabricator.queue!.shift()
-        }
-        addToast('Released job', 'success')
+        console.debug("Release job response:", response)
+        // Don't manually shift the queue - let WebSocket events update it
+        // The backend will emit a queue_update event that will sync the queue
+        addToast('Job released successfully', 'success')
       })
       .catch(error => {
-        console.error(error)
-        addToast('Error releasing job', 'error')
+        console.error('Failed to release job:', error)
+        // Check if error is due to empty queue
+        if (error?.response?.data?.error?.includes('queue') || error?.response?.data?.error?.includes('Queue')) {
+          addToast('No job in queue to release', 'error')
+        } else {
+          addToast('Error releasing job', 'error')
+        }
       })
   } catch (error) {
     console.error('Failed to release job:', error)

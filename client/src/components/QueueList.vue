@@ -4,10 +4,10 @@ import { removeJob, moveJobInQueue } from '../models/job'
 import { ref, computed } from 'vue'
 import FilterForm from './FilterForm.vue'
 
-const props = defineProps<{ fabricator: Fabricator }>()
-const currentFabricator = props.fabricator
+const props = defineProps<{ currentFabricator: Fabricator }>()
 
-const allJobs = ref(currentFabricator.queue || [])
+// Use computed to maintain reactivity with parent's queue
+const allJobs = computed(() => props.currentFabricator.queue || [])
 const showDetails = ref(true)
 const draggedJob = ref<any>(null)
 const dragOverIndex = ref<number | null>(null)
@@ -103,7 +103,7 @@ const handleDrop = async (event: DragEvent, dropIndex: number) => {
   event.preventDefault()
   dragOverIndex.value = null
 
-  if (!draggedJob.value || !allJobs.value || !currentFabricator) return
+  if (!draggedJob.value || !allJobs.value || !props.currentFabricator) return
 
   const { job, index: dragIndex } = draggedJob.value
 
@@ -122,7 +122,7 @@ const handleDrop = async (event: DragEvent, dropIndex: number) => {
   // Update backend
   try {
     const jobIds = allJobs.value.map(j => j.id)
-    await moveJobInQueue(currentFabricator.id, jobIds)
+    await moveJobInQueue(props.currentFabricator.id, jobIds)
   } catch (error) {
     console.error('Failed to update queue order:', error)
     // Revert on failure
@@ -141,7 +141,7 @@ const handleDragEnd = () => {
 
 // Move job up in queue
 const moveJobUp = async (index: number) => {
-  if (index === 0 || !allJobs.value || !currentFabricator) return
+  if (index === 0 || !allJobs.value || !props.currentFabricator) return
 
   const job = filteredJobs.value[index]
   if (!job || !job.id) return
@@ -160,7 +160,7 @@ const moveJobUp = async (index: number) => {
   // Update backend
   try {
     const jobIds = allJobs.value.map(j => j.id)
-    await moveJobInQueue(currentFabricator.id, jobIds)
+    await moveJobInQueue(props.currentFabricator.id, jobIds)
   } catch (error) {
     console.error('Failed to move job up:', error)
     // Revert to original order on failure
@@ -171,7 +171,7 @@ const moveJobUp = async (index: number) => {
 
 // Move job down in queue
 const moveJobDown = async (index: number) => {
-  if (index === filteredJobs.value.length - 1 || !allJobs.value || !currentFabricator) return
+  if (index === filteredJobs.value.length - 1 || !allJobs.value || !props.currentFabricator) return
 
   const job = filteredJobs.value[index]
   if (!job || !job.id) return
@@ -190,7 +190,7 @@ const moveJobDown = async (index: number) => {
   // Update backend
   try {
     const jobIds = allJobs.value.map(j => j.id)
-    await moveJobInQueue(currentFabricator.id, jobIds)
+    await moveJobInQueue(props.currentFabricator.id, jobIds)
   } catch (error) {
     console.error('Failed to move job down:', error)
     // Revert to original order on failure
@@ -253,7 +253,7 @@ const getStatusColor = (status: string | null) => {
             <th
               class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
             >
-              {{ currentFabricator.name }}
+              {{ props.currentFabricator.name }}
             </th>
             <th
               class="w-48 border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
@@ -326,7 +326,7 @@ const getStatusColor = (status: string | null) => {
               <td
                 class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"
               >
-                {{ currentFabricator.description || currentFabricator.name }}
+                {{ props.currentFabricator.description || props.currentFabricator.name }}
               </td>
               <td
                 class="w-48 whitespace-no-wrap truncate border border-light-primary dark:border-dark-primary dark:text-light-primary p-2"

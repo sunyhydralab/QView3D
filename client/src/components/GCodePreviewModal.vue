@@ -1,44 +1,41 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import * as GCodePreview from 'gcode-preview'
+import { useGCodeViewer } from '@/composables/useGCodeViewer'
 
 const props = defineProps<{ file: File | null }>()
 const emit = defineEmits(['close'])
 const canvas = ref<HTMLCanvasElement | null>(null)
-let preview: GCodePreview.WebGLPreview | null = null
+
+// Use the composable for shared functionality
+const {
+  initPreview,
+  processStaticGCode,
+  stripGCodeComments
+} = useGCodeViewer()
+
+let preview: ReturnType<typeof initPreview> = null
 
 async function initFullPreview(file: File) {
   if (!canvas.value) return
-  preview?.clear()
 
-  preview = GCodePreview.init({
-    canvas: canvas.value,
-    extrusionColor: '#7561A9',
-    backgroundColor: 'black',
-    buildVolume: { x: 250, y: 210, z: 220 },
-    travelColor: 'limegreen',
-    lineWidth: 0.4,          // Realistic nozzle diameter (0.4mm)
-    lineHeight: 0.2,         // Realistic layer height (0.2mm)
-    extrusionWidth: 0.4,     // Realistic extrusion width (0.4mm)
-    renderExtrusion: true,
-    renderTravel: false,
-    renderTubes: true,
+  // Initialize with consistent configuration
+  preview = initPreview(canvas.value, {
+    extrusionColor: '#7561A9',  // Custom color for this viewer
+    renderTravel: false  // Disable travel lines for cleaner preview
   })
 
-  // position camera
-  preview.camera.position.set(-200, 232, 200)
-  preview.camera.lookAt(0, 0, 0)
+  if (!preview) {
+    console.error('Failed to initialize GCode preview')
+    return
+  }
 
-  // read and strip comments
+  // Read and process the file
   const raw = await file.text()
-  const stripped = raw
-    .split('\n')
-    .filter(line => !line.trim().startsWith(';'))
-    .join('\n')
+  const stripped = stripGCodeComments(raw)
 
-  // process entire G-code at once
-  preview.processGCode(stripped)
+  // Process with Z-offset correction for proper positioning
+  processStaticGCode(preview, stripped)
 }
 
 onMounted(async () => {

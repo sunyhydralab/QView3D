@@ -5,13 +5,14 @@ import QueueList from '@/components/QueueList.vue'
 import NoPrinterRobot from '@/components/NoPrinterRobot.vue'
 
 onMounted(async () => {
-  retrieveRegisteredFabricators()
+  await retrieveRegisteredFabricators()
 })
 </script>
 
 <template>
   <div class="mt-8 pt-12">
-    <QueueList v-for="fabricator in fabricatorList" :key="fabricator.id" :fabricator="fabricator" />
+
+    <QueueList v-for="fabricator in fabricatorList" :key="fabricator.id" :current-fabricator="fabricator" />
     <NoPrinterRobot v-if="fabricatorList.length === 0" />
   </div>
 </template>

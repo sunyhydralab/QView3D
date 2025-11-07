@@ -27,13 +27,24 @@ export class HealthChecker {
 
     // Initialize status for each backend
     Object.keys(backends).forEach(name => {
-      this.status[name] = {
-        status: HealthStatus.HEALTHY,
-        responseTime: null,
-        lastCheck: null,
-        lastError: null,
-        consecutiveFailures: 0
-      };
+      // JavaScript backend is disabled for now
+      if (name === 'javascript') {
+        this.status[name] = {
+          status: 'disabled',
+          responseTime: null,
+          lastCheck: null,
+          lastError: 'Backend temporarily disabled',
+          consecutiveFailures: 0
+        };
+      } else {
+        this.status[name] = {
+          status: HealthStatus.HEALTHY,
+          responseTime: null,
+          lastCheck: null,
+          lastError: null,
+          consecutiveFailures: 0
+        };
+      }
     });
   }
 
@@ -69,7 +80,9 @@ export class HealthChecker {
    * Check health of all backends
    */
   async checkAll() {
-    const checks = Object.keys(this.backends).map(name =>
+    // Skip JavaScript backend health checks for now
+    const backendsToCheck = Object.keys(this.backends).filter(name => name !== 'javascript');
+    const checks = backendsToCheck.map(name =>
       this.checkBackend(name)
     );
     await Promise.all(checks);

@@ -20,11 +20,18 @@ async function initializeApp() {
   // Set the mode on app start
   setModeToSystem()
 
-  // Initialize socket connection
-  connectSocket()
+  // Initialize socket connection and wait for it to be ready
+  try {
+    await connectSocket()
+    console.log('Socket connection established')
 
-  // Setup socket event listeners (once during app initialization)
-  setupSockets()
+    // Setup socket event listeners only after connection is ready
+    setupSockets()
+  } catch (error) {
+    console.error('Failed to connect socket:', error)
+    // Continue app initialization even if socket fails
+    // The socket will try to reconnect automatically
+  }
 
   // Fetch initial fabricator data
   await retrieveRegisteredFabricators()

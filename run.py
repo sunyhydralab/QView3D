@@ -35,8 +35,9 @@ MIDDLEWARE_LOCAL_PATH = "middleware"
 # The name of the database file
 DATABASE_FILE_NAME="QView.db"
 
-# Database is ALWAYS wiped on startup for clean state
-START_FROM_NEW_DATABASE = True  # Always True - ensures fresh database every run
+# Database handling: Default is to preserve state (release mode behavior)
+# Only wipe database in debug mode for testing
+START_FROM_NEW_DATABASE = False  # Changed to False - preserve database by default
 
 # Middleware configuration
 MIDDLEWARE_PORT = 8002
@@ -97,16 +98,25 @@ def start_client():
     )
 
 def start_server(fresh_database):
-    # ALWAYS delete the database file for a fresh start
+    # Only delete database if fresh_database is True (debug mode)
     database_file_path = os.path.join(SERVER_LOCAL_PATH, DATABASE_FILE_NAME)
-    if (os.path.exists(database_file_path)):
-        try:
-            os.remove(database_file_path)
-            print("Database wiped - starting fresh")
-        except OSError as ose:
-            print(f"Failed to delete database: {ose}")
+
+    if fresh_database:
+        # Debug mode - wipe database for clean state
+        if os.path.exists(database_file_path):
+            try:
+                os.remove(database_file_path)
+                print("DEBUG MODE: Database wiped - starting fresh")
+            except OSError as ose:
+                print(f"Failed to delete database: {ose}")
+        else:
+            print("DEBUG MODE: No existing database found - starting fresh")
     else:
-        print("No existing database found - starting fresh")
+        # Release mode - preserve database for persistence
+        if os.path.exists(database_file_path):
+            print("RELEASE MODE: Using existing database - preserving state")
+        else:
+            print("RELEASE MODE: No existing database found - creating new one")
 
     # Start the server in the background using virtual environment
     if current_os == "WINDOWS":
@@ -325,7 +335,7 @@ def get_user_configuration():
     Returns: (mode, backend) tuple
     """
     # .upper() ensures that lower case letters are fine as well
-    user_mode = input("Would like to: Install Dependencies[I], Run the program in debug mode[D](The default), Run the program in release mode[R], and Cancel[C] ").upper()
+    user_mode = input("Would like to: Install Dependencies[I], Run in Debug mode (wipes database)[D], Run in Release mode (preserves state)[R](The default), Cancel[C] ").upper()
 
     # Ensure the user input is correct
     match user_mode:
@@ -334,22 +344,27 @@ def get_user_configuration():
         case "C":
             return ("C", None)  # No backend needed for cancel
         case "D" | "R" | "":
-            # Ask for backend selection
+            # Set default mode
             if user_mode == "":
-                user_mode = "D"  # Default to debug mode
+                user_mode = "R"  # Default to RELEASE mode for state persistence
 
-            backend_choice = input("Select Backend: [P]ython (default), [J]avaScript ").upper()
+            # Only ask for backend selection in debug mode
+            if user_mode == "D":
+                backend_choice = input("Select Backend: [P]ython (default), [J]avaScript ").upper()
 
-            match backend_choice:
-                case "P":
-                    return (user_mode, "python")
-                case "J":
-                    return (user_mode, "javascript")
-                case "":  # Default to Python
-                    return (user_mode, "python")
-                case _:
-                    print("Not a valid backend choice")
-                    return get_user_configuration()
+                match backend_choice:
+                    case "P":
+                        return (user_mode, "python")
+                    case "J":
+                        return (user_mode, "javascript")
+                    case "":  # Default to Python
+                        return (user_mode, "python")
+                    case _:
+                        print("Not a valid backend choice")
+                        return get_user_configuration()
+            else:
+                # Release mode - use Python backend by default
+                return (user_mode, "python")
         case _:
             print("Not a valid configuration")
             # Continue the loop if the user puts the wrong input
@@ -407,6 +422,62 @@ def start_debug(fresh_database):
 
     return processes
 
+def start_release(fresh_database):
+    """
+    Start in release mode - preserves database and state
+    Similar to debug mode but without database wipe
+    """
+    # Update config.json with current backend mode
+    update_config_json()
+
+    # Build client for production use
+    build_client()
+
+    # Start all services
+    processes = []
+
+    print("\n" + "="*60)
+    print(f"STARTING QView3D IN RELEASE MODE - {BACKEND_MODE.upper()} BACKEND")
+    print("="*60)
+    print(f"User Access: http://localhost:{MIDDLEWARE_PORT}")
+    print(f"Middleware:  http://localhost:{MIDDLEWARE_PORT}")
+
+    if BACKEND_MODE == "python":
+        print(f"Backend:     http://{FLASK_SERVER_IP}:{FLASK_SERVER_PORT}")
+        print(f"Emulator:    http://localhost:{PYTHON_EMULATOR_PORT}")
+    elif BACKEND_MODE == "javascript":
+        print(f"Backend:     http://localhost:{JS_SERVER_PORT}")
+        print(f"Emulator:    Port {JS_EMULATOR_PORT} (not implemented)")
+
+    print(f"Vite Dev:    http://localhost:{VITE_CLIENT_PORT}")
+    print("-"*60)
+    print("RELEASE MODE: Database and state are PRESERVED")
+    print("All GCode, print jobs, issues, and history will persist")
+    print("Access the app at http://localhost:8002")
+    print("-"*60)
+
+    # Start the selected backend (with fresh_database=False for release)
+    if BACKEND_MODE == "python":
+        processes.append(start_server(fresh_database))
+    elif BACKEND_MODE == "javascript":
+        processes.append(start_js_server())
+    else:
+        print(f"Warning: Unknown backend mode '{BACKEND_MODE}', starting Python backend")
+        processes.append(start_server(fresh_database))
+
+    # Start emulator
+    emulator_process = start_emulator()
+    if emulator_process:
+        processes.append(emulator_process)
+
+    # Start middleware
+    processes.append(start_middleware())
+
+    # Start client (production build with Vite serving)
+    processes.append(start_client())
+
+    return processes
+
 
 running_processes = []
 is_installing = False
@@ -432,10 +503,11 @@ match user_mode:
         is_installing = True
         install_software(current_os)
     case "D":
-        running_processes = start_debug(START_FROM_NEW_DATABASE)
+        # Debug mode - always wipe database for fresh start
+        running_processes = start_debug(True)
     case "R":
-        print("Doesn't do anything yet")
-        pass # TODO Add release mode
+        # Release mode - preserve database for state persistence
+        running_processes = start_release(False)
     case "C":
         print("Process canceled")
         exit(0)

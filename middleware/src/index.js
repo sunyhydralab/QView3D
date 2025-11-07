@@ -104,6 +104,7 @@ const apiRoutes = {
     '/getjobhistory',
     '/getjobs',
     '/getfiles',
+    '/getfile',  // Added for fetching individual GCode files
     '/getissues',
     '/getprinterinfo',
     '/health',

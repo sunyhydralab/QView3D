@@ -289,9 +289,17 @@ def releasejob():
             return jsonify({"error": "Printer not found."}), 404
 
         fabricator.error = ""
-        if len(fabricator.queue) > 0:
-            assert fabricator.queue[0].getJobId() == jobpk, "Job not at front of queue"
-            fabricator.queue.removeJob()
+
+        # Check if queue is empty before trying to remove
+        if len(fabricator.queue) == 0:
+            return jsonify({"error": "Queue is empty, no job to release"}), 400
+
+        # Verify the job at front of queue matches requested job
+        if fabricator.queue[0].getJobId() != jobpk:
+            return jsonify({"error": f"Job {jobpk} is not at front of queue"}), 400
+
+        # Remove the job from queue
+        fabricator.queue.removeJob()
 
         currentStatus = fabricator.getStatus()
 
@@ -305,12 +313,24 @@ def releasejob():
                 fabricator.setStatus("ready")
                 if current_app:
                     current_app.socketio.emit("fabricator_status_update", {"id": printerid, "status": "ready"})
+            # For rerun, we'll emit queue update after the job is re-added
             return rerunjob(printerid, jobpk, "front")
         elif key == 1:
+            Job.update_job_status(jobpk, "complete")
             if currentStatus != "offline":
                 fabricator.setStatus("ready")
                 if current_app:
                     current_app.socketio.emit("fabricator_status_update", {"id": printerid, "status": "ready"})
+
+        # Emit queue_update event to sync frontend queue with backend
+        if current_app and current_app.socketio:
+            # Convert queue to serializable format
+            queue_data = [job.serialize() for job in fabricator.queue] if fabricator.queue else []
+            current_app.socketio.emit("queue_update", {
+                "fabricator_id": printerid,
+                "queue": queue_data
+            })
+            print(f"Emitted queue_update for fabricator {printerid} with {len(queue_data)} jobs")
 
         if current_app:
             db.session.commit()
@@ -547,31 +567,58 @@ def removeIssue():
 def startPrint():
     try:
         data = request.get_json()
-        printerid = data['printerid']
-        jobid = data['jobid']
+        printerid = data.get('printerid')
+        jobid = data.get('jobid')
+
+        # Log the incoming request
+        print(f"[StartPrint] Received request - printerid: {printerid}, jobid: {jobid}")
+
+        if printerid is None or jobid is None:
+            return jsonify({"error": "Missing printerid or jobid in request"}), 400
+
         printerobject = findPrinterObject(printerid)
 
         if printerobject is None:
-            return jsonify({"error": "Fabricator not found."}), 404
+            print(f"[StartPrint] Fabricator not found for id: {printerid}")
+            return jsonify({"error": f"Fabricator not found for id: {printerid}"}), 404
 
         queue = printerobject.getQueue()
-        assert queue is not None, "Queue not found."
-        assert len(queue) > 0, f"Queue is empty for printer {printerid}"
-        assert printerobject.queue[0] is not None, f"Job not found: jobid: {jobid}"
+        if queue is None:
+            return jsonify({"error": "Queue not found for fabricator"}), 404
+
+        if len(queue) == 0:
+            return jsonify({"error": f"Queue is empty for printer {printerid}"}), 400
+
+        if printerobject.queue[0] is None:
+            return jsonify({"error": f"First job in queue is None for jobid: {jobid}"}), 404
 
         job = printerobject.queue[0]
+
+        # Verify the job ID matches what was requested
+        if job.id != jobid:
+            print(f"[StartPrint] Warning: Requested job {jobid} but queue has job {job.id}")
+
         # Change status from 'submitted' to 'inqueue' to trigger auto-start
-        if job.getStatus() == "submitted":
+        current_status = job.getStatus()
+        print(f"[StartPrint] Job {job.id} current status: {current_status}")
+
+        if current_status == "submitted":
             job.setStatus("inqueue")
             Job.update_job_status(job.id, "inqueue")
-        assert job.getStatus() in ["inqueue", "ready"], f"Job not ready to print. Status: {job.getStatus()}"
+            print(f"[StartPrint] Updated job {job.id} status to 'inqueue'")
+
+        if job.getStatus() not in ["inqueue", "ready"]:
+            return jsonify({"error": f"Job not ready to print. Status: {job.getStatus()}"}), 400
 
         # Start the print job directly
+        print(f"[StartPrint] Starting print job {job.id} on printer {printerid}")
         current_app.fabricator_list.start_print_job(printerobject, job)
         return jsonify({"success": True, "message": "Job started successfully."}), 200
+
     except Exception as e:
+        print(f"[StartPrint] Error: {str(e)}")
         current_app.handle_errors_and_logging(e)
-        return jsonify({"error": format_exc()}), 500
+        return jsonify({"error": str(e)}), 500
 
 @jobs_bp.route('/confirmjobcomplete', methods=["POST"])
 def confirmJobComplete():

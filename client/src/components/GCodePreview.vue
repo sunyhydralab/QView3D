@@ -4,6 +4,7 @@ import * as GCodePreview from 'gcode-preview'
 import { onSocketEvent, socket } from '@/services/socket'
 import { addToast } from '@/components/Toast.vue'
 import { isDark } from '@/composables/useMode'
+import { API_URL } from '@/composables/useIPSettings'
 
 const gcodeString = ref('')
 const isLivePreview = ref(false) // Default to static mode
@@ -34,8 +35,19 @@ async function fetchJobFile(jobId: number): Promise<void> {
 
   try {
     console.log(`Fetching G-code file for job ID: ${jobId}`);
-    const response = await fetch(`/getfile?jobid=${jobId}`);
-    
+
+    // Try direct backend URL since middleware routing is having issues
+    const backendUrl = 'http://localhost:8000';
+    console.log(`Trying direct backend: ${backendUrl}/getfile?jobid=${jobId}`);
+
+    const response = await fetch(`${backendUrl}/getfile?jobid=${jobId}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+
     if (!response.ok) {
       throw new Error(`Failed to fetch file: ${response.statusText}`);
     }
@@ -50,7 +62,7 @@ async function fetchJobFile(jobId: number): Promise<void> {
       layers = extractLayers(gcodeString.value);
       console.log(`Identified ${layers.length} layers in the GCode file`);
       
-      // Process the G-code
+      // Process the G-code directly
       if (isLivePreview.value) {
         processGCodeProgressively(gcodeString.value);
       } else {
@@ -79,20 +91,18 @@ onMounted(() => {
         gcodeCanvas.value.height = canvasHeight;
         console.log(`Canvas dimensions: ${canvasWidth}x${canvasHeight}`);
         
-        // Initialize the GCode preview with realistic 3D printer settings
+        // Initialize the GCode preview with correct settings according to docs
         try {
           preview = GCodePreview.init({
             canvas: gcodeCanvas.value,
             extrusionColor: 'turquoise',
             backgroundColor: 'black',
-            buildVolume: { x: 250, y: 210, z: 220 },
+            buildVolume: { x: 250, y: 210, z: 220 },  // Standard print bed size
             travelColor: 'limegreen',
-            lineWidth: 0.4,          // Realistic nozzle diameter (0.4mm)
-            lineHeight: 0.2,         // Realistic layer height (0.2mm)
-            extrusionWidth: 0.4,     // Realistic extrusion width (0.4mm)
-            renderExtrusion: true,
-            renderTravel: true,
-            renderTubes: true        // Keep tubes for better visual appearance
+            renderTubes: true,  // Use tube geometry for better visuals
+            // Note: The library doesn't support all the properties we were using
+            // Removed unsupported properties: lineWidth, lineHeight, extrusionWidth,
+            // renderExtrusion, renderTravel, minLayerThreshold, initialCameraPosition
           });
           console.log("GCode preview initialized successfully");
         } catch (error) {
@@ -100,12 +110,8 @@ onMounted(() => {
           addToast(`Failed to initialize 3D viewer: ${error}`, 'error');
           return;
         }
-        
-        // Set the camera position explicitly for better view
-        if (preview && preview.camera) {
-          preview.camera.position.set(-200, 232, 200);
-          preview.camera.lookAt(0, 0, 0);
-        }
+
+        // The library handles camera positioning automatically
         
         // If we have a file already, process it
         if (props.file) {
@@ -177,54 +183,80 @@ async function processFile(file: File) {
   reader.readAsText(file);
 }
 
-// Process the entire GCode file at once for static display with improved approach
+/**
+ * Preprocess GCode to fix Z-axis offset issues
+ * This ensures the model sits on the bed instead of floating
+ */
+function preprocessGCodeForZOffset(gcode: string): string {
+  const lines = gcode.split('\n');
+  let minZ = Infinity;
+
+  // First pass: find the minimum Z value in the entire file
+  lines.forEach(line => {
+    const zMatch = line.match(/Z(-?\d*\.?\d+)/);
+    if (zMatch) {
+      const zValue = parseFloat(zMatch[1]);
+      if (!isNaN(zValue) && zValue < minZ) {
+        minZ = zValue;
+      }
+    }
+  });
+
+  // If we found a minimum Z value and it's positive, adjust all Z values
+  if (minZ !== Infinity && minZ > 0.1) { // Only adjust if Z is significantly above 0
+    console.log(`Adjusting Z-axis offset: shifting all Z values down by ${minZ}mm`);
+
+    return lines.map(line => {
+      // Only adjust lines with Z values
+      const zMatch = line.match(/Z(-?\d*\.?\d+)/);
+      if (zMatch) {
+        const originalZ = parseFloat(zMatch[1]);
+        const adjustedZ = (originalZ - minZ).toFixed(3);
+        return line.replace(/Z(-?\d*\.?\d+)/, `Z${adjustedZ}`);
+      }
+      return line;
+    }).join('\n');
+  }
+
+  return gcode; // Return original if no adjustment needed
+}
+
+// Process the entire GCode file at once for static display
 function processStaticGCode(gcode: string) {
   if (!preview) {
     console.error("GCode preview not initialized!");
     addToast('GCode preview not initialized', 'error');
     return;
   }
-  
+
   console.log(`Processing static GCode file with ${gcode.split('\n').length} lines`);
-  
+
   try {
     // Clear previous content
     preview.clear();
-    
-    // Set the camera position explicitly before each render
-    if (preview.camera) {
-      preview.camera.position.set(-200, 232, 200);
-      preview.camera.lookAt(0, 0, 0);
-    }
-    
-    // Process the entire gcode at once
-    preview.processGCode(gcode);
+
+    // Apply Z-offset correction to prevent floating
+    const correctedGCode = preprocessGCodeForZOffset(gcode);
+
+    // Process the corrected gcode
+    preview.processGCode(correctedGCode);
+
+    // Render the scene after processing
+    preview.render();
+
     console.log("Static GCode rendering complete");
     addToast('3D preview loaded successfully', 'success');
   } catch (error) {
     console.error("Error rendering static GCode:", error);
     addToast(`3D preview error: ${error}`, 'error');
-    // Try fallback render if primary fails
-    try {
-      // Process without renderTravel if the first attempt failed
-      if (preview) {
-        preview.renderTravel = false;
-        preview.processGCode(gcode);
-        preview.renderTravel = true; // Reset to default
-        addToast('3D preview loaded (travel moves disabled)', 'warning');
-      }
-    } catch (fallbackError) {
-      console.error("Fallback rendering also failed:", fallbackError);
-      addToast('3D preview failed to load', 'error');
-    }
   }
 }
 
-// Process G-code command by command with visual feedback - improved approach
+// Process G-code command by command with visual feedback
 async function processGCodeProgressively(gcode: string) {
   if (!preview) return;
   isProcessing.value = true;
-  
+
   try {
     // For static mode, just process the entire file at once
     if (!isLivePreview.value) {
@@ -232,75 +264,55 @@ async function processGCodeProgressively(gcode: string) {
       isProcessing.value = false;
       return;
     }
-    
-    // For live mode, process progressively with improved approach
+
+    // For live mode, simulate progressive rendering
     preview.clear();
-    
-    // Set camera position
-    if (preview.camera) {
-      preview.camera.position.set(-200, 232, 200);
-      preview.camera.lookAt(0, 0, 0);
-    }
-    
-    // First process the entire file at low detail for a quick preview
-    console.log("Processing initial quick preview...");
-    preview.renderTravel = false; // Disable travel lines for speed
-    preview.processGCode(gcode);
-    preview.renderTravel = true;  // Re-enable for detailed pass
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // If we have layers, process layer by layer for better organization
+
+    // Apply Z-offset correction first
+    const correctedGCode = preprocessGCodeForZOffset(gcode);
+
+    // Extract layers for progressive rendering
+    const layers = extractLayers(correctedGCode);
+
     if (layers.length > 0) {
       console.log(`Processing ${layers.length} layers progressively...`);
-      
+
+      // Build up the gcode progressively
+      let accumulatedGCode = '';
+
       for (let i = 0; i < layers.length; i++) {
         if (!isLivePreview.value) {
-          // If switched to static mode during processing, stop progressive rendering
+          // If switched to static mode, render everything
           processStaticGCode(gcode);
           break;
         }
-        
-        // Process an entire layer at once
-        const layerGcode = layers[i].join('\n');
-        preview.processGCode(layerGcode);
-        
-        // Pause briefly between layers for visual effect
-        if (i % 5 === 0) {
+
+        // Accumulate layers
+        accumulatedGCode += layers[i].join('\n') + '\n';
+
+        // Clear and re-render with accumulated gcode
+        preview.clear();
+        preview.processGCode(accumulatedGCode);
+        preview.render();
+
+        // Pause between layer groups for visual effect
+        if (i % 10 === 0 && i > 0) {
           await new Promise(resolve => setTimeout(resolve, 50));
         }
       }
     } else {
-      // Fallback to line-by-line processing if no layers detected
-      const commands = gcode.split('\n').filter(cmd => !cmd.trim().startsWith(';'));
-      console.log(`Processing ${commands.length} commands progressively...`);
-      
-      // Process in larger chunks for better performance
-      for (let i = 0; i < commands.length; i += 20) {
-        if (!isLivePreview.value) {
-          processStaticGCode(gcode);
-          break;
-        }
-        
-        const endIdx = Math.min(i + 20, commands.length);
-        const chunk = commands.slice(i, endIdx).join('\n');
-        preview.processGCode(chunk);
-        
-        // Only pause occasionally
-        if (i % 100 === 0) {
-          await new Promise(resolve => setTimeout(resolve, 10));
-        }
-      }
+      // No layers detected, just process the whole file
+      preview.processGCode(gcode);
+      preview.render();
     }
-    
+
     console.log("Progressive rendering complete");
   } catch (error) {
     console.error('Error in progressive processing:', error);
-    // Fallback to processing the entire file at once
-    if (preview) {
-      processStaticGCode(gcode);
-    }
+    // Fallback to static rendering
+    processStaticGCode(gcode);
   }
-  
+
   isProcessing.value = false;
 }
 
@@ -355,9 +367,19 @@ function setupGcodeSocketListeners(jobId: number) {
       console.log(`[GCode Live Preview] Received buffer with ${data.progress.toFixed(1)}% progress`);
       gcodeString.value = data.gcode_buffer;
 
-      // Process the accumulated buffer
+      // Clear and process the accumulated buffer with Z-offset correction
       try {
-        preview.processGCode(data.gcode_buffer);
+        preview.clear();
+
+        // Apply Z-offset correction to prevent floating
+        const correctedBuffer = preprocessGCodeForZOffset(data.gcode_buffer);
+
+        // Camera position already set via initialCameraPosition, just ensure lookAt
+        if (preview.camera) {
+          preview.camera.lookAt(0, 0, 0);
+        }
+
+        preview.processGCode(correctedBuffer);
       } catch (error) {
         console.error('Error processing gcode buffer:', error);
       }
@@ -386,9 +408,36 @@ function setupGcodeSocketListeners(jobId: number) {
       // Accumulate the gcode data
       gcodeString.value += data.gcode_chunk + '\n';
 
-      // Process the new chunk incrementally (don't clear, just add to existing preview)
+      // Process the new chunk incrementally with proper Z-offset
       try {
-        preview.processGCode(data.gcode_chunk);
+        // Extract Z value from the chunk to maintain continuity
+        const zMatch = data.gcode_chunk.match(/Z(-?\d*\.?\d+)/);
+        if (zMatch) {
+          // Find minimum Z from the start of the print to apply consistent offset
+          const lines = gcodeString.value.split('\n');
+          let minZ = Infinity;
+
+          lines.forEach((line: string) => {
+            const match = line.match(/Z(-?\d*\.?\d+)/);
+            if (match) {
+              const z = parseFloat(match[1]);
+              if (!isNaN(z) && z < minZ) minZ = z;
+            }
+          });
+
+          // Apply the same offset to the new chunk
+          let correctedChunk = data.gcode_chunk;
+          if (minZ !== Infinity && minZ > 0) {
+            const originalZ = parseFloat(zMatch[1]);
+            const adjustedZ = (originalZ - minZ).toFixed(3);
+            correctedChunk = data.gcode_chunk.replace(/Z(-?\d*\.?\d+)/, `Z${adjustedZ}`);
+          }
+
+          preview.processGCode(correctedChunk);
+        } else {
+          // No Z value in chunk, process as-is
+          preview.processGCode(data.gcode_chunk);
+        }
       } catch (error) {
         console.error('Error processing gcode chunk:', error);
       }
@@ -419,7 +468,7 @@ function setupGcodeSocketListeners(jobId: number) {
 }
 
 // Watch for the file changes and load G-Code string
-watch(() => props.file, (newFile) => {
+watch(() => props.file, (newFile: File | undefined) => {
   if (newFile && gcodeCanvas.value) {
     console.log(`Processing new file: ${newFile.name}`);
     processFile(newFile);
@@ -442,7 +491,7 @@ watch([() => props.jobId, () => props.file, () => preview], ([jobId, file, previ
 }, { immediate: true });
 
 // Watch for job ID changes to update socket listeners
-watch(() => props.jobId, (newJobId) => {
+watch(() => props.jobId, (newJobId: number | undefined) => {
   if (newJobId) {
     console.log(`Job ID changed to ${newJobId}, setting up socket listeners`);
 
