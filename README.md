@@ -23,28 +23,48 @@ The project is maintained by computer science students at SUNY New Paltz, under 
 
 ## Features
 
-- **Concurrent Communication**: Manage multiple 3D printers simultaneously.
-- **Job Management**:
-  - Local storage of database.
-  - Load balancing to distribute jobs across multiple printers.
-  - Storage management for purging old files while retaining essential data.
-  - Job prioritization and favoring.
-  - Comprehensive job filtering and history tracking.
-  - Initiate printer pauses and filament color changes.
-  - Supports various printer models.
-- **Error Logging**: Assign comments and track issues for past jobs to analyze job success and error rates.
-- **Advanced Viewing**:
-  - Real-time 3D model previews before and during printing.
-  - Layer-by-layer virtual print monitoring via GCode Viewer.
-- **Virtual Printer Emulator**: A Go-based emulator to simulate printer behavior, enabling testing without physical hardware.
-- **Cross-Platform Compatibility**: Runs on Windows, macOS, and Linux, ensuring accessibility across systems.
+### 🖨️ Printer Management
+- **Concurrent Communication**: Manage multiple 3D printers simultaneously with real-time status updates.
+- **Auto-Detection**: Automatic discovery of connected printers via serial ports.
+- **Temperature Monitoring**: Live tracking of bed and extruder temperatures.
+- **Status Tracking**: Real-time printer states (ready, printing, paused, offline, error).
+- **Remote Control**: Start, pause, resume, and cancel prints from the web interface.
+
+### 📋 Job Management
+- **Smart Queue System**: Advanced queuing with drag-and-drop reordering.
+- **Load Balancing**: Automatic distribution of jobs across available printers.
+- **Job Prioritization**: Reorder queue items and set priority levels.
+- **Rerun Capability**: Easy re-submission of completed jobs.
+- **Job History**: Complete tracking with filtering, searching, and success/failure metrics.
+- **File Management**: Automatic cleanup of old files with configurable retention policies.
+- **Batch Operations**: Submit multiple jobs at once to different printers.
+
+### 🎨 Advanced Visualization
+- **3D Model Preview**: WebGL-based preview of models before printing with Z-axis correction.
+- **GCode Viewer**: Layer-by-layer visualization of print paths.
+- **Live Progress Display**: Real-time print progress with estimated completion time.
+- **Console Logging**: View printer communication logs in real-time.
+
+### 🛠️ Error Handling & Recovery
+- **Automatic Issue Tracking**: Auto-creation of issues for print failures and errors.
+- **Smart Timeout Handling**: Automatic recovery from communication timeouts.
+- **Error Deduplication**: Prevents duplicate issue creation for recurring errors.
+- **Print Recovery**: Resume prints after power loss or connection issues.
+- **Detailed Logging**: Comprehensive error logs for debugging.
+
+### 🧪 Development & Testing
+- **Virtual Printer Emulator**: Go-based emulator to simulate printer behavior without hardware.
+- **Mock Data Support**: Test with simulated printer responses.
+- **Debug Mode**: Enhanced logging and development tools.
+- **Cross-Platform Compatibility**: Runs on Windows, macOS, and Linux.
 
 ## Technologies
 
-- **Frontend**: Vue.js with Bootstrap for styling.
-- **Backend**: Flask integrated with SQLite, handling data through Node.js.
-- **Communication**: Serial communication via PySerial.
-- **Database**: SQLite.
+- **Frontend**: Vue.js 3 with Tailwind CSS for modern UI/UX.
+- **Middleware**: Express.js server for routing and WebSocket management.
+- **Backend**: Python Flask with SQLAlchemy ORM.
+- **Communication**: Serial communication via PySerial, WebSockets for real-time updates.
+- **Database**: SQLite for persistent storage.
 - **Testing**: Virtual printer emulator built in Go for G-code simulation and testing.
 
 ## Architecture Diagram
@@ -60,38 +80,35 @@ flowchart TB
     subgraph Middleware Layer
         Middleware[Middleware Server<br/>Express.js]
         Middleware -->|Frontend Requests| Vite[Vite Dev Server<br/>Port 5173]
-        Middleware -->|All API Requests| Target[Static Target<br/>Set at Startup]
+        Middleware -->|API Requests| Python
     end
 
     subgraph Backend Services
-        Target -.->|mode: python| Python[Python Backend<br/>Port 8000]
-        Target -.->|mode: javascript| JS[JavaScript Backend<br/>Port 8005]
+        Python[Python Backend<br/>Flask - Port 8000]
         Python --> DB[(SQLite Database<br/>QView.db)]
-        JS --> DB
         Python --> Serial[Serial Communication<br/>PySerial]
-        JS --> Serial2[Serial Communication<br/>serialport]
+        Python --> WS[WebSocket Handler<br/>SocketIO]
     end
 
     subgraph Hardware Layer
         Serial --> Printers[3D Printers<br/>USB/Serial]
-        Serial2 --> Printers
-        Serial --> Emulator[Virtual Printer<br/>Port 8004]
-        Serial2 --> Emulator
+        Serial --> Emulator[Virtual Printer<br/>Go Emulator - Port 8004]
     end
 
     subgraph Frontend Development
-        Vite --> Vue[Vue.js 3 App<br/>with HMR]
+        Vite --> Vue[Vue.js 3 App<br/>TypeScript + Tailwind]
+        Vue -.->|WebSocket| WS
     end
 
     style User fill:#e1f5ff
     style Middleware fill:#90ee90
-    style Target fill:#ffeb3b
     style Vite fill:#ffd700
     style Python fill:#4169e1
-    style JS fill:#32cd32
     style DB fill:#ff6347
     style Printers fill:#ffa500
     style Vue fill:#42b883
+    style WS fill:#9370db
+    style Emulator fill:#20b2aa
 ```
 
 ### Request Flow Overview
@@ -101,30 +118,41 @@ sequenceDiagram
     participant B as Browser
     participant M as Middleware<br/>(Port 8002)
     participant V as Vite Dev Server<br/>(Port 5173)
-    participant BE as Selected Backend<br/>(Port 8000/8005)
+    participant P as Python Backend<br/>(Port 8000)
     participant DB as SQLite Database
+    participant PR as 3D Printer
 
-    Note over B,DB: Startup: Backend Selected from config.json
-    M->>M: Read config.middleware.mode
-    M->>M: Set BACKEND_TARGET_URL
+    Note over B,PR: Application Startup
+    M->>P: Initialize Backend
+    P->>DB: Load Configuration
+    P->>PR: Detect Serial Ports
 
-    Note over B,DB: Frontend Asset Request
+    Note over B,PR: Frontend Asset Request
     B->>M: GET /
     M->>V: Proxy to Vite
     V->>V: Compile Vue App + HMR
-    V-->>B: Serve App + WebSocket
+    V-->>B: Serve App + Assets
 
-    Note over B,DB: API Request Flow (Static Routing)
+    Note over B,PR: API Request Flow
     B->>M: GET /getfabricators
-    M->>BE: Proxy to BACKEND_TARGET_URL
-    BE->>DB: Query Fabricators
-    DB-->>BE: Return Data
-    BE-->>M: JSON Response
+    M->>P: Forward Request
+    P->>DB: Query Fabricators
+    DB-->>P: Return Data
+    P-->>M: JSON Response
     M-->>B: Forward Response
 
-    Note over B,DB: Real-time Updates
-    BE->>M: WebSocket Event
-    M->>B: Broadcast Update
+    Note over B,PR: Print Job Submission
+    B->>M: POST /submitjob
+    M->>P: Forward Job Data
+    P->>DB: Store Job
+    P->>PR: Send G-code
+    PR-->>P: Status Updates
+    P-->>B: WebSocket Events
+
+    Note over B,PR: Real-time Monitoring
+    PR->>P: Temperature/Progress
+    P->>B: WebSocket Broadcast
+    B->>B: Update UI
 ```
 
 ## Setup and Installation
