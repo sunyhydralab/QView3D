@@ -10,27 +10,10 @@ VENV := $(SERVER_DIR)/.python-venv
 PIP := $(VENV)/bin/pip
 FLASK := $(VENV)/bin/flask
 
-FLASK_SERVER_IP ?= localhost
-FLASK_SERVER_PORT ?= 8000
-FLASK_SERVER_WEB_SOCKET_PORT ?= 8001
+ENV_FILE := .env
+ENV_EXAMPLE := .env.example
 
-VITE_CLIENT_IP ?= localhost
-VITE_CLIENT_PORT ?= 8002
-VITE_LOG_LEVEL ?= error
-
-DATABASE_FILE_NAME ?= QView.db
-
--include .env
-
-export FLASK_SERVER_IP
-export FLASK_SERVER_PORT
-export FLASK_SERVER_WEB_SOCKET_PORT
-export VITE_CLIENT_IP
-export VITE_CLIENT_PORT
-export VITE_LOG_LEVEL
-export DATABASE_FILE_NAME
-
-.PHONY: help setup ensure-config ensure-setup backend frontend dev build reset-db fresh-dev clean
+.PHONY: help ensure-config setup ensure-setup backend frontend dev build reset-db fresh-dev clean check-serial production-check production-config production-backend production-frontend production
 
 help: 
 	@echo "QView3D commands:"
@@ -40,6 +23,8 @@ help:
 	@echo "  make reset-db   - Reset the SQLite database"
 	@echo "  make fresh-dev  - Reset database and start development"
 	@echo "  make clean      - Remove generated frontend build"
+	@echo "  make production - Build and run QView3D in production mode"
+	@echo "  make check-serial - Check Linux printer serial permissions"
 
 ensure-config:
 	@if [ ! -f .env ]; then \
@@ -95,3 +80,54 @@ fresh-dev: reset-db dev
 clean:
 	rm -rf "$(CLIENT_DIR)/dist"
 	@echo "Frontend build removed."
+
+check-serial: ensure-config
+	@set -a; source "$(ENV_FILE)"; set +a; \
+	if id -nG "$$USER" | tr ' ' '\n' | grep -qx "$$SERIAL_GROUP"; then \
+		echo "Serial permission OK: $$USER is in $$SERIAL_GROUP"; \
+	else \
+		echo "ERROR: $$USER is not in the $$SERIAL_GROUP group."; \
+		echo "Run: sudo usermod -aG $$SERIAL_GROUP $$USER"; \
+		echo "Then log out and log back in."; \
+		exit 1; \
+	fi
+
+production-check: ensure-setup
+	@command -v nginx >/dev/null 2>&1 || { \
+		echo "ERROR: nginx is not installed."; \
+		echo "Install it with: sudo apt install nginx"; \
+		exit 1; \
+	}
+	@test -x "$(VENV)/bin/gunicorn" || { \
+		echo "ERROR: Gunicorn is not installed."; \
+		echo "Run make setup."; \
+		exit 1; \
+	}
+
+production-config: ensure-config
+	@mkdir -p .nginx/logs
+	@set -a; source "$(ENV_FILE)"; set +a; \
+	sed \
+		-e "s|__FRONTEND_IP__|$$PRODUCTION_FRONTEND_IP|g" \
+		-e "s|__FRONTEND_PORT__|$$PRODUCTION_FRONTEND_PORT|g" \
+		-e "s|__DIST_PATH__|$(CURDIR)/$(CLIENT_DIR)/dist|g" \
+		deploy/nginx.conf.template > .nginx/nginx.conf
+	@echo "Generated production Nginx configuration."
+
+production-backend:
+	@set -a; source "$(ENV_FILE)"; set +a; \
+	cd "$(SERVER_DIR)" && \
+	.python-venv/bin/gunicorn \
+		--bind "$$PRODUCTION_BACKEND_IP:$$PRODUCTION_BACKEND_PORT" \
+		--workers "$$GUNICORN_WORKERS" \
+		--threads "$$GUNICORN_THREADS" \
+		"$$GUNICORN_APP"
+
+production-frontend:
+	nginx \
+		-p "$(CURDIR)/.nginx/" \
+		-c nginx.conf \
+		-g "daemon off;"
+
+production: production-check check-serial build production-config
+	$(MAKE) -j2 production-backend production-frontend

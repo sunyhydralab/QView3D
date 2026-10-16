@@ -1,0 +1,26 @@
+pid logs/nginx.pid;
+error_log logs/error.log;
+
+events {
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    access_log logs/access.log;
+
+    sendfile on;
+
+    server {
+        listen __FRONTEND_IP__:__FRONTEND_PORT__;
+        server_name _;
+
+        root "__DIST_PATH__";
+        index index.html;
+
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }
+}

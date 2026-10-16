@@ -85,6 +85,19 @@ make clean
 ```bash
 make dev
 ```
+## Production
+
+Production uses the compiled Vite frontend and Gunicorn instead of the development servers.
+
+### Production prerequisites
+
+On Ubuntu, install Nginx:
+
+```bash
+sudo apt update
+sudo apt install nginx
+
+
 ## Pull Requests
 
 We welcome contributions to QView3D. Please follow the guidelines in the [CONTRIBUTING.md](CONTRIBUTING.md) file.
