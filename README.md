@@ -61,16 +61,30 @@ Clone the repository:
 git clone https://github.com/sunyhydralab/QView3D.git
 ```
 
-Run the following commands to install dependencies and start the application:
+Enter the project directory.
 
 ```sh
 cd QView3D
 ``` 
 
-```sh
-python run.py
+## Development Setup
+
+QView3D uses GNU Make for project setup and development.
+### Other Make Commands
+
+```bash
+make setup
+make build
+make reset-db
+make fresh-dev
+make clean
 ```
 
+### Start the development environment
+
+```bash
+make dev
+```
 ## Pull Requests
 
 We welcome contributions to QView3D. Please follow the guidelines in the [CONTRIBUTING.md](CONTRIBUTING.md) file.

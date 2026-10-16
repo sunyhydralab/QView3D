@@ -1,8 +1,13 @@
 import {computed} from 'vue'
 
 // declare IP settings
-export const API_IP_ADDRESS = computed(() => localStorage.getItem("apiIPAddress") || "localhost")
-export const API_PORT = computed(() => localStorage.getItem("apiPort") || "8000")
+export const API_IP_ADDRESS = computed(
+  () => localStorage.getItem("apiIPaddress") || import.meta.env.VITE_API_IP_ADDRESS
+)
+
+export const API_PORT = computed(
+  () => localStorage.getItem("apiPort") || import.meta.env.VITE_API_PORT
+)
 export const API_URL = computed(() => `http://${API_IP_ADDRESS.value}:${API_PORT.value}`)
 
 const ipAddressRegex = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$|localhost$/;
