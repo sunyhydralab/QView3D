@@ -87,7 +87,12 @@ make dev
 ```
 ## Production
 
+```bash
+make production
+```
+
 Production uses the compiled Vite frontend and Gunicorn instead of the development servers.
+
 
 ### Production prerequisites
 
