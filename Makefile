@@ -52,28 +52,32 @@ ensure-setup: ensure-config
 	fi
 
 backend: ensure-setup
-	cd $(SERVER_DIR) && \
-	FLASK_RUN_HOST="$(FLASK_SERVER_IP)" \
-	FLASK_RUN_PORT="$(FLASK_SERVER_PORT)" \
+	@set -a; source "$(ENV_FILE)"; set +a; \
+	cd "$(SERVER_DIR)" && \
+	FLASK_RUN_HOST="$$FLASK_SERVER_IP" \
+	FLASK_RUN_PORT="$$FLASK_SERVER_PORT" \
 	.python-venv/bin/flask run
 
 frontend: ensure-setup
-	cd $(CLIENT_DIR) && \
+	@set -a; source "$(ENV_FILE)"; set +a; \
+	cd "$(CLIENT_DIR)" && \
 	npm run dev -- \
-		--host "$(VITE_CLIENT_IP)" \
-		--port "$(VITE_CLIENT_PORT)" \
+		--host "$$VITE_CLIENT_IP" \
+		--port "$$VITE_CLIENT_PORT" \
 		--cors \
-		--logLevel "$(VITE_LOG_LEVEL)"
+		--logLevel "$$VITE_LOG_LEVEL"
 
 dev: ensure-setup
 	$(MAKE) -j2 backend frontend
 
 build: ensure-setup
-	cd $(CLIENT_DIR) && npm run build
+	@set -a; source "$(ENV_FILE)"; set +a; \
+	cd "$(CLIENT_DIR)" && npm run build
 
-reset-db:
-	rm -f "$(SERVER_DIR)/$(DATABASE_FILE_NAME)"
-	@echo "Database reset: $(SERVER_DIR)/$(DATABASE_FILE_NAME)"
+reset-db: ensure-config
+	@set -a; source "$(ENV_FILE)"; set +a; \
+	rm -f "$(SERVER_DIR)/$$DATABASE_FILE_NAME"; \
+	echo "Database reset: $(SERVER_DIR)/$$DATABASE_FILE_NAME"
 
 fresh-dev: reset-db dev
 
