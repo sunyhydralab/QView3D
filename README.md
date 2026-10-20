@@ -41,11 +41,12 @@ The project is maintained by computer science students at SUNY New Paltz, under 
 
 ## Technologies
 
-- **Frontend**: Vue.js with Bootstrap for styling.
-- **Backend**: Flask integrated with SQLite, handling data through Node.js.
-- **Communication**: Serial communication via PySerial.
+- **Frontend**: Vue.js with Vite and Bootstrap.
+- **Backend**: Python with Flask.
 - **Database**: SQLite.
-- **Testing**: Virtual printer emulator built in Go for G-code simulation and testing.
+- **Communication**: PySerial.
+- **Build Tooling**: GNU Make and Bash.
+- **Testing**: Go-based virtual printer emulator.
 
 ## Architecture Diagram
 
