@@ -36,7 +36,8 @@ The project is maintained by computer science students at SUNY New Paltz, under 
 - **Advanced Viewing**:
   - Real-time 3D model previews before and during printing.
   - Layer-by-layer virtual print monitoring via GCode Viewer.
-- **Virtual Printer Emulator**: A Go-based emulator to simulate printer behavior, enabling testing without physical hardware.
+
+
 - **Cross-Platform Compatibility**: Runs on Windows, macOS, and Linux, ensuring accessibility across systems.
 
 ## Technologies
