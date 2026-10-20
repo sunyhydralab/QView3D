@@ -70,6 +70,8 @@ cd QView3D
 ## Development Setup
 
 QView3D uses GNU Make for project setup and development.
+Project settings such as IP addresses, ports, and database configuration are stored in `.env`.
+If `.env` does not exist, it is created from `.env.example`.
 ### Other Make Commands
 
 ```bash
@@ -78,6 +80,7 @@ make build
 make reset-db
 make fresh-dev
 make clean
+make check-serial 
 ```
 
 ### Start the development environment
@@ -86,12 +89,17 @@ make clean
 make dev
 ```
 ## Production
-
+start production 
 ```bash
 make production
 ```
 
-Production uses the compiled Vite frontend and Gunicorn instead of the development servers.
+Check serial-port permissions:
+
+```bash
+make check-serial
+
+Production builds the Vue/Vite frontend into static files, serves them with Nginx, and runs the Flask backend with Gunicorn.
 
 
 ### Production prerequisites
@@ -101,7 +109,7 @@ On Ubuntu, install Nginx:
 ```bash
 sudo apt update
 sudo apt install nginx
-
+```
 
 ## Pull Requests
 
