@@ -19,7 +19,7 @@ The project is maintained by computer science students at SUNY New Paltz, under 
 - [**CJ Jenks**](https://github.com/iron768)
 - [**Stiviyan Dragiev**](https://github.com/dragiev1)
 - [**Christopher Jamieson**](https://github.com/shift16)
-- [**Youssup Song**](https://github.com/youssup)
+- [**Matthew Toro**](https://github.com/Matt0108/)
 
 ## Features
 
