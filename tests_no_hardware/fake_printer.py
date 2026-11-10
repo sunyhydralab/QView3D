@@ -3,7 +3,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 
-# Allow this test code to import files from QView3D/server
+
 SERVER_DIR = Path(__file__).resolve().parents[1] / "server"
 
 if str(SERVER_DIR) not in sys.path:
@@ -29,7 +29,7 @@ class MockableDevice(Device):
         self.dbID = 999
         self.name = self.DESCRIPTION
 
-        # Fake serial-port information.
+ 
         self.serialPort = SimpleNamespace(
             device="MOCK_PORT",
             serial_number="MOCK_SERIAL"
@@ -37,7 +37,7 @@ class MockableDevice(Device):
 
         self.serialID = self.serialPort.serial_number
 
-        # This can be a MagicMock or FakeSerialConnection.
+
         self.serialConnection = connection
 
         self.logger = None
