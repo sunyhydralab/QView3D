@@ -21,6 +21,13 @@ class FabricatorConnection(ABC):
         :return: FabricatorConnection instance
         :rtype: SerialConnection | SocketConnection
         """
+        if port == "MOCK_PORT":
+            return FakeSerialConnection(
+                port=port,
+                baudrate=baudrate,
+                timeout=timeout
+    )
+        
         if websocket_connections is not None and fabricator_id is not None:
             return SocketConnection(port, baudrate, websocket_connections, fabricator_id, timeout=timeout)
         elif port is not None and baudrate is not None:
@@ -37,6 +44,60 @@ class SerialConnection(FabricatorConnection, serial.Serial):
             if not "Access is denied" in str(e):
                 print(f"Failed to open serial connection: {e}")
                 raise ConnectionError(f"Failed to open serial connection: {e}")
+
+class FakeSerialConnection(FabricatorConnection):
+    def __init__(
+        self,
+        port="MOCK_PORT",
+        baudrate=115200,
+        timeout=1.0
+    ):
+        self.port = port
+        self.baudrate = baudrate
+        self.timeout = timeout
+        self._is_open = True
+        self.writes = []
+
+    @property
+    def is_open(self):
+        return self._is_open
+
+    def write(self, data):
+        if not self._is_open:
+            raise ConnectionError(
+                "Mock serial connection is closed"
+            )
+
+        if isinstance(data, str):
+            data = data.encode("utf-8")
+
+        self.writes.append(data)
+
+        print(
+            f"[MOCK PRINTER] received: "
+            f"{data.decode('utf-8').strip()}"
+        )
+
+        return len(data)
+
+    def readline(self):
+        if not self._is_open:
+            raise ConnectionError(
+                "Mock serial connection is closed"
+            )
+
+        print("[MOCK PRINTER] response: ok")
+
+        return b"ok\n"
+
+    def read(self, size=1):
+        return self.readline()
+
+    def reset_input_buffer(self):
+        pass
+
+    def close(self):
+        self._is_open = False
 
 
 class SocketConnection(FabricatorConnection):

@@ -228,18 +228,37 @@ const setTemperature = async () => {
 // Generate a gcode test
 const runGCodeTest = async () => {
   if (!isRegistered.value) {
-    addToast('Printer must be registered before running a test', 'warning');
+    addToast(
+      'Printer must be registered before running a test',
+      'warning'
+    );
     return;
   }
-  
+
   try {
-    await api('runemulatortest', {
-      type: 'simple_move'
-    }, 'POST');
-    addToast('G-code test started', 'info');
+    const response = await api(
+      'runemulatortest',
+      {},
+      'POST'
+    );
+
+    statusMessage.value =
+      `Sent ${response.command} -> ${response.response}`;
+
+    addToast(
+      `Mock printer response: ${response.response}`,
+      'success'
+    );
   } catch (error) {
-    console.error('Error running G-code test:', error);
-    addToast('Failed to run G-code test', 'error');
+    console.error(
+      'Error running G-code test:',
+      error
+    );
+
+    addToast(
+      'Failed to run G-code test',
+      'error'
+    );
   }
 };
 
